@@ -1,0 +1,24 @@
+{
+  "name": "swp391_g3_topic8",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Le-Gia-Thinh/SWP391_G3_Topic8.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Le-Gia-Thinh/SWP391_G3_Topic8/issues"
+  },
+  "homepage": "https://github.com/Le-Gia-Thinh/SWP391_G3_Topic8#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
