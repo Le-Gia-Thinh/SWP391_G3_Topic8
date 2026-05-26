@@ -1,10 +1,23 @@
 import express from "express";
+
 import * as commonController from "../controllers/commonController.js";
 import * as sessionController from "../controllers/sessionController.js";
 import * as reservationController from "../controllers/reservationController.js";
 import * as reportController from "../controllers/reportController.js";
+import * as authController from "../controllers/authController.js";
 
 const router = express.Router();
+
+// Test API
+router.get("/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "API is working"
+  });
+});
+
+// Auth
+router.post("/auth/register", authController.registerDriver);
 
 // Common
 router.get("/roles", commonController.getRoles);
