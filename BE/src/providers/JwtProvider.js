@@ -39,8 +39,14 @@ const JwtProvider = {
     // ms("15m") → 900000
     // ms("7d")  → 604800000
     toMs(timeString) {
-        return ms(timeString);
-    },
+        const value = ms(timeString);
+
+        if (!value) {
+            throw new Error(`Invalid time format: ${timeString}`);
+        }
+
+        return value;
+    }
 };
 
 export default JwtProvider;
