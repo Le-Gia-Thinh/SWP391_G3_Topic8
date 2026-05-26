@@ -10,13 +10,14 @@ GO
 -- =====================================================
 -- BƯỚC 1: XÓA TRIGGERS
 -- =====================================================
-IF OBJECT_ID('TRG_AutoIncident',              'TR') IS NOT NULL DROP TRIGGER TRG_AutoIncident;
-IF OBJECT_ID('TRG_FreeSlotOnReservationCancel','TR') IS NOT NULL DROP TRIGGER TRG_FreeSlotOnReservationCancel;
-IF OBJECT_ID('TRG_ReserveSlotOnReservation',  'TR') IS NOT NULL DROP TRIGGER TRG_ReserveSlotOnReservation;
-IF OBJECT_ID('TRG_ValidateExitTime',          'TR') IS NOT NULL DROP TRIGGER TRG_ValidateExitTime;
-IF OBJECT_ID('TRG_UpdateSlotStatus',          'TR') IS NOT NULL DROP TRIGGER TRG_UpdateSlotStatus;
-IF OBJECT_ID('TRG_UpperPlateNumber',          'TR') IS NOT NULL DROP TRIGGER TRG_UpperPlateNumber;
-IF OBJECT_ID('TRG_AutoUpperVehicleName',      'TR') IS NOT NULL DROP TRIGGER TRG_AutoUpperVehicleName;
+IF OBJECT_ID('TRG_AutoIncident',                         'TR') IS NOT NULL DROP TRIGGER TRG_AutoIncident;
+IF OBJECT_ID('TRG_RecalculateSlotStatus_OnReservation',  'TR') IS NOT NULL DROP TRIGGER TRG_RecalculateSlotStatus_OnReservation;
+IF OBJECT_ID('TRG_FreeSlotOnReservationCancel',          'TR') IS NOT NULL DROP TRIGGER TRG_FreeSlotOnReservationCancel;
+IF OBJECT_ID('TRG_ReserveSlotOnReservation',             'TR') IS NOT NULL DROP TRIGGER TRG_ReserveSlotOnReservation;
+IF OBJECT_ID('TRG_ValidateExitTime',                     'TR') IS NOT NULL DROP TRIGGER TRG_ValidateExitTime;
+IF OBJECT_ID('TRG_UpdateSlotStatus',                     'TR') IS NOT NULL DROP TRIGGER TRG_UpdateSlotStatus;
+IF OBJECT_ID('TRG_UpperPlateNumber',                     'TR') IS NOT NULL DROP TRIGGER TRG_UpperPlateNumber;
+IF OBJECT_ID('TRG_AutoUpperVehicleName',                 'TR') IS NOT NULL DROP TRIGGER TRG_AutoUpperVehicleName;
 GO
 
 -- =====================================================
@@ -392,34 +393,25 @@ CREATE TRIGGER TRG_AutoUpperVehicleName
 ON VehicleTypes AFTER INSERT, UPDATE
 AS
 BEGIN
-    UPDATE VehicleTypes
-    SET VehicleName = UPPER(VehicleName)
-    WHERE VehicleTypeID IN (SELECT VehicleTypeID FROM inserted);
+    SET NOCOUNT ON;
+
+    UPDATE vt
+    SET vt.VehicleName = UPPER(vt.VehicleName)
+    FROM VehicleTypes vt
+    JOIN inserted i ON vt.VehicleTypeID = i.VehicleTypeID;
 END
 GO
 
 CREATE TRIGGER TRG_UpperPlateNumber
-ON ParkingSessions AFTER INSERT
-AS
-BEGIN
-    UPDATE ParkingSessions
-    SET PlateNumber = UPPER(PlateNumber)
-    WHERE SessionID IN (SELECT SessionID FROM inserted);
-END
-GO
-
-CREATE TRIGGER TRG_UpdateSlotStatus
 ON ParkingSessions AFTER INSERT, UPDATE
 AS
 BEGIN
-    UPDATE s
-    SET s.SlotStatus = CASE
-        WHEN i.SessionStatus = 'Active'    THEN 'Occupied'
-        WHEN i.SessionStatus = 'Completed' THEN 'Available'
-        ELSE s.SlotStatus
-    END
-    FROM ParkingSlots s
-    JOIN inserted i ON s.SlotID = i.SlotID;
+    SET NOCOUNT ON;
+
+    UPDATE ps
+    SET ps.PlateNumber = UPPER(ps.PlateNumber)
+    FROM ParkingSessions ps
+    JOIN inserted i ON ps.SessionID = i.SessionID;
 END
 GO
 
@@ -427,42 +419,101 @@ CREATE TRIGGER TRG_ValidateExitTime
 ON ParkingSessions AFTER INSERT, UPDATE
 AS
 BEGIN
-    IF EXISTS(
-        SELECT 1 FROM inserted i
-        WHERE i.ExitTime IS NOT NULL AND i.ExitTime <= i.EntryTime
+    SET NOCOUNT ON;
+
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        WHERE i.ExitTime IS NOT NULL
+          AND i.ExitTime <= i.EntryTime
     )
     BEGIN
         RAISERROR('ExitTime must be greater than EntryTime.', 16, 1);
         ROLLBACK TRANSACTION;
+        RETURN;
     END
 END
 GO
 
-CREATE TRIGGER TRG_ReserveSlotOnReservation
-ON Reservations AFTER INSERT
+CREATE TRIGGER TRG_UpdateSlotStatus
+ON ParkingSessions
+AFTER INSERT, UPDATE
 AS
 BEGIN
-    UPDATE s
-    SET s.SlotStatus = 'Reserved'
-    FROM ParkingSlots s
-    JOIN inserted i ON s.SlotID = i.SlotID
-    WHERE i.ReservationStatus = 'Reserved';
+    SET NOCOUNT ON;
+
+    UPDATE ps
+    SET ps.SlotStatus =
+        CASE
+            -- Giữ nguyên trạng thái thủ công
+            WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
+
+            -- Ưu tiên 1: có session Active thì slot đang được sử dụng
+            WHEN EXISTS (
+                SELECT 1
+                FROM ParkingSessions s
+                WHERE s.SlotID = ps.SlotID
+                  AND s.SessionStatus = 'Active'
+            ) THEN 'Occupied'
+
+            -- Ưu tiên 2: không có xe đang đỗ nhưng có reservation Reserved
+            WHEN EXISTS (
+                SELECT 1
+                FROM Reservations r
+                WHERE r.SlotID = ps.SlotID
+                  AND r.ReservationStatus = 'Reserved'
+            ) THEN 'Reserved'
+
+            -- Không có session active, không có reservation
+            ELSE 'Available'
+        END
+    FROM ParkingSlots ps
+    WHERE ps.SlotID IN (
+        SELECT DISTINCT i.SlotID
+        FROM inserted i
+        WHERE i.SlotID IS NOT NULL
+    );
 END
 GO
 
-CREATE TRIGGER TRG_FreeSlotOnReservationCancel
-ON Reservations AFTER UPDATE
+CREATE TRIGGER TRG_RecalculateSlotStatus_OnReservation
+ON Reservations
+AFTER INSERT, UPDATE
 AS
 BEGIN
-    UPDATE s
-    SET s.SlotStatus = 'Available'
-    FROM ParkingSlots s
-    JOIN inserted i ON s.SlotID = i.SlotID
-    WHERE i.ReservationStatus IN ('Cancelled', 'Expired')
-      AND NOT EXISTS(
-          SELECT 1 FROM ParkingSessions ps
-          WHERE ps.SlotID = s.SlotID AND ps.SessionStatus = 'Active'
-      );
+    SET NOCOUNT ON;
+
+    UPDATE ps
+    SET ps.SlotStatus =
+        CASE
+            -- Giữ nguyên trạng thái thủ công
+            WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
+
+            -- Ưu tiên 1: có session Active thì slot đang được sử dụng
+            WHEN EXISTS (
+                SELECT 1
+                FROM ParkingSessions s
+                WHERE s.SlotID = ps.SlotID
+                  AND s.SessionStatus = 'Active'
+            ) THEN 'Occupied'
+
+            -- Ưu tiên 2: có reservation Reserved
+            WHEN EXISTS (
+                SELECT 1
+                FROM Reservations r
+                WHERE r.SlotID = ps.SlotID
+                  AND r.ReservationStatus = 'Reserved'
+            ) THEN 'Reserved'
+
+            -- Không có gì thì Available
+            ELSE 'Available'
+        END
+    FROM ParkingSlots ps
+    WHERE ps.SlotID IN (
+        SELECT DISTINCT i.SlotID
+        FROM inserted i
+        WHERE i.SlotID IS NOT NULL
+    );
 END
 GO
 
@@ -470,16 +521,19 @@ CREATE TRIGGER TRG_AutoIncident
 ON ParkingSessions AFTER UPDATE
 AS
 BEGIN
+    SET NOCOUNT ON;
+
     INSERT INTO Incidents(SessionID, DriverID, IncidentType, IncidentStatus, Priority, Description, CreatedAt, UpdatedAt)
     SELECT i.SessionID, i.DriverID,
            'Lost Ticket', 'Open', 'Normal', 'Auto-created lost ticket',
            GETDATE(), GETDATE()
     FROM inserted i
     WHERE i.SessionStatus = 'Lost'
-      AND NOT EXISTS(
-          SELECT 1 FROM Incidents inc
-          WHERE inc.SessionID     = i.SessionID
-            AND inc.IncidentType  = 'Lost Ticket'
+      AND NOT EXISTS (
+          SELECT 1
+          FROM Incidents inc
+          WHERE inc.SessionID = i.SessionID
+            AND inc.IncidentType = 'Lost Ticket'
             AND inc.IncidentStatus IN ('Open','InProgress')
       );
 END
@@ -601,7 +655,7 @@ INSERT INTO Payments(SessionID, Amount, PaymentMethod, PaymentStatus) VALUES
 GO
 
 -- Reservations (dùng slot còn Available: 3,4,8,9)
--- Trigger TRG_ReserveSlotOnReservation sẽ tự set Reserved
+-- Trigger TRG_RecalculateSlotStatus_OnReservation sẽ tự set Reserved
 INSERT INTO Reservations(DriverID, VehicleTypeID, SlotID, ReservationDate, StartTime, EndTime, ReservationStatus)
 VALUES
 (1, 1, 3,  CAST(GETDATE() AS DATE), DATEADD(HOUR,1,GETDATE()), DATEADD(HOUR,4,GETDATE()), 'Reserved'),
@@ -629,7 +683,34 @@ VALUES
 GO
 
 -- =====================================================
--- BƯỚC 11: VERIFICATION
+-- BƯỚC 11: SYNC LẠI SLOT STATUS THEO SESSION + RESERVATION
+-- =====================================================
+UPDATE ps
+SET ps.SlotStatus =
+    CASE
+        WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
+
+        WHEN EXISTS (
+            SELECT 1
+            FROM ParkingSessions s
+            WHERE s.SlotID = ps.SlotID
+              AND s.SessionStatus = 'Active'
+        ) THEN 'Occupied'
+
+        WHEN EXISTS (
+            SELECT 1
+            FROM Reservations r
+            WHERE r.SlotID = ps.SlotID
+              AND r.ReservationStatus = 'Reserved'
+        ) THEN 'Reserved'
+
+        ELSE 'Available'
+    END
+FROM ParkingSlots ps;
+GO
+
+-- =====================================================
+-- BƯỚC 12: VERIFICATION
 -- =====================================================
 SELECT TableName, Rows FROM (
     SELECT 'Roles'           AS TableName, COUNT(*) AS Rows FROM Roles          UNION ALL

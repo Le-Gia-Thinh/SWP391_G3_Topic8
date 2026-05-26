@@ -7,8 +7,8 @@ Trong FE : khởi tạo yarn + vite : yarn create vite ==> đặt tên ==> chọ
                     yarn lint là kiểm tra lỗi cú pháp , ..., làm clean code 
                    
 Trong BE :
-                    Chạy lệnh npm install trước 
+                    Chạy lệnh yarn install trước 
                     chạy lệnh trong sql
-                    chạy npm run dev , chạy npm install axios    
-
-                    ==> chạy test npm start                
+                    chạy yarn dev , chạy yarn install axios    
+                    Chạy lệnh yarn add express cors dotenv mssql cookie-parser jsonwebtoken bcryptjs axios google-auth-library ms http-status-codes cài đặt thư viện
+                    ==> chạy test yarn dev                
