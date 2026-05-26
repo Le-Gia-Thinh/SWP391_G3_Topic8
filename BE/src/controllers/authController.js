@@ -192,8 +192,7 @@ export async function forgotPassword(req, res, next) {
 // POST /api/auth/reset-password
 export async function resetPassword(req, res, next) {
   try {
-    await authService.resetPasswordService(req.body);
-
+    await authService.resetPasswordService(req.body)
     clearTokenCookies(res);
 
     return res.status(StatusCodes.OK).json({
