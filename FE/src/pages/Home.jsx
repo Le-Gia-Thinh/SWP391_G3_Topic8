@@ -1,5 +1,7 @@
 import React from 'react';
 import { Users, Car, Bike, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import StatCard from '../components/home/StatCard';
+import VehicleCard from '../components/home/VehicleCard';
 
 const Home = () => {
   return (
@@ -47,18 +49,7 @@ const Home = () => {
               { label: 'Đang Trống', value: '612', unit: 'Chỗ trống', icon: <Car className="w-5 h-5 text-green-500" /> },
               { label: 'Doanh Thu (ước tính)', value: '105', unit: 'Triệu VNĐ', icon: <Users className="w-5 h-5 text-gray-400" /> },
             ].map((stat, idx) => (
-              <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start mb-6">
-                  <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
-                    {stat.icon}
-                  </div>
-                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">{stat.unit}</span>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
-                  <p className="text-3xl font-bold text-blue-600">{stat.value}</p>
-                </div>
-              </div>
+              <StatCard key={idx} {...stat} />
             ))}
           </div>
         </div>
@@ -76,17 +67,7 @@ const Home = () => {
             { title: 'Ô Tô', desc: '120 chỗ trống / tầng', icon: <Car className="w-6 h-6" />, progress: 'w-1/2' },
             { title: 'Xe Đạp', desc: '20 chỗ trống / tầng', icon: <Bike className="w-6 h-6" />, progress: 'w-1/4' },
           ].map((v, i) => (
-            <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group hover:border-blue-200 transition-colors">
-              <div className="absolute top-6 right-6 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md">Cho Phép</div>
-              <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-gray-600 mb-6 group-hover:text-blue-600 transition-colors">
-                {v.icon}
-              </div>
-              <h3 className="text-lg font-bold text-blue-600 mb-1">{v.title}</h3>
-              <p className="text-sm text-gray-500 mb-6">{v.desc}</p>
-              <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                <div className={`bg-blue-600 h-full rounded-full ${v.progress}`}></div>
-              </div>
-            </div>
+            <VehicleCard key={i} {...v} />
           ))}
         </div>
       </section>
