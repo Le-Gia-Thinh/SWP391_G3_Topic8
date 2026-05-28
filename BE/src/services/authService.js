@@ -225,7 +225,7 @@ export async function getMeService(userId) {
         err.statusCode = 404; throw err;
     }
 
-    return result.recordset[0];
+    return formatUser(result.recordset[0]);  // ← wrap qua formatUser
 }
 
 // ── FORGOT PASSWORD ───────────────────────────────────────────

@@ -1,10 +1,10 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Building2, ChevronLeft } from 'lucide-react';
+import React from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { Building2, ChevronLeft } from 'lucide-react'
 
 const Header = () => {
-  const location = useLocation();
-  const isAuthPage = location.pathname.includes('/login') || location.pathname.includes('/register');
+  const location = useLocation()
+  const isAuthPage = location.pathname.includes('/login') || location.pathname.includes('/register')
 
   return (
     <header className="bg-white border-b border-gray-100 py-4">
@@ -38,8 +38,8 @@ const Header = () => {
               <Link to="/admin/login" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
                 Đăng Nhập
               </Link>
-              <Link 
-                to="/register" 
+              <Link
+                to="/register"
                 className="text-sm font-medium bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200"
               >
                 Đăng ký
@@ -49,7 +49,7 @@ const Header = () => {
         )}
       </div>
     </header>
-  );
-};
+  )
+}
 
-export default Header;
+export default Header

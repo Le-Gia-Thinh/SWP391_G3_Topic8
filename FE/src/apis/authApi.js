@@ -1,0 +1,26 @@
+// src/apis/authApi.js
+import authorizeAxios from '../utils/authorizeAxios'
+
+export const loginAPI = (data) => authorizeAxios.post('/auth/login', data)
+
+export const logoutAPI = () => authorizeAxios.post('/auth/logout')
+
+export const refreshTokenAPI = () => authorizeAxios.post('/auth/refresh')
+
+export const getMeAPI = () => authorizeAxios.get('/auth/me')
+
+export const registerAPI = (data) => authorizeAxios.post('/auth/register', data)
+
+export const forgotPasswordAPI = (email) => {
+  return authorizeAxios.post('/auth/forgot-password', { email })
+}
+
+export const resetPasswordAPI = (data) => authorizeAxios.post('/auth/reset-password', data)
+
+export const googleLoginAPI = (idToken) => {
+  return authorizeAxios.post('/auth/google', { idToken })
+}
+
+export const facebookLoginAPI = (token) => {
+  return authorizeAxios.post('/auth/facebook', { accessToken: token })
+}

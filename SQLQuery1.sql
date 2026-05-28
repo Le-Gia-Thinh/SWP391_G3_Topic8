@@ -1,735 +1,735 @@
-﻿USE master;
-GO
--- Đảm bảo đang dùng đúng DB (tạo nếu chưa có)
-IF DB_ID('ParkingManagementDB') IS NULL
-    CREATE DATABASE ParkingManagementDB;
-GO
-USE ParkingManagementDB;
-GO
+﻿    USE master;
+    GO
+    -- Đảm bảo đang dùng đúng DB (tạo nếu chưa có)
+    IF DB_ID('ParkingManagementDB') IS NULL
+        CREATE DATABASE ParkingManagementDB;
+    GO
+    USE ParkingManagementDB;
+    GO
 
--- =====================================================
--- BƯỚC 1: XÓA TRIGGERS
--- =====================================================
-IF OBJECT_ID('TRG_AutoIncident',                         'TR') IS NOT NULL DROP TRIGGER TRG_AutoIncident;
-IF OBJECT_ID('TRG_RecalculateSlotStatus_OnReservation',  'TR') IS NOT NULL DROP TRIGGER TRG_RecalculateSlotStatus_OnReservation;
-IF OBJECT_ID('TRG_FreeSlotOnReservationCancel',          'TR') IS NOT NULL DROP TRIGGER TRG_FreeSlotOnReservationCancel;
-IF OBJECT_ID('TRG_ReserveSlotOnReservation',             'TR') IS NOT NULL DROP TRIGGER TRG_ReserveSlotOnReservation;
-IF OBJECT_ID('TRG_ValidateExitTime',                     'TR') IS NOT NULL DROP TRIGGER TRG_ValidateExitTime;
-IF OBJECT_ID('TRG_UpdateSlotStatus',                     'TR') IS NOT NULL DROP TRIGGER TRG_UpdateSlotStatus;
-IF OBJECT_ID('TRG_UpperPlateNumber',                     'TR') IS NOT NULL DROP TRIGGER TRG_UpperPlateNumber;
-IF OBJECT_ID('TRG_AutoUpperVehicleName',                 'TR') IS NOT NULL DROP TRIGGER TRG_AutoUpperVehicleName;
-GO
+    -- =====================================================
+    -- BƯỚC 1: XÓA TRIGGERS
+    -- =====================================================
+    IF OBJECT_ID('TRG_AutoIncident',                         'TR') IS NOT NULL DROP TRIGGER TRG_AutoIncident;
+    IF OBJECT_ID('TRG_RecalculateSlotStatus_OnReservation',  'TR') IS NOT NULL DROP TRIGGER TRG_RecalculateSlotStatus_OnReservation;
+    IF OBJECT_ID('TRG_FreeSlotOnReservationCancel',          'TR') IS NOT NULL DROP TRIGGER TRG_FreeSlotOnReservationCancel;
+    IF OBJECT_ID('TRG_ReserveSlotOnReservation',             'TR') IS NOT NULL DROP TRIGGER TRG_ReserveSlotOnReservation;
+    IF OBJECT_ID('TRG_ValidateExitTime',                     'TR') IS NOT NULL DROP TRIGGER TRG_ValidateExitTime;
+    IF OBJECT_ID('TRG_UpdateSlotStatus',                     'TR') IS NOT NULL DROP TRIGGER TRG_UpdateSlotStatus;
+    IF OBJECT_ID('TRG_UpperPlateNumber',                     'TR') IS NOT NULL DROP TRIGGER TRG_UpperPlateNumber;
+    IF OBJECT_ID('TRG_AutoUpperVehicleName',                 'TR') IS NOT NULL DROP TRIGGER TRG_AutoUpperVehicleName;
+    GO
 
--- =====================================================
--- BƯỚC 2: XÓA STORED PROCEDURES
--- =====================================================
-IF OBJECT_ID('sp_CreateReservation','P') IS NOT NULL DROP PROCEDURE sp_CreateReservation;
-IF OBJECT_ID('sp_CheckOutVehicle',  'P') IS NOT NULL DROP PROCEDURE sp_CheckOutVehicle;
-IF OBJECT_ID('sp_CheckInVehicle',   'P') IS NOT NULL DROP PROCEDURE sp_CheckInVehicle;
-GO
+    -- =====================================================
+    -- BƯỚC 2: XÓA STORED PROCEDURES
+    -- =====================================================
+    IF OBJECT_ID('sp_CreateReservation','P') IS NOT NULL DROP PROCEDURE sp_CreateReservation;
+    IF OBJECT_ID('sp_CheckOutVehicle',  'P') IS NOT NULL DROP PROCEDURE sp_CheckOutVehicle;
+    IF OBJECT_ID('sp_CheckInVehicle',   'P') IS NOT NULL DROP PROCEDURE sp_CheckInVehicle;
+    GO
 
--- =====================================================
--- BƯỚC 3: XÓA CONSTRAINTS (để DROP TABLE không bị block)
--- =====================================================
-IF OBJECT_ID('CK_Users_MinAge', 'C') IS NOT NULL
-    ALTER TABLE Users DROP CONSTRAINT CK_Users_MinAge;
-GO
+    -- =====================================================
+    -- BƯỚC 3: XÓA CONSTRAINTS (để DROP TABLE không bị block)
+    -- =====================================================
+    IF OBJECT_ID('CK_Users_MinAge', 'C') IS NOT NULL
+        ALTER TABLE Users DROP CONSTRAINT CK_Users_MinAge;
+    GO
 
--- =====================================================
--- BƯỚC 4: XÓA TABLES theo thứ tự dependency (con trước, cha sau)
--- =====================================================
-IF OBJECT_ID('Feedbacks',       'U') IS NOT NULL DROP TABLE Feedbacks;
-IF OBJECT_ID('Incidents',       'U') IS NOT NULL DROP TABLE Incidents;
-IF OBJECT_ID('Payments',        'U') IS NOT NULL DROP TABLE Payments;
-IF OBJECT_ID('Reservations',    'U') IS NOT NULL DROP TABLE Reservations;
-IF OBJECT_ID('ParkingSessions', 'U') IS NOT NULL DROP TABLE ParkingSessions;
-IF OBJECT_ID('ParkingSlots',    'U') IS NOT NULL DROP TABLE ParkingSlots;
-IF OBJECT_ID('Zones',           'U') IS NOT NULL DROP TABLE Zones;
-IF OBJECT_ID('Floors',          'U') IS NOT NULL DROP TABLE Floors;
-IF OBJECT_ID('Buildings',       'U') IS NOT NULL DROP TABLE Buildings;
-IF OBJECT_ID('PricingPolicies', 'U') IS NOT NULL DROP TABLE PricingPolicies;
-IF OBJECT_ID('RolePermissions', 'U') IS NOT NULL DROP TABLE RolePermissions;
-IF OBJECT_ID('Users',           'U') IS NOT NULL DROP TABLE Users;
-IF OBJECT_ID('VehicleTypes',    'U') IS NOT NULL DROP TABLE VehicleTypes;
-IF OBJECT_ID('Permissions',     'U') IS NOT NULL DROP TABLE Permissions;
-IF OBJECT_ID('Roles',           'U') IS NOT NULL DROP TABLE Roles;
-GO
+    -- =====================================================
+    -- BƯỚC 4: XÓA TABLES theo thứ tự dependency (con trước, cha sau)
+    -- =====================================================
+    IF OBJECT_ID('Feedbacks',       'U') IS NOT NULL DROP TABLE Feedbacks;
+    IF OBJECT_ID('Incidents',       'U') IS NOT NULL DROP TABLE Incidents;
+    IF OBJECT_ID('Payments',        'U') IS NOT NULL DROP TABLE Payments;
+    IF OBJECT_ID('Reservations',    'U') IS NOT NULL DROP TABLE Reservations;
+    IF OBJECT_ID('ParkingSessions', 'U') IS NOT NULL DROP TABLE ParkingSessions;
+    IF OBJECT_ID('ParkingSlots',    'U') IS NOT NULL DROP TABLE ParkingSlots;
+    IF OBJECT_ID('Zones',           'U') IS NOT NULL DROP TABLE Zones;
+    IF OBJECT_ID('Floors',          'U') IS NOT NULL DROP TABLE Floors;
+    IF OBJECT_ID('Buildings',       'U') IS NOT NULL DROP TABLE Buildings;
+    IF OBJECT_ID('PricingPolicies', 'U') IS NOT NULL DROP TABLE PricingPolicies;
+    IF OBJECT_ID('RolePermissions', 'U') IS NOT NULL DROP TABLE RolePermissions;
+    IF OBJECT_ID('Users',           'U') IS NOT NULL DROP TABLE Users;
+    IF OBJECT_ID('VehicleTypes',    'U') IS NOT NULL DROP TABLE VehicleTypes;
+    IF OBJECT_ID('Permissions',     'U') IS NOT NULL DROP TABLE Permissions;
+    IF OBJECT_ID('Roles',           'U') IS NOT NULL DROP TABLE Roles;
+    GO
 
--- =====================================================
--- BƯỚC 5: TẠO LẠI TABLES
--- =====================================================
+    -- =====================================================
+    -- BƯỚC 5: TẠO LẠI TABLES
+    -- =====================================================
 
-CREATE TABLE Roles(
-    RoleID      INT IDENTITY(1,1) PRIMARY KEY,
-    RoleName    NVARCHAR(50)  UNIQUE NOT NULL,
-    Description NVARCHAR(200)
-);
-GO
+    CREATE TABLE Roles(
+        RoleID      INT IDENTITY(1,1) PRIMARY KEY,
+        RoleName    NVARCHAR(50)  UNIQUE NOT NULL,
+        Description NVARCHAR(200)
+    );
+    GO
 
-CREATE TABLE Permissions(
-    PermissionID   INT IDENTITY(1,1) PRIMARY KEY,
-    PermissionName NVARCHAR(100) UNIQUE NOT NULL,
-    Description    NVARCHAR(200)
-);
-GO
+    CREATE TABLE Permissions(
+        PermissionID   INT IDENTITY(1,1) PRIMARY KEY,
+        PermissionName NVARCHAR(100) UNIQUE NOT NULL,
+        Description    NVARCHAR(200)
+    );
+    GO
 
-CREATE TABLE RolePermissions(
-    RoleID       INT NOT NULL,
-    PermissionID INT NOT NULL,
-    PRIMARY KEY(RoleID, PermissionID),
-    FOREIGN KEY(RoleID)       REFERENCES Roles(RoleID),
-    FOREIGN KEY(PermissionID) REFERENCES Permissions(PermissionID)
-);
-GO
+    CREATE TABLE RolePermissions(
+        RoleID       INT NOT NULL,
+        PermissionID INT NOT NULL,
+        PRIMARY KEY(RoleID, PermissionID),
+        FOREIGN KEY(RoleID)       REFERENCES Roles(RoleID),
+        FOREIGN KEY(PermissionID) REFERENCES Permissions(PermissionID)
+    );
+    GO
 
-CREATE TABLE Users(
-    UserID       INT IDENTITY(1,1) PRIMARY KEY,
-    FullName     NVARCHAR(100) NOT NULL,
-    Email        NVARCHAR(100) UNIQUE NOT NULL,
-    PasswordHash NVARCHAR(256) NOT NULL,
-    PhoneNumber  NVARCHAR(20),
-    RoleID       INT NOT NULL,
-    DateOfBirth  DATE NULL,
-    HireDate     DATE NULL,
-    IsActive     BIT      DEFAULT 1,
-    CreatedAt    DATETIME DEFAULT GETDATE(),
-    UpdatedAt    DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY(RoleID) REFERENCES Roles(RoleID)
-);
-GO
+    CREATE TABLE Users(
+        UserID       INT IDENTITY(1,1) PRIMARY KEY,
+        FullName     NVARCHAR(100) NOT NULL,
+        Email        NVARCHAR(100) UNIQUE NOT NULL,
+        PasswordHash NVARCHAR(256) NOT NULL,
+        PhoneNumber  NVARCHAR(20),
+        RoleID       INT NOT NULL,
+        DateOfBirth  DATE NULL,
+        HireDate     DATE NULL,
+        IsActive     BIT      DEFAULT 1,
+        CreatedAt    DATETIME DEFAULT GETDATE(),
+        UpdatedAt    DATETIME DEFAULT GETDATE(),
+        FOREIGN KEY(RoleID) REFERENCES Roles(RoleID)
+    );
+    GO
 
-CREATE TABLE VehicleTypes(
-    VehicleTypeID INT IDENTITY(1,1) PRIMARY KEY,
-    VehicleCode   NVARCHAR(20) UNIQUE NOT NULL,
-    VehicleName   NVARCHAR(50)  NOT NULL,
-    Description   NVARCHAR(200),
-    IsActive      BIT DEFAULT 1
-);
-GO
+    CREATE TABLE VehicleTypes(
+        VehicleTypeID INT IDENTITY(1,1) PRIMARY KEY,
+        VehicleCode   NVARCHAR(20) UNIQUE NOT NULL,
+        VehicleName   NVARCHAR(50)  NOT NULL,
+        Description   NVARCHAR(200),
+        IsActive      BIT DEFAULT 1
+    );
+    GO
 
-CREATE TABLE PricingPolicies(
-    PricingPolicyID INT IDENTITY(1,1) PRIMARY KEY,
-    VehicleTypeID   INT NOT NULL,
-    MinHours        DECIMAL(5,2) NOT NULL,
-    MaxHours        DECIMAL(5,2) NOT NULL,
-    Fee             DECIMAL(10,2) NOT NULL,
-    IsOvernight     BIT DEFAULT 0,
-    IsActive        BIT DEFAULT 1,
-    FOREIGN KEY(VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
-    CHECK(MinHours >= 0 AND MaxHours >= MinHours),
-    CHECK(Fee >= 0)
-);
-GO
+    CREATE TABLE PricingPolicies(
+        PricingPolicyID INT IDENTITY(1,1) PRIMARY KEY,
+        VehicleTypeID   INT NOT NULL,
+        MinHours        DECIMAL(5,2) NOT NULL,
+        MaxHours        DECIMAL(5,2) NOT NULL,
+        Fee             DECIMAL(10,2) NOT NULL,
+        IsOvernight     BIT DEFAULT 0,
+        IsActive        BIT DEFAULT 1,
+        FOREIGN KEY(VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
+        CHECK(MinHours >= 0 AND MaxHours >= MinHours),
+        CHECK(Fee >= 0)
+    );
+    GO
 
-CREATE TABLE Buildings(
-    BuildingID     INT IDENTITY(1,1) PRIMARY KEY,
-    BuildingName   NVARCHAR(100) NOT NULL,
-    Address        NVARCHAR(200),
-    OperatingHours NVARCHAR(50),
-    TotalFloors    INT,
-    CreatedAt      DATETIME DEFAULT GETDATE(),
-    UpdatedAt      DATETIME DEFAULT GETDATE()
-);
-GO
+    CREATE TABLE Buildings(
+        BuildingID     INT IDENTITY(1,1) PRIMARY KEY,
+        BuildingName   NVARCHAR(100) NOT NULL,
+        Address        NVARCHAR(200),
+        OperatingHours NVARCHAR(50),
+        TotalFloors    INT,
+        CreatedAt      DATETIME DEFAULT GETDATE(),
+        UpdatedAt      DATETIME DEFAULT GETDATE()
+    );
+    GO
 
-CREATE TABLE Floors(
-    FloorID    INT IDENTITY(1,1) PRIMARY KEY,
-    BuildingID INT NOT NULL,
-    FloorName  NVARCHAR(50) NOT NULL,
-    IsActive   BIT DEFAULT 1,
-    FOREIGN KEY(BuildingID) REFERENCES Buildings(BuildingID)
-);
-GO
+    CREATE TABLE Floors(
+        FloorID    INT IDENTITY(1,1) PRIMARY KEY,
+        BuildingID INT NOT NULL,
+        FloorName  NVARCHAR(50) NOT NULL,
+        IsActive   BIT DEFAULT 1,
+        FOREIGN KEY(BuildingID) REFERENCES Buildings(BuildingID)
+    );
+    GO
 
-CREATE TABLE Zones(
-    ZoneID               INT IDENTITY(1,1) PRIMARY KEY,
-    FloorID              INT NOT NULL,
-    ZoneName             NVARCHAR(50) NOT NULL,
-    AllowedVehicleTypeID INT NOT NULL,
-    TotalSlots           INT DEFAULT 0,
-    FOREIGN KEY(FloorID)              REFERENCES Floors(FloorID),
-    FOREIGN KEY(AllowedVehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
-    CHECK(TotalSlots >= 0)
-);
-GO
+    CREATE TABLE Zones(
+        ZoneID               INT IDENTITY(1,1) PRIMARY KEY,
+        FloorID              INT NOT NULL,
+        ZoneName             NVARCHAR(50) NOT NULL,
+        AllowedVehicleTypeID INT NOT NULL,
+        TotalSlots           INT DEFAULT 0,
+        FOREIGN KEY(FloorID)              REFERENCES Floors(FloorID),
+        FOREIGN KEY(AllowedVehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
+        CHECK(TotalSlots >= 0)
+    );
+    GO
 
-CREATE TABLE ParkingSlots(
-    SlotID        INT IDENTITY(1,1) PRIMARY KEY,
-    ZoneID        INT NOT NULL,
-    SlotCode      NVARCHAR(20) NOT NULL UNIQUE,
-    SlotStatus    NVARCHAR(20) DEFAULT 'Available',
-    VehicleTypeID INT NOT NULL,
-    FOREIGN KEY(ZoneID)        REFERENCES Zones(ZoneID),
-    FOREIGN KEY(VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
-    CHECK(SlotStatus IN ('Available','Occupied','Reserved','Maintenance','Blocked'))
-);
-GO
+    CREATE TABLE ParkingSlots(
+        SlotID        INT IDENTITY(1,1) PRIMARY KEY,
+        ZoneID        INT NOT NULL,
+        SlotCode      NVARCHAR(20) NOT NULL UNIQUE,
+        SlotStatus    NVARCHAR(20) DEFAULT 'Available',
+        VehicleTypeID INT NOT NULL,
+        FOREIGN KEY(ZoneID)        REFERENCES Zones(ZoneID),
+        FOREIGN KEY(VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
+        CHECK(SlotStatus IN ('Available','Occupied','Reserved','Maintenance','Blocked'))
+    );
+    GO
 
-CREATE TABLE ParkingSessions(
-    SessionID     INT IDENTITY(1,1) PRIMARY KEY,
-    SlotID        INT NOT NULL,
-    DriverID      INT NOT NULL,
-    PlateNumber   NVARCHAR(20) NOT NULL,
-    VehicleTypeID INT NOT NULL,
-    EntryTime     DATETIME DEFAULT GETDATE(),
-    ExitTime      DATETIME NULL,
-    SessionStatus NVARCHAR(20) DEFAULT 'Active',
-    FOREIGN KEY(SlotID)        REFERENCES ParkingSlots(SlotID),
-    FOREIGN KEY(DriverID)      REFERENCES Users(UserID),
-    FOREIGN KEY(VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
-    CHECK(ExitTime IS NULL OR ExitTime > EntryTime),
-    CHECK(SessionStatus IN ('Active','Completed','Lost','Overdue'))
-);
-GO
+    CREATE TABLE ParkingSessions(
+        SessionID     INT IDENTITY(1,1) PRIMARY KEY,
+        SlotID        INT NOT NULL,
+        DriverID      INT NOT NULL,
+        PlateNumber   NVARCHAR(20) NOT NULL,
+        VehicleTypeID INT NOT NULL,
+        EntryTime     DATETIME DEFAULT GETDATE(),
+        ExitTime      DATETIME NULL,
+        SessionStatus NVARCHAR(20) DEFAULT 'Active',
+        FOREIGN KEY(SlotID)        REFERENCES ParkingSlots(SlotID),
+        FOREIGN KEY(DriverID)      REFERENCES Users(UserID),
+        FOREIGN KEY(VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
+        CHECK(ExitTime IS NULL OR ExitTime > EntryTime),
+        CHECK(SessionStatus IN ('Active','Completed','Lost','Overdue'))
+    );
+    GO
 
-CREATE TABLE Payments(
-    PaymentID     INT IDENTITY(1,1) PRIMARY KEY,
-    SessionID     INT NOT NULL UNIQUE,
-    Amount        DECIMAL(10,2) NOT NULL,
-    PaymentMethod NVARCHAR(50),
-    PaymentTime   DATETIME NULL,
-    PaymentStatus NVARCHAR(20) DEFAULT 'Pending',
-    FOREIGN KEY(SessionID) REFERENCES ParkingSessions(SessionID),
-    CHECK(Amount >= 0),
-    CHECK(PaymentStatus IN ('Pending','Completed','Failed'))
-);
-GO
+    CREATE TABLE Payments(
+        PaymentID     INT IDENTITY(1,1) PRIMARY KEY,
+        SessionID     INT NOT NULL UNIQUE,
+        Amount        DECIMAL(10,2) NOT NULL,
+        PaymentMethod NVARCHAR(50),
+        PaymentTime   DATETIME NULL,
+        PaymentStatus NVARCHAR(20) DEFAULT 'Pending',
+        FOREIGN KEY(SessionID) REFERENCES ParkingSessions(SessionID),
+        CHECK(Amount >= 0),
+        CHECK(PaymentStatus IN ('Pending','Completed','Failed'))
+    );
+    GO
 
-CREATE TABLE Reservations(
-    ReservationID     INT IDENTITY(1,1) PRIMARY KEY,
-    DriverID          INT NOT NULL,
-    VehicleTypeID     INT NOT NULL,
-    SlotID            INT NULL,
-    ReservationDate   DATE NOT NULL,
-    StartTime         DATETIME NOT NULL,
-    EndTime           DATETIME NOT NULL,
-    ReservationStatus NVARCHAR(20) DEFAULT 'Reserved',
-    CreatedAt         DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY(DriverID)      REFERENCES Users(UserID),
-    FOREIGN KEY(VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
-    FOREIGN KEY(SlotID)        REFERENCES ParkingSlots(SlotID),
-    CHECK(EndTime > StartTime),
-    CHECK(ReservationStatus IN ('Reserved','Cancelled','Expired','Completed'))
-);
-GO
+    CREATE TABLE Reservations(
+        ReservationID     INT IDENTITY(1,1) PRIMARY KEY,
+        DriverID          INT NOT NULL,
+        VehicleTypeID     INT NOT NULL,
+        SlotID            INT NULL,
+        ReservationDate   DATE NOT NULL,
+        StartTime         DATETIME NOT NULL,
+        EndTime           DATETIME NOT NULL,
+        ReservationStatus NVARCHAR(20) DEFAULT 'Reserved',
+        CreatedAt         DATETIME DEFAULT GETDATE(),
+        FOREIGN KEY(DriverID)      REFERENCES Users(UserID),
+        FOREIGN KEY(VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
+        FOREIGN KEY(SlotID)        REFERENCES ParkingSlots(SlotID),
+        CHECK(EndTime > StartTime),
+        CHECK(ReservationStatus IN ('Reserved','Cancelled','Expired','Completed'))
+    );
+    GO
 
-CREATE TABLE Incidents(
-    IncidentID      INT IDENTITY(1,1) PRIMARY KEY,
-    SessionID       INT NULL,
-    DriverID        INT NOT NULL,
-    IncidentType    NVARCHAR(50) NOT NULL,
-    IncidentStatus  NVARCHAR(20) DEFAULT 'Open',
-    Priority        NVARCHAR(20) DEFAULT 'Normal',
-    Description     NVARCHAR(500),
-    AssignedStaffID INT NULL,
-    CreatedAt       DATETIME DEFAULT GETDATE(),
-    UpdatedAt       DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY(SessionID)       REFERENCES ParkingSessions(SessionID),
-    FOREIGN KEY(DriverID)        REFERENCES Users(UserID),
-    FOREIGN KEY(AssignedStaffID) REFERENCES Users(UserID),
-    CHECK(IncidentStatus IN ('Open','InProgress','Resolved')),
-    CHECK(Priority IN ('Low','Normal','High'))
-);
-GO
+    CREATE TABLE Incidents(
+        IncidentID      INT IDENTITY(1,1) PRIMARY KEY,
+        SessionID       INT NULL,
+        DriverID        INT NOT NULL,
+        IncidentType    NVARCHAR(50) NOT NULL,
+        IncidentStatus  NVARCHAR(20) DEFAULT 'Open',
+        Priority        NVARCHAR(20) DEFAULT 'Normal',
+        Description     NVARCHAR(500),
+        AssignedStaffID INT NULL,
+        CreatedAt       DATETIME DEFAULT GETDATE(),
+        UpdatedAt       DATETIME DEFAULT GETDATE(),
+        FOREIGN KEY(SessionID)       REFERENCES ParkingSessions(SessionID),
+        FOREIGN KEY(DriverID)        REFERENCES Users(UserID),
+        FOREIGN KEY(AssignedStaffID) REFERENCES Users(UserID),
+        CHECK(IncidentStatus IN ('Open','InProgress','Resolved')),
+        CHECK(Priority IN ('Low','Normal','High'))
+    );
+    GO
 
-CREATE TABLE Feedbacks(
-    FeedbackID     INT IDENTITY(1,1) PRIMARY KEY,
-    DriverID       INT NOT NULL,
-    IncidentID     INT NULL,
-    FeedbackType   NVARCHAR(50),
-    Description    NVARCHAR(500),
-    Attachment     NVARCHAR(200),
-    FeedbackStatus NVARCHAR(20) DEFAULT 'Open',
-    CreatedAt      DATETIME DEFAULT GETDATE(),
-    UpdatedAt      DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY(DriverID)    REFERENCES Users(UserID),
-    FOREIGN KEY(IncidentID)  REFERENCES Incidents(IncidentID),
-    CHECK(FeedbackStatus IN ('Open','Closed','Resolved'))
-);
-GO
+    CREATE TABLE Feedbacks(
+        FeedbackID     INT IDENTITY(1,1) PRIMARY KEY,
+        DriverID       INT NOT NULL,
+        IncidentID     INT NULL,
+        FeedbackType   NVARCHAR(50),
+        Description    NVARCHAR(500),
+        Attachment     NVARCHAR(200),
+        FeedbackStatus NVARCHAR(20) DEFAULT 'Open',
+        CreatedAt      DATETIME DEFAULT GETDATE(),
+        UpdatedAt      DATETIME DEFAULT GETDATE(),
+        FOREIGN KEY(DriverID)    REFERENCES Users(UserID),
+        FOREIGN KEY(IncidentID)  REFERENCES Incidents(IncidentID),
+        CHECK(FeedbackStatus IN ('Open','Closed','Resolved'))
+    );
+    GO
 
--- =====================================================
--- BƯỚC 6: CONSTRAINTS BỔ SUNG
--- FIX: dùng OR để Driver (RoleID=1) không bị ràng buộc tuổi
--- =====================================================
-ALTER TABLE Users
-ADD CONSTRAINT CK_Users_MinAge
-CHECK (
-    RoleID = 1   -- Driver: không cần kiểm tra tuổi
-    OR (
-        RoleID IN (2, 3)
-        AND DateOfBirth IS NOT NULL
-        AND HireDate    IS NOT NULL
-        AND DATEDIFF(YEAR, DateOfBirth, HireDate) >= 18
-    )
-);
-GO
+    -- =====================================================
+    -- BƯỚC 6: CONSTRAINTS BỔ SUNG
+    -- FIX: dùng OR để Driver (RoleID=1) không bị ràng buộc tuổi
+    -- =====================================================
+    ALTER TABLE Users
+    ADD CONSTRAINT CK_Users_MinAge
+    CHECK (
+        RoleID = 1   -- Driver: không cần kiểm tra tuổi
+        OR (
+            RoleID IN (2, 3)
+            AND DateOfBirth IS NOT NULL
+            AND HireDate    IS NOT NULL
+            AND DATEDIFF(YEAR, DateOfBirth, HireDate) >= 18
+        )
+    );
+    GO
 
--- =====================================================
--- BƯỚC 7: STORED PROCEDURES
--- =====================================================
+    -- =====================================================
+    -- BƯỚC 7: STORED PROCEDURES
+    -- =====================================================
 
-CREATE PROCEDURE sp_CheckInVehicle
-    @DriverID     INT,
-    @PlateNumber  NVARCHAR(20),
-    @VehicleTypeID INT,
-    @SlotID       INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    DECLARE @SlotStatus NVARCHAR(20);
-    DECLARE @Fee        DECIMAL(10,2);
-    DECLARE @SessionID  INT;
-
-    SELECT @SlotStatus = SlotStatus FROM ParkingSlots WHERE SlotID = @SlotID;
-
-    IF @SlotStatus IS NULL OR @SlotStatus <> 'Available'
+    CREATE PROCEDURE sp_CheckInVehicle
+        @DriverID     INT,
+        @PlateNumber  NVARCHAR(20),
+        @VehicleTypeID INT,
+        @SlotID       INT
+    AS
     BEGIN
-        RAISERROR('Slot not available.', 16, 1); RETURN;
-    END
+        SET NOCOUNT ON;
+        DECLARE @SlotStatus NVARCHAR(20);
+        DECLARE @Fee        DECIMAL(10,2);
+        DECLARE @SessionID  INT;
 
+        SELECT @SlotStatus = SlotStatus FROM ParkingSlots WHERE SlotID = @SlotID;
+
+        IF @SlotStatus IS NULL OR @SlotStatus <> 'Available'
+        BEGIN
+            RAISERROR('Slot not available.', 16, 1); RETURN;
+        END
+
+        INSERT INTO ParkingSessions(SlotID, DriverID, PlateNumber, VehicleTypeID, EntryTime, SessionStatus)
+        VALUES (@SlotID, @DriverID, UPPER(@PlateNumber), @VehicleTypeID, GETDATE(), 'Active');
+
+        SET @SessionID = SCOPE_IDENTITY();
+
+        SELECT TOP 1 @Fee = Fee
+        FROM PricingPolicies
+        WHERE VehicleTypeID = @VehicleTypeID AND MinHours = 0 AND IsActive = 1
+        ORDER BY MaxHours;
+
+        INSERT INTO Payments(SessionID, Amount, PaymentMethod, PaymentStatus)
+        VALUES(@SessionID, ISNULL(@Fee, 0), 'Pending', 'Pending');
+
+        SELECT @SessionID AS NewSessionID;
+    END
+    GO
+
+    CREATE PROCEDURE sp_CheckOutVehicle
+        @SessionID    INT,
+        @PaymentMethod NVARCHAR(50)
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+        DECLARE @EntryTime    DATETIME;
+        DECLARE @ExitTime     DATETIME;
+        DECLARE @VehicleTypeID INT;
+        DECLARE @DurationH    DECIMAL(10,2);
+        DECLARE @Fee          DECIMAL(10,2);
+
+        SELECT @EntryTime = EntryTime, @VehicleTypeID = VehicleTypeID
+        FROM ParkingSessions
+        WHERE SessionID = @SessionID AND SessionStatus = 'Active';
+
+        IF @EntryTime IS NULL
+        BEGIN
+            RAISERROR('Session not found or already completed.', 16, 1); RETURN;
+        END
+
+        SET @ExitTime  = GETDATE();
+        SET @DurationH = DATEDIFF(MINUTE, @EntryTime, @ExitTime) / 60.0;
+
+        SELECT TOP 1 @Fee = Fee
+        FROM PricingPolicies
+        WHERE VehicleTypeID = @VehicleTypeID AND IsActive = 1
+        AND (
+            (IsOvernight = 1 AND @DurationH > 8)
+            OR (@DurationH BETWEEN MinHours AND MaxHours)
+        )
+        ORDER BY IsOvernight DESC, MaxHours;
+
+        IF @Fee IS NULL SET @Fee = 0;
+
+        UPDATE ParkingSessions
+        SET ExitTime = @ExitTime, SessionStatus = 'Completed'
+        WHERE SessionID = @SessionID;
+
+        UPDATE Payments
+        SET Amount        = @Fee,
+            PaymentMethod = @PaymentMethod,
+            PaymentTime   = @ExitTime,
+            PaymentStatus = 'Completed'
+        WHERE SessionID = @SessionID;
+    END
+    GO
+
+    CREATE PROCEDURE sp_CreateReservation
+        @DriverID        INT,
+        @VehicleTypeID   INT,
+        @SlotID          INT,
+        @ReservationDate DATE,
+        @StartTime       DATETIME,
+        @EndTime         DATETIME
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        IF @EndTime <= @StartTime
+        BEGIN
+            RAISERROR('EndTime must be greater than StartTime.', 16, 1); RETURN;
+        END
+
+        IF EXISTS (
+            SELECT 1 FROM Reservations
+            WHERE SlotID = @SlotID
+            AND ReservationStatus = 'Reserved'
+            AND @StartTime < EndTime
+            AND @EndTime   > StartTime
+        )
+        BEGIN
+            RAISERROR('Slot already reserved in this time range.', 16, 1); RETURN;
+        END
+
+        INSERT INTO Reservations(DriverID, VehicleTypeID, SlotID, ReservationDate, StartTime, EndTime, ReservationStatus)
+        VALUES(@DriverID, @VehicleTypeID, @SlotID, @ReservationDate, @StartTime, @EndTime, 'Reserved');
+    END
+    GO
+
+    -- =====================================================
+    -- BƯỚC 8: TRIGGERS
+    -- =====================================================
+
+    CREATE TRIGGER TRG_AutoUpperVehicleName
+    ON VehicleTypes AFTER INSERT, UPDATE
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        UPDATE vt
+        SET vt.VehicleName = UPPER(vt.VehicleName)
+        FROM VehicleTypes vt
+        JOIN inserted i ON vt.VehicleTypeID = i.VehicleTypeID;
+    END
+    GO
+
+    CREATE TRIGGER TRG_UpperPlateNumber
+    ON ParkingSessions AFTER INSERT, UPDATE
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        UPDATE ps
+        SET ps.PlateNumber = UPPER(ps.PlateNumber)
+        FROM ParkingSessions ps
+        JOIN inserted i ON ps.SessionID = i.SessionID;
+    END
+    GO
+
+    CREATE TRIGGER TRG_ValidateExitTime
+    ON ParkingSessions AFTER INSERT, UPDATE
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        IF EXISTS (
+            SELECT 1
+            FROM inserted i
+            WHERE i.ExitTime IS NOT NULL
+            AND i.ExitTime <= i.EntryTime
+        )
+        BEGIN
+            RAISERROR('ExitTime must be greater than EntryTime.', 16, 1);
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+    END
+    GO
+
+    CREATE TRIGGER TRG_UpdateSlotStatus
+    ON ParkingSessions
+    AFTER INSERT, UPDATE
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        UPDATE ps
+        SET ps.SlotStatus =
+            CASE
+                -- Giữ nguyên trạng thái thủ công
+                WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
+
+                -- Ưu tiên 1: có session Active thì slot đang được sử dụng
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM ParkingSessions s
+                    WHERE s.SlotID = ps.SlotID
+                    AND s.SessionStatus = 'Active'
+                ) THEN 'Occupied'
+
+                -- Ưu tiên 2: không có xe đang đỗ nhưng có reservation Reserved
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM Reservations r
+                    WHERE r.SlotID = ps.SlotID
+                    AND r.ReservationStatus = 'Reserved'
+                ) THEN 'Reserved'
+
+                -- Không có session active, không có reservation
+                ELSE 'Available'
+            END
+        FROM ParkingSlots ps
+        WHERE ps.SlotID IN (
+            SELECT DISTINCT i.SlotID
+            FROM inserted i
+            WHERE i.SlotID IS NOT NULL
+        );
+    END
+    GO
+
+    CREATE TRIGGER TRG_RecalculateSlotStatus_OnReservation
+    ON Reservations
+    AFTER INSERT, UPDATE
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        UPDATE ps
+        SET ps.SlotStatus =
+            CASE
+                -- Giữ nguyên trạng thái thủ công
+                WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
+
+                -- Ưu tiên 1: có session Active thì slot đang được sử dụng
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM ParkingSessions s
+                    WHERE s.SlotID = ps.SlotID
+                    AND s.SessionStatus = 'Active'
+                ) THEN 'Occupied'
+
+                -- Ưu tiên 2: có reservation Reserved
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM Reservations r
+                    WHERE r.SlotID = ps.SlotID
+                    AND r.ReservationStatus = 'Reserved'
+                ) THEN 'Reserved'
+
+                -- Không có gì thì Available
+                ELSE 'Available'
+            END
+        FROM ParkingSlots ps
+        WHERE ps.SlotID IN (
+            SELECT DISTINCT i.SlotID
+            FROM inserted i
+            WHERE i.SlotID IS NOT NULL
+        );
+    END
+    GO
+
+    CREATE TRIGGER TRG_AutoIncident
+    ON ParkingSessions AFTER UPDATE
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+
+        INSERT INTO Incidents(SessionID, DriverID, IncidentType, IncidentStatus, Priority, Description, CreatedAt, UpdatedAt)
+        SELECT i.SessionID, i.DriverID,
+            'Lost Ticket', 'Open', 'Normal', 'Auto-created lost ticket',
+            GETDATE(), GETDATE()
+        FROM inserted i
+        WHERE i.SessionStatus = 'Lost'
+        AND NOT EXISTS (
+            SELECT 1
+            FROM Incidents inc
+            WHERE inc.SessionID = i.SessionID
+                AND inc.IncidentType = 'Lost Ticket'
+                AND inc.IncidentStatus IN ('Open','InProgress')
+        );
+    END
+    GO
+
+    -- =====================================================
+    -- BƯỚC 9: SAMPLE DATA (theo đúng thứ tự dependency)
+    -- =====================================================
+
+    -- Roles
+    INSERT INTO Roles(RoleName, Description) VALUES
+    ('Driver',  'Regular parking customer'),
+    ('Staff',   'Parking lot staff'),
+    ('Manager', 'Parking lot manager');
+    GO
+
+    -- Permissions
+    INSERT INTO Permissions(PermissionName, Description) VALUES
+    ('VIEW_SLOTS',      'View parking slots'),
+    ('MANAGE_SESSIONS', 'Manage parking sessions'),
+    ('MANAGE_USERS',    'Manage users'),
+    ('VIEW_REPORTS',    'View reports'),
+    ('MANAGE_PAYMENTS', 'Manage payments');
+    GO
+
+    -- RolePermissions
+    INSERT INTO RolePermissions(RoleID, PermissionID) VALUES
+    (1, 1),                          -- Driver: xem slot
+    (2, 1), (2, 2), (2, 5),          -- Staff
+    (3, 1), (3, 2), (3, 3), (3, 4), (3, 5); -- Manager: toàn quyền
+    GO
+
+    -- Users
+    -- RoleID=1 (Driver): DateOfBirth/HireDate = NULL (constraint cho phép)
+    -- RoleID=2/3 (Staff/Manager): phải có DOB + HireDate, tuổi >= 18 khi vào làm
+    INSERT INTO Users(FullName, Email, PasswordHash, PhoneNumber, RoleID, DateOfBirth, HireDate) VALUES
+    ('Alice Driver',  'alice@email.com',  'hash_alice',  '0901000001', 1, NULL,         NULL),
+    ('Bob Staff',     'bob@email.com',    'hash_bob',    '0901000002', 2, '1990-05-10', '2015-06-01'),
+    ('Carol Manager', 'carol@email.com',  'hash_carol',  '0901000003', 3, '1985-03-20', '2010-04-15'),
+    ('David Driver',  'david@email.com',  'hash_david',  '0901000004', 1, NULL,         NULL),
+    ('Eve Driver',    'eve@email.com',    'hash_eve',    '0901000005', 1, NULL,         NULL);
+    GO
+
+    -- VehicleTypes (trigger TRG_AutoUpperVehicleName sẽ tự uppercase VehicleName)
+    INSERT INTO VehicleTypes(VehicleCode, VehicleName, Description) VALUES
+    ('MOTO',  'Motorbike', 'Motorcycles and scooters'),
+    ('CAR',   'Car',       'Passenger cars'),
+    ('TRUCK', 'Truck',     'Light trucks');
+    GO
+
+    -- PricingPolicies
+    INSERT INTO PricingPolicies(VehicleTypeID, MinHours, MaxHours, Fee, IsOvernight, IsActive) VALUES
+    (1, 0, 3,   4000,  0, 1),   -- Xe máy 0-3h
+    (1, 3, 8,   8000,  0, 1),   -- Xe máy 3-8h
+    (1, 8, 24, 15000,  1, 1),   -- Xe máy qua đêm
+    (2, 0, 3,   6000,  0, 1),   -- Ô tô 0-3h
+    (2, 3, 8,  12000,  0, 1),   -- Ô tô 3-8h
+    (2, 8, 24, 25000,  1, 1),   -- Ô tô qua đêm
+    (3, 0, 3,  10000,  0, 1),   -- Xe tải 0-3h
+    (3, 3, 8,  20000,  0, 1);   -- Xe tải 3-8h
+    GO
+
+    -- Buildings
+    INSERT INTO Buildings(BuildingName, Address, OperatingHours, TotalFloors) VALUES
+    ('Toa A', '123 Nguyen Van Linh, Q7', '06:00-22:00', 3),
+    ('Toa B', '456 Le Van Viet, Q9',     '00:00-23:59', 2);
+    GO
+
+    -- Floors
+    INSERT INTO Floors(BuildingID, FloorName) VALUES
+    (1, 'Tang 1'), (1, 'Tang 2'), (1, 'Tang 3'),  -- FloorID 1,2,3
+    (2, 'Tang 1'), (2, 'Tang 2');                  -- FloorID 4,5
+    GO
+
+    -- Zones
+    INSERT INTO Zones(FloorID, ZoneName, AllowedVehicleTypeID, TotalSlots) VALUES
+    (1, 'Zone A - Xe may', 1, 10),   -- ZoneID 1
+    (1, 'Zone B - O to',   2,  5),   -- ZoneID 2
+    (2, 'Zone C - Xe may', 1, 10),   -- ZoneID 3
+    (2, 'Zone D - O to',   2,  5),   -- ZoneID 4
+    (3, 'Zone E - Xe tai', 3,  4),   -- ZoneID 5
+    (4, 'Zone F - Xe may', 1,  8),   -- ZoneID 6
+    (4, 'Zone G - O to',   2,  4),   -- ZoneID 7
+    (5, 'Zone H - O to',   2,  4);   -- ZoneID 8
+    GO
+
+    -- ParkingSlots (20 slots, đủ để test data dùng SlotID 1-16)
+    INSERT INTO ParkingSlots(ZoneID, SlotCode, VehicleTypeID) VALUES
+    -- Zone 1: Xe may, SlotID 1-5
+    (1,'A-M-01',1),(1,'A-M-02',1),(1,'A-M-03',1),(1,'A-M-04',1),(1,'A-M-05',1),
+    -- Zone 2: O to,   SlotID 6-10
+    (2,'A-C-01',2),(2,'A-C-02',2),(2,'A-C-03',2),(2,'A-C-04',2),(2,'A-C-05',2),
+    -- Zone 3: Xe may, SlotID 11-15
+    (3,'B-M-01',1),(3,'B-M-02',1),(3,'B-M-03',1),(3,'B-M-04',1),(3,'B-M-05',1),
+    -- Zone 4: O to,   SlotID 16-20
+    (4,'B-C-01',2),(4,'B-C-02',2),(4,'B-C-03',2),(4,'B-C-04',2),(4,'B-C-05',2);
+    GO
+
+    -- =====================================================
+    -- BƯỚC 10: TEST DATA
+    -- =====================================================
+
+    -- ParkingSessions (dùng SlotID và DriverID đã tồn tại)
+    -- Trigger TRG_UpdateSlotStatus sẽ tự set Occupied
     INSERT INTO ParkingSessions(SlotID, DriverID, PlateNumber, VehicleTypeID, EntryTime, SessionStatus)
-    VALUES (@SlotID, @DriverID, UPPER(@PlateNumber), @VehicleTypeID, GETDATE(), 'Active');
+    VALUES
+    (1,  1, '29A-12345', 1, GETDATE(),               'Active'),  -- SessionID 1
+    (6,  1, '29A-54321', 2, GETDATE(),               'Active'),  -- SessionID 2
+    (2,  1, '29A-56789', 1, DATEADD(HOUR,-2,GETDATE()), 'Active'),  -- SessionID 3
+    (7,  1, '29A-98765', 2, DATEADD(HOUR,-3,GETDATE()), 'Active');  -- SessionID 4
+    GO
 
-    SET @SessionID = SCOPE_IDENTITY();
+    -- Payments
+    INSERT INTO Payments(SessionID, Amount, PaymentMethod, PaymentStatus) VALUES
+    (1, 4000, 'Cash', 'Pending'),
+    (2, 6000, 'Cash', 'Pending'),
+    (3, 4000, 'Cash', 'Pending'),
+    (4, 6000, 'Cash', 'Pending');
+    GO
 
-    SELECT TOP 1 @Fee = Fee
-    FROM PricingPolicies
-    WHERE VehicleTypeID = @VehicleTypeID AND MinHours = 0 AND IsActive = 1
-    ORDER BY MaxHours;
-
-    INSERT INTO Payments(SessionID, Amount, PaymentMethod, PaymentStatus)
-    VALUES(@SessionID, ISNULL(@Fee, 0), 'Pending', 'Pending');
-
-    SELECT @SessionID AS NewSessionID;
-END
-GO
-
-CREATE PROCEDURE sp_CheckOutVehicle
-    @SessionID    INT,
-    @PaymentMethod NVARCHAR(50)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    DECLARE @EntryTime    DATETIME;
-    DECLARE @ExitTime     DATETIME;
-    DECLARE @VehicleTypeID INT;
-    DECLARE @DurationH    DECIMAL(10,2);
-    DECLARE @Fee          DECIMAL(10,2);
-
-    SELECT @EntryTime = EntryTime, @VehicleTypeID = VehicleTypeID
-    FROM ParkingSessions
-    WHERE SessionID = @SessionID AND SessionStatus = 'Active';
-
-    IF @EntryTime IS NULL
-    BEGIN
-        RAISERROR('Session not found or already completed.', 16, 1); RETURN;
-    END
-
-    SET @ExitTime  = GETDATE();
-    SET @DurationH = DATEDIFF(MINUTE, @EntryTime, @ExitTime) / 60.0;
-
-    SELECT TOP 1 @Fee = Fee
-    FROM PricingPolicies
-    WHERE VehicleTypeID = @VehicleTypeID AND IsActive = 1
-      AND (
-          (IsOvernight = 1 AND @DurationH > 8)
-          OR (@DurationH BETWEEN MinHours AND MaxHours)
-      )
-    ORDER BY IsOvernight DESC, MaxHours;
-
-    IF @Fee IS NULL SET @Fee = 0;
-
-    UPDATE ParkingSessions
-    SET ExitTime = @ExitTime, SessionStatus = 'Completed'
-    WHERE SessionID = @SessionID;
-
-    UPDATE Payments
-    SET Amount        = @Fee,
-        PaymentMethod = @PaymentMethod,
-        PaymentTime   = @ExitTime,
-        PaymentStatus = 'Completed'
-    WHERE SessionID = @SessionID;
-END
-GO
-
-CREATE PROCEDURE sp_CreateReservation
-    @DriverID        INT,
-    @VehicleTypeID   INT,
-    @SlotID          INT,
-    @ReservationDate DATE,
-    @StartTime       DATETIME,
-    @EndTime         DATETIME
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF @EndTime <= @StartTime
-    BEGIN
-        RAISERROR('EndTime must be greater than StartTime.', 16, 1); RETURN;
-    END
-
-    IF EXISTS (
-        SELECT 1 FROM Reservations
-        WHERE SlotID = @SlotID
-          AND ReservationStatus = 'Reserved'
-          AND @StartTime < EndTime
-          AND @EndTime   > StartTime
-    )
-    BEGIN
-        RAISERROR('Slot already reserved in this time range.', 16, 1); RETURN;
-    END
-
+    -- Reservations (dùng slot còn Available: 3,4,8,9)
+    -- Trigger TRG_RecalculateSlotStatus_OnReservation sẽ tự set Reserved
     INSERT INTO Reservations(DriverID, VehicleTypeID, SlotID, ReservationDate, StartTime, EndTime, ReservationStatus)
-    VALUES(@DriverID, @VehicleTypeID, @SlotID, @ReservationDate, @StartTime, @EndTime, 'Reserved');
-END
-GO
+    VALUES
+    (1, 1, 3,  CAST(GETDATE() AS DATE), DATEADD(HOUR,1,GETDATE()), DATEADD(HOUR,4,GETDATE()), 'Reserved'),
+    (1, 2, 8,  CAST(GETDATE() AS DATE), DATEADD(HOUR,2,GETDATE()), DATEADD(HOUR,5,GETDATE()), 'Reserved'),
+    (1, 1, 4,  CAST(GETDATE() AS DATE), DATEADD(HOUR,1,GETDATE()), DATEADD(HOUR,4,GETDATE()), 'Reserved'),
+    (1, 2, 9,  CAST(GETDATE() AS DATE), DATEADD(HOUR,2,GETDATE()), DATEADD(HOUR,5,GETDATE()), 'Reserved');
+    GO
 
--- =====================================================
--- BƯỚC 8: TRIGGERS
--- =====================================================
+    -- Incidents (SessionID 1-4 và DriverID 1 đã tồn tại, AssignedStaffID=2)
+    INSERT INTO Incidents(SessionID, DriverID, IncidentType, IncidentStatus, Priority, Description, AssignedStaffID)
+    VALUES
+    (1, 1, 'Lost Ticket', 'Open', 'Normal', 'Customer lost ticket for slot 1',   2),
+    (2, 1, 'Overdue',     'Open', 'High',   'Vehicle parked over allowed time',  2),
+    (3, 1, 'Wrong Slot',  'Open', 'Normal', 'Vehicle parked in wrong slot',      2),
+    (4, 1, 'Lost Ticket', 'Open', 'High',   'Customer lost ticket urgent',       2);
+    GO
 
-CREATE TRIGGER TRG_AutoUpperVehicleName
-ON VehicleTypes AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
+    -- Feedbacks (DriverID=1, IncidentID 1-4 đã tồn tại)
+    INSERT INTO Feedbacks(DriverID, IncidentID, FeedbackType, Description, FeedbackStatus)
+    VALUES
+    (1, 1, 'Complaint', 'Lost ticket handling issue',   'Open'),
+    (1, 2, 'Complaint', 'Overdue fee unclear',           'Open'),
+    (1, 3, 'Complaint', 'Wrong slot problem',            'Open'),
+    (1, 4, 'Complaint', 'Lost ticket urgent follow-up',  'Open');
+    GO
 
-    UPDATE vt
-    SET vt.VehicleName = UPPER(vt.VehicleName)
-    FROM VehicleTypes vt
-    JOIN inserted i ON vt.VehicleTypeID = i.VehicleTypeID;
-END
-GO
-
-CREATE TRIGGER TRG_UpperPlateNumber
-ON ParkingSessions AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    UPDATE ps
-    SET ps.PlateNumber = UPPER(ps.PlateNumber)
-    FROM ParkingSessions ps
-    JOIN inserted i ON ps.SessionID = i.SessionID;
-END
-GO
-
-CREATE TRIGGER TRG_ValidateExitTime
-ON ParkingSessions AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF EXISTS (
-        SELECT 1
-        FROM inserted i
-        WHERE i.ExitTime IS NOT NULL
-          AND i.ExitTime <= i.EntryTime
-    )
-    BEGIN
-        RAISERROR('ExitTime must be greater than EntryTime.', 16, 1);
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END
-END
-GO
-
-CREATE TRIGGER TRG_UpdateSlotStatus
-ON ParkingSessions
-AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-
+    -- =====================================================
+    -- BƯỚC 11: SYNC LẠI SLOT STATUS THEO SESSION + RESERVATION
+    -- =====================================================
     UPDATE ps
     SET ps.SlotStatus =
         CASE
-            -- Giữ nguyên trạng thái thủ công
             WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
 
-            -- Ưu tiên 1: có session Active thì slot đang được sử dụng
             WHEN EXISTS (
                 SELECT 1
                 FROM ParkingSessions s
                 WHERE s.SlotID = ps.SlotID
-                  AND s.SessionStatus = 'Active'
+                AND s.SessionStatus = 'Active'
             ) THEN 'Occupied'
 
-            -- Ưu tiên 2: không có xe đang đỗ nhưng có reservation Reserved
             WHEN EXISTS (
                 SELECT 1
                 FROM Reservations r
                 WHERE r.SlotID = ps.SlotID
-                  AND r.ReservationStatus = 'Reserved'
+                AND r.ReservationStatus = 'Reserved'
             ) THEN 'Reserved'
 
-            -- Không có session active, không có reservation
             ELSE 'Available'
         END
-    FROM ParkingSlots ps
-    WHERE ps.SlotID IN (
-        SELECT DISTINCT i.SlotID
-        FROM inserted i
-        WHERE i.SlotID IS NOT NULL
-    );
-END
-GO
+    FROM ParkingSlots ps;
+    GO
 
-CREATE TRIGGER TRG_RecalculateSlotStatus_OnReservation
-ON Reservations
-AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
+    -- =====================================================
+    -- BƯỚC 12: VERIFICATION
+    -- =====================================================
+    SELECT TableName, Rows FROM (
+        SELECT 'Roles'           AS TableName, COUNT(*) AS Rows FROM Roles          UNION ALL
+        SELECT 'Permissions',     COUNT(*) FROM Permissions                         UNION ALL
+        SELECT 'Users',           COUNT(*) FROM Users                               UNION ALL
+        SELECT 'VehicleTypes',    COUNT(*) FROM VehicleTypes                        UNION ALL
+        SELECT 'PricingPolicies', COUNT(*) FROM PricingPolicies                     UNION ALL
+        SELECT 'Buildings',       COUNT(*) FROM Buildings                           UNION ALL
+        SELECT 'Floors',          COUNT(*) FROM Floors                              UNION ALL
+        SELECT 'Zones',           COUNT(*) FROM Zones                               UNION ALL
+        SELECT 'ParkingSlots',    COUNT(*) FROM ParkingSlots                        UNION ALL
+        SELECT 'ParkingSessions', COUNT(*) FROM ParkingSessions                     UNION ALL
+        SELECT 'Payments',        COUNT(*) FROM Payments                            UNION ALL
+        SELECT 'Reservations',    COUNT(*) FROM Reservations                        UNION ALL
+        SELECT 'Incidents',       COUNT(*) FROM Incidents                           UNION ALL
+        SELECT 'Feedbacks',       COUNT(*) FROM Feedbacks
+    ) t ORDER BY TableName;
+    GO
 
-    UPDATE ps
-    SET ps.SlotStatus =
-        CASE
-            -- Giữ nguyên trạng thái thủ công
-            WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
-
-            -- Ưu tiên 1: có session Active thì slot đang được sử dụng
-            WHEN EXISTS (
-                SELECT 1
-                FROM ParkingSessions s
-                WHERE s.SlotID = ps.SlotID
-                  AND s.SessionStatus = 'Active'
-            ) THEN 'Occupied'
-
-            -- Ưu tiên 2: có reservation Reserved
-            WHEN EXISTS (
-                SELECT 1
-                FROM Reservations r
-                WHERE r.SlotID = ps.SlotID
-                  AND r.ReservationStatus = 'Reserved'
-            ) THEN 'Reserved'
-
-            -- Không có gì thì Available
-            ELSE 'Available'
-        END
-    FROM ParkingSlots ps
-    WHERE ps.SlotID IN (
-        SELECT DISTINCT i.SlotID
-        FROM inserted i
-        WHERE i.SlotID IS NOT NULL
-    );
-END
-GO
-
-CREATE TRIGGER TRG_AutoIncident
-ON ParkingSessions AFTER UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    INSERT INTO Incidents(SessionID, DriverID, IncidentType, IncidentStatus, Priority, Description, CreatedAt, UpdatedAt)
-    SELECT i.SessionID, i.DriverID,
-           'Lost Ticket', 'Open', 'Normal', 'Auto-created lost ticket',
-           GETDATE(), GETDATE()
-    FROM inserted i
-    WHERE i.SessionStatus = 'Lost'
-      AND NOT EXISTS (
-          SELECT 1
-          FROM Incidents inc
-          WHERE inc.SessionID = i.SessionID
-            AND inc.IncidentType = 'Lost Ticket'
-            AND inc.IncidentStatus IN ('Open','InProgress')
-      );
-END
-GO
-
--- =====================================================
--- BƯỚC 9: SAMPLE DATA (theo đúng thứ tự dependency)
--- =====================================================
-
--- Roles
-INSERT INTO Roles(RoleName, Description) VALUES
-('Driver',  'Regular parking customer'),
-('Staff',   'Parking lot staff'),
-('Manager', 'Parking lot manager');
-GO
-
--- Permissions
-INSERT INTO Permissions(PermissionName, Description) VALUES
-('VIEW_SLOTS',      'View parking slots'),
-('MANAGE_SESSIONS', 'Manage parking sessions'),
-('MANAGE_USERS',    'Manage users'),
-('VIEW_REPORTS',    'View reports'),
-('MANAGE_PAYMENTS', 'Manage payments');
-GO
-
--- RolePermissions
-INSERT INTO RolePermissions(RoleID, PermissionID) VALUES
-(1, 1),                          -- Driver: xem slot
-(2, 1), (2, 2), (2, 5),          -- Staff
-(3, 1), (3, 2), (3, 3), (3, 4), (3, 5); -- Manager: toàn quyền
-GO
-
--- Users
--- RoleID=1 (Driver): DateOfBirth/HireDate = NULL (constraint cho phép)
--- RoleID=2/3 (Staff/Manager): phải có DOB + HireDate, tuổi >= 18 khi vào làm
-INSERT INTO Users(FullName, Email, PasswordHash, PhoneNumber, RoleID, DateOfBirth, HireDate) VALUES
-('Alice Driver',  'alice@email.com',  'hash_alice',  '0901000001', 1, NULL,         NULL),
-('Bob Staff',     'bob@email.com',    'hash_bob',    '0901000002', 2, '1990-05-10', '2015-06-01'),
-('Carol Manager', 'carol@email.com',  'hash_carol',  '0901000003', 3, '1985-03-20', '2010-04-15'),
-('David Driver',  'david@email.com',  'hash_david',  '0901000004', 1, NULL,         NULL),
-('Eve Driver',    'eve@email.com',    'hash_eve',    '0901000005', 1, NULL,         NULL);
-GO
-
--- VehicleTypes (trigger TRG_AutoUpperVehicleName sẽ tự uppercase VehicleName)
-INSERT INTO VehicleTypes(VehicleCode, VehicleName, Description) VALUES
-('MOTO',  'Motorbike', 'Motorcycles and scooters'),
-('CAR',   'Car',       'Passenger cars'),
-('TRUCK', 'Truck',     'Light trucks');
-GO
-
--- PricingPolicies
-INSERT INTO PricingPolicies(VehicleTypeID, MinHours, MaxHours, Fee, IsOvernight, IsActive) VALUES
-(1, 0, 3,   4000,  0, 1),   -- Xe máy 0-3h
-(1, 3, 8,   8000,  0, 1),   -- Xe máy 3-8h
-(1, 8, 24, 15000,  1, 1),   -- Xe máy qua đêm
-(2, 0, 3,   6000,  0, 1),   -- Ô tô 0-3h
-(2, 3, 8,  12000,  0, 1),   -- Ô tô 3-8h
-(2, 8, 24, 25000,  1, 1),   -- Ô tô qua đêm
-(3, 0, 3,  10000,  0, 1),   -- Xe tải 0-3h
-(3, 3, 8,  20000,  0, 1);   -- Xe tải 3-8h
-GO
-
--- Buildings
-INSERT INTO Buildings(BuildingName, Address, OperatingHours, TotalFloors) VALUES
-('Toa A', '123 Nguyen Van Linh, Q7', '06:00-22:00', 3),
-('Toa B', '456 Le Van Viet, Q9',     '00:00-23:59', 2);
-GO
-
--- Floors
-INSERT INTO Floors(BuildingID, FloorName) VALUES
-(1, 'Tang 1'), (1, 'Tang 2'), (1, 'Tang 3'),  -- FloorID 1,2,3
-(2, 'Tang 1'), (2, 'Tang 2');                  -- FloorID 4,5
-GO
-
--- Zones
-INSERT INTO Zones(FloorID, ZoneName, AllowedVehicleTypeID, TotalSlots) VALUES
-(1, 'Zone A - Xe may', 1, 10),   -- ZoneID 1
-(1, 'Zone B - O to',   2,  5),   -- ZoneID 2
-(2, 'Zone C - Xe may', 1, 10),   -- ZoneID 3
-(2, 'Zone D - O to',   2,  5),   -- ZoneID 4
-(3, 'Zone E - Xe tai', 3,  4),   -- ZoneID 5
-(4, 'Zone F - Xe may', 1,  8),   -- ZoneID 6
-(4, 'Zone G - O to',   2,  4),   -- ZoneID 7
-(5, 'Zone H - O to',   2,  4);   -- ZoneID 8
-GO
-
--- ParkingSlots (20 slots, đủ để test data dùng SlotID 1-16)
-INSERT INTO ParkingSlots(ZoneID, SlotCode, VehicleTypeID) VALUES
--- Zone 1: Xe may, SlotID 1-5
-(1,'A-M-01',1),(1,'A-M-02',1),(1,'A-M-03',1),(1,'A-M-04',1),(1,'A-M-05',1),
--- Zone 2: O to,   SlotID 6-10
-(2,'A-C-01',2),(2,'A-C-02',2),(2,'A-C-03',2),(2,'A-C-04',2),(2,'A-C-05',2),
--- Zone 3: Xe may, SlotID 11-15
-(3,'B-M-01',1),(3,'B-M-02',1),(3,'B-M-03',1),(3,'B-M-04',1),(3,'B-M-05',1),
--- Zone 4: O to,   SlotID 16-20
-(4,'B-C-01',2),(4,'B-C-02',2),(4,'B-C-03',2),(4,'B-C-04',2),(4,'B-C-05',2);
-GO
-
--- =====================================================
--- BƯỚC 10: TEST DATA
--- =====================================================
-
--- ParkingSessions (dùng SlotID và DriverID đã tồn tại)
--- Trigger TRG_UpdateSlotStatus sẽ tự set Occupied
-INSERT INTO ParkingSessions(SlotID, DriverID, PlateNumber, VehicleTypeID, EntryTime, SessionStatus)
-VALUES
-(1,  1, '29A-12345', 1, GETDATE(),               'Active'),  -- SessionID 1
-(6,  1, '29A-54321', 2, GETDATE(),               'Active'),  -- SessionID 2
-(2,  1, '29A-56789', 1, DATEADD(HOUR,-2,GETDATE()), 'Active'),  -- SessionID 3
-(7,  1, '29A-98765', 2, DATEADD(HOUR,-3,GETDATE()), 'Active');  -- SessionID 4
-GO
-
--- Payments
-INSERT INTO Payments(SessionID, Amount, PaymentMethod, PaymentStatus) VALUES
-(1, 4000, 'Cash', 'Pending'),
-(2, 6000, 'Cash', 'Pending'),
-(3, 4000, 'Cash', 'Pending'),
-(4, 6000, 'Cash', 'Pending');
-GO
-
--- Reservations (dùng slot còn Available: 3,4,8,9)
--- Trigger TRG_RecalculateSlotStatus_OnReservation sẽ tự set Reserved
-INSERT INTO Reservations(DriverID, VehicleTypeID, SlotID, ReservationDate, StartTime, EndTime, ReservationStatus)
-VALUES
-(1, 1, 3,  CAST(GETDATE() AS DATE), DATEADD(HOUR,1,GETDATE()), DATEADD(HOUR,4,GETDATE()), 'Reserved'),
-(1, 2, 8,  CAST(GETDATE() AS DATE), DATEADD(HOUR,2,GETDATE()), DATEADD(HOUR,5,GETDATE()), 'Reserved'),
-(1, 1, 4,  CAST(GETDATE() AS DATE), DATEADD(HOUR,1,GETDATE()), DATEADD(HOUR,4,GETDATE()), 'Reserved'),
-(1, 2, 9,  CAST(GETDATE() AS DATE), DATEADD(HOUR,2,GETDATE()), DATEADD(HOUR,5,GETDATE()), 'Reserved');
-GO
-
--- Incidents (SessionID 1-4 và DriverID 1 đã tồn tại, AssignedStaffID=2)
-INSERT INTO Incidents(SessionID, DriverID, IncidentType, IncidentStatus, Priority, Description, AssignedStaffID)
-VALUES
-(1, 1, 'Lost Ticket', 'Open', 'Normal', 'Customer lost ticket for slot 1',   2),
-(2, 1, 'Overdue',     'Open', 'High',   'Vehicle parked over allowed time',  2),
-(3, 1, 'Wrong Slot',  'Open', 'Normal', 'Vehicle parked in wrong slot',      2),
-(4, 1, 'Lost Ticket', 'Open', 'High',   'Customer lost ticket urgent',       2);
-GO
-
--- Feedbacks (DriverID=1, IncidentID 1-4 đã tồn tại)
-INSERT INTO Feedbacks(DriverID, IncidentID, FeedbackType, Description, FeedbackStatus)
-VALUES
-(1, 1, 'Complaint', 'Lost ticket handling issue',   'Open'),
-(1, 2, 'Complaint', 'Overdue fee unclear',           'Open'),
-(1, 3, 'Complaint', 'Wrong slot problem',            'Open'),
-(1, 4, 'Complaint', 'Lost ticket urgent follow-up',  'Open');
-GO
-
--- =====================================================
--- BƯỚC 11: SYNC LẠI SLOT STATUS THEO SESSION + RESERVATION
--- =====================================================
-UPDATE ps
-SET ps.SlotStatus =
-    CASE
-        WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
-
-        WHEN EXISTS (
-            SELECT 1
-            FROM ParkingSessions s
-            WHERE s.SlotID = ps.SlotID
-              AND s.SessionStatus = 'Active'
-        ) THEN 'Occupied'
-
-        WHEN EXISTS (
-            SELECT 1
-            FROM Reservations r
-            WHERE r.SlotID = ps.SlotID
-              AND r.ReservationStatus = 'Reserved'
-        ) THEN 'Reserved'
-
-        ELSE 'Available'
-    END
-FROM ParkingSlots ps;
-GO
-
--- =====================================================
--- BƯỚC 12: VERIFICATION
--- =====================================================
-SELECT TableName, Rows FROM (
-    SELECT 'Roles'           AS TableName, COUNT(*) AS Rows FROM Roles          UNION ALL
-    SELECT 'Permissions',     COUNT(*) FROM Permissions                         UNION ALL
-    SELECT 'Users',           COUNT(*) FROM Users                               UNION ALL
-    SELECT 'VehicleTypes',    COUNT(*) FROM VehicleTypes                        UNION ALL
-    SELECT 'PricingPolicies', COUNT(*) FROM PricingPolicies                     UNION ALL
-    SELECT 'Buildings',       COUNT(*) FROM Buildings                           UNION ALL
-    SELECT 'Floors',          COUNT(*) FROM Floors                              UNION ALL
-    SELECT 'Zones',           COUNT(*) FROM Zones                               UNION ALL
-    SELECT 'ParkingSlots',    COUNT(*) FROM ParkingSlots                        UNION ALL
-    SELECT 'ParkingSessions', COUNT(*) FROM ParkingSessions                     UNION ALL
-    SELECT 'Payments',        COUNT(*) FROM Payments                            UNION ALL
-    SELECT 'Reservations',    COUNT(*) FROM Reservations                        UNION ALL
-    SELECT 'Incidents',       COUNT(*) FROM Incidents                           UNION ALL
-    SELECT 'Feedbacks',       COUNT(*) FROM Feedbacks
-) t ORDER BY TableName;
-GO
-
--- Kiểm tra SlotStatus sau khi triggers chạy
-SELECT SlotID, SlotCode, SlotStatus FROM ParkingSlots ORDER BY SlotID;
-GO
+    -- Kiểm tra SlotStatus sau khi triggers chạy
+    SELECT SlotID, SlotCode, SlotStatus FROM ParkingSlots ORDER BY SlotID;
+    GO
