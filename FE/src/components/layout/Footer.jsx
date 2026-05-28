@@ -1,6 +1,6 @@
-import React from 'react';
-import { Building2, Phone, Mail, MapPin, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+
+import { Building2, Phone, Mail, MapPin, ArrowRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 const Footer = () => {
   return (
@@ -68,10 +68,10 @@ const Footer = () => {
               Đăng ký nhận thông báo về các ưu đãi và cập nhật tính năng mới nhất
             </p>
             <div className="flex gap-2">
-              <input 
-                type="email" 
-                placeholder="Email của bạn" 
-                className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 outline-none" 
+              <input
+                type="email"
+                placeholder="Email của bạn"
+                className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 outline-none"
               />
               <button className="bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center shrink-0">
                 <ArrowRight className="w-4 h-4" />
@@ -91,7 +91,7 @@ const Footer = () => {
         </div>
       </div>
     </footer>
-  );
-};
+  )
+}
 
-export default Footer;
+export default Footer

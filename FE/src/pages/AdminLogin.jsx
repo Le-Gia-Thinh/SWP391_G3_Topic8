@@ -1,78 +1,166 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+// src/pages/AdminLogin.jsx
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { useNavigate, Navigate } from 'react-router-dom'
+import {
+  Box, Card, TextField, Typography, Button,
+  Checkbox, FormControlLabel, Link,
+  InputAdornment, IconButton, Divider, CircularProgress
+} from '@mui/material'
+import { Visibility, VisibilityOff } from '@mui/icons-material'
+import { GoogleLogin } from '@react-oauth/google'
+import { useAuth } from '../contexts/AuthContext'
 
 const AdminLogin = () => {
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPass, setShowPass] = useState(false)
+  const { login, loginWithGoogle, isAuthenticated, getRedirectPath, user } = useAuth()
+  const navigate = useNavigate()
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting }
+  } = useForm({ defaultValues: { account: '', password: '' } })
+
+  // Đã login → redirect thẳng về trang theo role
+  if (isAuthenticated) {
+    return <Navigate to={getRedirectPath(user?.roleName)} replace />
+  }
+
+  const onSubmit = async ({ account, password }) => {
+    try {
+      const loggedUser = await login({ email: account, password })
+      navigate(getRedirectPath(loggedUser.roleName), { replace: true })
+    } catch {
+      // Lỗi đã toast bởi axios interceptor
+    }
+  }
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const loggedUser = await loginWithGoogle(credentialResponse.credential)
+      navigate(getRedirectPath(loggedUser.roleName), { replace: true })
+    } catch {
+      // Lỗi đã toast
+    }
+  }
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-140px)] py-12 px-4">
-      <div className="w-full max-w-[440px] bg-white rounded-2xl shadow-sm border border-gray-100 p-10 relative overflow-hidden">
-        {/* Simple top decoration */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-blue-600"></div>
+    <Box sx={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      minHeight: '100vh', bgcolor: 'grey.100', p: 2
+    }}>
+      <Card sx={{
+        width: '100%', maxWidth: 420, p: 4,
+        borderTop: '3px solid', borderColor: 'primary.main', boxShadow: 3
+      }}>
 
-        <div className="text-center mb-10">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Đăng Nhập</h1>
-          <p className="text-sm text-gray-500">Vui lòng nhập thông tin để truy cập hệ thống</p>
-        </div>
+        {/* Header */}
+        <Box sx={{ textAlign: 'center', mb: 3 }}>
+          <Typography variant="h5" fontWeight={700} gutterBottom>Đăng Nhập</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Vui lòng nhập thông tin để truy cập hệ thống
+          </Typography>
+        </Box>
 
-        <form className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1.5">Số điện thoại hoặc Tài khoản</label>
-            <input 
-              type="text" 
-              placeholder="Ví dụ: 0912345678 hoặc admin@..." 
-              className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+        {/* Form */}
+        <Box
+          component="form"
+          onSubmit={handleSubmit(onSubmit)}
+          sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}
+        >
+          <TextField
+            label="Email"
+            placeholder="admin@parking.com"
+            fullWidth
+            autoFocus
+            size="small"
+            error={!!errors.account}
+            helperText={errors.account?.message}
+            {...register('account', {
+              required: 'Email không được để trống',
+              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Email không hợp lệ' }
+            })}
+          />
+
+          <TextField
+            label="Mật khẩu"
+            placeholder="Nhập mật khẩu"
+            fullWidth
+            size="small"
+            type={showPass ? 'text' : 'password'}
+            error={!!errors.password}
+            helperText={errors.password?.message}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setShowPass(v => !v)}>
+                    {showPass ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+            {...register('password', {
+              required: 'Mật khẩu không được để trống',
+              minLength: { value: 6, message: 'Mật khẩu tối thiểu 6 ký tự' }
+            })}
+          />
+
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <FormControlLabel
+              label={<Typography variant="body2">Ghi nhớ đăng nhập</Typography>}
+              control={<Checkbox size="small" {...register('remember')} />}
             />
-          </div>
+            <Link href="/forgot-password" variant="body2" underline="hover">
+              Quên mật khẩu?
+            </Link>
+          </Box>
 
-          <div>
-            <div className="flex justify-between items-center mb-1.5">
-              <label className="block text-xs font-bold text-gray-700">Mật khẩu</label>
-              <a href="#" className="text-xs text-blue-600 font-medium hover:underline">Quên mật khẩu?</a>
-            </div>
-            <div className="relative">
-              <input 
-                type={showPassword ? 'text' : 'password'} 
-                placeholder="Nhập mật khẩu" 
-                className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all pr-10"
-              />
-              <button 
-                type="button" 
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center pt-2">
-            <input 
-              id="remember" 
-              type="checkbox" 
-              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-            />
-            <label htmlFor="remember" className="ml-2 block text-sm text-gray-600 cursor-pointer select-none">
-              Ghi nhớ đăng nhập
-            </label>
-          </div>
-
-          <button 
-            type="button" 
-            className="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-md shadow-blue-200 mt-4"
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            size="large"
+            disabled={isSubmitting}
+            sx={{ mt: 1, py: 1.5, fontWeight: 600 }}
           >
-            Đăng Nhập
-          </button>
-        </form>
+            {isSubmitting
+              ? <CircularProgress size={22} color="inherit" />
+              : 'Đăng Nhập'
+            }
+          </Button>
+        </Box>
 
-        <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-          <p className="text-sm text-gray-600">
-            Bạn không có tài khoản? <a href="#" className="text-blue-600 font-medium hover:underline">Vui lòng liên hệ CSKH</a>
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
+        {/* Social Login */}
+        <Divider sx={{ my: 3 }}>
+          <Typography variant="caption" color="text.secondary">HOẶC</Typography>
+        </Divider>
 
-export default AdminLogin;
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => { }}
+            text="signin_with"
+            shape="rectangular"
+            width="350"
+          />
+        </Box>
+
+        <Divider sx={{ my: 2 }} />
+        <Typography
+          variant="body2"
+          sx={{ textAlign: 'center' }}
+          color="text.secondary"
+        >
+          Bạn chưa có tài khoản?{' '}
+          <Link href="/register" underline="hover" fontWeight={500}>
+            Đăng ký ngay
+          </Link>
+        </Typography>
+
+      </Card>
+    </Box>
+  )
+}
+
+export default AdminLogin
