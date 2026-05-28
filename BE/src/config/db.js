@@ -12,13 +12,17 @@ const config = {
   server: process.env.DB_SERVER,
   database: process.env.DB_DATABASE,
   port: parseInt(process.env.DB_PORT),
-  options: { encrypt: false, trustServerCertificate: true }
+  options: {
+    encrypt: process.env.DB_ENCRYPT === "true",
+    trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === "true",
+  },
+  pool: { max: 10, min: 0, idleTimeoutMillis: 30000 },
 };
 
 const pool = new sql.ConnectionPool(config);
 const poolConnect = pool.connect()
   .then(() => console.log("✅ SQL Server connected"))
-  .catch(err => console.error(" SQL Server connection failed:", err));
+  .catch((err) => { console.error("❌ SQL Server connection failed:", err); process.exit(1); });
 
 export async function getPool() {
   await poolConnect;
