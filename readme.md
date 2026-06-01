@@ -17,4 +17,5 @@ Trong BE :
                     chạy yarn dev , chạy yarn install axios    
                     Chạy lệnh yarn add express cors dotenv mssql cookie-parser jsonwebtoken bcryptjs axios google-auth-library ms http-status-codes cài đặt thư viện
                     yarn add nodemailer
+                    yarn seed:password
                     ==> chạy test yarn dev                
