@@ -11,6 +11,11 @@ import DriverLayout from './pages/driver/DriverLayout'
 import DriverHome from './pages/driver/DriverHome'
 import DriverBooking from './pages/driver/DriverBooking'
 import DriverBookingConfirmation from './pages/driver/DriverBookingConfirmation'
+import DriverHistory from './pages/driver/DriverHistory'
+import DriverSession from './pages/driver/DriverSession'
+import DriverPayment from './pages/driver/DriverPayment'
+import DriverReport from './pages/driver/DriverReport'
+import DriverProfile from './pages/driver/DriverProfile'
 
 import {
   VerifyEmailPending,
@@ -85,6 +90,11 @@ const App = () => {
           <Route path="home" element={<DriverHome />} />
           <Route path="booking" element={<DriverBooking />} />
           <Route path="booking-confirmation" element={<DriverBookingConfirmation />} />
+          <Route path="history" element={<DriverHistory />} />
+          <Route path="session" element={<DriverSession />} />
+          <Route path="payment" element={<DriverPayment />} />
+          <Route path="report" element={<DriverReport />} />
+          <Route path="profile" element={<DriverProfile />} />
         </Route>
       </Route>
 
