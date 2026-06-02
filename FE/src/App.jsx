@@ -7,8 +7,11 @@
   import DriverRegister from './pages/DriverRegister'
   import ManagerDashboard from './pages/ManagerDashboard'
   import StaffDashboard from './pages/StaffDashboard'
-  import DriverDashboard from './pages/DriverDashboard'
-
+  
+  import DriverLayout from './pages/driver/DriverLayout'
+  import DriverHome from './pages/driver/DriverHome'
+  import DriverBooking from './pages/driver/DriverBooking'
+  import DriverBookingConfirmation from './pages/driver/DriverBookingConfirmation'
   import './index.css'
 
   const CheckIn = () => (
@@ -70,8 +73,13 @@
 
         {/* Driver only */}
         <Route element={<RoleRoute allowedRoles={['Driver']} />}>
-          <Route path="/driver/dashboard" element={<DriverDashboard />} />
-          <Route path="/booking" element={<Booking />} />
+          <Route path="/driver" element={<DriverLayout />}>
+            <Route index element={<DriverHome />} />
+            <Route path="dashboard" element={<DriverHome />} />
+            <Route path="home" element={<DriverHome />} />
+            <Route path="booking" element={<DriverBooking />} />
+            <Route path="booking-confirmation" element={<DriverBookingConfirmation />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<NotFound />} />
