@@ -6,7 +6,7 @@ import { toast } from 'react-toastify'
 const authorizeAxios = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   timeout: 10000,
-  withCredentials: true, // ✅ Gửi/nhận httpOnly cookie tự động
+  withCredentials: true // ✅ Gửi/nhận httpOnly cookie tự động
 })
 
 // ── Refresh-token queue ───────────────────────────────────────────
@@ -34,8 +34,8 @@ authorizeAxios.interceptors.response.use(
 
   async (error) => {
     const original = error.config
-    const status   = error.response?.status
-    const code     = error.response?.data?.code
+    const status = error.response?.status
+    const code = error.response?.data?.code
 
     if (!original) return Promise.reject(error)
 

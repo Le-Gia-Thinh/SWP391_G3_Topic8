@@ -1,16 +1,50 @@
-import ms from "ms";                        // ✅ fix 4: thêm import ms
-import bcryptjs from "bcryptjs";                  // giữ nguyên import
+import ms from "ms";
+import crypto from "crypto";
+import bcryptjs from "bcryptjs";
 import axios from "axios";
+import nodemailer from "nodemailer";
 import { OAuth2Client } from "google-auth-library";
 import { getPool, sql } from "../config/db.js";
 import JwtProvider from "../providers/JwtProvider.js";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const BCRYPT_ROUNDS = 10;
-
-// ✅ fix 2: dùng ms() thay vì hardcode
 const REFRESH_TTL = ms(process.env.REFRESH_TOKEN_EXPIRES || "7d");
 
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: false,
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
+});
+
+async function sendVerifyEmail(email, fullName, token) {
+    const url = `http://localhost:5000/api/auth/verify-email?token=${token}`;
+    await transporter.sendMail({
+        from: `"Parking System" <${process.env.SMTP_USER}>`,
+        to: email,
+        subject: "Xác minh địa chỉ email của bạn",
+        html: `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+                <h2>Xin chào, ${fullName}!</h2>
+                <p>Vui lòng click nút bên dưới để xác minh email:</p>
+                <a href="${url}"
+                   style="display:inline-block;padding:12px 24px;background:#1976d2;
+                          color:#fff;text-decoration:none;border-radius:6px;font-weight:600">
+                    Xác minh email
+                </a>
+                <p style="color:#888;font-size:13px;margin-top:16px">
+                    Link có hiệu lực trong 24 giờ.
+                </p>
+            </div>
+        `,
+    });
+}
+
+// ✅ Bug 2 fix — thêm isEmailVerified
 function formatUser(u) {
     return {
         userId: u.UserID,
@@ -20,6 +54,7 @@ function formatUser(u) {
         roleId: u.RoleID,
         roleName: u.RoleName,
         avatarUrl: u.AvatarUrl || null,
+        isEmailVerified: !!u.IsEmailVerified,
     };
 }
 
@@ -34,7 +69,7 @@ async function generateAndSaveTokens(pool, user, ip = null) {
     const accessToken = JwtProvider.generateAccessToken(payload);
     const refreshToken = JwtProvider.generateRefreshToken({ userId: user.UserID });
     const tokenHash = JwtProvider.hashToken(refreshToken);
-    const expiresAt = new Date(Date.now() + REFRESH_TTL); // ✅ fix 2
+    const expiresAt = new Date(Date.now() + REFRESH_TTL);
 
     await pool.request()
         .input("UserID", sql.Int, user.UserID)
@@ -46,22 +81,32 @@ async function generateAndSaveTokens(pool, user, ip = null) {
     return { accessToken, refreshToken };
 }
 
-// ── REGISTER ──────────────────────────────────────────────────
+// ✅ Bug 1 fix — dùng crypto.randomUUID() thay JWT
 export async function registerService({ fullName, email, password, phoneNumber }) {
     const pool = await getPool();
-    const passwordHash = await bcryptjs.hash(password, BCRYPT_ROUNDS); // ✅ fix 1
+    const passwordHash = await bcryptjs.hash(password, BCRYPT_ROUNDS);
+
+    const verifyToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + ms("24h"));
 
     const result = await pool.request()
         .input("FullName", sql.NVarChar(100), fullName.trim())
         .input("Email", sql.NVarChar(100), email.trim().toLowerCase())
         .input("PasswordHash", sql.NVarChar(256), passwordHash)
         .input("PhoneNumber", sql.NVarChar(20), phoneNumber?.trim() || null)
+        .input("EmailVerifyToken", sql.NVarChar(500), verifyToken)
+        .input("EmailVerifyExpires", sql.DateTime, expiresAt)
         .execute("sp_RegisterLocal");
 
-    return formatUser(result.recordset[0]);
+    const user = result.recordset[0];
+
+    sendVerifyEmail(user.Email, user.FullName, verifyToken).catch((err) => {
+        console.error("❌ Gửi verify email thất bại:", err.message);
+    });
+
+    return formatUser(user);
 }
 
-// ── LOGIN LOCAL ───────────────────────────────────────────────
 export async function loginService({ email, password }, ip) {
     const pool = await getPool();
     const result = await pool.request()
@@ -70,7 +115,6 @@ export async function loginService({ email, password }, ip) {
 
     const user = result.recordset[0];
 
-    // Chống timing attack: luôn chạy bcrypt dù user không tồn tại
     const dummyHash = await bcryptjs.hash("dummy_password", BCRYPT_ROUNDS);
     const hashToTest = user?.PasswordHash || dummyHash;
     const isMatch = await bcryptjs.compare(password, hashToTest);
@@ -83,12 +127,17 @@ export async function loginService({ email, password }, ip) {
         const err = new Error("Tài khoản đã bị khóa, vui lòng liên hệ quản lý");
         err.statusCode = 403; throw err;
     }
+    if (!user.IsEmailVerified) {
+        const err = new Error("Vui lòng xác minh email trước khi đăng nhập. Kiểm tra hộp thư của bạn.");
+        err.statusCode = 403;
+        err.code = "EMAIL_NOT_VERIFIED";
+        throw err;
+    }
 
     const { accessToken, refreshToken } = await generateAndSaveTokens(pool, user, ip);
     return { accessToken, refreshToken, user: formatUser(user) };
 }
 
-// ── GOOGLE LOGIN ──────────────────────────────────────────────
 export async function googleLoginService(idToken, ip) {
     let payload;
     try {
@@ -113,16 +162,22 @@ export async function googleLoginService(idToken, ip) {
         .execute("sp_UpsertSocialUser");
 
     const user = result.recordset[0];
-    if (!user?.IsActive) {
+    if (!user) throw new Error("Không thể xử lý đăng nhập Google");
+
+    if (!user.IsActive) {
         const err = new Error("Tài khoản đã bị khóa, vui lòng liên hệ quản lý");
         err.statusCode = 403; throw err;
     }
 
     const { accessToken, refreshToken } = await generateAndSaveTokens(pool, user, ip);
-    return { accessToken, refreshToken, user: formatUser(user) };
+
+    const message = user.IsNewLink
+        ? "Đã liên kết Google vào tài khoản hiện có của bạn"
+        : "Đăng nhập Google thành công";
+
+    return { accessToken, refreshToken, user: formatUser(user), message };
 }
 
-// ── FACEBOOK LOGIN ────────────────────────────────────────────
 export async function facebookLoginService(fbAccessToken, ip) {
     let fbData;
     try {
@@ -147,16 +202,68 @@ export async function facebookLoginService(fbAccessToken, ip) {
         .execute("sp_UpsertSocialUser");
 
     const user = result.recordset[0];
-    if (!user?.IsActive) {
+    if (!user) throw new Error("Không thể xử lý đăng nhập Facebook");
+
+    if (!user.IsActive) {
         const err = new Error("Tài khoản đã bị khóa, vui lòng liên hệ quản lý");
         err.statusCode = 403; throw err;
     }
 
     const { accessToken, refreshToken } = await generateAndSaveTokens(pool, user, ip);
-    return { accessToken, refreshToken, user: formatUser(user) };
+
+    const message = user.IsNewLink
+        ? "Đã liên kết Facebook vào tài khoản hiện có của bạn"
+        : "Đăng nhập Facebook thành công";
+
+    return { accessToken, refreshToken, user: formatUser(user), message };
 }
 
-// ── REFRESH TOKEN ─────────────────────────────────────────────
+export async function verifyEmailService(token) {
+    if (!token) {
+        const err = new Error("Token không hợp lệ");
+        err.statusCode = 400; throw err;
+    }
+
+    const pool = await getPool();
+    await pool.request()
+        .input("Token", sql.NVarChar(500), token)
+        .execute("sp_VerifyEmail");
+}
+
+// ✅ Bug 1 fix — dùng UUID
+export async function resendVerifyEmailService(email) {
+    if (!email) return;
+
+    const pool = await getPool();
+    const verifyToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + ms("24h"));
+
+    let result;
+    try {
+        result = await pool.request()
+            .input("Email", sql.NVarChar(100), email.trim().toLowerCase())
+            .input("EmailVerifyToken", sql.NVarChar(500), verifyToken)
+            .input("EmailVerifyExpires", sql.DateTime, expiresAt)
+            .execute("sp_ResendVerifyEmail");
+    } catch {
+        return;
+    }
+
+    const userId = result.recordset[0]?.UserID;
+    if (!userId) return;
+
+    const userRes = await pool.request()
+        .input("UserID", sql.Int, userId)
+        .query("SELECT FullName, Email FROM Users WHERE UserID = @UserID");
+
+    const user = userRes.recordset[0];
+    if (!user) return;
+
+    sendVerifyEmail(user.Email, user.FullName, verifyToken).catch((err) => {
+        console.error("❌ Gửi lại verify email thất bại:", err.message);
+    });
+}
+
 export async function refreshTokenService(rawRefreshToken, ip) {
     try {
         JwtProvider.verifyRefreshToken(rawRefreshToken);
@@ -193,7 +300,6 @@ export async function refreshTokenService(rawRefreshToken, ip) {
     return { accessToken, refreshToken: newRefreshToken };
 }
 
-// ── LOGOUT ────────────────────────────────────────────────────
 export async function logoutService(rawRefreshToken) {
     if (!rawRefreshToken) return;
     try {
@@ -202,33 +308,33 @@ export async function logoutService(rawRefreshToken) {
         await pool.request()
             .input("TokenHash", sql.NVarChar(200), tokenHash)
             .execute("sp_RevokeRefreshToken");
-    } catch { /* token không tồn tại → coi như đã logout */ }
+    } catch { }
 }
 
-// ── GET ME ────────────────────────────────────────────────────
+// ✅ Bug 2 fix — thêm IsEmailVerified vào SELECT
 export async function getMeService(userId) {
     const pool = await getPool();
     const result = await pool.request()
         .input("UserID", sql.Int, userId)
         .query(`
-      SELECT u.UserID, u.FullName, u.Email, u.PhoneNumber,
-             u.RoleID, r.RoleName, u.AvatarUrl,
-             u.DateOfBirth, u.HireDate, u.IsActive,
-             u.CreatedAt, u.UpdatedAt
-      FROM Users u
-      JOIN Roles r ON u.RoleID = r.RoleID
-      WHERE u.UserID = @UserID AND u.IsActive = 1
-    `);
+            SELECT u.UserID, u.FullName, u.Email, u.PhoneNumber,
+                   u.RoleID, r.RoleName, u.AvatarUrl,
+                   u.IsEmailVerified,
+                   u.DateOfBirth, u.HireDate, u.IsActive,
+                   u.CreatedAt, u.UpdatedAt
+            FROM Users u
+            JOIN Roles r ON u.RoleID = r.RoleID
+            WHERE u.UserID = @UserID AND u.IsActive = 1
+        `);
 
     if (result.recordset.length === 0) {
         const err = new Error("Không tìm thấy user");
         err.statusCode = 404; throw err;
     }
 
-    return formatUser(result.recordset[0]);  // ← wrap qua formatUser
+    return formatUser(result.recordset[0]);
 }
 
-// ── FORGOT PASSWORD ───────────────────────────────────────────
 export async function forgotPasswordService(email) {
     const pool = await getPool();
     const result = await pool.request()
@@ -239,24 +345,22 @@ export async function forgotPasswordService(email) {
 
     const userId = result.recordset[0].UserID;
     const resetToken = JwtProvider.generateAccessToken({ userId });
-    const resetExpires = new Date(Date.now() + ms("15m")); // ✅ fix 3
+    const resetExpires = new Date(Date.now() + ms("15m"));
 
     await pool.request()
         .input("UserID", sql.Int, userId)
         .input("ResetToken", sql.NVarChar(500), resetToken)
         .input("ResetTokenExpires", sql.DateTime, resetExpires)
         .query(`
-      UPDATE Users
-      SET ResetToken = @ResetToken, ResetTokenExpires = @ResetTokenExpires,
-          UpdatedAt  = GETDATE()
-      WHERE UserID = @UserID
-    `);
+            UPDATE Users
+            SET ResetToken = @ResetToken, ResetTokenExpires = @ResetTokenExpires,
+                UpdatedAt  = GETDATE()
+            WHERE UserID = @UserID
+        `);
 
-    console.log("🔑 Reset link:",
-        `${process.env.FE_ORIGIN}/reset-password?token=${resetToken}`);
+    console.log("🔑 Reset link:", `${process.env.FE_ORIGIN}/reset-password?token=${resetToken}`);
 }
 
-// ── RESET PASSWORD ────────────────────────────────────────────
 export async function resetPasswordService({ token, newPassword }) {
     let decoded;
     try {
@@ -271,24 +375,49 @@ export async function resetPasswordService({ token, newPassword }) {
         .input("UserID", sql.Int, decoded.userId)
         .input("ResetToken", sql.NVarChar(500), token)
         .query(`
-      SELECT UserID FROM Users
-      WHERE UserID = @UserID AND ResetToken = @ResetToken
-        AND ResetTokenExpires > GETDATE() AND IsActive = 1
-    `);
+            SELECT UserID FROM Users
+            WHERE UserID = @UserID AND ResetToken = @ResetToken
+              AND ResetTokenExpires > GETDATE() AND IsActive = 1
+        `);
 
     if (result.recordset.length === 0) {
         const err = new Error("Token không hợp lệ hoặc đã hết hạn");
         err.statusCode = 400; throw err;
     }
 
-    const hashedPassword = await bcryptjs.hash(newPassword, BCRYPT_ROUNDS); // ✅ fix 1
+    const hashedPassword = await bcryptjs.hash(newPassword, BCRYPT_ROUNDS);
     await pool.request()
         .input("UserID", sql.Int, decoded.userId)
         .input("PasswordHash", sql.NVarChar(256), hashedPassword)
         .query(`
-      UPDATE Users
-      SET PasswordHash = @PasswordHash, ResetToken = NULL,
-          ResetTokenExpires = NULL, UpdatedAt = GETDATE()
-      WHERE UserID = @UserID
-    `);
+            UPDATE Users
+            SET PasswordHash = @PasswordHash, ResetToken = NULL,
+                ResetTokenExpires = NULL, UpdatedAt = GETDATE()
+            WHERE UserID = @UserID
+        `);
+}
+export async function checkEmailVerifyStatusService(email) {
+    if (!email) {
+        const err = new Error("Email là bắt buộc");
+        err.statusCode = 400;
+        throw err;
+    }
+
+    const pool = await getPool();
+
+    const result = await pool.request()
+        .input("Email", sql.NVarChar(100), email.trim().toLowerCase())
+        .query(`
+            SELECT IsEmailVerified
+            FROM Users
+            WHERE Email = @Email AND IsActive = 1
+        `);
+
+    if (result.recordset.length === 0) {
+        return { isEmailVerified: false };
+    }
+
+    return {
+        isEmailVerified: !!result.recordset[0].IsEmailVerified
+    };
 }
