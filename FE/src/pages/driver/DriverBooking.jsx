@@ -13,6 +13,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import CustomSelect from '../../components/ui/Select'
 import CustomCheckbox from '../../components/ui/Checkbox'
+import authorizeAxios from '../../utils/authorizeAxios'
 
 const FLOORS = [
   { value: 'B1', label: 'Tầng hầm B1' },
@@ -68,12 +69,15 @@ const DriverBooking = () => {
   const [selectedSlot, setSelectedSlot] = useState('A-09')
   const [licensePlate, setLicensePlate] = useState('51K-123.45')
   const [vehicleType, setVehicleType] = useState('car')
-  const [bookingDate, setBookingDate] = useState('2026-06-02')
+  const [bookingDate, setBookingDate] = useState('2026-06-03')
   const [startTime, setStartTime] = useState('08:30')
   const [duration, setDuration] = useState('4h')
   const [floor, setFloor] = useState('B1')
   const [zone, setZone] = useState('A')
   const [autoSelect, setAutoSelect] = useState(true)
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   const slots = useMemo(() => {
     return Array.from({ length: 30 }, (_, index) => {
@@ -106,25 +110,60 @@ const DriverBooking = () => {
     setAutoSelect(false)
   }
 
-  const handleBooking = (event) => {
+  const handleBooking = async (event) => {
     event.preventDefault()
+    setErrorMessage('')
 
-    const bookingData = {
-      parkingName: PARKING_INFO.name,
-      licensePlate,
-      vehicleType,
-      bookingDate,
-      startTime,
-      duration,
-      floor,
-      zone,
-      selectedSlot,
-      temporaryPrice
+    if (!licensePlate.trim()) {
+      setErrorMessage('Vui lòng nhập biển số xe.')
+      return
     }
 
-    navigate('/driver/booking-confirmation', {
-      state: bookingData
-    })
+    try {
+      setIsSubmitting(true)
+
+      const response = await authorizeAxios.post('/reservations', {
+        vehicleType,
+        licensePlate: licensePlate.trim().toUpperCase(),
+        bookingDate,
+        startTime,
+        duration,
+        buildingId: 1
+      })
+
+      const reservation = response.data?.data?.reservation
+
+      const bookingData = {
+        parkingName: reservation?.BuildingName || PARKING_INFO.name,
+        licensePlate: licensePlate.trim().toUpperCase(),
+        vehicleType,
+        bookingDate,
+        startTime,
+        duration,
+        floor: reservation?.FloorName || floor,
+        zone: reservation?.ZoneName || zone,
+        selectedSlot: reservation?.SlotCode || selectedSlot,
+        temporaryPrice,
+        reservationId: reservation?.ReservationID,
+        bookingCode: reservation?.BookingCode,
+        slotId: reservation?.SlotID
+      }
+
+      navigate('/driver/booking-confirmation', {
+        state: bookingData
+      })
+    } catch (error) {
+      console.error('Create booking failed:', error)
+
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.errors?.[0] ||
+        'Đặt chỗ thất bại. Vui lòng thử lại.'
+
+      setErrorMessage(message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleCancel = () => {
@@ -136,7 +175,6 @@ const DriverBooking = () => {
       onSubmit={handleBooking}
       className="mx-auto max-w-6xl animate-in fade-in duration-500"
     >
-      {/* Header */}
       <div className="mb-6">
         <h1 className="mb-2 text-2xl font-bold text-gray-900">
           Đặt chỗ đỗ xe mới
@@ -148,9 +186,7 @@ const DriverBooking = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Left Column */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Booking Information */}
           <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
@@ -259,7 +295,6 @@ const DriverBooking = () => {
             </div>
           </div>
 
-          {/* Slot Map */}
           <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
             <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -321,12 +356,13 @@ const DriverBooking = () => {
                     type="button"
                     onClick={() => handleSelectSlot(slot)}
                     disabled={slot.status === 'occupied'}
-                    className={`flex h-12 items-center justify-center rounded-lg border text-xs font-bold outline-none transition-all ${slot.status === 'occupied'
-                      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
-                      : slot.status === 'selected'
-                        ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-sm ring-2 ring-blue-100'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:text-blue-500'
-                      }`}
+                    className={`flex h-12 items-center justify-center rounded-lg border text-xs font-bold outline-none transition-all ${
+                      slot.status === 'occupied'
+                        ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                        : slot.status === 'selected'
+                          ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-sm ring-2 ring-blue-100'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:text-blue-500'
+                    }`}
                   >
                     {slot.id}
                   </button>
@@ -335,7 +371,6 @@ const DriverBooking = () => {
             </div>
           </div>
 
-          {/* Location Details */}
           <div className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
@@ -358,7 +393,6 @@ const DriverBooking = () => {
           </div>
         </div>
 
-        {/* Right Column */}
         <div>
           <div className="sticky top-6 rounded-2xl border-2 border-blue-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-gray-900">
@@ -430,12 +464,19 @@ const DriverBooking = () => {
               </ul>
             </div>
 
+            {errorMessage && (
+              <div className="mb-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                {errorMessage}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700"
+              disabled={isSubmitting}
+              className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <CheckCircle2 size={18} />
-              Xác nhận đặt chỗ
+              {isSubmitting ? 'Đang đặt chỗ...' : 'Xác nhận đặt chỗ'}
             </button>
 
             <button

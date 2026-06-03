@@ -4,11 +4,7 @@ import { GuestRoute, ProtectedRoute, RoleRoute } from './components/ProtectedRou
 import Home from './pages/Home'
 import AdminLogin from './pages/AdminLogin'
 import DriverRegister from './pages/DriverRegister'
-import ManagerDashboard from './pages/manager/ManagerDashboard'
-import ManagerConfig from './pages/manager/ManagerConfig'
-// import ManagerIncidents from './pages/manager/ManagerIncidents'
-import ManagerPricing from './pages/manager/ManagerPricing'
-import ManagerSlots from './pages/manager/ManagerSlots'
+
 import StaffDashboard from './pages/StaffDashboard'
 
 import DriverLayout from './pages/driver/DriverLayout'
@@ -20,7 +16,12 @@ import DriverSession from './pages/driver/DriverSession'
 import DriverPayment from './pages/driver/DriverPayment'
 import DriverReport from './pages/driver/DriverReport'
 import DriverProfile from './pages/driver/DriverProfile'
+
 import ManagerLayout from './pages/manager/ManagerLayout'
+import ManagerDashboard from './pages/manager/ManagerDashboard'
+import ManagerConfig from './pages/manager/ManagerConfig'
+import ManagerPricing from './pages/manager/ManagerPricing'
+import ManagerSlots from './pages/manager/ManagerSlots'
 import ManagerProfile from './pages/manager/ManagerProfile'
 
 import {
@@ -81,8 +82,17 @@ const App = () => {
           <Route path="positions" element={<ManagerSlots />} />
           <Route path="config" element={<ManagerConfig />} />
           <Route path="pricing" element={<ManagerPricing />} />
-          {/* <Route path="incidents" element={<ManagerIncidents />} /> */}
-          <Route path="reports" element={<div className="p-8 rounded-3xl bg-white shadow-sm"><h2 className="text-2xl font-bold">Báo cáo định kỳ</h2><p className="mt-2 text-sm text-gray-500">Trang đang được xây dựng.</p></div>} />
+          <Route
+            path="reports"
+            element={
+              <div className="rounded-3xl bg-white p-8 shadow-sm">
+                <h2 className="text-2xl font-bold">Báo cáo định kỳ</h2>
+                <p className="mt-2 text-sm text-gray-500">
+                  Trang đang được xây dựng.
+                </p>
+              </div>
+            }
+          />
           <Route path="profile" element={<ManagerProfile />} />
         </Route>
       </Route>

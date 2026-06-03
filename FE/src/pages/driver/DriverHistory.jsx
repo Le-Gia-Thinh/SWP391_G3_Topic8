@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Search,
   Calendar,
@@ -10,89 +10,7 @@ import {
   MoreHorizontal
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-
-const BOOKINGS = [
-  {
-    id: 'BK-88291',
-    building: 'Vincom Center Đồng Khởi',
-    vehicleType: 'Ô tô 4 chỗ',
-    vehicleTypeValue: 'car4',
-    plate: '51G-123.45',
-    floor: 'B2',
-    zone: 'A',
-    slot: '12',
-    startTime: '10:30',
-    startDate: '24/05/2024',
-    endTime: '12:30',
-    endDate: '24/05/2024',
-    status: 'Đang hoạt động',
-    statusValue: 'active'
-  },
-  {
-    id: 'BK-88295',
-    building: 'Bitexco Financial Tower',
-    vehicleType: 'Xe bán tải',
-    vehicleTypeValue: 'pickup',
-    plate: '51H-999.88',
-    floor: 'B3',
-    zone: 'C',
-    slot: '45',
-    startTime: '09:00',
-    startDate: '24/05/2024',
-    endTime: '11:00',
-    endDate: '24/05/2024',
-    status: 'Đang hoạt động',
-    statusValue: 'active'
-  },
-  {
-    id: 'BK-87102',
-    building: 'Vincom Center Đồng Khởi',
-    vehicleType: 'Ô tô 7 chỗ',
-    vehicleTypeValue: 'car7',
-    plate: '51A-555.66',
-    floor: 'B2',
-    zone: 'B',
-    slot: '08',
-    startTime: '14:00',
-    startDate: '23/05/2024',
-    endTime: '16:00',
-    endDate: '23/05/2024',
-    status: 'Đã sử dụng',
-    statusValue: 'used'
-  },
-  {
-    id: 'BK-86554',
-    building: 'Landmark 81',
-    vehicleType: 'Ô tô 4 chỗ',
-    vehicleTypeValue: 'car4',
-    plate: '60B-112.23',
-    floor: 'B1',
-    zone: 'D',
-    slot: '22',
-    startTime: '08:15',
-    startDate: '22/05/2024',
-    endTime: '10:15',
-    endDate: '22/05/2024',
-    status: 'Hết hạn',
-    statusValue: 'expired'
-  },
-  {
-    id: 'BK-85001',
-    building: 'Saigon Centre',
-    vehicleType: 'Ô tô 4 chỗ',
-    vehicleTypeValue: 'car4',
-    plate: '72A-888.88',
-    floor: 'B4',
-    zone: 'A',
-    slot: '01',
-    startTime: '18:00',
-    startDate: '20/05/2024',
-    endTime: '20:00',
-    endDate: '20/05/2024',
-    status: 'Đã hủy',
-    statusValue: 'cancelled'
-  }
-]
+import authorizeAxios from '../../utils/authorizeAxios'
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tất cả trạng thái' },
@@ -104,9 +22,9 @@ const STATUS_OPTIONS = [
 
 const VEHICLE_OPTIONS = [
   { value: '', label: 'Tất cả' },
-  { value: 'car4', label: 'Ô tô 4 chỗ' },
-  { value: 'car7', label: 'Ô tô 7 chỗ' },
-  { value: 'pickup', label: 'Xe bán tải' }
+  { value: 'MOTO', label: 'Xe máy' },
+  { value: 'CAR', label: 'Ô tô' },
+  { value: 'TRUCK', label: 'Xe tải' }
 ]
 
 const STATUS_CLASSES = {
@@ -116,16 +34,104 @@ const STATUS_CLASSES = {
   cancelled: 'bg-red-50 text-red-600'
 }
 
+const formatDate = (value) => {
+  if (!value) return '--/--/----'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return '--/--/----'
+  }
+
+  return date.toLocaleDateString('vi-VN')
+}
+
+const formatTime = (value) => {
+  if (!value) return '--:--'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return '--:--'
+  }
+
+  return date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const getIsoDate = (value) => {
+  if (!value) return ''
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) return ''
+
+  return date.toISOString().slice(0, 10)
+}
+
+const mapReservationToBooking = (item) => {
+  return {
+    id: item.BookingCode || `BK-${String(item.ReservationID).padStart(4, '0')}`,
+    reservationId: item.ReservationID,
+    building: item.BuildingName || 'Chưa có tòa nhà',
+    vehicleType: item.VehicleName || 'Chưa có loại xe',
+    vehicleTypeValue: item.VehicleCode || '',
+    plate: item.PlateNumber || 'Chưa check-in',
+    floor: item.FloorName || '--',
+    zone: item.ZoneName || '--',
+    slot: item.SlotCode || '--',
+    startTime: formatTime(item.StartTime),
+    startDate: formatDate(item.StartTime),
+    endTime: formatTime(item.EndTime),
+    endDate: formatDate(item.EndTime),
+    rawStartDate: item.StartTime,
+    status: item.StatusLabel || item.ReservationStatus,
+    statusValue: item.StatusValue || 'used',
+    raw: item
+  }
+}
+
 const DriverHistory = () => {
+  const [bookings, setBookings] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [vehicleFilter, setVehicleFilter] = useState('')
   const [dateFilter, setDateFilter] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  const fetchReservations = async () => {
+    try {
+      setIsLoading(true)
+      setErrorMessage('')
+
+      const response = await authorizeAxios.get('/reservations')
+      const data = response.data?.data || []
+
+      setBookings(data.map(mapReservationToBooking))
+    } catch (error) {
+      console.error('Get reservations failed:', error)
+
+      const message =
+        error.response?.data?.message ||
+        'Không thể tải lịch sử đặt chỗ. Vui lòng thử lại.'
+
+      setErrorMessage(message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchReservations()
+  }, [])
 
   const filteredBookings = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase()
 
-    return BOOKINGS.filter((booking) => {
+    return bookings.filter((booking) => {
       const matchesSearch =
         !keyword ||
         booking.id.toLowerCase().includes(keyword) ||
@@ -139,22 +145,22 @@ const DriverHistory = () => {
         !vehicleFilter || booking.vehicleTypeValue === vehicleFilter
 
       const matchesDate =
-        !dateFilter || booking.startDate.split('/').reverse().join('-') === dateFilter
+        !dateFilter || getIsoDate(booking.rawStartDate) === dateFilter
 
       return matchesSearch && matchesStatus && matchesVehicle && matchesDate
     })
-  }, [searchTerm, statusFilter, vehicleFilter, dateFilter])
+  }, [bookings, searchTerm, statusFilter, vehicleFilter, dateFilter])
 
   const handleResetFilters = () => {
     setSearchTerm('')
     setStatusFilter('')
     setVehicleFilter('')
     setDateFilter('')
+    fetchReservations()
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -173,7 +179,6 @@ const DriverHistory = () => {
         </Link>
       </div>
 
-      {/* Filters */}
       <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4 lg:grid-cols-5">
           <div className="lg:col-span-2">
@@ -260,7 +265,12 @@ const DriverHistory = () => {
         </div>
       </div>
 
-      {/* Table */}
+      {errorMessage && (
+        <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-gray-100 p-5 lg:flex-row lg:items-center lg:justify-between">
           <h2 className="flex items-center gap-2 text-lg font-bold text-gray-800">
@@ -304,7 +314,15 @@ const DriverHistory = () => {
             </thead>
 
             <tbody className="divide-y divide-gray-100">
-              {filteredBookings.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={9} className="px-5 py-12 text-center">
+                    <p className="font-bold text-gray-700">
+                      Đang tải lịch sử đặt chỗ...
+                    </p>
+                  </td>
+                </tr>
+              ) : filteredBookings.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-5 py-12 text-center">
                     <div className="mx-auto max-w-sm">
@@ -377,9 +395,9 @@ const DriverHistory = () => {
 
                     <td className="px-5 py-4">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_CLASSES[booking.statusValue] ||
-                          STATUS_CLASSES.used
-                          }`}
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${
+                          STATUS_CLASSES[booking.statusValue] || STATUS_CLASSES.used
+                        }`}
                       >
                         {booking.status}
                       </span>
@@ -394,14 +412,12 @@ const DriverHistory = () => {
                             parkingName: booking.building,
                             licensePlate: booking.plate,
                             vehicleType: booking.vehicleTypeValue,
-                            bookingDate: booking.startDate
-                              .split('/')
-                              .reverse()
-                              .join('-'),
+                            bookingDate: getIsoDate(booking.rawStartDate),
                             startTime: booking.startTime,
                             floor: booking.floor,
                             zone: booking.zone,
-                            selectedSlot: booking.slot
+                            selectedSlot: booking.slot,
+                            reservationId: booking.reservationId
                           }}
                           className="text-blue-600 hover:text-blue-700"
                         >
@@ -432,7 +448,6 @@ const DriverHistory = () => {
           </table>
         </div>
 
-        {/* Pagination */}
         <div className="flex flex-col gap-4 border-t border-gray-100 p-5 lg:flex-row lg:items-center lg:justify-between">
           <Link
             to="/driver/booking"
@@ -444,7 +459,7 @@ const DriverHistory = () => {
           <div className="text-sm text-gray-500">
             Tổng cộng{' '}
             <span className="font-bold text-gray-800">
-              {BOOKINGS.length} lượt đặt chỗ
+              {bookings.length} lượt đặt chỗ
             </span>
           </div>
 
