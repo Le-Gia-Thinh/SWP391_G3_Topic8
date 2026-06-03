@@ -1,5 +1,5 @@
 import { ArrowUpRight, Download } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 
 const ManagerDashboard = () => {
   const { user } = useAuth()

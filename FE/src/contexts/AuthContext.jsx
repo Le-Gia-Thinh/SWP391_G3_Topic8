@@ -5,9 +5,9 @@ const AuthContext = createContext(null)
 
 function getRedirectPath(roleName) {
   switch (roleName) {
-    case 'Manager': return '/manager/dashboard'
+    case 'Manager': return '/manager'
     case 'Staff': return '/staff/dashboard'
-    case 'Driver': return '/driver/dashboard'
+    case 'Driver': return '/driver'
     default: return '/'
   }
 }
@@ -36,12 +36,21 @@ export function AuthProvider({ children }) {
       setUser(loggedUser)
       return loggedUser
     } catch (error) {
-      console.warn("API Login failed, using mock Driver user to bypass BE.");
+      console.warn('⚠️ API Login failed, using fallback role detection.')
+
+      let roleForTesting = 'Driver'
+      const normalizedEmail = email?.toLowerCase() || ''
+      if (normalizedEmail.includes('manager') || normalizedEmail.includes('admin')) {
+        roleForTesting = 'Manager'
+      } else if (normalizedEmail.includes('staff')) {
+        roleForTesting = 'Staff'
+      }
+
       const mockUser = {
-        id: 1,
-        fullName: "Duy Nguyễn (Mock)",
-        email: email,
-        roleName: "Driver"
+        id: Math.random().toString(36).slice(2, 10),
+        fullName: email?.split('@')[0] || 'Manager',
+        email,
+        roleName: roleForTesting
       }
       setUser(mockUser)
       return mockUser
