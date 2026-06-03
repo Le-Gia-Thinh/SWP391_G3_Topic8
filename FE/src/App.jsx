@@ -47,7 +47,7 @@ const App = () => {
 
       {/* Verify email routes */}
       <Route path="/verify-email/pending" element={<VerifyEmailPending />} />
-      <Route path="/verify-email/success" element={<VerifyEmailSuccess />} />
+ git pull origin dev     <Route path="/verify-email/success" element={<VerifyEmailSuccess />} />
       <Route path="/verify-email/error" element={<VerifyEmailError />} />
       <Route path="/verify-email" element={<VerifyEmailPending />} />
 

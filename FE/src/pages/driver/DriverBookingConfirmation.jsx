@@ -1,11 +1,11 @@
-import React from 'react';
-import { 
-  CheckCircle2, 
-  MapPin, 
-  User, 
-  Car, 
-  Building, 
-  Clock, 
+import React, { useMemo } from 'react'
+import {
+  CheckCircle2,
+  MapPin,
+  User,
+  Car,
+  Building,
+  Clock,
   CalendarDays,
   AlertCircle,
   ShieldCheck,
@@ -14,193 +14,449 @@ import {
   Download,
   Eye,
   ArrowRight
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
+} from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
+
+const PARKING_INFO = {
+  name: 'District 1 Parking Tower',
+  shortName: 'D1 Parking Tower',
+  address: '123 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh',
+  gate: 'Cổng A - Lối vào chính'
+}
+
+const VEHICLE_LABELS = {
+  car: 'Ô tô (4-7 chỗ)',
+  bike: 'Xe máy'
+}
+
+const DURATION_LABELS = {
+  '4h': '4 Giờ 00 Phút',
+  '8h': '8 Giờ 00 Phút',
+  '24h': 'Cả ngày'
+}
+
+const DURATION_HOURS = {
+  '4h': 4,
+  '8h': 8,
+  '24h': 24
+}
+
+const DEFAULT_BOOKING = {
+  bookingCode: 'BK-1025',
+  driverName: 'Nguyễn Văn A',
+  parkingName: PARKING_INFO.name,
+  licensePlate: '51K-123.45',
+  vehicleType: 'car',
+  bookingDate: '2026-06-02',
+  startTime: '08:30',
+  duration: '4h',
+  floor: 'B1',
+  zone: 'A',
+  selectedSlot: 'A-09',
+  temporaryPrice: 60000
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+
+  const [year, month, day] = dateString.split('-')
+
+  if (!year || !month || !day) return dateString
+
+  return `${day}/${month}/${year}`
+}
+
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('vi-VN').format(value || 0)
+}
+
+const addHoursToTime = (time, hours) => {
+  if (!time || !hours) return time
+
+  const [hour, minute] = time.split(':').map(Number)
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return time
+
+  const totalMinutes = hour * 60 + minute + hours * 60
+  const nextHour = Math.floor(totalMinutes / 60) % 24
+  const nextMinute = totalMinutes % 60
+
+  return `${String(nextHour).padStart(2, '0')}:${String(nextMinute).padStart(
+    2,
+    '0'
+  )}`
+}
 
 const DriverBookingConfirmation = () => {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+
+  const booking = {
+    ...DEFAULT_BOOKING,
+    ...location.state,
+    driverName: user?.fullName || location.state?.driverName || DEFAULT_BOOKING.driverName
+  }
+
+  const bookingCode = useMemo(() => {
+    return (
+      booking.bookingCode ||
+      `BK-${Math.floor(100000 + Math.random() * 900000)}`
+    )
+  }, [booking.bookingCode])
+
+  const formattedDate = formatDate(booking.bookingDate)
+  const durationLabel = DURATION_LABELS[booking.duration] || booking.duration
+  const vehicleLabel = VEHICLE_LABELS[booking.vehicleType] || booking.vehicleType
+  const expiredTime = addHoursToTime(
+    booking.startTime,
+    DURATION_HOURS[booking.duration]
+  )
+
+  const fullSlotName = `${booking.floor} / Khu ${booking.zone} / Slot ${booking.selectedSlot}`
+
+  const handleCopyBookingCode = async () => {
+    try {
+      await navigator.clipboard.writeText(bookingCode)
+    } catch {
+      // Clipboard may be blocked by browser permission.
+    }
+  }
+
+  const handleCancelBooking = () => {
+    navigate('/driver/history')
+  }
+
+  const handleViewSlotDetail = () => {
+    navigate('/driver/session')
+  }
+
   return (
-    <div className="max-w-6xl mx-auto pb-24 animate-in fade-in duration-500">
-      
+    <div className="mx-auto max-w-6xl animate-in fade-in pb-24 duration-500">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
-        <h1 className="text-2xl font-bold text-gray-900">Xác nhận đặt chỗ</h1>
-        <div className="h-4 w-px bg-gray-300"></div>
-        <div className="flex items-center gap-1.5 text-sm font-medium text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+      <div className="mb-6 flex items-center gap-4 border-b border-gray-100 pb-4">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Xác nhận đặt chỗ
+        </h1>
+
+        <div className="h-4 w-px bg-gray-300" />
+
+        <div className="flex items-center gap-1.5 rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-500">
           <MapPin size={16} className="text-blue-500" />
-          District 1 Parking Tower
+          {booking.parkingName}
         </div>
       </div>
 
       {/* Success Banner */}
-      <div className="bg-green-50 border border-green-200 rounded-2xl p-5 mb-8 flex items-start sm:items-center justify-between gap-4">
-        <div className="flex items-start sm:items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+      <div className="mb-8 flex items-start justify-between gap-4 rounded-2xl border border-green-200 bg-green-50 p-5 sm:items-center">
+        <div className="flex items-start gap-4 sm:items-center">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-600">
             <CheckCircle2 size={24} />
           </div>
+
           <div>
-            <h2 className="text-lg font-bold text-green-800">Vị trí của bạn đã được giữ chỗ thành công!</h2>
-            <p className="text-sm text-green-700 mt-1">Cảm ơn bạn đã sử dụng dịch vụ. Vui lòng kiểm tra thông tin chi tiết bên dưới.</p>
+            <h2 className="text-lg font-bold text-green-800">
+              Vị trí của bạn đã được giữ chỗ thành công!
+            </h2>
+            <p className="mt-1 text-sm text-green-700">
+              Cảm ơn bạn đã sử dụng dịch vụ. Vui lòng kiểm tra thông tin chi
+              tiết bên dưới.
+            </p>
           </div>
         </div>
+
         <div className="hidden sm:block">
-          <span className="bg-white text-green-700 px-4 py-2 rounded-xl text-sm font-bold shadow-sm border border-green-100">Đang hoạt động</span>
+          <span className="rounded-xl border border-green-100 bg-white px-4 py-2 text-sm font-bold text-green-700 shadow-sm">
+            Đang hoạt động
+          </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Left Column */}
-        <div className="lg:col-span-2 space-y-8">
-          
+        <div className="space-y-8 lg:col-span-2">
           {/* Details */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 shadow-sm">
-            <h3 className="text-base font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm md:p-8">
+            <h3 className="mb-6 flex items-center gap-2 text-base font-bold text-gray-900">
               <CalendarDays className="text-blue-500" size={20} />
               Thông tin chi tiết đặt chỗ
             </h3>
-            
-            <p className="text-sm text-gray-500 mb-6">Vui lòng xuất trình thông tin này khi đến bãi đỗ xe.</p>
+
+            <p className="mb-6 text-sm text-gray-500">
+              Vui lòng xuất trình thông tin này khi đến bãi đỗ xe.
+            </p>
 
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-50 gap-1">
-                <span className="text-gray-500 text-sm flex items-center gap-2"><User size={16} /> Tên tài xế</span>
-                <span className="font-bold text-gray-900">Nguyễn Văn A</span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-50 gap-1">
-                <span className="text-gray-500 text-sm flex items-center gap-2"><Car size={16} /> Biển số xe</span>
-                <span className="font-bold text-gray-900">51K - 123.45</span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-50 gap-1">
-                <span className="text-gray-500 text-sm flex items-center gap-2"><Car size={16} /> Loại phương tiện</span>
-                <span className="font-medium text-gray-900">Ô tô (4-7 chỗ)</span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-50 gap-1">
-                <span className="text-gray-500 text-sm flex items-center gap-2"><Building size={16} /> Tòa nhà đỗ xe</span>
-                <span className="font-medium text-gray-900">District 1 Parking Tower</span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-50 gap-1">
-                <span className="text-gray-500 text-sm flex items-center gap-2"><MapPin size={16} /> Vị trí đỗ</span>
-                <span className="font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">Tầng 2 / Khu A / Số 102</span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-50 gap-1">
-                <span className="text-gray-500 text-sm flex items-center gap-2"><Clock size={16} /> Thời gian bắt đầu</span>
-                <span className="font-bold text-gray-900">14:30 - 24/10/2023</span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-gray-50 gap-1">
-                <span className="text-gray-500 text-sm flex items-center gap-2"><Clock size={16} /> Thời gian dự kiến</span>
-                <span className="font-medium text-gray-900">4 Giờ 00 Phút</span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-1">
-                <span className="text-gray-500 text-sm flex items-center gap-2"><Clock size={16} /> Thời gian hết hạn</span>
-                <span className="font-bold text-red-600">18:30 - 24/10/2023</span>
-              </div>
+              <DetailRow
+                icon={<User size={16} />}
+                label="Tên tài xế"
+                value={booking.driverName}
+                bold
+              />
+
+              <DetailRow
+                icon={<Car size={16} />}
+                label="Biển số xe"
+                value={booking.licensePlate}
+                bold
+              />
+
+              <DetailRow
+                icon={<Car size={16} />}
+                label="Loại phương tiện"
+                value={vehicleLabel}
+              />
+
+              <DetailRow
+                icon={<Building size={16} />}
+                label="Tòa nhà đỗ xe"
+                value={booking.parkingName}
+              />
+
+              <DetailRow
+                icon={<MapPin size={16} />}
+                label="Vị trí đỗ"
+                value={fullSlotName}
+                valueClassName="rounded-lg border border-blue-100 bg-blue-50 px-3 py-1 font-bold text-blue-600"
+              />
+
+              <DetailRow
+                icon={<Clock size={16} />}
+                label="Thời gian bắt đầu"
+                value={`${booking.startTime} - ${formattedDate}`}
+                bold
+              />
+
+              <DetailRow
+                icon={<Clock size={16} />}
+                label="Thời gian dự kiến"
+                value={durationLabel}
+              />
+
+              <DetailRow
+                icon={<Clock size={16} />}
+                label="Thời gian hết hạn"
+                value={`${expiredTime} - ${formattedDate}`}
+                valueClassName="font-bold text-red-600"
+                noBorder
+              />
             </div>
           </div>
 
           {/* Important Notes */}
           <div>
-            <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <h3 className="mb-4 flex items-center gap-2 text-base font-bold text-gray-900">
               Lưu ý quan trọng
             </h3>
-            
+
             <div className="space-y-4">
-              <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-5 flex gap-3">
-                <AlertCircle className="text-orange-500 shrink-0" size={20} />
-                <div>
-                  <h4 className="font-bold text-orange-800 text-sm mb-1">Thời gian hiệu lực</h4>
-                  <p className="text-xs text-orange-700 leading-relaxed">Vui lòng đến bãi đỗ xe trước thời hạn <span className="font-bold">14:30</span>. Sau thời gian này, nếu bạn chưa check-in vị trí tự động bị hủy và vị trí sẽ được giải phóng cho người khác.</p>
-                </div>
-              </div>
+              <NoteCard
+                icon={<AlertCircle size={20} />}
+                iconClassName="text-orange-500"
+                className="border-orange-100 bg-orange-50/50"
+                title="Thời gian hiệu lực"
+                titleClassName="text-orange-800"
+                contentClassName="text-orange-700"
+              >
+                Vui lòng check-in đúng thời gian đã đặt. Nếu bạn không vào bãi
+                sau thời gian cho phép, vị trí có thể được giải phóng cho người
+                khác.
+              </NoteCard>
 
-              <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-5 flex gap-3">
-                <ShieldCheck className="text-blue-500 shrink-0" size={20} />
-                <div>
-                  <h4 className="font-bold text-blue-800 text-sm mb-1">Quy trình vào cổng</h4>
-                  <p className="text-xs text-blue-700 leading-relaxed">Hệ thống camera sẽ tự động nhận diện <span className="font-bold">biển số xe</span> hoặc <span className="font-bold">Mã đặt chỗ</span>. Sau khi mở barie, bạn có thể di chuyển phương tiện đến vị trí xe.</p>
-                </div>
-              </div>
+              <NoteCard
+                icon={<ShieldCheck size={20} />}
+                iconClassName="text-blue-500"
+                className="border-blue-100 bg-blue-50/50"
+                title="Quy trình vào cổng"
+                titleClassName="text-blue-800"
+                contentClassName="text-blue-700"
+              >
+                Khi đến bãi xe, bạn cung cấp biển số xe hoặc mã đặt chỗ cho
+                nhân viên để được xác nhận và hướng dẫn vào đúng vị trí.
+              </NoteCard>
 
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 flex gap-3">
-                <Ban className="text-gray-500 shrink-0" size={20} />
-                <div>
-                  <h4 className="font-bold text-gray-700 text-sm mb-1">Chính sách hủy</h4>
-                  <p className="text-xs text-gray-600 leading-relaxed">Bạn có thể hủy đặt chỗ miễn phí trước 30 phút. Quá thời gian này có thể phát sinh phí hủy dịch vụ theo quy định.</p>
-                </div>
-              </div>
+              <NoteCard
+                icon={<Ban size={20} />}
+                iconClassName="text-gray-500"
+                className="border-gray-200 bg-gray-50"
+                title="Chính sách hủy"
+                titleClassName="text-gray-700"
+                contentClassName="text-gray-600"
+              >
+                Bạn có thể hủy đặt chỗ miễn phí trước 30 phút. Quá thời gian
+                này có thể phát sinh phí hủy dịch vụ theo quy định.
+              </NoteCard>
             </div>
           </div>
         </div>
 
         {/* Right Column */}
         <div className="space-y-6">
-          
-          <div className="bg-white border-2 border-blue-100 rounded-2xl p-6 shadow-sm text-center">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Mã đặt chỗ của bạn</p>
-            <div className="bg-blue-50 border border-blue-200 rounded-xl py-4 mb-4 relative overflow-hidden group cursor-pointer hover:bg-blue-100 transition-colors">
-              <h2 className="text-3xl font-black text-blue-600 tracking-wider">BK-1025</h2>
-              <div className="absolute top-2 right-2 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="rounded-2xl border-2 border-blue-100 bg-white p-6 text-center shadow-sm">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">
+              Mã đặt chỗ của bạn
+            </p>
+
+            <button
+              type="button"
+              onClick={handleCopyBookingCode}
+              className="group relative mb-4 w-full overflow-hidden rounded-xl border border-blue-200 bg-blue-50 py-4 transition-colors hover:bg-blue-100"
+            >
+              <h2 className="text-3xl font-black tracking-wider text-blue-600">
+                {bookingCode}
+              </h2>
+
+              <div className="absolute right-2 top-2 text-blue-400 opacity-0 transition-opacity group-hover:opacity-100">
                 <Copy size={16} />
               </div>
-            </div>
-            
-            <p className="text-xs text-gray-500 mb-6 leading-relaxed">
-              Cung cấp biển số xe <span className="font-bold text-gray-900">51K - 123.45</span> hoặc mã này cho nhân viên tại cổng vào.
+            </button>
+
+            <p className="mb-6 text-xs leading-relaxed text-gray-500">
+              Cung cấp biển số xe{' '}
+              <span className="font-bold text-gray-900">
+                {booking.licensePlate}
+              </span>{' '}
+              hoặc mã này cho nhân viên tại cổng vào.
             </p>
-            
+
             <div className="space-y-3">
-              <Link to="/driver/history" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-blue-200 flex items-center justify-center gap-2 text-sm">
+              <Link
+                to="/driver/history"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700"
+              >
                 <Eye size={16} />
                 Xem danh sách của tôi
               </Link>
-              <button className="w-full bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
+
+              <button
+                type="button"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-3 text-sm font-bold text-gray-700 transition-all hover:bg-gray-50"
+              >
                 <Download size={16} />
-                Tải xuống vé (PDF)
+                Tải xuống vé PDF
               </button>
             </div>
           </div>
 
-          <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+          <div className="flex items-start gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
               <MapPin size={20} />
             </div>
+
             <div>
-              <h4 className="font-bold text-gray-900 text-sm mb-1">Vị trí bãi xe</h4>
-              <p className="text-xs text-gray-500 mb-2 leading-relaxed">
-                123 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh
+              <h4 className="mb-1 text-sm font-bold text-gray-900">
+                Vị trí bãi xe
+              </h4>
+
+              <p className="mb-2 text-xs leading-relaxed text-gray-500">
+                {PARKING_INFO.address}
               </p>
-              <Link to="#" className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline">
+
+              <Link
+                to="#"
+                className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
+              >
                 Xem trên bản đồ <ArrowRight size={13} />
               </Link>
             </div>
           </div>
-
         </div>
-
       </div>
 
       {/* Sticky Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 sm:left-64 bg-white border-t border-gray-200 p-4 shadow-[0_-10px_20px_rgba(0,0,0,0.02)] z-10">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-gray-200 bg-white p-4 shadow-[0_-10px_20px_rgba(0,0,0,0.02)] sm:left-64">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="hidden sm:block">
-              <p className="text-sm font-medium text-gray-500">Phiên bản hiện tại v2.4.0</p>
-              <p className="text-xs text-gray-400">Parking Building Management System</p>
-            </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button className="text-sm font-bold text-red-500 hover:bg-red-50 px-4 py-2.5 rounded-xl transition-colors shrink-0">
+            <p className="text-sm font-medium text-gray-500">
+              Phiên bản hiện tại v2.4.0
+            </p>
+            <p className="text-xs text-gray-400">
+              Parking Building Management System
+            </p>
+          </div>
+
+          <div className="flex w-full items-center gap-3 sm:w-auto">
+            <button
+              type="button"
+              onClick={handleCancelBooking}
+              className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold text-red-500 transition-colors hover:bg-red-50"
+            >
               Hủy đặt chỗ này
             </button>
-            <Link to="/driver/booking" className="flex-1 sm:flex-none text-center bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-2.5 px-6 rounded-xl transition-colors text-sm">
+
+            <Link
+              to="/driver/booking"
+              className="flex-1 rounded-xl border border-gray-200 bg-white px-6 py-2.5 text-center text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 sm:flex-none"
+            >
               Đặt thêm chỗ mới
             </Link>
-            <button className="flex-1 sm:flex-none text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition-colors shadow-md shadow-blue-200 text-sm">
+
+            <button
+              type="button"
+              onClick={handleViewSlotDetail}
+              className="flex-1 rounded-xl bg-blue-600 px-6 py-2.5 text-center text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors hover:bg-blue-700 sm:flex-none"
+            >
               Xem chi tiết chỗ đỗ
             </button>
           </div>
         </div>
       </div>
-
     </div>
-  );
-};
+  )
+}
 
-export default DriverBookingConfirmation;
+const DetailRow = ({
+  icon,
+  label,
+  value,
+  bold = false,
+  valueClassName = '',
+  noBorder = false
+}) => {
+  const defaultValueClass = bold
+    ? 'font-bold text-gray-900'
+    : 'font-medium text-gray-900'
+
+  return (
+    <div
+      className={`flex flex-col justify-between gap-1 py-3 sm:flex-row sm:items-center ${noBorder ? '' : 'border-b border-gray-50'
+        }`}
+    >
+      <span className="flex items-center gap-2 text-sm text-gray-500">
+        {icon}
+        {label}
+      </span>
+
+      <span className={valueClassName || defaultValueClass}>{value}</span>
+    </div>
+  )
+}
+
+const NoteCard = ({
+  icon,
+  iconClassName,
+  className,
+  title,
+  titleClassName,
+  contentClassName,
+  children
+}) => {
+  return (
+    <div className={`flex gap-3 rounded-xl border p-5 ${className}`}>
+      <div className={`shrink-0 ${iconClassName}`}>{icon}</div>
+
+      <div>
+        <h4 className={`mb-1 text-sm font-bold ${titleClassName}`}>
+          {title}
+        </h4>
+
+        <p className={`text-xs leading-relaxed ${contentClassName}`}>
+          {children}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default DriverBookingConfirmation
