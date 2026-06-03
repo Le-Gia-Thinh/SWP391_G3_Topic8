@@ -24,3 +24,6 @@ export const googleLoginAPI = (idToken) => {
 export const facebookLoginAPI = (token) => {
   return authorizeAxios.post('/auth/facebook', { accessToken: token })
 }
+export const checkEmailVerifiedAPI = (email) => {
+  return authorizeAxios.post('/auth/check-email-verified', { email })
+}
