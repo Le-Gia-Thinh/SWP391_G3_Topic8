@@ -1,3 +1,4 @@
+
 import { getPool, sql } from "../config/db.js";
 
 function getUserIdFromToken(req) {

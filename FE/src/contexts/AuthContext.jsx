@@ -15,12 +15,35 @@ function getRedirectPath(roleName) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-
   useEffect(() => {
-    getMeAPI()
-      .then((res) => setUser(res.data.data))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false))
+    const handleLoadingDone = () => setLoading(false)
+    window.addEventListener('auth:loading-done', handleLoadingDone)
+    return () => window.removeEventListener('auth:loading-done', handleLoadingDone)
+  }, [])
+  // AuthContext.jsx
+  useEffect(() => {
+    let cancelled = false
+
+    async function initAuth() {
+      try {
+        const res = await getMeAPI()
+        if (!cancelled) {
+          setUser(res.data.data)
+          setLoading(false)
+        }
+      } catch (err) {
+        if (cancelled) return
+        const code = err?.response?.data?.code
+        // TOKEN_EXPIRED: interceptor đã tự refresh + retry getMeAPI bên trong
+        // promise đã resolve ở trên rồi nếu thành công
+        // nếu vào catch này với TOKEN_EXPIRED = refresh thất bại
+        setUser(null)
+        setLoading(false)
+      }
+    }
+
+    initAuth()
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
@@ -30,31 +53,10 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function login({ email, password }) {
-    try {
-      const res = await loginAPI({ email, password })
-      const loggedUser = res.data.data.user
-      setUser(loggedUser)
-      return loggedUser
-    } catch (error) {
-      console.warn('⚠️ API Login failed, using fallback role detection.')
-
-      let roleForTesting = 'Driver'
-      const normalizedEmail = email?.toLowerCase() || ''
-      if (normalizedEmail.includes('manager') || normalizedEmail.includes('admin')) {
-        roleForTesting = 'Manager'
-      } else if (normalizedEmail.includes('staff')) {
-        roleForTesting = 'Staff'
-      }
-
-      const mockUser = {
-        id: Math.random().toString(36).slice(2, 10),
-        fullName: email?.split('@')[0] || 'Manager',
-        email,
-        roleName: roleForTesting
-      }
-      setUser(mockUser)
-      return mockUser
-    }
+    const res = await loginAPI({ email, password })
+    const loggedUser = res.data.data.user
+    setUser(loggedUser)
+    return loggedUser
   }
 
   // ✅ Bug 3 fix — trả { user, message }

@@ -73,13 +73,17 @@ const AdminLogin = () => {
   if (isAuthenticated) {
     return <Navigate to={getRedirectPath(user?.roleName)} replace />
   }
-
   const onSubmit = async ({ account, password }) => {
     try {
       const loggedUser = await login({ email: account, password })
+
+      toast.success('Đăng nhập thành công')
       navigate(getRedirectPath(loggedUser.roleName), { replace: true })
-    } catch {
-      // toast đã xử lý bởi axios interceptor
+    } catch (error) {
+      const message =
+        error.response?.data?.message || 'Email hoặc mật khẩu không đúng'
+
+      toast.error(message)
     }
   }
 

@@ -12,8 +12,7 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
-        historyApiFallback: true,
-        https: true
+        cookieDomainRewrite: 'localhost'
       }
     }
   }

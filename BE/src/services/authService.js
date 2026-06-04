@@ -10,7 +10,7 @@ import JwtProvider from "../providers/JwtProvider.js";
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const BCRYPT_ROUNDS = 10;
 const REFRESH_TTL = ms(process.env.REFRESH_TOKEN_EXPIRES || "7d");
-
+const SESSION_ABSOLUTE_TTL = ms(process.env.SESSION_ABSOLUTE_EXPIRES);
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: parseInt(process.env.SMTP_PORT || "587"),
@@ -58,7 +58,7 @@ function formatUser(u) {
     };
 }
 
-async function generateAndSaveTokens(pool, user, ip = null) {
+async function generateAndSaveTokens(pool, user, ip = null, existingSessionExpiresAt = null) {
     const payload = {
         userId: user.UserID,
         email: user.Email,
@@ -68,15 +68,31 @@ async function generateAndSaveTokens(pool, user, ip = null) {
 
     const accessToken = JwtProvider.generateAccessToken(payload);
     const refreshToken = JwtProvider.generateRefreshToken({ userId: user.UserID });
+
     const tokenHash = JwtProvider.hashToken(refreshToken);
     const expiresAt = new Date(Date.now() + REFRESH_TTL);
+
+    const sessionExpiresAt =
+        existingSessionExpiresAt
+            ? new Date(existingSessionExpiresAt)
+            : new Date(Date.now() + SESSION_ABSOLUTE_TTL);
 
     await pool.request()
         .input("UserID", sql.Int, user.UserID)
         .input("TokenHash", sql.NVarChar(200), tokenHash)
         .input("ExpiresAt", sql.DateTime, expiresAt)
+        .input("SessionExpiresAt", sql.DateTime, sessionExpiresAt)
         .input("CreatedByIp", sql.NVarChar(45), ip || null)
         .execute("sp_SaveRefreshToken");
+
+    console.log("====================================");
+    console.log("🆕 Tokens created");
+    console.log("UserID:", user.UserID);
+    console.log("Refresh expires at:", expiresAt.toISOString());
+    console.log("Session absolute expires at:", sessionExpiresAt.toISOString());
+    console.log("Refresh TTL seconds:", Math.floor(REFRESH_TTL / 1000));
+    console.log("Absolute session TTL seconds:", Math.floor((sessionExpiresAt - Date.now()) / 1000));
+    console.log("====================================");
 
     return { accessToken, refreshToken };
 }
@@ -282,7 +298,7 @@ export async function refreshTokenService(rawRefreshToken, ip) {
         .execute("sp_GetUserByRefreshToken");
 
     if (result.recordset.length === 0) {
-        const err = new Error("Refresh token không hợp lệ hoặc đã hết hạn");
+        const err = new Error("Refresh token không hợp lệ hoặc session đã hết hạn");
         err.statusCode = 401;
         err.code = "REFRESH_TOKEN_EXPIRED";
         throw err;
@@ -290,12 +306,19 @@ export async function refreshTokenService(rawRefreshToken, ip) {
 
     const user = result.recordset[0];
 
+    if (new Date(user.SessionExpiresAt) <= new Date()) {
+        const err = new Error("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại");
+        err.statusCode = 401;
+        err.code = "SESSION_EXPIRED";
+        throw err;
+    }
+
     await pool.request()
         .input("TokenHash", sql.NVarChar(200), tokenHash)
         .execute("sp_RevokeRefreshToken");
 
     const { accessToken, refreshToken: newRefreshToken } =
-        await generateAndSaveTokens(pool, user, ip);
+        await generateAndSaveTokens(pool, user, ip, user.SessionExpiresAt);
 
     return { accessToken, refreshToken: newRefreshToken };
 }

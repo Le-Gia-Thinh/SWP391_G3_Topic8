@@ -2,8 +2,8 @@ import { StatusCodes } from "http-status-codes";
 import * as authService from "../services/authService.js";
 import JwtProvider from "../providers/JwtProvider.js";
 
-const ACCESS_TOKEN_EXPIRES = process.env.ACCESS_TOKEN_EXPIRES || "15m";
-const REFRESH_TOKEN_EXPIRES = process.env.REFRESH_TOKEN_EXPIRES || "7d";
+const ACCESS_TOKEN_EXPIRES = process.env.ACCESS_TOKEN_EXPIRES;
+const REFRESH_TOKEN_EXPIRES = process.env.REFRESH_TOKEN_EXPIRES;
 const IS_PROD = process.env.NODE_ENV === "production";
 
 const baseCookieOptions = {
@@ -15,8 +15,9 @@ const baseCookieOptions = {
 function setTokenCookies(res, accessToken, refreshToken) {
   res.cookie("accessToken", accessToken, {
     ...baseCookieOptions,
-    maxAge: JwtProvider.toMs(ACCESS_TOKEN_EXPIRES),
+    maxAge: JwtProvider.toMs(REFRESH_TOKEN_EXPIRES),
   });
+
   res.cookie("refreshToken", refreshToken, {
     ...baseCookieOptions,
     maxAge: JwtProvider.toMs(REFRESH_TOKEN_EXPIRES),
@@ -147,32 +148,55 @@ export async function resendVerifyEmail(req, res, next) {
     });
   } catch (err) { next(err); }
 }
-
 // POST /api/auth/refresh
 export async function refreshToken(req, res, next) {
   try {
-    const rawRefreshToken = req.cookies?.refreshToken;
+    const rawRefreshToken = req.cookies?.refreshToken
+
+    console.log('====================================')
+    console.log('🔄 /api/auth/refresh called')
+    console.log('Time:', new Date().toISOString())
+    console.log('Has refreshToken cookie:', !!rawRefreshToken)
+
+    if (rawRefreshToken) {
+      try {
+        const decoded = JwtProvider.verifyRefreshToken(rawRefreshToken)
+        const nowInSeconds = Math.floor(Date.now() / 1000)
+        const remainingSeconds = decoded.exp - nowInSeconds
+
+        console.log('Refresh token userId:', decoded.userId)
+        console.log('Refresh token exp:', new Date(decoded.exp * 1000).toISOString())
+        console.log('Refresh token remaining seconds:', remainingSeconds)
+      } catch (err) {
+        console.log('Refresh token verify failed:', err.name, err.message)
+      }
+    }
+
+    console.log('====================================')
+
     if (!rawRefreshToken) {
-      clearTokenCookies(res);
+      clearTokenCookies(res)
       return res.status(StatusCodes.UNAUTHORIZED).json({
         success: false,
-        message: "Refresh token không tồn tại hoặc đã hết hạn",
-        code: "REFRESH_TOKEN_EXPIRED",
-      });
+        message: 'Refresh token không tồn tại hoặc đã hết hạn',
+        code: 'REFRESH_TOKEN_EXPIRED',
+      })
     }
+
     const { accessToken, refreshToken: newRefreshToken } =
-      await authService.refreshTokenService(rawRefreshToken, getClientIp(req));
-    setTokenCookies(res, accessToken, newRefreshToken);
+      await authService.refreshTokenService(rawRefreshToken, getClientIp(req))
+
+    setTokenCookies(res, accessToken, newRefreshToken)
+
     return res.status(StatusCodes.OK).json({
       success: true,
-      message: "Refresh token thành công",
-    });
+      message: 'Refresh token thành công',
+    })
   } catch (err) {
-    clearTokenCookies(res);
-    next(err);
+    clearTokenCookies(res)
+    next(err)
   }
 }
-
 // POST /api/auth/logout
 export async function logout(req, res, next) {
   try {
