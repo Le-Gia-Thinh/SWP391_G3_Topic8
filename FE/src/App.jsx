@@ -5,8 +5,17 @@ import Home from './pages/Home'
 import AdminLogin from './pages/AdminLogin'
 import DriverRegister from './pages/DriverRegister'
 
-import StaffDashboard from './pages/StaffDashboard'
-
+import StaffLayout from './pages/staff/StaffLayout'
+import StaffDashboardScreen from './pages/staff/StaffDashboardScreen'
+import StaffCheckInWalkIn from './pages/staff/StaffCheckInWalkIn'
+import StaffCheckInSuccess from './pages/staff/StaffCheckInSuccess'
+import StaffBookingCheckIn from './pages/staff/StaffBookingCheckIn'
+import StaffVerifyBooking from './pages/staff/StaffVerifyBooking'
+import StaffBookingSuccess from './pages/staff/StaffBookingSuccess'
+import StaffCreateIncident from './pages/staff/StaffCreateIncident'
+import StaffVehicleCheckOut from './pages/staff/StaffVehicleCheckOut'
+import StaffPaymentConfirm from './pages/staff/StaffPaymentConfirm'
+import StaffCheckOutCompleted from './pages/staff/StaffCheckOutCompleted'
 import DriverLayout from './pages/driver/DriverLayout'
 import DriverHome from './pages/driver/DriverHome'
 import DriverBooking from './pages/driver/DriverBooking'
@@ -99,7 +108,19 @@ const App = () => {
 
       {/* Staff only */}
       <Route element={<RoleRoute allowedRoles={['Staff']} />}>
-        <Route path="/staff/dashboard" element={<StaffDashboard />} />
+        <Route path="/staff" element={<StaffLayout />}>
+          <Route index element={<StaffDashboardScreen />} />
+          <Route path="dashboard" element={<StaffDashboardScreen />} />
+          <Route path="checkin-walkin" element={<StaffCheckInWalkIn />} />
+          <Route path="checkin-success" element={<StaffCheckInSuccess />} />
+          <Route path="checkin-booking" element={<StaffBookingCheckIn />} />
+          <Route path="verify-booking" element={<StaffVerifyBooking />} />
+          <Route path="booking-success" element={<StaffBookingSuccess />} />
+          <Route path="create-incident" element={<StaffCreateIncident />} />
+          <Route path="checkout" element={<StaffVehicleCheckOut />} />
+          <Route path="payment" element={<StaffPaymentConfirm />} />
+          <Route path="checkout-completed" element={<StaffCheckOutCompleted />} />
+        </Route>
       </Route>
 
       {/* Staff + Manager */}
