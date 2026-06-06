@@ -5,6 +5,7 @@ import * as commonController from "../controllers/commonController.js";
 import * as sessionController from "../controllers/sessionController.js";
 import * as reservationController from "../controllers/reservationController.js";
 import * as reportController from "../controllers/reportController.js";
+import * as driverController from "../controllers/driverController.js";
 
 import {
   isAuthorized,
@@ -56,8 +57,28 @@ router.get("/vehicle-types", isAuthorized, commonController.getVehicleTypes);
 router.get("/buildings", isAuthorized, commonController.getBuildings);
 router.get("/slots", isAuthorized, commonController.getSlots);
 
+// Driver
+router.get(
+  "/driver/home",
+  isAuthorized,
+  isDriver,
+  driverController.getDriverHome
+);
+
+router.get(
+  "/driver/current-session",
+  isAuthorized,
+  isDriver,
+  sessionController.getCurrentDriverSession
+);
+
 // Sessions
-router.get("/sessions", isAuthorized, isStaffOrManager, sessionController.getSessions);
+router.get(
+  "/sessions",
+  isAuthorized,
+  isStaffOrManager,
+  sessionController.getSessions
+);
 
 router.post(
   "/sessions/check-in",
@@ -75,15 +96,18 @@ router.post(
   sessionController.checkOutVehicle
 );
 
+// Reservations
 router.get(
-  "/driver/current-session",
+  "/reservations",
   isAuthorized,
-  isDriver,
-  sessionController.getCurrentDriverSession
+  reservationController.getReservations
 );
 
-// Reservations
-router.get("/reservations", isAuthorized, reservationController.getReservations);
+router.get(
+  "/reservations/:id",
+  isAuthorized,
+  reservationController.getReservationById
+);
 
 router.post(
   "/reservations",
@@ -94,6 +118,11 @@ router.post(
 );
 
 // Reports
-router.get("/reports/dashboard", isAuthorized, isManager, reportController.dashboard);
+router.get(
+  "/reports/dashboard",
+  isAuthorized,
+  isManager,
+  reportController.dashboard
+);
 
 export default router;

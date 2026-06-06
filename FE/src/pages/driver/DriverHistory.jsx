@@ -406,23 +406,23 @@ const DriverHistory = () => {
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-3 font-semibold">
                         <Link
-                          to="/driver/booking-confirmation"
-                          state={{
-                            bookingCode: booking.id,
-                            parkingName: booking.building,
-                            licensePlate: booking.plate,
-                            vehicleType: booking.vehicleTypeValue,
-                            bookingDate: getIsoDate(booking.rawStartDate),
-                            startTime: booking.startTime,
-                            floor: booking.floor,
-                            zone: booking.zone,
-                            selectedSlot: booking.slot,
-                            reservationId: booking.reservationId
-                          }}
-                          className="text-blue-600 hover:text-blue-700"
-                        >
-                          Chi tiết
-                        </Link>
+  to={`/driver/booking-confirmation?reservationId=${booking.reservationId}`}
+  state={{
+    bookingCode: booking.id,
+    parkingName: booking.building,
+    licensePlate: booking.plate,
+    vehicleType: booking.vehicleTypeValue,
+    bookingDate: getIsoDate(booking.rawStartDate),
+    startTime: booking.startTime,
+    floor: booking.floor,
+    zone: booking.zone,
+    selectedSlot: booking.slot,
+    reservationId: booking.reservationId
+  }}
+  className="text-blue-600 hover:text-blue-700"
+>
+  Chi tiết
+</Link>
 
                         {booking.statusValue === 'active' && (
                           <button

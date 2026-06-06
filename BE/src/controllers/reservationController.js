@@ -76,6 +76,7 @@ export async function getReservations(req, res, next) {
         r.DriverID,
         u.FullName AS DriverName,
         u.Email AS DriverEmail,
+        u.PhoneNumber AS DriverPhone,
 
         r.VehicleTypeID,
         vt.VehicleCode,
@@ -97,6 +98,7 @@ export async function getReservations(req, res, next) {
         r.ReservationStatus,
         r.CreatedAt,
 
+        latestSession.SessionID,
         latestSession.PlateNumber,
 
         CASE
@@ -124,7 +126,9 @@ export async function getReservations(req, res, next) {
       LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
 
       OUTER APPLY (
-        SELECT TOP 1 s.PlateNumber
+        SELECT TOP 1
+          s.SessionID,
+          s.PlateNumber
         FROM ParkingSessions s
         WHERE s.DriverID = r.DriverID
           AND s.SlotID = r.SlotID
@@ -135,9 +139,124 @@ export async function getReservations(req, res, next) {
       ORDER BY r.ReservationID DESC
     `);
 
-    res.json({
+    return res.json({
       success: true,
       data: result.recordset,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getReservationById(req, res, next) {
+  try {
+    const reservationId = Number(req.params.id);
+
+    if (!Number.isInteger(reservationId) || reservationId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "reservationId không hợp lệ.",
+      });
+    }
+
+    const pool = await getPool();
+
+    const userId = getUserIdFromToken(req);
+    const roleName = getRoleNameFromToken(req);
+
+    const request = pool.request()
+      .input("ReservationID", sql.Int, reservationId);
+
+    let driverFilterSql = "";
+
+    if (roleName === "Driver") {
+      request.input("DriverID", sql.Int, userId);
+      driverFilterSql = "AND r.DriverID = @DriverID";
+    }
+
+    const result = await request.query(`
+      SELECT TOP 1
+        r.ReservationID,
+        CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
+
+        r.DriverID,
+        u.FullName AS DriverName,
+        u.Email AS DriverEmail,
+        u.PhoneNumber AS DriverPhone,
+
+        r.VehicleTypeID,
+        vt.VehicleCode,
+        vt.VehicleName,
+
+        r.SlotID,
+        ps.SlotCode,
+        ps.SlotStatus,
+
+        z.ZoneName,
+        f.FloorName,
+        b.BuildingID,
+        b.BuildingName,
+        b.Address,
+
+        r.ReservationDate,
+        r.StartTime,
+        r.EndTime,
+        r.ReservationStatus,
+        r.CreatedAt,
+
+        latestSession.SessionID,
+        latestSession.PlateNumber,
+
+        CASE
+          WHEN r.ReservationStatus = 'Reserved' AND r.EndTime >= GETDATE() THEN 'active'
+          WHEN r.ReservationStatus = 'Completed' THEN 'used'
+          WHEN r.ReservationStatus = 'Cancelled' THEN 'cancelled'
+          WHEN r.ReservationStatus = 'Expired' OR r.EndTime < GETDATE() THEN 'expired'
+          ELSE 'used'
+        END AS StatusValue,
+
+        CASE
+          WHEN r.ReservationStatus = 'Reserved' AND r.EndTime >= GETDATE() THEN N'Đang hoạt động'
+          WHEN r.ReservationStatus = 'Completed' THEN N'Đã sử dụng'
+          WHEN r.ReservationStatus = 'Cancelled' THEN N'Đã hủy'
+          WHEN r.ReservationStatus = 'Expired' OR r.EndTime < GETDATE() THEN N'Hết hạn'
+          ELSE N'Đã sử dụng'
+        END AS StatusLabel
+
+      FROM Reservations r
+      JOIN Users u ON r.DriverID = u.UserID
+      JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
+      LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID
+      LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID
+      LEFT JOIN Floors f ON z.FloorID = f.FloorID
+      LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
+
+      OUTER APPLY (
+        SELECT TOP 1
+          s.SessionID,
+          s.PlateNumber
+        FROM ParkingSessions s
+        WHERE s.DriverID = r.DriverID
+          AND s.SlotID = r.SlotID
+        ORDER BY s.EntryTime DESC
+      ) latestSession
+
+      WHERE r.ReservationID = @ReservationID
+      ${driverFilterSql}
+    `);
+
+    const reservation = result.recordset[0];
+
+    if (!reservation) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy đặt chỗ.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: reservation,
     });
   } catch (err) {
     next(err);

@@ -149,9 +149,11 @@ const DriverBooking = () => {
         slotId: reservation?.SlotID
       }
 
-      navigate('/driver/booking-confirmation', {
-        state: bookingData
-      })
+      navigate(`/driver/booking-confirmation?reservationId=${reservation?.ReservationID}`,
+        {
+          state: bookingData
+        }
+      )
     } catch (error) {
       console.error('Create booking failed:', error)
 
@@ -356,13 +358,12 @@ const DriverBooking = () => {
                     type="button"
                     onClick={() => handleSelectSlot(slot)}
                     disabled={slot.status === 'occupied'}
-                    className={`flex h-12 items-center justify-center rounded-lg border text-xs font-bold outline-none transition-all ${
-                      slot.status === 'occupied'
+                    className={`flex h-12 items-center justify-center rounded-lg border text-xs font-bold outline-none transition-all ${slot.status === 'occupied'
                         ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
                         : slot.status === 'selected'
                           ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-sm ring-2 ring-blue-100'
                           : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:text-blue-500'
-                    }`}
+                      }`}
                   >
                     {slot.id}
                   </button>

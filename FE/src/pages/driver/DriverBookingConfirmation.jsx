@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   CheckCircle2,
   MapPin,
@@ -13,108 +13,276 @@ import {
   Copy,
   Download,
   Eye,
-  ArrowRight
+  ArrowRight,
+  RefreshCcw
 } from 'lucide-react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams
+} from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import authorizeAxios from '../../utils/authorizeAxios'
 
 const PARKING_INFO = {
   name: 'District 1 Parking Tower',
-  shortName: 'D1 Parking Tower',
-  address: '123 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh',
-  gate: 'Cổng A - Lối vào chính'
+  address: '123 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh'
 }
 
 const VEHICLE_LABELS = {
   car: 'Ô tô (4-7 chỗ)',
-  bike: 'Xe máy'
+  bike: 'Xe máy',
+  CAR: 'Ô tô',
+  MOTO: 'Xe máy',
+  MOTORBIKE: 'Xe máy',
+  TRUCK: 'Xe tải'
 }
 
-const DURATION_LABELS = {
-  '4h': '4 Giờ 00 Phút',
-  '8h': '8 Giờ 00 Phút',
-  '24h': 'Cả ngày'
+const formatBackendDate = (value) => {
+  if (!value) return null
+
+  let text = String(value)
+
+  if (text.endsWith('Z')) {
+    text = text.slice(0, -1)
+  }
+
+  const date = new Date(text)
+
+  if (Number.isNaN(date.getTime())) return null
+
+  return date
 }
 
-const DURATION_HOURS = {
-  '4h': 4,
-  '8h': 8,
-  '24h': 24
+const formatDate = (value) => {
+  const date = formatBackendDate(value)
+
+  if (!date) {
+    if (!value) return '--/--/----'
+
+    const [year, month, day] = String(value).split('-')
+
+    if (year && month && day) {
+      return `${day}/${month}/${year}`
+    }
+
+    return String(value)
+  }
+
+  return date.toLocaleDateString('vi-VN')
 }
 
-const DEFAULT_BOOKING = {
-  bookingCode: 'BK-1025',
-  driverName: 'Nguyễn Văn A',
-  parkingName: PARKING_INFO.name,
-  licensePlate: '51K-123.45',
-  vehicleType: 'car',
-  bookingDate: '2026-06-02',
-  startTime: '08:30',
-  duration: '4h',
-  floor: 'B1',
-  zone: 'A',
-  selectedSlot: 'A-09',
-  temporaryPrice: 60000
-}
+const formatTime = (value) => {
+  const date = formatBackendDate(value)
 
-const formatDate = (dateString) => {
-  if (!dateString) return ''
+  if (!date) {
+    if (!value) return '--:--'
+    return String(value).slice(0, 5)
+  }
 
-  const [year, month, day] = dateString.split('-')
-
-  if (!year || !month || !day) return dateString
-
-  return `${day}/${month}/${year}`
+  return date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN').format(value || 0)
 }
 
-const addHoursToTime = (time, hours) => {
-  if (!time || !hours) return time
+const getDurationLabel = (startTime, endTime, fallbackDuration) => {
+  const start = formatBackendDate(startTime)
+  const end = formatBackendDate(endTime)
 
-  const [hour, minute] = time.split(':').map(Number)
+  if (!start || !end) {
+    if (fallbackDuration === '4h') return '4 Giờ 00 Phút'
+    if (fallbackDuration === '8h') return '8 Giờ 00 Phút'
+    if (fallbackDuration === '24h') return 'Cả ngày'
+    return fallbackDuration || '--'
+  }
 
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return time
+  const diffMinutes = Math.max(
+    0,
+    Math.floor((end.getTime() - start.getTime()) / 60000)
+  )
 
-  const totalMinutes = hour * 60 + minute + hours * 60
-  const nextHour = Math.floor(totalMinutes / 60) % 24
-  const nextMinute = totalMinutes % 60
+  const hours = Math.floor(diffMinutes / 60)
+  const minutes = diffMinutes % 60
 
-  return `${String(nextHour).padStart(2, '0')}:${String(nextMinute).padStart(
-    2,
-    '0'
-  )}`
+  return `${hours} Giờ ${String(minutes).padStart(2, '0')} Phút`
+}
+
+const mapReservationToBooking = (reservation, stateBooking, user) => {
+  if (!reservation && !stateBooking) return null
+
+  const source = reservation || {}
+
+  return {
+    reservationId:
+      source.ReservationID ||
+      stateBooking?.reservationId ||
+      stateBooking?.ReservationID,
+
+    bookingCode:
+      source.BookingCode ||
+      stateBooking?.bookingCode ||
+      stateBooking?.BookingCode,
+
+    driverName:
+      source.DriverName ||
+      user?.fullName ||
+      user?.FullName ||
+      stateBooking?.driverName ||
+      'Driver',
+
+    parkingName:
+      source.BuildingName ||
+      stateBooking?.parkingName ||
+      PARKING_INFO.name,
+
+    address:
+      source.Address ||
+      stateBooking?.address ||
+      PARKING_INFO.address,
+
+    licensePlate:
+      source.PlateNumber ||
+      stateBooking?.licensePlate ||
+      'Chưa check-in',
+
+    vehicleType:
+      source.VehicleCode ||
+      stateBooking?.vehicleType ||
+      source.VehicleName ||
+      'car',
+
+    vehicleName:
+      source.VehicleName ||
+      VEHICLE_LABELS[source.VehicleCode] ||
+      VEHICLE_LABELS[stateBooking?.vehicleType] ||
+      stateBooking?.vehicleType ||
+      'Chưa cập nhật',
+
+    bookingDate:
+      source.ReservationDate ||
+      stateBooking?.bookingDate,
+
+    startTime:
+      source.StartTime ||
+      stateBooking?.startTime,
+
+    endTime:
+      source.EndTime ||
+      stateBooking?.endTime,
+
+    duration:
+      stateBooking?.duration,
+
+    floor:
+      source.FloorName ||
+      stateBooking?.floor ||
+      '--',
+
+    zone:
+      source.ZoneName ||
+      stateBooking?.zone ||
+      '--',
+
+    selectedSlot:
+      source.SlotCode ||
+      stateBooking?.selectedSlot ||
+      '--',
+
+    temporaryPrice:
+      stateBooking?.temporaryPrice ||
+      0,
+
+    statusLabel:
+      source.StatusLabel ||
+      stateBooking?.statusLabel ||
+      'Đang hoạt động',
+
+    statusValue:
+      source.StatusValue ||
+      stateBooking?.statusValue ||
+      'active',
+
+    reservationStatus:
+      source.ReservationStatus ||
+      stateBooking?.reservationStatus
+  }
 }
 
 const DriverBookingConfirmation = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
 
-  const booking = {
-    ...DEFAULT_BOOKING,
-    ...location.state,
-    driverName: user?.fullName || location.state?.driverName || DEFAULT_BOOKING.driverName
+  const reservationIdFromQuery = searchParams.get('reservationId')
+  const reservationIdFromState = location.state?.reservationId
+  const reservationId = reservationIdFromQuery || reservationIdFromState
+
+  const [reservation, setReservation] = useState(null)
+  const [isLoading, setIsLoading] = useState(Boolean(reservationId))
+  const [errorMessage, setErrorMessage] = useState('')
+
+  const fetchReservationDetail = async () => {
+    if (!reservationId) {
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      setErrorMessage('')
+
+      const response = await authorizeAxios.get(`/reservations/${reservationId}`)
+      setReservation(response.data?.data || null)
+    } catch (error) {
+      console.error('Get reservation detail failed:', error)
+
+      const message =
+        error.response?.data?.message ||
+        'Không thể tải chi tiết đặt chỗ. Vui lòng thử lại.'
+
+      setErrorMessage(message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const bookingCode = useMemo(() => {
-    return (
-      booking.bookingCode ||
-      `BK-${Math.floor(100000 + Math.random() * 900000)}`
-    )
-  }, [booking.bookingCode])
+  useEffect(() => {
+    fetchReservationDetail()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservationId])
 
-  const formattedDate = formatDate(booking.bookingDate)
-  const durationLabel = DURATION_LABELS[booking.duration] || booking.duration
-  const vehicleLabel = VEHICLE_LABELS[booking.vehicleType] || booking.vehicleType
-  const expiredTime = addHoursToTime(
-    booking.startTime,
-    DURATION_HOURS[booking.duration]
+  const booking = useMemo(() => {
+    return mapReservationToBooking(reservation, location.state, user)
+  }, [reservation, location.state, user])
+
+  const bookingCode = booking?.bookingCode || 'Không có mã'
+
+  const formattedDate = formatDate(booking?.startTime || booking?.bookingDate)
+  const startTime = formatTime(booking?.startTime)
+  const expiredTime = formatTime(booking?.endTime)
+
+  const durationLabel = getDurationLabel(
+    booking?.startTime,
+    booking?.endTime,
+    booking?.duration
   )
 
-  const fullSlotName = `${booking.floor} / Khu ${booking.zone} / Slot ${booking.selectedSlot}`
+  const vehicleLabel =
+    booking?.vehicleName ||
+    VEHICLE_LABELS[booking?.vehicleType] ||
+    booking?.vehicleType ||
+    '--'
+
+  const fullSlotName = `${booking?.floor || '--'} / Khu ${
+    booking?.zone || '--'
+  } / Slot ${booking?.selectedSlot || '--'}`
 
   const handleCopyBookingCode = async () => {
     try {
@@ -132,9 +300,58 @@ const DriverBookingConfirmation = () => {
     navigate('/driver/session')
   }
 
+  if (isLoading) {
+    return (
+      <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-sm">
+        <p className="font-bold text-gray-700">
+          Đang tải chi tiết đặt chỗ...
+        </p>
+      </div>
+    )
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="rounded-2xl border border-red-100 bg-red-50 p-10 text-center shadow-sm">
+        <p className="font-bold text-red-600">
+          {errorMessage}
+        </p>
+
+        <button
+          type="button"
+          onClick={fetchReservationDetail}
+          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
+        >
+          <RefreshCcw size={16} />
+          Thử lại
+        </button>
+      </div>
+    )
+  }
+
+  if (!booking) {
+    return (
+      <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-sm">
+        <h2 className="text-lg font-bold text-gray-900">
+          Không có dữ liệu đặt chỗ
+        </h2>
+
+        <p className="mt-2 text-sm text-gray-500">
+          Vui lòng quay lại lịch sử đặt chỗ để chọn một booking.
+        </p>
+
+        <Link
+          to="/driver/history"
+          className="mt-5 inline-flex rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+        >
+          Về lịch sử đặt chỗ
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-6xl animate-in fade-in pb-24 duration-500">
-      {/* Header */}
       <div className="mb-6 flex items-center gap-4 border-b border-gray-100 pb-4">
         <h1 className="text-2xl font-bold text-gray-900">
           Xác nhận đặt chỗ
@@ -148,7 +365,6 @@ const DriverBookingConfirmation = () => {
         </div>
       </div>
 
-      {/* Success Banner */}
       <div className="mb-8 flex items-start justify-between gap-4 rounded-2xl border border-green-200 bg-green-50 p-5 sm:items-center">
         <div className="flex items-start gap-4 sm:items-center">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-600">
@@ -159,24 +375,22 @@ const DriverBookingConfirmation = () => {
             <h2 className="text-lg font-bold text-green-800">
               Vị trí của bạn đã được giữ chỗ thành công!
             </h2>
+
             <p className="mt-1 text-sm text-green-700">
-              Cảm ơn bạn đã sử dụng dịch vụ. Vui lòng kiểm tra thông tin chi
-              tiết bên dưới.
+              Vui lòng kiểm tra thông tin chi tiết bên dưới.
             </p>
           </div>
         </div>
 
         <div className="hidden sm:block">
           <span className="rounded-xl border border-green-100 bg-white px-4 py-2 text-sm font-bold text-green-700 shadow-sm">
-            Đang hoạt động
+            {booking.statusLabel}
           </span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Left Column */}
         <div className="space-y-8 lg:col-span-2">
-          {/* Details */}
           <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm md:p-8">
             <h3 className="mb-6 flex items-center gap-2 text-base font-bold text-gray-900">
               <CalendarDays className="text-blue-500" size={20} />
@@ -224,7 +438,7 @@ const DriverBookingConfirmation = () => {
               <DetailRow
                 icon={<Clock size={16} />}
                 label="Thời gian bắt đầu"
-                value={`${booking.startTime} - ${formattedDate}`}
+                value={`${startTime} - ${formattedDate}`}
                 bold
               />
 
@@ -244,7 +458,6 @@ const DriverBookingConfirmation = () => {
             </div>
           </div>
 
-          {/* Important Notes */}
           <div>
             <h3 className="mb-4 flex items-center gap-2 text-base font-bold text-gray-900">
               Lưu ý quan trọng
@@ -260,8 +473,7 @@ const DriverBookingConfirmation = () => {
                 contentClassName="text-orange-700"
               >
                 Vui lòng check-in đúng thời gian đã đặt. Nếu bạn không vào bãi
-                sau thời gian cho phép, vị trí có thể được giải phóng cho người
-                khác.
+                sau thời gian cho phép, vị trí có thể được giải phóng cho người khác.
               </NoteCard>
 
               <NoteCard
@@ -284,14 +496,12 @@ const DriverBookingConfirmation = () => {
                 titleClassName="text-gray-700"
                 contentClassName="text-gray-600"
               >
-                Bạn có thể hủy đặt chỗ miễn phí trước 30 phút. Quá thời gian
-                này có thể phát sinh phí hủy dịch vụ theo quy định.
+                Bạn có thể hủy đặt chỗ miễn phí trước 30 phút nếu booking chưa được check-in.
               </NoteCard>
             </div>
           </div>
         </div>
 
-        {/* Right Column */}
         <div className="space-y-6">
           <div className="rounded-2xl border-2 border-blue-100 bg-white p-6 text-center shadow-sm">
             <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">
@@ -350,7 +560,7 @@ const DriverBookingConfirmation = () => {
               </h4>
 
               <p className="mb-2 text-xs leading-relaxed text-gray-500">
-                {PARKING_INFO.address}
+                {booking.address}
               </p>
 
               <Link
@@ -364,7 +574,6 @@ const DriverBookingConfirmation = () => {
         </div>
       </div>
 
-      {/* Sticky Bottom Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-gray-200 bg-white p-4 shadow-[0_-10px_20px_rgba(0,0,0,0.02)] sm:left-64">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="hidden sm:block">
@@ -420,15 +629,18 @@ const DetailRow = ({
 
   return (
     <div
-      className={`flex flex-col justify-between gap-1 py-3 sm:flex-row sm:items-center ${noBorder ? '' : 'border-b border-gray-50'
-        }`}
+      className={`flex flex-col justify-between gap-1 py-3 sm:flex-row sm:items-center ${
+        noBorder ? '' : 'border-b border-gray-50'
+      }`}
     >
       <span className="flex items-center gap-2 text-sm text-gray-500">
         {icon}
         {label}
       </span>
 
-      <span className={valueClassName || defaultValueClass}>{value}</span>
+      <span className={valueClassName || defaultValueClass}>
+        {value}
+      </span>
     </div>
   )
 }
@@ -444,7 +656,9 @@ const NoteCard = ({
 }) => {
   return (
     <div className={`flex gap-3 rounded-xl border p-5 ${className}`}>
-      <div className={`shrink-0 ${iconClassName}`}>{icon}</div>
+      <div className={`shrink-0 ${iconClassName}`}>
+        {icon}
+      </div>
 
       <div>
         <h4 className={`mb-1 text-sm font-bold ${titleClassName}`}>
