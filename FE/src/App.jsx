@@ -16,6 +16,11 @@ import StaffCreateIncident from './pages/staff/StaffCreateIncident'
 import StaffVehicleCheckOut from './pages/staff/StaffVehicleCheckOut'
 import StaffPaymentConfirm from './pages/staff/StaffPaymentConfirm'
 import StaffCheckOutCompleted from './pages/staff/StaffCheckOutCompleted'
+import StaffParkingMap from './pages/staff/StaffParkingMap'
+import StaffSearchSession from './pages/staff/StaffSearchSession'
+import StaffProfile from './pages/staff/StaffProfile'
+import StaffSettings from './pages/staff/StaffSettings'
+import StaffSecurity from './pages/staff/StaffSecurity'
 import DriverLayout from './pages/driver/DriverLayout'
 import DriverHome from './pages/driver/DriverHome'
 import DriverBooking from './pages/driver/DriverBooking'
@@ -120,6 +125,11 @@ const App = () => {
           <Route path="checkout" element={<StaffVehicleCheckOut />} />
           <Route path="payment" element={<StaffPaymentConfirm />} />
           <Route path="checkout-completed" element={<StaffCheckOutCompleted />} />
+          <Route path="parking-map" element={<StaffParkingMap />} />
+          <Route path="search-session" element={<StaffSearchSession />} />
+          <Route path="profile" element={<StaffProfile />} />
+          <Route path="settings" element={<StaffSettings />} />
+          <Route path="security" element={<StaffSecurity />} />
         </Route>
       </Route>
 

@@ -11,6 +11,7 @@ import {
   Bell,
   HelpCircle
 } from 'lucide-react';
+import StaffNavbar from './StaffNavbar';
 
 const StaffLayout = () => {
   const location = useLocation();
@@ -24,8 +25,8 @@ const StaffLayout = () => {
 
   const manageMenu = [
     { name: 'Báo cáo sự cố', path: '/staff/create-incident', icon: <AlertCircle size={20} /> },
-    { name: 'Xem sơ đồ chỗ', path: '#', icon: <Map size={20} /> },
-    { name: 'Tra cứu phiên', path: '#', icon: <Search size={20} /> },
+    { name: 'Xem sơ đồ chỗ', path: '/staff/parking-map', icon: <Map size={20} /> },
+    { name: 'Tra cứu phiên', path: '/staff/search-session', icon: <Search size={20} /> },
   ];
 
   return (
@@ -111,6 +112,7 @@ const StaffLayout = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        <StaffNavbar />
         <div className="flex-1 overflow-auto bg-gray-50 p-6 pb-20">
           <Outlet />
         </div>

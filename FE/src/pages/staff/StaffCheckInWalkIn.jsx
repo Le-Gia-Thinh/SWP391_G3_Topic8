@@ -179,12 +179,12 @@ const StaffCheckInWalkIn = () => {
         {/* Grid Map */}
         <div className="grid grid-cols-10 gap-3">
           {slots.map(slot => {
-            let style = "bg-white border-gray-300 text-gray-600";
-            if (slot.status === 'đã có xe') style = "bg-red-50 border-red-200 text-red-700";
-            if (slot.status === 'đã đặt') style = "bg-white border-orange-400 text-orange-600 border-dashed";
-            if (slot.status === 'bảo trì') style = "bg-gray-100 border-gray-300 text-gray-400";
-            if (slot.status === 'khóa') style = "bg-gray-800 border-gray-800 text-white";
-            if (slot.status === 'đang chọn') style = "bg-blue-600 border-blue-600 text-white shadow-md transform scale-105";
+            let style = 'bg-white border-gray-300 text-gray-600';
+            if (slot.status === 'đã có xe') style = 'bg-red-50 border-red-200 text-red-700';
+            if (slot.status === 'đã đặt') style = 'bg-white border-orange-400 text-orange-600 border-dashed';
+            if (slot.status === 'bảo trì') style = 'bg-gray-100 border-gray-300 text-gray-400';
+            if (slot.status === 'khóa') style = 'bg-gray-800 border-gray-800 text-white';
+            if (slot.status === 'đang chọn') style = 'bg-blue-600 border-blue-600 text-white shadow-md transform scale-105';
 
             return (
               <div key={slot.id} className={`border rounded-lg p-3 text-center transition-all ${style} flex flex-col justify-center items-center h-16 cursor-pointer hover:opacity-80`}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, AlertTriangle, Link2, UserCog, UploadCloud, FileText, Image as ImageIcon, X, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle, Link2, UserCog, UploadCloud, FileText, Image as ImageIcon, X, Trash2, Search, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const StaffCreateIncident = () => {
