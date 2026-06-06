@@ -220,6 +220,38 @@ export function validateCreateReservation(req, res, next) {
 export function validateCheckIn(req, res, next) {
   const errors = [];
 
+  const bookingCode = trim(req.body.bookingCode);
+  const reservationId = Number(req.body.reservationId);
+
+  const hasBookingCode = Boolean(bookingCode);
+  const hasReservationId = Number.isInteger(reservationId) && reservationId > 0;
+
+  if (hasBookingCode || hasReservationId) {
+    const plateNumber = trim(req.body.plateNumber).toUpperCase();
+
+    if (plateNumber && !plateNumberRegex.test(plateNumber)) {
+      errors.push("plateNumber không đúng định dạng. Ví dụ: 59A-12345 hoặc 59A-123.45");
+    }
+
+    if (errors.length > 0) {
+      return sendValidationError(res, errors);
+    }
+
+    if (hasReservationId) {
+      req.body.reservationId = reservationId;
+    }
+
+    if (hasBookingCode) {
+      req.body.bookingCode = bookingCode.toUpperCase();
+    }
+
+    if (plateNumber) {
+      req.body.plateNumber = plateNumber;
+    }
+
+    return next();
+  }
+
   const driverId = Number(req.body.driverId);
   const vehicleTypeId = Number(req.body.vehicleTypeId);
   const slotId = Number(req.body.slotId);

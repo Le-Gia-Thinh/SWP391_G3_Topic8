@@ -97,7 +97,6 @@ router.post(
 );
 
 // Reservations
-// Reservations
 router.get(
   "/reservations",
   isAuthorized,
