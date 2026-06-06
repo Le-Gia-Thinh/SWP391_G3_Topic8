@@ -23,6 +23,7 @@ const STATUS_OPTIONS = [
 const VEHICLE_OPTIONS = [
   { value: '', label: 'Tất cả' },
   { value: 'MOTO', label: 'Xe máy' },
+  { value: 'MOTORBIKE', label: 'Xe máy' },
   { value: 'CAR', label: 'Ô tô' },
   { value: 'TRUCK', label: 'Xe tải' }
 ]
@@ -87,8 +88,10 @@ const mapReservationToBooking = (item) => {
     endTime: formatTime(item.EndTime),
     endDate: formatDate(item.EndTime),
     rawStartDate: item.StartTime,
+    rawEndDate: item.EndTime,
     status: item.StatusLabel || item.ReservationStatus,
     statusValue: item.StatusValue || 'used',
+    reservationStatus: item.ReservationStatus,
     raw: item
   }
 }
@@ -100,6 +103,7 @@ const DriverHistory = () => {
   const [vehicleFilter, setVehicleFilter] = useState('')
   const [dateFilter, setDateFilter] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
   const fetchReservations = async () => {
@@ -157,6 +161,39 @@ const DriverHistory = () => {
     setVehicleFilter('')
     setDateFilter('')
     fetchReservations()
+  }
+
+  const handleCancelBooking = async (booking) => {
+    if (!booking?.reservationId) {
+      alert('Không tìm thấy mã đặt chỗ để hủy.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn hủy đặt chỗ ${booking.id} không?`
+    )
+
+    if (!confirmed) return
+
+    try {
+      setIsCancelling(true)
+
+      await authorizeAxios.patch(`/reservations/${booking.reservationId}/cancel`)
+
+      await fetchReservations()
+
+      alert(`Đã hủy đặt chỗ ${booking.id} thành công.`)
+    } catch (error) {
+      console.error('Cancel reservation failed:', error)
+
+      const message =
+        error.response?.data?.message ||
+        'Hủy đặt chỗ thất bại. Vui lòng thử lại.'
+
+      alert(message)
+    } finally {
+      setIsCancelling(false)
+    }
   }
 
   return (
@@ -406,28 +443,30 @@ const DriverHistory = () => {
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-3 font-semibold">
                         <Link
-  to={`/driver/booking-confirmation?reservationId=${booking.reservationId}`}
-  state={{
-    bookingCode: booking.id,
-    parkingName: booking.building,
-    licensePlate: booking.plate,
-    vehicleType: booking.vehicleTypeValue,
-    bookingDate: getIsoDate(booking.rawStartDate),
-    startTime: booking.startTime,
-    floor: booking.floor,
-    zone: booking.zone,
-    selectedSlot: booking.slot,
-    reservationId: booking.reservationId
-  }}
-  className="text-blue-600 hover:text-blue-700"
->
-  Chi tiết
-</Link>
+                          to={`/driver/booking-confirmation?reservationId=${booking.reservationId}`}
+                          state={{
+                            bookingCode: booking.id,
+                            parkingName: booking.building,
+                            licensePlate: booking.plate,
+                            vehicleType: booking.vehicleTypeValue,
+                            bookingDate: getIsoDate(booking.rawStartDate),
+                            startTime: booking.startTime,
+                            floor: booking.floor,
+                            zone: booking.zone,
+                            selectedSlot: booking.slot,
+                            reservationId: booking.reservationId
+                          }}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          Chi tiết
+                        </Link>
 
                         {booking.statusValue === 'active' && (
                           <button
                             type="button"
-                            className="text-red-500 hover:text-red-600"
+                            disabled={isCancelling}
+                            onClick={() => handleCancelBooking(booking)}
+                            className="text-red-500 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             Hủy bỏ
                           </button>

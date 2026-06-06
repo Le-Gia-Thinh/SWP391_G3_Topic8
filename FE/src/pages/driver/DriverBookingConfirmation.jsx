@@ -291,10 +291,33 @@ const DriverBookingConfirmation = () => {
       // Clipboard may be blocked by browser permission.
     }
   }
-
-  const handleCancelBooking = () => {
+  const handleCancelBooking = async () => {
+  if (!booking?.reservationId) {
     navigate('/driver/history')
+    return
   }
+
+  const confirmed = window.confirm(
+    `Bạn có chắc muốn hủy đặt chỗ ${booking.bookingCode} không?`
+  )
+
+  if (!confirmed) return
+
+  try {
+    await authorizeAxios.patch(`/reservations/${booking.reservationId}/cancel`)
+    navigate('/driver/history')
+  } catch (error) {
+    console.error('Cancel reservation failed:', error)
+
+    const message =
+      error.response?.data?.message ||
+      'Hủy đặt chỗ thất bại. Vui lòng thử lại.'
+
+    alert(message)
+  }
+}
+
+
 
   const handleViewSlotDetail = () => {
     navigate('/driver/session')

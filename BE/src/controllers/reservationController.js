@@ -25,12 +25,17 @@ function normalizeVehicleTypeId(value) {
 
 function buildDateTime(date, time) {
   if (!date || !time) return null;
-  if (String(time).includes("T")) return new Date(time);
+
+  if (String(time).includes("T")) {
+    return new Date(time);
+  }
+
   return new Date(`${date}T${time}:00`);
 }
 
 function getDurationHours(duration) {
   if (!duration) return null;
+
   if (typeof duration === "number") return duration;
 
   const text = String(duration).trim().toLowerCase();
@@ -41,6 +46,7 @@ function getDurationHours(duration) {
   if (text === "cả ngày" || text === "ca ngay" || text === "full-day") return 24;
 
   const matched = text.match(/\d+/);
+
   return matched ? Number(matched[0]) : null;
 }
 
@@ -426,6 +432,154 @@ export async function createReservation(req, res, next) {
       },
     });
   } catch (err) {
+    next(err);
+  }
+}
+
+export async function cancelReservation(req, res, next) {
+  const pool = await getPool();
+  const transaction = new sql.Transaction(pool);
+
+  try {
+    const reservationId = Number(req.params.id);
+
+    if (!Number.isInteger(reservationId) || reservationId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "reservationId không hợp lệ.",
+      });
+    }
+
+    const driverId = getUserIdFromToken(req);
+    const roleName = getRoleNameFromToken(req);
+
+    if (!driverId) {
+      return res.status(401).json({
+        success: false,
+        message: "Không tìm thấy thông tin tài xế. Vui lòng đăng nhập lại.",
+      });
+    }
+
+    await transaction.begin();
+
+    const request = new sql.Request(transaction)
+      .input("ReservationID", sql.Int, reservationId);
+
+    let driverFilterSql = "";
+
+    if (roleName === "Driver") {
+      request.input("DriverID", sql.Int, driverId);
+      driverFilterSql = "AND r.DriverID = @DriverID";
+    }
+
+    const reservationResult = await request.query(`
+      SELECT TOP 1
+        r.ReservationID,
+        r.DriverID,
+        r.SlotID,
+        r.ReservationStatus,
+        r.StartTime,
+        r.EndTime,
+        ps.SlotStatus
+      FROM Reservations r
+      LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID
+      WHERE r.ReservationID = @ReservationID
+      ${driverFilterSql}
+    `);
+
+    const reservation = reservationResult.recordset[0];
+
+    if (!reservation) {
+      await transaction.rollback();
+
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy đặt chỗ hoặc bạn không có quyền hủy đặt chỗ này.",
+      });
+    }
+
+    if (reservation.ReservationStatus !== "Reserved") {
+      await transaction.rollback();
+
+      return res.status(400).json({
+        success: false,
+        message: "Chỉ có thể hủy đặt chỗ đang ở trạng thái Reserved.",
+      });
+    }
+
+    const activeSessionResult = await new sql.Request(transaction)
+      .input("DriverID", sql.Int, reservation.DriverID)
+      .input("SlotID", sql.Int, reservation.SlotID)
+      .query(`
+        SELECT TOP 1 SessionID
+        FROM ParkingSessions
+        WHERE DriverID = @DriverID
+          AND SlotID = @SlotID
+          AND SessionStatus = 'Active'
+          AND ExitTime IS NULL
+      `);
+
+    if (activeSessionResult.recordset.length > 0) {
+      await transaction.rollback();
+
+      return res.status(409).json({
+        success: false,
+        message: "Không thể hủy vì xe đã được check-in và đang có phiên đỗ hoạt động.",
+      });
+    }
+
+    await new sql.Request(transaction)
+      .input("ReservationID", sql.Int, reservationId)
+      .query(`
+        UPDATE Reservations
+        SET ReservationStatus = 'Cancelled'
+        WHERE ReservationID = @ReservationID
+      `);
+
+    await new sql.Request(transaction)
+      .input("SlotID", sql.Int, reservation.SlotID)
+      .query(`
+        UPDATE ParkingSlots
+        SET SlotStatus =
+          CASE
+            WHEN EXISTS (
+              SELECT 1
+              FROM ParkingSessions s
+              WHERE s.SlotID = @SlotID
+                AND s.SessionStatus = 'Active'
+                AND s.ExitTime IS NULL
+            )
+            THEN 'Occupied'
+
+            WHEN EXISTS (
+              SELECT 1
+              FROM Reservations r
+              WHERE r.SlotID = @SlotID
+                AND r.ReservationStatus = 'Reserved'
+                AND r.EndTime >= GETDATE()
+            )
+            THEN 'Reserved'
+
+            ELSE 'Available'
+          END
+        WHERE SlotID = @SlotID
+      `);
+
+    await transaction.commit();
+
+    return res.json({
+      success: true,
+      message: "Hủy đặt chỗ thành công.",
+      data: {
+        reservationId,
+        status: "Cancelled",
+      },
+    });
+  } catch (err) {
+    try {
+      await transaction.rollback();
+    } catch {}
+
     next(err);
   }
 }

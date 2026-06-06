@@ -97,6 +97,7 @@ router.post(
 );
 
 // Reservations
+// Reservations
 router.get(
   "/reservations",
   isAuthorized,
@@ -107,6 +108,13 @@ router.get(
   "/reservations/:id",
   isAuthorized,
   reservationController.getReservationById
+);
+
+router.patch(
+  "/reservations/:id/cancel",
+  isAuthorized,
+  isDriver,
+  reservationController.cancelReservation
 );
 
 router.post(
