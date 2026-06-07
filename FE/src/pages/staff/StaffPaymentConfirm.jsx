@@ -202,7 +202,7 @@ const StaffPaymentConfirm = () => {
               <ShieldCheck size={18} className="text-blue-500" /> Quy trình thanh toán
             </h3>
             <p className="text-xs text-blue-800 leading-relaxed">
-              Nhân viên nhận tiền hoặc xác nhận khách hàng đã chuyển khoản thành công trên app. Chọn <strong>"Xác nhận thanh toán"</strong> để kết thúc phiên và mở barie cho xe ra. Nếu khách hàng không đủ tiền/có vấn đề, chọn "Tạo sự cố / Báo cáo khẩn".
+              Nhân viên nhận tiền hoặc xác nhận khách hàng đã chuyển khoản thành công trên app. Chọn <strong>&quot;Xác nhận thanh toán&quot;</strong> để kết thúc phiên và mở barie cho xe ra. Nếu khách hàng không đủ tiền/có vấn đề, chọn &quot;Tạo sự cố / Báo cáo khẩn&quot;.
             </p>
           </div>
 

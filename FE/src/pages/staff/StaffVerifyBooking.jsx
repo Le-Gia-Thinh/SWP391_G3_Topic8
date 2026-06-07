@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronLeft, Calendar, Search, ShieldCheck, AlertTriangle, XCircle, FileText, RefreshCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Search, ShieldCheck, AlertTriangle, XCircle, FileText, RefreshCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const StaffVerifyBooking = () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, ChevronRight, Info, Car, MapPin, ArrowRight } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Info, Car, MapPin, ArrowRight, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const StaffCheckInSuccess = () => {
