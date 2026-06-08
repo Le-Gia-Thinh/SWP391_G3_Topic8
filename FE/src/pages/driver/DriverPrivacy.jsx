@@ -15,7 +15,7 @@ const DriverPrivacy = () => {
 
       <div className="prose prose-sm prose-emerald max-w-none text-gray-600 leading-relaxed space-y-4">
         <p className="font-semibold text-gray-800">Cập nhật lần cuối: 24/05/2026</p>
-        
+
         <p>Chính sách này giải thích cách chúng tôi thu thập, sử dụng, chia sẻ và bảo vệ thông tin cá nhân của bạn khi sử dụng hệ thống đỗ xe thông minh PBMS.</p>
 
         <h3 className="text-lg font-bold text-gray-900 mt-6">1. Thông tin chúng tôi thu thập</h3>

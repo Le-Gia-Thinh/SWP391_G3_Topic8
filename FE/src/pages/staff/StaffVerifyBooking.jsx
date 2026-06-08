@@ -1,6 +1,6 @@
-import React from 'react';
-import { ChevronLeft, ChevronRight, Calendar, Search, ShieldCheck, AlertTriangle, XCircle, FileText, RefreshCcw } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react'
+import { ChevronLeft, ChevronRight, Calendar, Search, ShieldCheck, AlertTriangle, XCircle, FileText, RefreshCcw } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 
 const StaffVerifyBooking = () => {
   const navigate = useNavigate()

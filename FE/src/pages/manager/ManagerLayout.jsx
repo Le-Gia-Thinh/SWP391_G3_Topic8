@@ -150,7 +150,7 @@ const ManagerLayout = () => {
         />
       )}
 
-      <aside 
+      <aside
         className={`fixed inset-y-0 left-0 z-50 w-72 flex-col border-r border-gray-200 bg-white px-4 py-6 shadow-xl transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0 flex' : '-translate-x-full hidden'
         }`}
@@ -165,7 +165,7 @@ const ManagerLayout = () => {
               <p className="text-xs text-gray-500">{appSubtitle}</p>
             </div>
           </Link>
-          <button 
+          <button
             onClick={() => setSidebarOpen(false)}
             className="p-2 rounded-xl text-gray-400 hover:bg-gray-50"
           >
@@ -223,7 +223,7 @@ const ManagerLayout = () => {
                 >
                   <Menu size={24} />
                 </button>
-                
+
                 <Link to="/manager" className="flex items-center gap-3 hover:opacity-80 transition-opacity ml-2 mr-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-100 text-sky-600 shadow-sm">
                     <Car size={20} />

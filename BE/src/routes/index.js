@@ -105,6 +105,13 @@ router.get(
 );
 
 router.get(
+  "/reservations/available-slots",
+  isAuthorized,
+  isDriver,
+  reservationController.getAvailableSlots
+);
+
+router.get(
   "/reservations/:id",
   isAuthorized,
   reservationController.getReservationById

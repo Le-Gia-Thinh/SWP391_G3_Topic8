@@ -1,29 +1,31 @@
 import { getPool, sql } from "../config/db.js";
 import {
-  getUserIdFromToken,
-  getRoleNameFromToken,
-} from "../utils/requestUser.js";
-import {
   buildDateTime,
   getDurationHours,
   addHours,
+  getMinimumReservationStartTime,
 } from "../utils/dateTimeUtils.js";
-import { buildBookingCode } from "../utils/codeUtils.js";
 
 function createHttpError(status, message) {
   const error = new Error(message);
   error.status = status;
+  error.statusCode = status;
   return error;
+}
+
+function getUserIdFromToken(req) {
+  return req.user?.UserID || req.user?.userId || req.user?.id;
+}
+
+function getRoleNameFromToken(req) {
+  return req.user?.RoleName || req.user?.roleName;
 }
 
 function normalizeVehicleTypeId(value) {
   if (value === undefined || value === null || value === "") return null;
 
   const numberValue = Number(value);
-
-  if (!Number.isNaN(numberValue) && numberValue > 0) {
-    return numberValue;
-  }
+  if (!Number.isNaN(numberValue) && numberValue > 0) return numberValue;
 
   const text = String(value).trim().toLowerCase();
 
@@ -34,14 +36,138 @@ function normalizeVehicleTypeId(value) {
   return null;
 }
 
+function buildBookingCode(reservationId) {
+  return `BK-${String(reservationId).padStart(4, "0")}`;
+}
+
+async function expireOverdueReservations(pool) {
+  await pool.request().query(`
+    UPDATE Reservations
+    SET ReservationStatus = 'Expired'
+    WHERE ReservationStatus = 'Reserved'
+      AND EndTime < GETDATE();
+
+    UPDATE ps
+    SET ps.SlotStatus =
+      CASE
+        WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
+
+        WHEN EXISTS (
+          SELECT 1
+          FROM ParkingSessions s
+          WHERE s.SlotID = ps.SlotID
+            AND s.SessionStatus = 'Active'
+            AND s.ExitTime IS NULL
+        ) THEN 'Occupied'
+
+        WHEN EXISTS (
+          SELECT 1
+          FROM Reservations r
+          WHERE r.SlotID = ps.SlotID
+            AND r.ReservationStatus = 'Reserved'
+            AND r.EndTime >= GETDATE()
+        ) THEN 'Reserved'
+
+        ELSE 'Available'
+      END
+    FROM ParkingSlots ps
+    WHERE ps.SlotStatus IN ('Available', 'Occupied', 'Reserved');
+  `);
+}
+
+function reservationBaseSelect() {
+  return `
+    SELECT
+      r.ReservationID,
+      CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
+
+      r.DriverID,
+      u.FullName AS DriverName,
+      u.Email AS DriverEmail,
+      u.PhoneNumber AS DriverPhone,
+
+      r.VehicleTypeID,
+      vt.VehicleCode,
+      vt.VehicleName,
+
+      r.SlotID,
+      ps.SlotCode,
+      ps.SlotStatus,
+
+      z.ZoneID,
+      z.ZoneName,
+
+      f.FloorID,
+      f.FloorName,
+
+      b.BuildingID,
+      b.BuildingName,
+      b.Address,
+
+      r.ReservationDate,
+      r.StartTime,
+      r.EndTime,
+
+      CONVERT(VARCHAR(16), r.StartTime, 120) AS StartTimeText,
+      CONVERT(VARCHAR(16), r.EndTime, 120) AS EndTimeText,
+      CONVERT(VARCHAR(10), r.StartTime, 120) AS StartDateText,
+      CONVERT(VARCHAR(10), r.EndTime, 120) AS EndDateText,
+      CONVERT(VARCHAR(5), r.StartTime, 108) AS StartClockText,
+      CONVERT(VARCHAR(5), r.EndTime, 108) AS EndClockText,
+
+      r.ReservationStatus,
+      r.CreatedAt,
+
+      latestSession.SessionID,
+      latestSession.PlateNumber,
+
+      CASE
+        WHEN r.ReservationStatus = 'Cancelled' THEN 'cancelled'
+        WHEN r.ReservationStatus = 'Completed' THEN 'used'
+        WHEN r.ReservationStatus = 'Reserved' AND r.EndTime < GETDATE() THEN 'expired'
+        WHEN r.ReservationStatus = 'Expired' AND r.EndTime < GETDATE() THEN 'expired'
+        WHEN r.ReservationStatus IN ('Reserved', 'Expired') AND r.EndTime >= GETDATE() THEN 'active'
+        ELSE 'used'
+      END AS StatusValue,
+
+      CASE
+        WHEN r.ReservationStatus = 'Cancelled' THEN N'Đã hủy'
+        WHEN r.ReservationStatus = 'Completed' THEN N'Đã sử dụng'
+        WHEN r.ReservationStatus = 'Reserved' AND r.EndTime < GETDATE() THEN N'Hết hạn'
+        WHEN r.ReservationStatus = 'Expired' AND r.EndTime < GETDATE() THEN N'Hết hạn'
+        WHEN r.ReservationStatus IN ('Reserved', 'Expired') AND r.EndTime >= GETDATE() THEN N'Đang hoạt động'
+        ELSE N'Đã sử dụng'
+      END AS StatusLabel
+
+    FROM Reservations r
+    JOIN Users u ON r.DriverID = u.UserID
+    JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
+    LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID
+    LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID
+    LEFT JOIN Floors f ON z.FloorID = f.FloorID
+    LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
+
+    OUTER APPLY (
+      SELECT TOP 1
+        s.SessionID,
+        s.PlateNumber
+      FROM ParkingSessions s
+      WHERE s.DriverID = r.DriverID
+        AND s.SlotID = r.SlotID
+      ORDER BY s.EntryTime DESC
+    ) latestSession
+  `;
+}
+
 export async function getReservations(req) {
   const pool = await getPool();
+
+  await expireOverdueReservations(pool);
 
   const userId = getUserIdFromToken(req);
   const roleName = getRoleNameFromToken(req);
 
   const request = pool.request();
-
   let whereSql = "";
 
   if (roleName === "Driver") {
@@ -50,72 +176,7 @@ export async function getReservations(req) {
   }
   
   const result = await request.query(`
-    SELECT 
-      r.ReservationID,
-      CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
-
-      r.DriverID,
-      u.FullName AS DriverName,
-      u.Email AS DriverEmail,
-      u.PhoneNumber AS DriverPhone,
-
-      r.VehicleTypeID,
-      vt.VehicleCode,
-      vt.VehicleName,
-
-      r.SlotID,
-      ps.SlotCode,
-      ps.SlotStatus,
-
-      z.ZoneName,
-      f.FloorName,
-      b.BuildingID,
-      b.BuildingName,
-      b.Address,
-
-      r.ReservationDate,
-      r.StartTime,
-      r.EndTime,
-      r.ReservationStatus,
-      r.CreatedAt,
-
-      latestSession.SessionID,
-      latestSession.PlateNumber,
-
-      CASE
-        WHEN r.ReservationStatus = 'Reserved' AND r.EndTime >= GETDATE() THEN 'active'
-        WHEN r.ReservationStatus = 'Completed' THEN 'used'
-        WHEN r.ReservationStatus = 'Cancelled' THEN 'cancelled'
-        WHEN r.ReservationStatus = 'Expired' OR r.EndTime < GETDATE() THEN 'expired'
-        ELSE 'used'
-      END AS StatusValue,
-
-      CASE
-        WHEN r.ReservationStatus = 'Reserved' AND r.EndTime >= GETDATE() THEN N'Đang hoạt động'
-        WHEN r.ReservationStatus = 'Completed' THEN N'Đã sử dụng'
-        WHEN r.ReservationStatus = 'Cancelled' THEN N'Đã hủy'
-        WHEN r.ReservationStatus = 'Expired' OR r.EndTime < GETDATE() THEN N'Hết hạn'
-        ELSE N'Đã sử dụng'
-      END AS StatusLabel
-
-    FROM Reservations r
-    JOIN Users u ON r.DriverID = u.UserID
-    JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
-    LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID
-    LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID
-    LEFT JOIN Floors f ON z.FloorID = f.FloorID
-    LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
-
-    OUTER APPLY (
-      SELECT TOP 1
-        s.SessionID,
-        s.PlateNumber
-      FROM ParkingSessions s
-      WHERE s.DriverID = r.DriverID
-        AND s.SlotID = r.SlotID
-      ORDER BY s.EntryTime DESC
-    ) latestSession
-
+    ${reservationBaseSelect()}
     ${whereSql}
     ORDER BY r.ReservationID DESC
   `);
@@ -124,20 +185,19 @@ export async function getReservations(req) {
 }
 
 export async function getReservationById(req) {
+  const pool = await getPool();
+
+  await expireOverdueReservations(pool);
+
   const reservationId = Number(req.params.id);
+  const userId = getUserIdFromToken(req);
+  const roleName = getRoleNameFromToken(req);
 
   if (!Number.isInteger(reservationId) || reservationId <= 0) {
     throw createHttpError(400, "reservationId không hợp lệ.");
   }
 
-  const pool = await getPool();
-
-  const userId = getUserIdFromToken(req);
-  const roleName = getRoleNameFromToken(req);
-
-  const request = pool.request()
-    .input("ReservationID", sql.Int, reservationId);
-
+  const request = pool.request().input("ReservationID", sql.Int, reservationId);
   let driverFilterSql = "";
 
   if (roleName === "Driver") {
@@ -146,74 +206,9 @@ export async function getReservationById(req) {
   }
 
   const result = await request.query(`
-    SELECT TOP 1
-      r.ReservationID,
-      CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
-
-      r.DriverID,
-      u.FullName AS DriverName,
-      u.Email AS DriverEmail,
-      u.PhoneNumber AS DriverPhone,
-
-      r.VehicleTypeID,
-      vt.VehicleCode,
-      vt.VehicleName,
-
-      r.SlotID,
-      ps.SlotCode,
-      ps.SlotStatus,
-
-      z.ZoneName,
-      f.FloorName,
-      b.BuildingID,
-      b.BuildingName,
-      b.Address,
-
-      r.ReservationDate,
-      r.StartTime,
-      r.EndTime,
-      r.ReservationStatus,
-      r.CreatedAt,
-
-      latestSession.SessionID,
-      latestSession.PlateNumber,
-
-      CASE
-        WHEN r.ReservationStatus = 'Reserved' AND r.EndTime >= GETDATE() THEN 'active'
-        WHEN r.ReservationStatus = 'Completed' THEN 'used'
-        WHEN r.ReservationStatus = 'Cancelled' THEN 'cancelled'
-        WHEN r.ReservationStatus = 'Expired' OR r.EndTime < GETDATE() THEN 'expired'
-        ELSE 'used'
-      END AS StatusValue,
-
-      CASE
-        WHEN r.ReservationStatus = 'Reserved' AND r.EndTime >= GETDATE() THEN N'Đang hoạt động'
-        WHEN r.ReservationStatus = 'Completed' THEN N'Đã sử dụng'
-        WHEN r.ReservationStatus = 'Cancelled' THEN N'Đã hủy'
-        WHEN r.ReservationStatus = 'Expired' OR r.EndTime < GETDATE() THEN N'Hết hạn'
-        ELSE N'Đã sử dụng'
-      END AS StatusLabel
-
-    FROM Reservations r
-    JOIN Users u ON r.DriverID = u.UserID
-    JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
-    LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID
-    LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID
-    LEFT JOIN Floors f ON z.FloorID = f.FloorID
-    LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
-
-    OUTER APPLY (
-      SELECT TOP 1
-        s.SessionID,
-        s.PlateNumber
-      FROM ParkingSessions s
-      WHERE s.DriverID = r.DriverID
-        AND s.SlotID = r.SlotID
-      ORDER BY s.EntryTime DESC
-    ) latestSession
-
+    ${reservationBaseSelect()}
     WHERE r.ReservationID = @ReservationID
-    ${driverFilterSql}
+      ${driverFilterSql}
   `);
 
   const reservation = result.recordset[0];
@@ -223,6 +218,143 @@ export async function getReservationById(req) {
   }
 
   return reservation;
+}
+
+export async function getAvailableSlots(req) {
+  const pool = await getPool();
+
+  await expireOverdueReservations(pool);
+
+  const vehicleTypeId = normalizeVehicleTypeId(
+    req.query.vehicleTypeId || req.query.vehicleType
+  );
+
+  const buildingId = Number(req.query.buildingId || 1);
+  const reservationDate = req.query.reservationDate || req.query.bookingDate;
+  const startTime = req.query.startTime;
+  const duration = req.query.duration;
+  const endTimeInput = req.query.endTime;
+
+  if (!vehicleTypeId) {
+    throw createHttpError(400, "Loại phương tiện không hợp lệ.");
+  }
+
+  if (!reservationDate || !startTime) {
+    throw createHttpError(400, "Ngày và giờ bắt đầu là bắt buộc.");
+  }
+
+  const start = buildDateTime(reservationDate, startTime);
+  const durationHours = getDurationHours(duration);
+  const end = endTimeInput
+    ? buildDateTime(reservationDate, endTimeInput)
+    : addHours(start, durationHours || 4);
+
+  const minimumStart = getMinimumReservationStartTime();
+
+  if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    throw createHttpError(400, "Thời gian không hợp lệ.");
+  }
+
+  if (start < minimumStart) {
+    throw createHttpError(
+      400,
+      "Thời gian đặt chỗ phải cách thời gian hiện tại tối thiểu 15 phút."
+    );
+  }
+
+  if (end <= start) {
+    throw createHttpError(
+      400,
+      "Thời gian kết thúc phải lớn hơn thời gian bắt đầu."
+    );
+  }
+
+  const result = await pool.request()
+    .input("BuildingID", sql.Int, buildingId)
+    .input("VehicleTypeID", sql.Int, vehicleTypeId)
+    .input("StartTime", sql.DateTime, start)
+    .input("EndTime", sql.DateTime, end)
+    .query(`
+      SELECT
+        ps.SlotID,
+        ps.SlotCode,
+        ps.SlotStatus,
+        ps.VehicleTypeID,
+
+        vt.VehicleCode,
+        vt.VehicleName,
+
+        z.ZoneID,
+        z.ZoneName,
+
+        f.FloorID,
+        f.FloorName,
+
+        b.BuildingID,
+        b.BuildingName,
+        b.Address,
+
+        CASE
+          WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN 'occupied'
+
+          WHEN EXISTS (
+            SELECT 1
+            FROM ParkingSessions s
+            WHERE s.SlotID = ps.SlotID
+              AND s.SessionStatus = 'Active'
+              AND s.ExitTime IS NULL
+          ) THEN 'occupied'
+
+          WHEN EXISTS (
+            SELECT 1
+            FROM Reservations r
+            WHERE r.SlotID = ps.SlotID
+              AND r.ReservationStatus = 'Reserved'
+              AND @StartTime < r.EndTime
+              AND @EndTime > r.StartTime
+          ) THEN 'occupied'
+
+          ELSE 'available'
+        END AS DisplayStatus
+
+      FROM ParkingSlots ps
+      JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
+      JOIN Zones z ON ps.ZoneID = z.ZoneID
+      JOIN Floors f ON z.FloorID = f.FloorID
+      JOIN Buildings b ON f.BuildingID = b.BuildingID
+      WHERE b.BuildingID = @BuildingID
+        AND ps.VehicleTypeID = @VehicleTypeID
+        AND vt.IsActive = 1
+        AND f.IsActive = 1
+      ORDER BY
+        CASE
+          WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN 1
+
+          WHEN EXISTS (
+            SELECT 1
+            FROM ParkingSessions s
+            WHERE s.SlotID = ps.SlotID
+              AND s.SessionStatus = 'Active'
+              AND s.ExitTime IS NULL
+          ) THEN 1
+
+          WHEN EXISTS (
+            SELECT 1
+            FROM Reservations r
+            WHERE r.SlotID = ps.SlotID
+              AND r.ReservationStatus = 'Reserved'
+              AND @StartTime < r.EndTime
+              AND @EndTime > r.StartTime
+          ) THEN 1
+
+          ELSE 0
+        END,
+        f.FloorID,
+        z.ZoneID,
+        ps.SlotID
+    `);
+
+  return result.recordset;
 }
 
 export async function createReservation(req) {
@@ -240,24 +372,17 @@ export async function createReservation(req) {
   );
 
   const buildingId = Number(req.body.buildingId || 1);
+  const requestedSlotId = Number(req.body.slotId || 0);
   const reservationDate = req.body.reservationDate || req.body.bookingDate;
+  const startTime = req.body.startTime;
+  const durationHours = getDurationHours(req.body.duration);
 
-  let startTime = req.body.startTime;
-  let endTime = req.body.endTime;
+  const start = buildDateTime(reservationDate, startTime);
+  const end = req.body.endTime
+    ? buildDateTime(reservationDate, req.body.endTime)
+    : addHours(start, durationHours || 4);
 
-  if (reservationDate && startTime && !String(startTime).includes("T")) {
-    const startDateTime = buildDateTime(reservationDate, startTime);
-    const durationHours = getDurationHours(req.body.duration);
-
-    startTime = startDateTime;
-
-    if (!endTime && durationHours) {
-      endTime = addHours(startDateTime, durationHours);
-    }
-  }
-
-  const start = new Date(startTime);
-  const end = new Date(endTime);
+  const minimumStart = getMinimumReservationStartTime();
 
   if (!vehicleTypeId) {
     throw createHttpError(400, "Loại phương tiện không hợp lệ.");
@@ -267,60 +392,84 @@ export async function createReservation(req) {
     throw createHttpError(400, "Ngày đặt chỗ là bắt buộc.");
   }
 
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+  if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     throw createHttpError(400, "Thời gian đặt chỗ không hợp lệ.");
   }
 
+  if (start < minimumStart) {
+    throw createHttpError(
+      400,
+      "Thời gian đặt chỗ phải cách thời gian hiện tại tối thiểu 15 phút."
+    );
+  }
+
   if (end <= start) {
-    throw createHttpError(400, "Thời gian kết thúc phải lớn hơn thời gian bắt đầu.");
+    throw createHttpError(
+      400,
+      "Thời gian kết thúc phải lớn hơn thời gian bắt đầu."
+    );
   }
 
   const pool = await getPool();
 
-  const slotResult = await pool.request()
+  await expireOverdueReservations(pool);
+
+  const slotRequest = pool.request()
     .input("BuildingID", sql.Int, buildingId)
     .input("VehicleTypeID", sql.Int, vehicleTypeId)
     .input("StartTime", sql.DateTime, start)
-    .input("EndTime", sql.DateTime, end)
-    .query(`
-      SELECT TOP 1
-        ps.SlotID,
-        ps.SlotCode,
-        z.ZoneName,
-        f.FloorName,
-        b.BuildingID,
-        b.BuildingName
-      FROM ParkingSlots ps
-      JOIN Zones z ON ps.ZoneID = z.ZoneID
-      JOIN Floors f ON z.FloorID = f.FloorID
-      JOIN Buildings b ON f.BuildingID = b.BuildingID
-      WHERE b.BuildingID = @BuildingID
-        AND ps.VehicleTypeID = @VehicleTypeID
-        AND ps.SlotStatus NOT IN ('Occupied', 'Maintenance', 'Blocked')
-        AND NOT EXISTS (
-          SELECT 1
-          FROM Reservations r
-          WHERE r.SlotID = ps.SlotID
-            AND r.ReservationStatus = 'Reserved'
-            AND @StartTime < r.EndTime
-            AND @EndTime > r.StartTime
-        )
-        AND NOT EXISTS (
-          SELECT 1
-          FROM ParkingSessions s
-          WHERE s.SlotID = ps.SlotID
-            AND s.SessionStatus = 'Active'
-            AND s.ExitTime IS NULL
-        )
-      ORDER BY ps.SlotID
-    `);
+    .input("EndTime", sql.DateTime, end);
+
+  let requestedSlotFilter = "";
+
+  if (Number.isInteger(requestedSlotId) && requestedSlotId > 0) {
+    slotRequest.input("RequestedSlotID", sql.Int, requestedSlotId);
+    requestedSlotFilter = "AND ps.SlotID = @RequestedSlotID";
+  }
+
+  const slotResult = await slotRequest.query(`
+    SELECT TOP 1
+      ps.SlotID,
+      ps.SlotCode,
+      z.ZoneName,
+      f.FloorName,
+      b.BuildingID,
+      b.BuildingName
+    FROM ParkingSlots ps
+    JOIN Zones z ON ps.ZoneID = z.ZoneID
+    JOIN Floors f ON z.FloorID = f.FloorID
+    JOIN Buildings b ON f.BuildingID = b.BuildingID
+    WHERE b.BuildingID = @BuildingID
+      AND ps.VehicleTypeID = @VehicleTypeID
+      ${requestedSlotFilter}
+      AND ps.SlotStatus NOT IN ('Maintenance', 'Blocked')
+      AND NOT EXISTS (
+        SELECT 1
+        FROM ParkingSessions s
+        WHERE s.SlotID = ps.SlotID
+          AND s.SessionStatus = 'Active'
+          AND s.ExitTime IS NULL
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM Reservations r
+        WHERE r.SlotID = ps.SlotID
+          AND r.ReservationStatus = 'Reserved'
+          AND @StartTime < r.EndTime
+          AND @EndTime > r.StartTime
+      )
+    ORDER BY
+      f.FloorID,
+      z.ZoneID,
+      ps.SlotID
+  `);
 
   const slot = slotResult.recordset[0];
 
   if (!slot) {
     throw createHttpError(
       409,
-      "Không còn chỗ trống phù hợp trong khoảng thời gian này."
+      "Vị trí bạn chọn không còn trống trong khoảng thời gian này. Vui lòng chọn vị trí khác."
     );
   }
 
@@ -340,21 +489,28 @@ export async function createReservation(req) {
     .input("EndTime", sql.DateTime, end)
     .query(`
       SELECT TOP 1
-        ReservationID,
-        DriverID,
-        VehicleTypeID,
-        SlotID,
-        ReservationDate,
-        StartTime,
-        EndTime,
-        ReservationStatus,
-        CreatedAt
-      FROM Reservations
-      WHERE DriverID = @DriverID
-        AND SlotID = @SlotID
-        AND StartTime = @StartTime
-        AND EndTime = @EndTime
-      ORDER BY ReservationID DESC
+        r.ReservationID,
+        CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
+        r.DriverID,
+        r.VehicleTypeID,
+        r.SlotID,
+        r.ReservationDate,
+        r.StartTime,
+        r.EndTime,
+        CONVERT(VARCHAR(16), r.StartTime, 120) AS StartTimeText,
+        CONVERT(VARCHAR(16), r.EndTime, 120) AS EndTimeText,
+        CONVERT(VARCHAR(10), r.StartTime, 120) AS StartDateText,
+        CONVERT(VARCHAR(10), r.EndTime, 120) AS EndDateText,
+        CONVERT(VARCHAR(5), r.StartTime, 108) AS StartClockText,
+        CONVERT(VARCHAR(5), r.EndTime, 108) AS EndClockText,
+        r.ReservationStatus,
+        r.CreatedAt
+      FROM Reservations r
+      WHERE r.DriverID = @DriverID
+        AND r.SlotID = @SlotID
+        AND r.StartTime = @StartTime
+        AND r.EndTime = @EndTime
+      ORDER BY r.ReservationID DESC
     `);
 
   const reservation = newestReservation.recordset[0];
@@ -362,12 +518,13 @@ export async function createReservation(req) {
   return {
     reservation: {
       ...reservation,
-      BookingCode: buildBookingCode(reservation.ReservationID),
       SlotCode: slot.SlotCode,
       ZoneName: slot.ZoneName,
       FloorName: slot.FloorName,
       BuildingID: slot.BuildingID,
       BuildingName: slot.BuildingName,
+      StatusValue: "active",
+      StatusLabel: "Đang hoạt động",
     },
   };
 }
@@ -393,6 +550,7 @@ export async function cancelReservation(req) {
       );
     }
 
+    await expireOverdueReservations(pool);
     await transaction.begin();
 
     const request = new sql.Request(transaction)
@@ -432,8 +590,12 @@ export async function cancelReservation(req) {
     if (reservation.ReservationStatus !== "Reserved") {
       throw createHttpError(
         400,
-        "Chỉ có thể hủy đặt chỗ đang ở trạng thái Reserved."
+        "Chỉ có thể hủy đặt chỗ đang hoạt động/chưa check-in."
       );
+    }
+
+    if (reservation.EndTime < new Date()) {
+      throw createHttpError(400, "Đặt chỗ đã hết hạn, không thể hủy.");
     }
 
     const activeSessionResult = await new sql.Request(transaction)
@@ -500,9 +662,7 @@ export async function cancelReservation(req) {
     };
   } catch (err) {
     try {
-      if (transaction._aborted !== true) {
-        await transaction.rollback();
-      }
+      await transaction.rollback();
     } catch {}
 
     throw err;

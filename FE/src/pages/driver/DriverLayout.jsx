@@ -462,7 +462,7 @@ const DriverLayout = () => {
       {/* Body */}
       <div className="flex min-h-0 flex-1 relative">
         {/* Sidebar */}
-        <aside 
+        <aside
           className={`fixed inset-y-0 left-0 z-50 w-[270px] flex-col justify-between border-r border-gray-100 bg-white shadow-xl transition-transform duration-300 ${
             sidebarOpen ? 'translate-x-0 flex' : '-translate-x-full hidden'
           }`}
@@ -478,7 +478,7 @@ const DriverLayout = () => {
                   <p className="mt-1 text-[10px] text-gray-400">Parking Building System</p>
                 </div>
               </Link>
-              <button 
+              <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-2 rounded-xl text-gray-400 hover:bg-gray-50"
               >
