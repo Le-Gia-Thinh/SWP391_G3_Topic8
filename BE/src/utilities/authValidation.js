@@ -168,6 +168,7 @@ export function validateCreateReservation(req, res, next) {
   const startTime = req.body.startTime;
   const endTime = req.body.endTime;
   const duration = req.body.duration;
+  const slotId = Number(req.body.slotId);
 
   if (!vehicleType) {
     errors.push("Loại phương tiện là bắt buộc");
@@ -185,25 +186,8 @@ export function validateCreateReservation(req, res, next) {
     errors.push("Cần có thời gian kết thúc hoặc thời lượng đặt chỗ");
   }
 
-  if (startTime && endTime) {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-
-    if (Number.isNaN(start.getTime())) {
-      errors.push("Thời gian bắt đầu không hợp lệ");
-    }
-
-    if (Number.isNaN(end.getTime())) {
-      errors.push("Thời gian kết thúc không hợp lệ");
-    }
-
-    if (
-      !Number.isNaN(start.getTime()) &&
-      !Number.isNaN(end.getTime()) &&
-      end <= start
-    ) {
-      errors.push("Thời gian kết thúc phải lớn hơn thời gian bắt đầu");
-    }
+  if (!Number.isInteger(slotId) || slotId <= 0) {
+    errors.push("Vị trí đỗ xe là bắt buộc");
   }
 
   if (errors.length > 0) {
@@ -213,6 +197,8 @@ export function validateCreateReservation(req, res, next) {
       errors,
     });
   }
+
+  req.body.slotId = slotId;
 
   next();
 }

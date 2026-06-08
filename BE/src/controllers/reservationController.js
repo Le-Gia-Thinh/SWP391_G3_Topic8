@@ -4,6 +4,19 @@ function getErrorStatus(err) {
   return err.status || err.statusCode || 500;
 }
 
+function sendClientError(res, err) {
+  const status = getErrorStatus(err);
+
+  if (status < 500) {
+    return res.status(status).json({
+      success: false,
+      message: err.message,
+    });
+  }
+
+  return null;
+}
+
 export async function getReservations(req, res, next) {
   try {
     const data = await reservationService.getReservations(req);
@@ -13,6 +26,8 @@ export async function getReservations(req, res, next) {
       data,
     });
   } catch (err) {
+    const handled = sendClientError(res, err);
+    if (handled) return handled;
     next(err);
   }
 }
@@ -26,15 +41,23 @@ export async function getReservationById(req, res, next) {
       data,
     });
   } catch (err) {
-    const status = getErrorStatus(err);
+    const handled = sendClientError(res, err);
+    if (handled) return handled;
+    next(err);
+  }
+}
 
-    if (status < 500) {
-      return res.status(status).json({
-        success: false,
-        message: err.message,
-      });
-    }
+export async function getAvailableSlots(req, res, next) {
+  try {
+    const data = await reservationService.getAvailableSlots(req);
 
+    return res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    const handled = sendClientError(res, err);
+    if (handled) return handled;
     next(err);
   }
 }
@@ -49,15 +72,8 @@ export async function createReservation(req, res, next) {
       data,
     });
   } catch (err) {
-    const status = getErrorStatus(err);
-
-    if (status < 500) {
-      return res.status(status).json({
-        success: false,
-        message: err.message,
-      });
-    }
-
+    const handled = sendClientError(res, err);
+    if (handled) return handled;
     next(err);
   }
 }
@@ -72,15 +88,8 @@ export async function cancelReservation(req, res, next) {
       data,
     });
   } catch (err) {
-    const status = getErrorStatus(err);
-
-    if (status < 500) {
-      return res.status(status).json({
-        success: false,
-        message: err.message,
-      });
-    }
-
+    const handled = sendClientError(res, err);
+    if (handled) return handled;
     next(err);
   }
 }

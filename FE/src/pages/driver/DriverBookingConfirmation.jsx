@@ -11,9 +11,7 @@ import {
   ShieldCheck,
   Ban,
   Copy,
-  Download,
   Eye,
-  ArrowRight,
   RefreshCcw
 } from 'lucide-react'
 import {
@@ -22,7 +20,6 @@ import {
   useNavigate,
   useSearchParams
 } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
 import authorizeAxios from '../../utils/authorizeAxios'
 
 const PARKING_INFO = {
@@ -31,80 +28,64 @@ const PARKING_INFO = {
 }
 
 const VEHICLE_LABELS = {
-  car: 'Ô tô (4-7 chỗ)',
-  bike: 'Xe máy',
   CAR: 'Ô tô',
   MOTO: 'Xe máy',
   MOTORBIKE: 'Xe máy',
-  TRUCK: 'Xe tải'
+  TRUCK: 'Xe tải',
+  car: 'Ô tô',
+  bike: 'Xe máy'
 }
 
-const formatBackendDate = (value) => {
-  if (!value) return null
-
-  let text = String(value)
-
-  if (text.endsWith('Z')) {
-    text = text.slice(0, -1)
-  }
-
-  const date = new Date(text)
-
-  if (Number.isNaN(date.getTime())) return null
-
-  return date
+const STATUS_CLASSES = {
+  active: 'border-green-100 bg-white text-green-700',
+  used: 'border-gray-100 bg-white text-gray-700',
+  expired: 'border-amber-100 bg-white text-amber-700',
+  cancelled: 'border-red-100 bg-white text-red-700'
 }
 
-const formatDate = (value) => {
-  const date = formatBackendDate(value)
-
-  if (!date) {
-    if (!value) return '--/--/----'
-
-    const [year, month, day] = String(value).split('-')
-
-    if (year && month && day) {
-      return `${day}/${month}/${year}`
+function splitDateTimeText(value) {
+  if (!value) {
+    return {
+      date: '--/--/----',
+      time: '--:--',
+      isoDate: ''
     }
-
-    return String(value)
   }
 
-  return date.toLocaleDateString('vi-VN')
+  const text = String(value).trim()
+  const [datePart, timePart = ''] = text.split(' ')
+  const [year, month, day] = datePart.split('-')
+
+  return {
+    date: year && month && day ? `${day}/${month}/${year}` : '--/--/----',
+    time: timePart ? timePart.slice(0, 5) : '--:--',
+    isoDate: year && month && day ? `${year}-${month}-${day}` : ''
+  }
 }
 
-const formatTime = (value) => {
-  const date = formatBackendDate(value)
+function calculateDurationLabel(startTimeText, endTimeText) {
+  const start = splitDateTimeText(startTimeText)
+  const end = splitDateTimeText(endTimeText)
 
-  if (!date) {
-    if (!value) return '--:--'
-    return String(value).slice(0, 5)
+  if (
+    !start.isoDate ||
+    !end.isoDate ||
+    start.time === '--:--' ||
+    end.time === '--:--'
+  ) {
+    return '--'
   }
 
-  return date.toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+  const startDate = new Date(`${start.isoDate}T${start.time}:00`)
+  const endDate = new Date(`${end.isoDate}T${end.time}:00`)
 
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('vi-VN').format(value || 0)
-}
-
-const getDurationLabel = (startTime, endTime, fallbackDuration) => {
-  const start = formatBackendDate(startTime)
-  const end = formatBackendDate(endTime)
-
-  if (!start || !end) {
-    if (fallbackDuration === '4h') return '4 Giờ 00 Phút'
-    if (fallbackDuration === '8h') return '8 Giờ 00 Phút'
-    if (fallbackDuration === '24h') return 'Cả ngày'
-    return fallbackDuration || '--'
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return '--'
   }
 
   const diffMinutes = Math.max(
     0,
-    Math.floor((end.getTime() - start.getTime()) / 60000)
+    Math.floor((endDate.getTime() - startDate.getTime()) / 60000)
   )
 
   const hours = Math.floor(diffMinutes / 60)
@@ -113,103 +94,135 @@ const getDurationLabel = (startTime, endTime, fallbackDuration) => {
   return `${hours} Giờ ${String(minutes).padStart(2, '0')} Phút`
 }
 
-const mapReservationToBooking = (reservation, stateBooking, user) => {
+function mapReservationToBooking(reservation, stateBooking) {
   if (!reservation && !stateBooking) return null
 
   const source = reservation || {}
 
+  const startTimeText =
+    source.StartTimeText ||
+    source.startTimeText ||
+    stateBooking?.startTimeText ||
+    null
+
+  const endTimeText =
+    source.EndTimeText ||
+    source.endTimeText ||
+    stateBooking?.endTimeText ||
+    null
+
+  const start = splitDateTimeText(startTimeText)
+  const end = splitDateTimeText(endTimeText)
+
+  const reservationId =
+    source.ReservationID ||
+    source.reservationId ||
+    stateBooking?.reservationId
+
   return {
-    reservationId:
-      source.ReservationID ||
-      stateBooking?.reservationId ||
-      stateBooking?.ReservationID,
+    reservationId,
 
     bookingCode:
       source.BookingCode ||
+      source.bookingCode ||
       stateBooking?.bookingCode ||
-      stateBooking?.BookingCode,
+      (reservationId
+        ? `BK-${String(reservationId).padStart(4, '0')}`
+        : 'Không có mã'),
 
     driverName:
       source.DriverName ||
-      user?.fullName ||
-      user?.FullName ||
+      source.driverName ||
       stateBooking?.driverName ||
       'Driver',
 
     parkingName:
       source.BuildingName ||
+      source.buildingName ||
       stateBooking?.parkingName ||
       PARKING_INFO.name,
 
     address:
       source.Address ||
+      source.address ||
       stateBooking?.address ||
       PARKING_INFO.address,
 
     licensePlate:
       source.PlateNumber ||
+      source.plateNumber ||
       stateBooking?.licensePlate ||
       'Chưa check-in',
 
     vehicleType:
       source.VehicleCode ||
+      source.vehicleCode ||
       stateBooking?.vehicleType ||
-      source.VehicleName ||
-      'car',
+      'CAR',
 
     vehicleName:
       source.VehicleName ||
+      source.vehicleName ||
+      stateBooking?.vehicleName ||
       VEHICLE_LABELS[source.VehicleCode] ||
       VEHICLE_LABELS[stateBooking?.vehicleType] ||
-      stateBooking?.vehicleType ||
-      'Chưa cập nhật',
-
-    bookingDate:
-      source.ReservationDate ||
-      stateBooking?.bookingDate,
-
-    startTime:
-      source.StartTime ||
-      stateBooking?.startTime,
-
-    endTime:
-      source.EndTime ||
-      stateBooking?.endTime,
-
-    duration:
-      stateBooking?.duration,
+      'Ô tô',
 
     floor:
       source.FloorName ||
+      source.floorName ||
       stateBooking?.floor ||
       '--',
 
     zone:
       source.ZoneName ||
+      source.zoneName ||
       stateBooking?.zone ||
       '--',
 
     selectedSlot:
       source.SlotCode ||
+      source.slotCode ||
       stateBooking?.selectedSlot ||
       '--',
 
-    temporaryPrice:
-      stateBooking?.temporaryPrice ||
-      0,
+    startTimeText,
+    endTimeText,
 
-    statusLabel:
-      source.StatusLabel ||
-      stateBooking?.statusLabel ||
-      'Đang hoạt động',
+    startClock:
+      source.StartClockText ||
+      source.startClockText ||
+      stateBooking?.startClockText ||
+      start.time,
+
+    endClock:
+      source.EndClockText ||
+      source.endClockText ||
+      stateBooking?.endClockText ||
+      end.time,
+
+    startDate: start.date,
+    endDate: end.date,
+
+    durationLabel: calculateDurationLabel(startTimeText, endTimeText),
+
+    temporaryPrice: stateBooking?.temporaryPrice || 0,
 
     statusValue:
       source.StatusValue ||
+      source.statusValue ||
       stateBooking?.statusValue ||
       'active',
 
+    statusLabel:
+      source.StatusLabel ||
+      source.statusLabel ||
+      stateBooking?.statusLabel ||
+      'Đang hoạt động',
+
     reservationStatus:
       source.ReservationStatus ||
+      source.reservationStatus ||
       stateBooking?.reservationStatus
   }
 }
@@ -217,7 +230,6 @@ const mapReservationToBooking = (reservation, stateBooking, user) => {
 const DriverBookingConfirmation = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user } = useAuth()
   const [searchParams] = useSearchParams()
 
   const reservationIdFromQuery = searchParams.get('reservationId')
@@ -259,20 +271,17 @@ const DriverBookingConfirmation = () => {
   }, [reservationId])
 
   const booking = useMemo(() => {
-    return mapReservationToBooking(reservation, location.state, user)
-  }, [reservation, location.state, user])
+    return mapReservationToBooking(reservation, location.state)
+  }, [reservation, location.state])
 
-  const bookingCode = booking?.bookingCode || 'Không có mã'
+  const statusClassName =
+    STATUS_CLASSES[booking?.statusValue] || STATUS_CLASSES.active
 
-  const formattedDate = formatDate(booking?.startTime || booking?.bookingDate)
-  const startTime = formatTime(booking?.startTime)
-  const expiredTime = formatTime(booking?.endTime)
+  const canCancel = booking?.statusValue === 'active'
 
-  const durationLabel = getDurationLabel(
-    booking?.startTime,
-    booking?.endTime,
-    booking?.duration
-  )
+  const fullSlotName = `${booking?.floor || '--'} / Khu ${
+    booking?.zone || '--'
+  } / Slot ${booking?.selectedSlot || '--'}`
 
   const vehicleLabel =
     booking?.vehicleName ||
@@ -280,47 +289,43 @@ const DriverBookingConfirmation = () => {
     booking?.vehicleType ||
     '--'
 
-  const fullSlotName = `${booking?.floor || '--'} / Khu ${
-    booking?.zone || '--'
-  } / Slot ${booking?.selectedSlot || '--'}`
-
   const handleCopyBookingCode = async () => {
     try {
-      await navigator.clipboard.writeText(bookingCode)
+      await navigator.clipboard.writeText(booking?.bookingCode || '')
     } catch {
-      // Clipboard may be blocked by browser permission.
+      // ignore
     }
   }
+
   const handleCancelBooking = async () => {
-  if (!booking?.reservationId) {
-    navigate('/driver/history')
-    return
-  }
+    if (!booking?.reservationId) {
+      navigate('/driver/history')
+      return
+    }
 
-  const confirmed = window.confirm(
-    `Bạn có chắc muốn hủy đặt chỗ ${booking.bookingCode} không?`
-  )
+    if (!canCancel) {
+      alert('Chỉ có thể hủy booking đang hoạt động/chưa check-in.')
+      return
+    }
 
-  if (!confirmed) return
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn hủy đặt chỗ ${booking.bookingCode} không?`
+    )
 
-  try {
-    await authorizeAxios.patch(`/reservations/${booking.reservationId}/cancel`)
-    navigate('/driver/history')
-  } catch (error) {
-    console.error('Cancel reservation failed:', error)
+    if (!confirmed) return
 
-    const message =
-      error.response?.data?.message ||
-      'Hủy đặt chỗ thất bại. Vui lòng thử lại.'
+    try {
+      await authorizeAxios.patch(`/reservations/${booking.reservationId}/cancel`)
+      navigate('/driver/history')
+    } catch (error) {
+      console.error('Cancel reservation failed:', error)
 
-    alert(message)
-  }
-}
+      const message =
+        error.response?.data?.message ||
+        'Hủy đặt chỗ thất bại. Vui lòng thử lại.'
 
-
-
-  const handleViewSlotDetail = () => {
-    navigate('/driver/session')
+      alert(message)
+    }
   }
 
   if (isLoading) {
@@ -405,11 +410,9 @@ const DriverBookingConfirmation = () => {
           </div>
         </div>
 
-        <div className="hidden sm:block">
-          <span className="rounded-xl border border-green-100 bg-white px-4 py-2 text-sm font-bold text-green-700 shadow-sm">
-            {booking.statusLabel}
-          </span>
-        </div>
+        <span className={`rounded-xl border px-4 py-2 text-sm font-bold shadow-sm ${statusClassName}`}>
+          {booking.statusLabel}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -420,36 +423,11 @@ const DriverBookingConfirmation = () => {
               Thông tin chi tiết đặt chỗ
             </h3>
 
-            <p className="mb-6 text-sm text-gray-500">
-              Vui lòng xuất trình thông tin này khi đến bãi đỗ xe.
-            </p>
-
             <div className="space-y-4">
-              <DetailRow
-                icon={<User size={16} />}
-                label="Tên tài xế"
-                value={booking.driverName}
-                bold
-              />
-
-              <DetailRow
-                icon={<Car size={16} />}
-                label="Biển số xe"
-                value={booking.licensePlate}
-                bold
-              />
-
-              <DetailRow
-                icon={<Car size={16} />}
-                label="Loại phương tiện"
-                value={vehicleLabel}
-              />
-
-              <DetailRow
-                icon={<Building size={16} />}
-                label="Tòa nhà đỗ xe"
-                value={booking.parkingName}
-              />
+              <DetailRow icon={<User size={16} />} label="Tên tài xế" value={booking.driverName} bold />
+              <DetailRow icon={<Car size={16} />} label="Biển số xe" value={booking.licensePlate} bold />
+              <DetailRow icon={<Car size={16} />} label="Loại phương tiện" value={vehicleLabel} />
+              <DetailRow icon={<Building size={16} />} label="Tòa nhà đỗ xe" value={booking.parkingName} />
 
               <DetailRow
                 icon={<MapPin size={16} />}
@@ -461,20 +439,20 @@ const DriverBookingConfirmation = () => {
               <DetailRow
                 icon={<Clock size={16} />}
                 label="Thời gian bắt đầu"
-                value={`${startTime} - ${formattedDate}`}
+                value={`${booking.startClock} - ${booking.startDate}`}
                 bold
               />
 
               <DetailRow
                 icon={<Clock size={16} />}
                 label="Thời gian dự kiến"
-                value={durationLabel}
+                value={booking.durationLabel}
               />
 
               <DetailRow
                 icon={<Clock size={16} />}
                 label="Thời gian hết hạn"
-                value={`${expiredTime} - ${formattedDate}`}
+                value={`${booking.endClock} - ${booking.endDate}`}
                 valueClassName="font-bold text-red-600"
                 noBorder
               />
@@ -495,8 +473,7 @@ const DriverBookingConfirmation = () => {
                 titleClassName="text-orange-800"
                 contentClassName="text-orange-700"
               >
-                Vui lòng check-in đúng thời gian đã đặt. Nếu bạn không vào bãi
-                sau thời gian cho phép, vị trí có thể được giải phóng cho người khác.
+                Booking chỉ hết hạn khi thời gian hết hạn nhỏ hơn giờ hiện tại của SQL Server.
               </NoteCard>
 
               <NoteCard
@@ -507,8 +484,7 @@ const DriverBookingConfirmation = () => {
                 titleClassName="text-blue-800"
                 contentClassName="text-blue-700"
               >
-                Khi đến bãi xe, bạn cung cấp biển số xe hoặc mã đặt chỗ cho
-                nhân viên để được xác nhận và hướng dẫn vào đúng vị trí.
+                Khi đến bãi xe, cung cấp biển số xe hoặc mã đặt chỗ cho nhân viên để được check-in.
               </NoteCard>
 
               <NoteCard
@@ -519,7 +495,7 @@ const DriverBookingConfirmation = () => {
                 titleClassName="text-gray-700"
                 contentClassName="text-gray-600"
               >
-                Bạn có thể hủy đặt chỗ miễn phí trước 30 phút nếu booking chưa được check-in.
+                Bạn chỉ có thể hủy booking đang hoạt động và chưa được staff check-in.
               </NoteCard>
             </div>
           </div>
@@ -537,7 +513,7 @@ const DriverBookingConfirmation = () => {
               className="group relative mb-4 w-full overflow-hidden rounded-xl border border-blue-200 bg-blue-50 py-4 transition-colors hover:bg-blue-100"
             >
               <h2 className="text-3xl font-black tracking-wider text-blue-600">
-                {bookingCode}
+                {booking.bookingCode}
               </h2>
 
               <div className="absolute right-2 top-2 text-blue-400 opacity-0 transition-opacity group-hover:opacity-100">
@@ -553,46 +529,13 @@ const DriverBookingConfirmation = () => {
               hoặc mã này cho nhân viên tại cổng vào.
             </p>
 
-            <div className="space-y-3">
-              <Link
-                to="/driver/history"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700"
-              >
-                <Eye size={16} />
-                Xem danh sách của tôi
-              </Link>
-
-              <button
-                type="button"
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-3 text-sm font-bold text-gray-700 transition-all hover:bg-gray-50"
-              >
-                <Download size={16} />
-                Tải xuống vé PDF
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
-              <MapPin size={20} />
-            </div>
-
-            <div>
-              <h4 className="mb-1 text-sm font-bold text-gray-900">
-                Vị trí bãi xe
-              </h4>
-
-              <p className="mb-2 text-xs leading-relaxed text-gray-500">
-                {booking.address}
-              </p>
-
-              <Link
-                to="#"
-                className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
-              >
-                Xem trên bản đồ <ArrowRight size={13} />
-              </Link>
-            </div>
+            <Link
+              to="/driver/history"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700"
+            >
+              <Eye size={16} />
+              Xem lịch sử đặt chỗ
+            </Link>
           </div>
         </div>
       </div>
@@ -601,10 +544,10 @@ const DriverBookingConfirmation = () => {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="hidden sm:block">
             <p className="text-sm font-medium text-gray-500">
-              Phiên bản hiện tại v2.4.0
+              Parking Building Management System
             </p>
             <p className="text-xs text-gray-400">
-              Parking Building Management System
+              Driver booking confirmation
             </p>
           </div>
 
@@ -612,7 +555,8 @@ const DriverBookingConfirmation = () => {
             <button
               type="button"
               onClick={handleCancelBooking}
-              className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold text-red-500 transition-colors hover:bg-red-50"
+              disabled={!canCancel}
+              className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Hủy đặt chỗ này
             </button>
@@ -624,13 +568,12 @@ const DriverBookingConfirmation = () => {
               Đặt thêm chỗ mới
             </Link>
 
-            <button
-              type="button"
-              onClick={handleViewSlotDetail}
+            <Link
+              to="/driver/session"
               className="flex-1 rounded-xl bg-blue-600 px-6 py-2.5 text-center text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors hover:bg-blue-700 sm:flex-none"
             >
-              Xem chi tiết chỗ đỗ
-            </button>
+              Xem phiên gửi hiện tại
+            </Link>
           </div>
         </div>
       </div>

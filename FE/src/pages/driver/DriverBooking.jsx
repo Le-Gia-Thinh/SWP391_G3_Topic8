@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   CalendarDays,
   MapPin,
@@ -11,23 +11,12 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import CustomSelect from '../../components/ui/Select'
-import CustomCheckbox from '../../components/ui/Checkbox'
 import authorizeAxios from '../../utils/authorizeAxios'
 
-const FLOORS = [
-  { value: 'B1', label: 'Tầng hầm B1' },
-  { value: 'B2', label: 'Tầng hầm B2' }
-]
-
-const ZONES = [
-  { value: 'A', label: 'Khu A - Gần cổng' },
-  { value: 'B', label: 'Khu B - Sâu bên trong' }
-]
-
 const VEHICLE_TYPES = [
-  { value: 'car', label: 'Ô tô (4-7 chỗ)' },
-  { value: 'bike', label: 'Xe máy' }
+  { value: 'CAR', label: 'Ô tô' },
+  { value: 'MOTO', label: 'Xe máy' },
+  { value: 'TRUCK', label: 'Xe tải' }
 ]
 
 const DURATIONS = [
@@ -36,154 +25,467 @@ const DURATIONS = [
   { value: '24h', label: 'Cả ngày', price: 180000 }
 ]
 
-const OCCUPIED_SLOTS = [
-  'A-03',
-  'A-07',
-  'A-08',
-  'B-02',
-  'B-05',
-  'B-09',
-  'C-01',
-  'C-06',
-  'C-10'
-]
+const DEFAULT_BUILDINGS = [{ value: '1', label: 'Toa A' }]
 
-const PARKING_INFO = {
-  name: 'District 1 Parking Tower',
-  shortName: 'D1 Parking Tower',
-  address: '123 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh',
-  gate: 'Cổng A - Lối vào chính'
+const padNumber = (value) => String(value).padStart(2, '0')
+
+const getTodayDateValue = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${padNumber(now.getMonth() + 1)}-${padNumber(now.getDate())}`
+}
+
+const getMinimumStartDate = () => {
+  const minimum = new Date(Date.now() + 15 * 60 * 1000)
+
+  if (minimum.getSeconds() > 0 || minimum.getMilliseconds() > 0) {
+    minimum.setMinutes(minimum.getMinutes() + 1)
+  }
+
+  minimum.setSeconds(0)
+  minimum.setMilliseconds(0)
+
+  return minimum
+}
+
+const getMinimumStartTimeValue = () => {
+  const minimum = getMinimumStartDate()
+  return `${padNumber(minimum.getHours())}:${padNumber(minimum.getMinutes())}`
+}
+
+const isToday = (dateValue) => dateValue === getTodayDateValue()
+
+const buildLocalDateTime = (dateValue, timeValue) => {
+  if (!dateValue || !timeValue) return null
+
+  const [year, month, day] = dateValue.split('-').map(Number)
+  const [hour, minute] = timeValue.split(':').map(Number)
+
+  const date = new Date(year, month - 1, day, hour, minute, 0, 0)
+
+  if (Number.isNaN(date.getTime())) return null
+
+  return date
+}
+
+const isStartTimeValid = (dateValue, timeValue) => {
+  const selected = buildLocalDateTime(dateValue, timeValue)
+
+  if (!selected) return false
+
+  return selected >= getMinimumStartDate()
 }
 
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat('vi-VN').format(value)
+  return new Intl.NumberFormat('vi-VN').format(value || 0)
 }
 
 const getOptionLabel = (options, value) => {
-  return options.find((option) => option.value === value)?.label || value
+  return options.find((item) => String(item.value) === String(value))?.label || value
+}
+
+const uniqueBy = (items, keyGetter) => {
+  const map = new Map()
+
+  items.forEach((item) => {
+    const key = keyGetter(item)
+
+    if (!map.has(key)) {
+      map.set(key, item)
+    }
+  })
+
+  return Array.from(map.values())
 }
 
 const DriverBooking = () => {
   const navigate = useNavigate()
 
-  const [selectedSlot, setSelectedSlot] = useState('A-09')
+  const [buildingOptions, setBuildingOptions] = useState(DEFAULT_BUILDINGS)
+  const [availableSlots, setAvailableSlots] = useState([])
+  const [selectedSlotId, setSelectedSlotId] = useState(null)
+
   const [licensePlate, setLicensePlate] = useState('51K-123.45')
-  const [vehicleType, setVehicleType] = useState('car')
-  const [bookingDate, setBookingDate] = useState('2026-06-03')
-  const [startTime, setStartTime] = useState('08:30')
+  const [vehicleType, setVehicleType] = useState('CAR')
+  const [bookingDate, setBookingDate] = useState(getTodayDateValue())
+  const [startTime, setStartTime] = useState(getMinimumStartTimeValue())
   const [duration, setDuration] = useState('4h')
-  const [floor, setFloor] = useState('B1')
-  const [zone, setZone] = useState('A')
+  const [buildingId, setBuildingId] = useState('1')
+  const [floorId, setFloorId] = useState('')
+  const [zoneId, setZoneId] = useState('')
   const [autoSelect, setAutoSelect] = useState(true)
 
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-
-  const slots = useMemo(() => {
-    return Array.from({ length: 30 }, (_, index) => {
-      const row = index < 10 ? 'A' : index < 20 ? 'B' : 'C'
-      const number = (index % 10) + 1
-      const id = `${row}-${number.toString().padStart(2, '0')}`
-
-      if (OCCUPIED_SLOTS.includes(id)) {
-        return { id, status: 'occupied' }
-      }
-
-      if (id === selectedSlot) {
-        return { id, status: 'selected' }
-      }
-
-      return { id, status: 'available' }
-    })
-  }, [selectedSlot])
 
   const selectedDuration = DURATIONS.find((item) => item.value === duration)
   const temporaryPrice = selectedDuration?.price || 0
 
-  const vehicleTypeLabel = getOptionLabel(VEHICLE_TYPES, vehicleType)
-  const durationLabel = getOptionLabel(DURATIONS, duration)
+  const isBookingTimeValid = isStartTimeValid(bookingDate, startTime)
 
-  const handleSelectSlot = (slot) => {
-    if (slot.status === 'occupied') return
+  const floorOptions = useMemo(() => {
+    return uniqueBy(
+      availableSlots.map((slot) => ({
+        value: String(slot.FloorID),
+        label: slot.FloorName
+      })),
+      (item) => item.value
+    )
+  }, [availableSlots])
 
-    setSelectedSlot(slot.id)
-    setAutoSelect(false)
+  const zoneOptions = useMemo(() => {
+    const scopedSlots = floorId
+      ? availableSlots.filter((slot) => String(slot.FloorID) === String(floorId))
+      : availableSlots
+
+    return uniqueBy(
+      scopedSlots.map((slot) => ({
+        value: String(slot.ZoneID),
+        label: slot.ZoneName
+      })),
+      (item) => item.value
+    )
+  }, [availableSlots, floorId])
+
+  const filteredSlots = useMemo(() => {
+    return availableSlots.filter((slot) => {
+      const matchFloor = !floorId || String(slot.FloorID) === String(floorId)
+      const matchZone = !zoneId || String(slot.ZoneID) === String(zoneId)
+
+      return matchFloor && matchZone
+    })
+  }, [availableSlots, floorId, zoneId])
+
+  const displaySlots = useMemo(() => {
+    return filteredSlots.map((slot) => {
+      if (slot.DisplayStatus !== 'available') {
+        return {
+          ...slot,
+          uiStatus: 'occupied'
+        }
+      }
+
+      if (slot.SlotID === selectedSlotId) {
+        return {
+          ...slot,
+          uiStatus: 'selected'
+        }
+      }
+
+      return {
+        ...slot,
+        uiStatus: 'available'
+      }
+    })
+  }, [filteredSlots, selectedSlotId])
+
+  const selectedSlot = useMemo(() => {
+    return availableSlots.find((slot) => slot.SlotID === selectedSlotId) || null
+  }, [availableSlots, selectedSlotId])
+
+  const fetchBuildings = async () => {
+    try {
+      const response = await authorizeAxios.get('/buildings')
+      const buildings = response.data?.data || []
+
+      if (buildings.length > 0) {
+        setBuildingOptions(
+          buildings.map((building) => ({
+            value: String(building.BuildingID),
+            label: building.BuildingName
+          }))
+        )
+      }
+    } catch (error) {
+      console.error('Get buildings failed:', error)
+    }
   }
 
-  const handleBooking = async (event) => {
-    event.preventDefault()
-    setErrorMessage('')
+  const fetchAvailableSlots = async () => {
+    if (!buildingId || !vehicleType || !bookingDate || !startTime || !duration) {
+      return
+    }
 
-    if (!licensePlate.trim()) {
-      setErrorMessage('Vui lòng nhập biển số xe.')
+    if (!isStartTimeValid(bookingDate, startTime)) {
+      setAvailableSlots([])
+      setSelectedSlotId(null)
       return
     }
 
     try {
-      setIsSubmitting(true)
+      setIsLoadingSlots(true)
+      setErrorMessage('')
 
-      const response = await authorizeAxios.post('/reservations', {
-        vehicleType,
-        licensePlate: licensePlate.trim().toUpperCase(),
-        bookingDate,
-        startTime,
-        duration,
-        buildingId: 1
+      const response = await authorizeAxios.get('/reservations/available-slots', {
+        params: {
+          buildingId,
+          vehicleType,
+          bookingDate,
+          startTime,
+          duration
+        }
       })
 
-      const reservation = response.data?.data?.reservation
+      const data = response.data?.data || []
 
-      const bookingData = {
-        parkingName: reservation?.BuildingName || PARKING_INFO.name,
-        licensePlate: licensePlate.trim().toUpperCase(),
-        vehicleType,
-        bookingDate,
-        startTime,
-        duration,
-        floor: reservation?.FloorName || floor,
-        zone: reservation?.ZoneName || zone,
-        selectedSlot: reservation?.SlotCode || selectedSlot,
-        temporaryPrice,
-        reservationId: reservation?.ReservationID,
-        bookingCode: reservation?.BookingCode,
-        slotId: reservation?.SlotID
-      }
+      setAvailableSlots(data)
 
-      navigate(`/driver/booking-confirmation?reservationId=${reservation?.ReservationID}`,
-        {
-          state: bookingData
-        }
+      const stillValid = data.some(
+        (slot) =>
+          slot.SlotID === selectedSlotId &&
+          slot.DisplayStatus === 'available'
       )
+
+      if (stillValid) return
+
+      const nearestAvailable = data.find(
+        (slot) => slot.DisplayStatus === 'available'
+      )
+
+      setSelectedSlotId(nearestAvailable?.SlotID || null)
     } catch (error) {
-      console.error('Create booking failed:', error)
+      console.error('Get available slots failed:', error)
 
       const message =
         error.response?.data?.message ||
-        error.response?.data?.errors?.[0] ||
-        'Đặt chỗ thất bại. Vui lòng thử lại.'
+        'Không thể tải sơ đồ vị trí trống từ database.'
 
       setErrorMessage(message)
+      setAvailableSlots([])
+      setSelectedSlotId(null)
     } finally {
-      setIsSubmitting(false)
+      setIsLoadingSlots(false)
     }
   }
 
-  const handleCancel = () => {
-    navigate('/driver/home')
+  useEffect(() => {
+    fetchBuildings()
+  }, [])
+
+  useEffect(() => {
+    fetchAvailableSlots()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buildingId, vehicleType, bookingDate, startTime, duration])
+
+  useEffect(() => {
+    if (floorOptions.length === 0) {
+      setFloorId('')
+      return
+    }
+
+    const exists = floorOptions.some((item) => item.value === String(floorId))
+
+    if (!floorId || !exists) {
+      setFloorId(floorOptions[0].value)
+    }
+  }, [floorOptions, floorId])
+
+  useEffect(() => {
+    if (zoneOptions.length === 0) {
+      setZoneId('')
+      return
+    }
+
+    const exists = zoneOptions.some((item) => item.value === String(zoneId))
+
+    if (!zoneId || !exists) {
+      setZoneId(zoneOptions[0].value)
+    }
+  }, [zoneOptions, zoneId])
+
+  useEffect(() => {
+    if (!autoSelect) return
+
+    const selectedVisible = filteredSlots.some(
+      (slot) =>
+        slot.SlotID === selectedSlotId &&
+        slot.DisplayStatus === 'available'
+    )
+
+    if (selectedVisible) return
+
+    const nearestAvailable = filteredSlots.find(
+      (slot) => slot.DisplayStatus === 'available'
+    )
+
+    setSelectedSlotId(nearestAvailable?.SlotID || null)
+  }, [autoSelect, filteredSlots, selectedSlotId])
+
+  const handleChangeDate = (event) => {
+    const value = event.target.value
+    const today = getTodayDateValue()
+
+    if (value < today) {
+      setBookingDate(today)
+      setStartTime(getMinimumStartTimeValue())
+      setErrorMessage('Không thể chọn ngày trong quá khứ.')
+      return
+    }
+
+    setBookingDate(value)
+
+    if (value === today && !isStartTimeValid(value, startTime)) {
+      setErrorMessage('Giờ bắt đầu phải cách thời gian hiện tại tối thiểu 15 phút.')
+      return
+    }
+
+    setErrorMessage('')
   }
 
+  const handleChangeStartTime = (event) => {
+    const value = event.target.value
+
+    setStartTime(value)
+
+    if (isToday(bookingDate) && !isStartTimeValid(bookingDate, value)) {
+      setErrorMessage('Giờ bắt đầu phải cách thời gian hiện tại tối thiểu 15 phút.')
+      return
+    }
+
+    setErrorMessage('')
+  }
+
+  const handleChangeBuilding = (event) => {
+    setBuildingId(event.target.value)
+    setFloorId('')
+    setZoneId('')
+    setSelectedSlotId(null)
+  }
+
+  const handleChangeVehicleType = (event) => {
+    setVehicleType(event.target.value)
+    setFloorId('')
+    setZoneId('')
+    setSelectedSlotId(null)
+  }
+
+  const handleAutoSelectChange = (event) => {
+    const checked = event.target.checked
+    setAutoSelect(checked)
+
+    if (checked) {
+      const nearestAvailable = filteredSlots.find(
+        (slot) => slot.DisplayStatus === 'available'
+      )
+
+      setSelectedSlotId(nearestAvailable?.SlotID || null)
+    }
+  }
+
+  const handleSelectSlot = (slot) => {
+    if (slot.uiStatus === 'occupied') return
+
+    setSelectedSlotId(slot.SlotID)
+    setAutoSelect(false)
+  }
+
+  const handleSubmit = async (event) => {
+  event.preventDefault()
+  setErrorMessage('')
+
+  if (!licensePlate.trim()) {
+    setErrorMessage('Vui lòng nhập biển số xe.')
+    return
+  }
+
+  if (!isStartTimeValid(bookingDate, startTime)) {
+    setErrorMessage('Thời gian đặt chỗ phải cách thời gian hiện tại tối thiểu 15 phút.')
+    return
+  }
+
+  if (!selectedSlotId) {
+    setErrorMessage('Vui lòng chọn một vị trí đỗ xe còn trống.')
+    return
+  }
+
+  try {
+    setIsSubmitting(true)
+
+    const response = await authorizeAxios.post('/reservations', {
+      vehicleType,
+      licensePlate: licensePlate.trim().toUpperCase(),
+      bookingDate,
+      startTime,
+      duration,
+      buildingId: Number(buildingId),
+      slotId: selectedSlotId
+    })
+
+    console.log('CREATE RESERVATION RESPONSE:', response.data)
+
+    const responseData = response.data?.data
+
+    const reservation =
+      responseData?.reservation ||
+      responseData?.data?.reservation ||
+      responseData?.data ||
+      responseData ||
+      response.data?.reservation ||
+      response.data
+
+    const reservationId =
+      reservation?.ReservationID ||
+      reservation?.reservationId ||
+      reservation?.ReservationId ||
+      reservation?.id
+
+    if (!reservationId) {
+      console.error('Không tìm thấy ReservationID trong response:', response.data)
+      setErrorMessage(
+        'Đặt chỗ thành công nhưng không lấy được mã đặt chỗ để chuyển sang trang xác nhận.'
+      )
+      return
+    }
+
+    navigate(`/driver/booking-confirmation?reservationId=${reservationId}`, {
+      state: {
+        reservationId,
+        bookingCode: reservation?.BookingCode,
+        parkingName: reservation?.BuildingName,
+        address: reservation?.Address,
+        licensePlate: licensePlate.trim().toUpperCase(),
+        vehicleType,
+        vehicleName: reservation?.VehicleName,
+        floor: reservation?.FloorName,
+        zone: reservation?.ZoneName,
+        selectedSlot: reservation?.SlotCode,
+        startTimeText: reservation?.StartTimeText,
+        endTimeText: reservation?.EndTimeText,
+        startClockText: reservation?.StartClockText,
+        endClockText: reservation?.EndClockText,
+        temporaryPrice,
+        statusValue: reservation?.StatusValue || 'active',
+        statusLabel: reservation?.StatusLabel || 'Đang hoạt động'
+      }
+    })
+  } catch (error) {
+    console.error('Create booking failed:', error)
+    console.error('Create booking response:', error.response?.data)
+
+    const message =
+      error.response?.data?.message ||
+      error.response?.data?.errors?.[0] ||
+      'Đặt chỗ thất bại. Vui lòng thử lại.'
+
+    setErrorMessage(message)
+    await fetchAvailableSlots()
+  } finally {
+    setIsSubmitting(false)
+  }
+}
+
+  const buildingLabel = getOptionLabel(buildingOptions, buildingId)
+  const vehicleLabel = getOptionLabel(VEHICLE_TYPES, vehicleType)
+  const durationLabel = getOptionLabel(DURATIONS, duration)
+
   return (
-    <form
-      onSubmit={handleBooking}
-      className="mx-auto max-w-6xl animate-in fade-in duration-500"
-    >
+    <form onSubmit={handleSubmit} className="mx-auto max-w-6xl animate-in fade-in duration-500">
       <div className="mb-6">
         <h1 className="mb-2 text-2xl font-bold text-gray-900">
           Đặt chỗ đỗ xe mới
         </h1>
         <p className="text-sm text-gray-500">
-          Vui lòng chọn loại phương tiện, thời gian và vị trí đỗ mong muốn.
-          Mã đặt chỗ sẽ được cấp sau khi bạn hoàn tất quy trình.
+          Chọn thời gian theo giờ Việt Nam, vị trí trống sẽ được tải trực tiếp từ database.
         </p>
       </div>
 
@@ -200,99 +502,118 @@ const DriverBooking = () => {
                   Thông tin đặt chỗ
                 </h2>
                 <p className="text-xs text-gray-500">
-                  Chi tiết phương tiện và thời gian
+                  Thời gian đặt chỗ phải cách hiện tại tối thiểu 15 phút.
                 </p>
               </div>
             </div>
 
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                    Biển số xe
-                  </label>
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                  Tòa nhà
+                </label>
+                <select
+                  value={buildingId}
+                  onChange={handleChangeBuilding}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                >
+                  {buildingOptions.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                  Biển số xe
+                </label>
+                <input
+                  type="text"
+                  value={licensePlate}
+                  onChange={(event) => setLicensePlate(event.target.value)}
+                  placeholder="VD: 51K-123.45"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm uppercase outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                  Loại phương tiện
+                </label>
+                <select
+                  value={vehicleType}
+                  onChange={handleChangeVehicleType}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                >
+                  {VEHICLE_TYPES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-start gap-1 text-xs text-gray-500">
+              <Info size={14} className="mt-0.5 shrink-0 text-blue-500" />
+              <span>
+                FE gửi ngày và giờ dạng local Việt Nam: bookingDate + startTime.
+                Backend lưu xuống SQL Server bằng DATETIME local.
+              </span>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                  Ngày đỗ
+                </label>
+                <div className="relative">
+                  <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
-                    type="text"
-                    value={licensePlate}
-                    onChange={(event) => setLicensePlate(event.target.value)}
-                    placeholder="VD: 51K-123.45"
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm uppercase outline-none transition-all focus:bg-white focus:ring-2 focus:ring-blue-500"
+                    type="date"
+                    value={bookingDate}
+                    min={getTodayDateValue()}
+                    onChange={handleChangeDate}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                    Loại phương tiện
-                  </label>
-                  <CustomSelect
-                    value={vehicleType}
-                    onChange={setVehicleType}
-                    options={VEHICLE_TYPES}
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                  Giờ bắt đầu
+                </label>
+                <div className="relative">
+                  <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={handleChangeStartTime}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                    required
                   />
                 </div>
               </div>
 
-              <div className="flex items-start gap-1 text-xs text-gray-500">
-                <Info size={14} className="mt-0.5 shrink-0 text-blue-500" />
-                <span>
-                  Nhân viên sẽ dùng biển số này hoặc mã đặt chỗ để xác nhận xe
-                  khi vào bãi.
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                    Ngày đỗ
-                  </label>
-                  <div className="relative">
-                    <CalendarDays
-                      size={16}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-                    <input
-                      type="date"
-                      value={bookingDate}
-                      onChange={(event) => setBookingDate(event.target.value)}
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-4 text-sm outline-none transition-all focus:bg-white focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                    Giờ bắt đầu
-                  </label>
-                  <div className="relative">
-                    <Clock
-                      size={16}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-                    <input
-                      type="time"
-                      value={startTime}
-                      onChange={(event) => setStartTime(event.target.value)}
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-4 text-sm outline-none transition-all focus:bg-white focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-gray-700">
-                    Thời lượng dự kiến
-                  </label>
-                  <CustomSelect
-                    value={duration}
-                    onChange={setDuration}
-                    options={DURATIONS.map(({ value, label }) => ({
-                      value,
-                      label
-                    }))}
-                  />
-                </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                  Thời lượng
+                </label>
+                <select
+                  value={duration}
+                  onChange={(event) => setDuration(event.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                >
+                  {DURATIONS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
@@ -304,7 +625,7 @@ const DriverBooking = () => {
                   Sơ đồ vị trí trống
                 </h2>
                 <p className="text-xs text-gray-500">
-                  Tầng hầm {floor} - Khu vực {zone}
+                  {buildingLabel} - {selectedSlot?.FloorName || '--'} - {selectedSlot?.ZoneName || '--'}
                 </p>
               </div>
 
@@ -315,8 +636,8 @@ const DriverBooking = () => {
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <div className="h-3 w-3 rounded-sm border border-gray-200 bg-gray-100" />
-                  Đã đỗ
+                  <div className="h-3 w-3 rounded-sm border border-gray-300 bg-gray-100" />
+                  Đã đỗ / Đã giữ
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -327,48 +648,78 @@ const DriverBooking = () => {
             </div>
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <CustomSelect
-                className="w-full sm:w-40"
-                value={floor}
-                onChange={setFloor}
-                options={FLOORS}
-              />
+              <select
+                value={floorId}
+                onChange={(event) => {
+                  setFloorId(event.target.value)
+                  setZoneId('')
+                  setSelectedSlotId(null)
+                }}
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:w-48"
+              >
+                {floorOptions.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
 
-              <CustomSelect
-                className="w-full sm:w-56"
-                value={zone}
-                onChange={setZone}
-                options={ZONES}
-              />
+              <select
+                value={zoneId}
+                onChange={(event) => {
+                  setZoneId(event.target.value)
+                  setSelectedSlotId(null)
+                }}
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:w-64"
+              >
+                {zoneOptions.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
 
-              <div className="sm:ml-auto">
-                <CustomCheckbox
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 sm:ml-auto">
+                <input
+                  type="checkbox"
                   checked={autoSelect}
-                  onChange={setAutoSelect}
-                  label="Tự động chọn vị trí tối ưu"
+                  onChange={handleAutoSelectChange}
+                  className="h-4 w-4 rounded border-gray-300"
                 />
-              </div>
+                Tự động chọn vị trí tối ưu
+              </label>
             </div>
 
             <div className="rounded-xl border border-gray-100 bg-gray-50 p-6">
-              <div className="grid grid-cols-5 gap-3 md:grid-cols-10">
-                {slots.map((slot) => (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    onClick={() => handleSelectSlot(slot)}
-                    disabled={slot.status === 'occupied'}
-                    className={`flex h-12 items-center justify-center rounded-lg border text-xs font-bold outline-none transition-all ${slot.status === 'occupied'
-                        ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
-                        : slot.status === 'selected'
-                          ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-sm ring-2 ring-blue-100'
-                          : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:text-blue-500'
+              {isLoadingSlots ? (
+                <div className="py-8 text-center text-sm font-semibold text-gray-500">
+                  Đang tải vị trí từ database...
+                </div>
+              ) : displaySlots.length === 0 ? (
+                <div className="py-8 text-center text-sm font-semibold text-gray-500">
+                  Không có vị trí phù hợp trong thời gian này.
+                </div>
+              ) : (
+                <div className="grid grid-cols-5 gap-3 md:grid-cols-10">
+                  {displaySlots.map((slot) => (
+                    <button
+                      key={slot.SlotID}
+                      type="button"
+                      disabled={slot.uiStatus === 'occupied'}
+                      onClick={() => handleSelectSlot(slot)}
+                      className={`flex h-12 items-center justify-center rounded-lg border text-xs font-bold outline-none transition-all ${
+                        slot.uiStatus === 'occupied'
+                          ? 'cursor-not-allowed border-gray-300 bg-gray-100 font-black text-gray-700 opacity-80'
+                          : slot.uiStatus === 'selected'
+                            ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-sm ring-2 ring-blue-100'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:text-blue-500'
                       }`}
-                  >
-                    {slot.id}
-                  </button>
-                ))}
-              </div>
+                    >
+                      {slot.SlotCode}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -380,16 +731,16 @@ const DriverBooking = () => {
 
               <div>
                 <h3 className="text-sm font-bold text-gray-900">
-                  {PARKING_INFO.name}
+                  {buildingLabel}
                 </h3>
                 <p className="text-xs text-gray-500">
-                  {PARKING_INFO.address}
+                  {selectedSlot?.Address || 'Địa chỉ bãi xe'}
                 </p>
               </div>
             </div>
 
             <div className="w-fit rounded-lg border border-blue-100 bg-white px-4 py-2 text-xs font-bold text-blue-600 shadow-sm">
-              {PARKING_INFO.gate}
+              Slot: {selectedSlot?.SlotCode || '--'}
             </div>
           </div>
         </div>
@@ -402,26 +753,10 @@ const DriverBooking = () => {
             </h2>
 
             <div className="mb-6 space-y-4">
-              <SummaryRow
-                icon={<Building size={16} />}
-                label="Tòa nhà"
-                value={PARKING_INFO.shortName}
-              />
-
-              <SummaryRow
-                icon={<Car size={16} />}
-                label="Biển số xe"
-                value={licensePlate || 'Chưa nhập'}
-              />
-
-              <SummaryRow label="Loại xe" value={vehicleTypeLabel} />
-
-              <SummaryRow
-                icon={<Clock size={16} />}
-                label="Thời gian vào"
-                value={`${startTime} - ${bookingDate}`}
-              />
-
+              <SummaryRow icon={<Building size={16} />} label="Tòa nhà" value={buildingLabel} />
+              <SummaryRow icon={<Car size={16} />} label="Biển số xe" value={licensePlate || 'Chưa nhập'} />
+              <SummaryRow label="Loại xe" value={vehicleLabel} />
+              <SummaryRow icon={<Clock size={16} />} label="Thời gian vào" value={`${startTime} - ${bookingDate}`} />
               <SummaryRow label="Thời lượng" value={durationLabel} />
 
               <div className="flex items-center justify-between pb-2 text-sm">
@@ -431,7 +766,7 @@ const DriverBooking = () => {
                 </span>
 
                 <span className="rounded-md bg-blue-50 px-2 py-1 font-bold text-blue-600">
-                  {floor} - Khu {zone} - {selectedSlot}
+                  {selectedSlot?.FloorName || '--'} - {selectedSlot?.ZoneName || '--'} - {selectedSlot?.SlotCode || '--'}
                 </span>
               </div>
             </div>
@@ -448,20 +783,20 @@ const DriverBooking = () => {
               </div>
 
               <p className="text-right text-[10px] font-medium text-blue-500">
-                Giá đã bao gồm 10% VAT
+                Giá demo tạm tính
               </p>
             </div>
 
             <div className="mb-6 rounded-xl border border-orange-100 bg-orange-50/50 p-4">
               <h4 className="mb-2 flex items-center gap-1.5 text-xs font-bold text-orange-800">
                 <AlertCircle size={14} />
-                Lưu ý chính sách:
+                Lưu ý
               </h4>
 
               <ul className="list-disc space-y-1.5 pl-4 text-[11px] font-medium text-orange-700 opacity-90">
-                <li>Cho phép check-in sớm tối đa 15 phút.</li>
-                <li>Hủy trước 30 phút sẽ được hoàn tiền 100%.</li>
-                <li>Vị trí có thể được giải phóng nếu không vào sau 30 phút.</li>
+                <li>Booking chỉ hết hạn khi EndTime nhỏ hơn giờ hiện tại của SQL Server.</li>
+                <li>Slot Reserved quá hạn sẽ tự được trả về Available.</li>
+                <li>Khi staff check-in, xe chuyển sang phiên gửi hiện tại.</li>
               </ul>
             </div>
 
@@ -473,7 +808,7 @@ const DriverBooking = () => {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoadingSlots || !selectedSlotId || !isBookingTimeValid}
               className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <CheckCircle2 size={18} />
@@ -482,20 +817,11 @@ const DriverBooking = () => {
 
             <button
               type="button"
-              onClick={handleCancel}
+              onClick={() => navigate('/driver/home')}
               className="w-full rounded-xl border border-gray-200 bg-white py-3.5 font-bold text-gray-600 transition-all hover:bg-gray-50"
             >
               Hủy bỏ
             </button>
-
-            <div className="mt-4 text-center">
-              <p className="text-xs text-gray-400">
-                Thanh toán bảo mật thông qua ví điện tử
-                <br />
-                Hỗ trợ kỹ thuật:{' '}
-                <span className="font-bold text-blue-500">1900.6789</span>
-              </p>
-            </div>
           </div>
         </div>
       </div>

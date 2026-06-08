@@ -35,44 +35,38 @@ const STATUS_CLASSES = {
   cancelled: 'bg-red-50 text-red-600'
 }
 
-const formatDate = (value) => {
-  if (!value) return '--/--/----'
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return '--/--/----'
+function splitDateTimeText(value) {
+  if (!value) {
+    return {
+      date: '--/--/----',
+      time: '--:--',
+      isoDate: ''
+    }
   }
 
-  return date.toLocaleDateString('vi-VN')
-}
+  const text = String(value).trim()
+  const [datePart, timePart = ''] = text.split(' ')
+  const [year, month, day] = datePart.split('-')
 
-const formatTime = (value) => {
-  if (!value) return '--:--'
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return '--:--'
+  return {
+    date: year && month && day ? `${day}/${month}/${year}` : '--/--/----',
+    time: timePart ? timePart.slice(0, 5) : '--:--',
+    isoDate: year && month && day ? `${year}-${month}-${day}` : ''
   }
-
-  return date.toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit'
-  })
 }
 
-const getIsoDate = (value) => {
-  if (!value) return ''
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) return ''
-
-  return date.toISOString().slice(0, 10)
+const getDisplayStatus = (item) => {
+  return {
+    statusValue: item.StatusValue || 'active',
+    statusLabel: item.StatusLabel || 'Đang hoạt động'
+  }
 }
 
 const mapReservationToBooking = (item) => {
+  const displayStatus = getDisplayStatus(item)
+  const start = splitDateTimeText(item.StartTimeText)
+  const end = splitDateTimeText(item.EndTimeText)
+
   return {
     id: item.BookingCode || `BK-${String(item.ReservationID).padStart(4, '0')}`,
     reservationId: item.ReservationID,
@@ -83,14 +77,18 @@ const mapReservationToBooking = (item) => {
     floor: item.FloorName || '--',
     zone: item.ZoneName || '--',
     slot: item.SlotCode || '--',
-    startTime: formatTime(item.StartTime),
-    startDate: formatDate(item.StartTime),
-    endTime: formatTime(item.EndTime),
-    endDate: formatDate(item.EndTime),
-    rawStartDate: item.StartTime,
-    rawEndDate: item.EndTime,
-    status: item.StatusLabel || item.ReservationStatus,
-    statusValue: item.StatusValue || 'used',
+
+    startTime: start.time,
+    startDate: start.date,
+    endTime: end.time,
+    endDate: end.date,
+
+    rawStartText: item.StartTimeText,
+    rawEndText: item.EndTimeText,
+    isoStartDate: start.isoDate,
+
+    status: displayStatus.statusLabel,
+    statusValue: displayStatus.statusValue,
     reservationStatus: item.ReservationStatus,
     raw: item
   }
@@ -149,7 +147,7 @@ const DriverHistory = () => {
         !vehicleFilter || booking.vehicleTypeValue === vehicleFilter
 
       const matchesDate =
-        !dateFilter || getIsoDate(booking.rawStartDate) === dateFilter
+        !dateFilter || booking.isoStartDate === dateFilter
 
       return matchesSearch && matchesStatus && matchesVehicle && matchesDate
     })
@@ -166,6 +164,11 @@ const DriverHistory = () => {
   const handleCancelBooking = async (booking) => {
     if (!booking?.reservationId) {
       alert('Không tìm thấy mã đặt chỗ để hủy.')
+      return
+    }
+
+    if (booking.statusValue !== 'active') {
+      alert('Chỉ có thể hủy booking đang hoạt động/chưa check-in.')
       return
     }
 
@@ -362,14 +365,9 @@ const DriverHistory = () => {
               ) : filteredBookings.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-5 py-12 text-center">
-                    <div className="mx-auto max-w-sm">
-                      <p className="font-bold text-gray-700">
-                        Không tìm thấy đặt chỗ phù hợp
-                      </p>
-                      <p className="mt-1 text-sm text-gray-500">
-                        Hãy thử đổi từ khóa tìm kiếm hoặc bộ lọc.
-                      </p>
-                    </div>
+                    <p className="font-bold text-gray-700">
+                      Không tìm thấy đặt chỗ phù hợp
+                    </p>
                   </td>
                 </tr>
               ) : (
@@ -449,12 +447,14 @@ const DriverHistory = () => {
                             parkingName: booking.building,
                             licensePlate: booking.plate,
                             vehicleType: booking.vehicleTypeValue,
-                            bookingDate: getIsoDate(booking.rawStartDate),
-                            startTime: booking.startTime,
                             floor: booking.floor,
                             zone: booking.zone,
                             selectedSlot: booking.slot,
-                            reservationId: booking.reservationId
+                            reservationId: booking.reservationId,
+                            statusValue: booking.statusValue,
+                            statusLabel: booking.status,
+                            startTimeText: booking.rawStartText,
+                            endTimeText: booking.rawEndText
                           }}
                           className="text-blue-600 hover:text-blue-700"
                         >
@@ -505,30 +505,28 @@ const DriverHistory = () => {
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Trang 1 / 1</span>
 
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled
-                className="flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-lg border border-gray-200 text-gray-300"
-              >
-                <ChevronLeft size={16} />
-              </button>
+            <button
+              type="button"
+              disabled
+              className="flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-lg border border-gray-200 text-gray-300"
+            >
+              <ChevronLeft size={16} />
+            </button>
 
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white"
-              >
-                1
-              </button>
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white"
+            >
+              1
+            </button>
 
-              <button
-                type="button"
-                disabled
-                className="flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-lg border border-gray-200 text-gray-300"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+            <button
+              type="button"
+              disabled
+              className="flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-lg border border-gray-200 text-gray-300"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       </div>
