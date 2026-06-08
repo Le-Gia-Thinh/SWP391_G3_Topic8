@@ -6,7 +6,7 @@ import * as sessionController from "../controllers/sessionController.js";
 import * as reservationController from "../controllers/reservationController.js";
 import * as reportController from "../controllers/reportController.js";
 import * as driverController from "../controllers/driverController.js";
-
+import paymentRoutes from './paymentRoutes.js'
 import {
   isAuthorized,
   isManager,
@@ -131,5 +131,5 @@ router.get(
   isManager,
   reportController.dashboard
 );
-
+router.use('/', paymentRoutes)
 export default router;

@@ -1,9 +1,9 @@
-import React from 'react';
-import { ChevronRight, CheckCircle2, ShieldCheck, MapPin, Calendar, Clock, Edit3, Home, Info, ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react'
+import { ChevronRight, CheckCircle2, ShieldCheck, MapPin, Calendar, Clock, Edit3, Home, Info, ArrowRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const StaffBookingSuccess = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-24">
@@ -13,7 +13,7 @@ const StaffBookingSuccess = () => {
         <span>Check-in đặt chỗ</span> <ChevronRight size={14} />
         <span className="text-blue-600 font-medium">Thành công</span>
       </div>
-      
+
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Booking Check-in Successful</h1>
         <div className="flex items-center gap-4 text-sm font-medium text-gray-600">
@@ -101,7 +101,7 @@ const StaffBookingSuccess = () => {
 
         {/* Right Column */}
         <div className="flex-1 space-y-6">
-          
+
           {/* Top Right Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center text-center">
             <p className="text-xs font-semibold text-gray-500 uppercase mb-4">Quyền sở hữu thuộc</p>
@@ -117,7 +117,7 @@ const StaffBookingSuccess = () => {
               <button className="flex-1 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors flex justify-center items-center gap-2">
                 <Edit3 size={18} /> Sửa nhật ký
               </button>
-              <button 
+              <button
                 onClick={() => navigate('/staff/dashboard')}
                 className="flex-[2] py-3 bg-blue-600 text-white font-bold rounded-xl shadow-md shadow-blue-200 hover:bg-blue-700 transition-colors flex justify-center items-center gap-2"
               >
@@ -129,7 +129,7 @@ const StaffBookingSuccess = () => {
           {/* Bottom Right Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-sm font-bold text-gray-600 mb-6 uppercase border-b border-gray-100 pb-2">Cập nhật trạng thái ô đỗ</h3>
-            
+
             <div className="flex justify-between items-center mb-6 px-2">
               <div className="text-center">
                 <div className="text-xl font-bold text-orange-500 mb-1">SLOT B2</div>
@@ -154,7 +154,7 @@ const StaffBookingSuccess = () => {
               <CheckCircle2 size={14} /> Hệ thống đã nhận cảm biến đỗ thành công.
             </p>
           </div>
-          
+
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 flex gap-3">
             <Info size={20} className="text-blue-500 shrink-0" />
             <div>
@@ -181,7 +181,7 @@ const StaffBookingSuccess = () => {
             <button className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-colors">
               Đi đến Check-out
             </button>
-            <button 
+            <button
               onClick={() => navigate('/staff/dashboard')}
               className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-200 hover:bg-blue-700 transition-colors"
             >
@@ -191,7 +191,7 @@ const StaffBookingSuccess = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffBookingSuccess;
+export default StaffBookingSuccess

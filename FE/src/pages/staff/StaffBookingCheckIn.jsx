@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
-import { Search, ChevronRight, Info, Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react'
+import { Search, ChevronRight, Info, Plus } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const StaffBookingCheckIn = () => {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('Đang chờ');
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState('Đang chờ')
 
   const tabs = [
     { name: 'Đang chờ', count: 12 },
     { name: 'Sắp đến', count: 5 },
     { name: 'Đến muộn', count: 2 },
     { name: 'Hết hạn', count: 6 },
-    { name: 'Đã sử dụng', count: 134 },
-  ];
+    { name: 'Đã sử dụng', count: 134 }
+  ]
 
   const bookings = [
     { code: 'BK-8821', plate: '30S-123.45', owner: 'Nguyễn Văn An', vehicle: 'Sedan 4 chỗ', slot: 'A-13', time: '08:30 AM', deadline: '09:00 AM', status: 'Đang chờ', statusColor: 'bg-green-100 text-green-700' },
     { code: 'BK-8820', plate: '29A-999.99', owner: 'Trần Thị Bình', vehicle: 'SUV 7 chỗ', slot: 'B-04', time: '08:45 AM', deadline: '09:15 AM', status: 'Sắp đến', statusColor: 'bg-blue-100 text-blue-700' },
     { code: 'BK-8790', plate: '51G-555.21', owner: 'Lê Minh Chiến', vehicle: 'Pickup', slot: 'C-01', time: '08:00 AM', deadline: '08:30 AM', status: 'Đến muộn', statusColor: 'bg-orange-100 text-orange-700' },
     { code: 'BK-8822', plate: '30H-432.12', owner: 'Phạm Đức Dũng', vehicle: 'Sedan 4 chỗ', slot: 'A-15', time: '09:00 AM', deadline: '09:30 AM', status: 'Đang chờ', statusColor: 'bg-green-100 text-green-700' },
-    { code: 'BK-8601', plate: '15B-678.90', owner: 'Hoàng Quốc Hùng', vehicle: 'Van', slot: 'D-02', time: '07:15 AM', deadline: '08:15 AM', status: 'Đã sử dụng', statusColor: 'bg-gray-100 text-gray-700' },
-  ];
+    { code: 'BK-8601', plate: '15B-678.90', owner: 'Hoàng Quốc Hùng', vehicle: 'Van', slot: 'D-02', time: '07:15 AM', deadline: '08:15 AM', status: 'Đã sử dụng', statusColor: 'bg-gray-100 text-gray-700' }
+  ]
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-24">
@@ -29,7 +29,7 @@ const StaffBookingCheckIn = () => {
         <span>Nhân viên</span> <ChevronRight size={14} />
         <span className="text-blue-600 font-medium">Check-in đặt trước</span>
       </div>
-      
+
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Quản lý Đặt chỗ Check-in</h1>
         <div className="flex items-center gap-4 text-sm font-medium text-gray-600">
@@ -41,33 +41,33 @@ const StaffBookingCheckIn = () => {
 
       {/* Main Content */}
       <div className="space-y-6 flex-1">
-        
+
         {/* Search Section */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-xl font-bold text-gray-800 mb-2">Tìm kiếm nhanh lượt đặt</h2>
             <p className="text-sm text-gray-500 mb-6">Nhập biển số xe (đầy đủ hoặc 4 số cuối) hoặc mã đặt chỗ để thực hiện check-in nhanh.</p>
-            
+
             <div className="flex gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
-                <input 
-                  type="text" 
-                  placeholder="Ví dụ: 30S-123.45 hoặc BK-8921" 
+                <input
+                  type="text"
+                  placeholder="Ví dụ: 30S-123.45 hoặc BK-8921"
                   className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
                 />
               </div>
-              <button 
+              <button
                 onClick={() => navigate('/staff/verify-booking')}
                 className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-200 transition-colors"
               >
                 Tìm kiếm ngay
               </button>
             </div>
-            
+
             <div className="mt-4 flex items-center gap-6 text-sm">
               <span className="flex items-center gap-1.5 text-gray-500"><Info size={16} /> Hệ thống tự động quét dữ liệu trong 24h gần nhất.</span>
-              <button 
+              <button
                 onClick={() => navigate('/staff/checkin-walkin')}
                 className="flex items-center gap-1 text-blue-600 font-semibold hover:underline"
               >
@@ -82,7 +82,7 @@ const StaffBookingCheckIn = () => {
           <div className="mb-6">
             <h3 className="text-lg font-bold text-gray-800 mb-1">Hàng chờ đặt chỗ hôm nay</h3>
             <p className="text-sm text-gray-500 mb-6">Theo dõi các phương tiện đã đặt trước theo khung giờ hiện tại.</p>
-            
+
             {/* Tabs */}
             <div className="flex gap-2 overflow-x-auto pb-2 border-b border-gray-100">
               {tabs.map(tab => (
@@ -90,8 +90,8 @@ const StaffBookingCheckIn = () => {
                   key={tab.name}
                   onClick={() => setActiveTab(tab.name)}
                   className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
-                    activeTab === tab.name 
-                      ? 'bg-gray-800 text-white' 
+                    activeTab === tab.name
+                      ? 'bg-gray-800 text-white'
                       : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
                   }`}
                 >
@@ -134,7 +134,7 @@ const StaffBookingCheckIn = () => {
                     </td>
                     <td className="py-4 px-4 text-right">
                       {item.status !== 'Đã sử dụng' && (
-                        <button 
+                        <button
                           onClick={() => navigate('/staff/verify-booking')}
                           className="px-4 py-1.5 bg-white border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg font-semibold text-xs transition-colors"
                         >
@@ -176,7 +176,7 @@ const StaffBookingCheckIn = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffBookingCheckIn;
+export default StaffBookingCheckIn

@@ -30,7 +30,8 @@ import DriverSession from './pages/driver/DriverSession'
 import DriverPayment from './pages/driver/DriverPayment'
 import DriverReport from './pages/driver/DriverReport'
 import DriverProfile from './pages/driver/DriverProfile'
-
+import DriverPaymentResult from './pages/driver/DriverPaymentResult'
+import DriverPaymentHistory from './pages/driver/DriverPaymentHistory'
 import ManagerLayout from './pages/manager/ManagerLayout'
 import ManagerDashboard from './pages/manager/ManagerDashboard'
 import ManagerConfig from './pages/manager/ManagerConfig'
@@ -151,6 +152,9 @@ const App = () => {
           <Route path="payment" element={<DriverPayment />} />
           <Route path="report" element={<DriverReport />} />
           <Route path="profile" element={<DriverProfile />} />
+          <Route path="payment" element={<DriverPayment />} />
+          <Route path="payment-result" element={<DriverPaymentResult />} />
+          <Route path="payment-history" element={<DriverPaymentHistory />} />
         </Route>
       </Route>
 

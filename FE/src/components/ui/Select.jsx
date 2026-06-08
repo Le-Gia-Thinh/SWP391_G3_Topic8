@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react'
+import { ChevronDown } from 'lucide-react'
 
 /**
  * CustomSelect – Pure React + Tailwind dropdown
@@ -10,20 +10,20 @@ import { ChevronDown } from 'lucide-react';
  * @param {string} placeholder - text hiển thị khi chưa chọn
  */
 const CustomSelect = ({ value, onChange, options = [], className = '', placeholder = 'Chọn...' }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef(null)
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setIsOpen(false);
+        setIsOpen(false)
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
-  const selectedOption = options.find((opt) => opt.value === value);
+  const selectedOption = options.find((opt) => opt.value === value)
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -50,8 +50,8 @@ const CustomSelect = ({ value, onChange, options = [], className = '', placehold
               role="option"
               aria-selected={value === option.value}
               onClick={() => {
-                onChange(option.value);
-                setIsOpen(false);
+                onChange(option.value)
+                setIsOpen(false)
               }}
               className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
                 value === option.value
@@ -65,7 +65,7 @@ const CustomSelect = ({ value, onChange, options = [], className = '', placehold
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default CustomSelect;
+export default CustomSelect

@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import React from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   CarFront,
@@ -10,24 +10,24 @@ import {
   LogOut,
   Bell,
   HelpCircle
-} from 'lucide-react';
-import StaffNavbar from './StaffNavbar';
+} from 'lucide-react'
+import StaffNavbar from './StaffNavbar'
 
 const StaffLayout = () => {
-  const location = useLocation();
+  const location = useLocation()
 
   const mainMenu = [
     { name: 'Bảng điều khiển', path: '/staff/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Nhận xe vãng lai', path: '/staff/checkin-walkin', icon: <CarFront size={20} /> },
     { name: 'Nhận xe đặt trước', path: '/staff/checkin-booking', icon: <CalendarCheck size={20} /> },
-    { name: 'Thanh toán & Trả xe', path: '/staff/checkout', icon: <LogOut size={20} /> },
-  ];
+    { name: 'Thanh toán & Trả xe', path: '/staff/checkout', icon: <LogOut size={20} /> }
+  ]
 
   const manageMenu = [
     { name: 'Báo cáo sự cố', path: '/staff/create-incident', icon: <AlertCircle size={20} /> },
     { name: 'Xem sơ đồ chỗ', path: '/staff/parking-map', icon: <Map size={20} /> },
-    { name: 'Tra cứu phiên', path: '/staff/search-session', icon: <Search size={20} /> },
-  ];
+    { name: 'Tra cứu phiên', path: '/staff/search-session', icon: <Search size={20} /> }
+  ]
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-800 font-sans">
@@ -47,7 +47,7 @@ const StaffLayout = () => {
             <p className="text-xs font-semibold text-gray-400 uppercase mb-4 px-2">Chính</p>
             <ul className="space-y-1">
               {mainMenu.map((item) => {
-                const isActive = location.pathname.includes(item.path);
+                const isActive = location.pathname.includes(item.path)
                 return (
                   <li key={item.name}>
                     <NavLink
@@ -62,7 +62,7 @@ const StaffLayout = () => {
                       <span className="font-medium">{item.name}</span>
                     </NavLink>
                   </li>
-                );
+                )
               })}
             </ul>
           </div>
@@ -72,7 +72,7 @@ const StaffLayout = () => {
             <p className="text-xs font-semibold text-gray-400 uppercase mb-4 px-2">Quản lý</p>
             <ul className="space-y-1">
               {manageMenu.map((item) => {
-                const isActive = location.pathname.includes(item.path) && item.path !== '#';
+                const isActive = location.pathname.includes(item.path) && item.path !== '#'
                 return (
                   <li key={item.name}>
                     <NavLink
@@ -87,7 +87,7 @@ const StaffLayout = () => {
                       <span className="font-medium">{item.name}</span>
                     </NavLink>
                   </li>
-                );
+                )
               })}
             </ul>
           </div>
@@ -135,7 +135,7 @@ const StaffLayout = () => {
         </footer>
       </main>
     </div>
-  );
-};
+  )
+}
 
-export default StaffLayout;
+export default StaffLayout

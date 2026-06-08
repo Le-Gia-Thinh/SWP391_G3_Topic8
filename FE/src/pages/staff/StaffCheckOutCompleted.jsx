@@ -1,9 +1,9 @@
-import React from 'react';
-import { ChevronRight, CheckCircle2, FileText, Home, ArrowRight, Printer, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react'
+import { ChevronRight, CheckCircle2, FileText, Home, ArrowRight, Printer, AlertTriangle, ShieldCheck } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const StaffCheckOutCompleted = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-24">
@@ -13,7 +13,7 @@ const StaffCheckOutCompleted = () => {
         <span>Thanh toán xe ra</span> <ChevronRight size={14} />
         <span className="text-blue-600 font-medium">Hoàn tất</span>
       </div>
-      
+
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Check-out Hoàn tất</h1>
       </header>
@@ -36,7 +36,7 @@ const StaffCheckOutCompleted = () => {
               <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
                 <Printer size={16} /> In biên lai
               </button>
-              <button 
+              <button
                 onClick={() => navigate('/staff/dashboard')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 flex items-center gap-2 transition-colors shadow-md shadow-blue-200"
               >
@@ -133,7 +133,7 @@ const StaffCheckOutCompleted = () => {
         <div className="flex-1 space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center text-center">
             <h3 className="text-sm font-bold text-gray-600 mb-6 uppercase border-b border-gray-100 w-full pb-2 text-left">Cập nhật vị trí đỗ</h3>
-            
+
             <div className="text-3xl font-black text-blue-600 mb-2">P-A102</div>
             <p className="text-xs text-gray-400 font-semibold uppercase mb-6">MÃ VỊ TRÍ ĐỖ</p>
 
@@ -167,7 +167,7 @@ const StaffCheckOutCompleted = () => {
               <p>Nhân viên: Nguyễn Văn An</p>
               <p>Phiên trực: STF-C01-09</p>
             </div>
-            <button 
+            <button
               onClick={() => navigate('/staff/checkout')}
               className="px-8 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-200 hover:bg-blue-700 transition-colors flex items-center gap-2 text-lg"
             >
@@ -177,7 +177,7 @@ const StaffCheckOutCompleted = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffCheckOutCompleted;
+export default StaffCheckOutCompleted

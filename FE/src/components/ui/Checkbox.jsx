@@ -1,5 +1,5 @@
-import React from 'react';
-import { Check } from 'lucide-react';
+import React from 'react'
+import { Check } from 'lucide-react'
 
 /**
  * CustomCheckbox – Pure React + Tailwind
@@ -28,7 +28,7 @@ const CustomCheckbox = ({ checked, onChange, label, className = '', labelClassNa
       </div>
       {label && <span className={labelClassName}>{label}</span>}
     </div>
-  );
-};
+  )
+}
 
-export default CustomCheckbox;
+export default CustomCheckbox

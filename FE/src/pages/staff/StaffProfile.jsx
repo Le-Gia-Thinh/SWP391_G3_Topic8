@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Edit3, Camera, Shield, CheckCircle2, ChevronRight } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import React, { useState } from 'react'
+import { User, Mail, Phone, MapPin, Calendar, Edit3, Camera, Shield, CheckCircle2, ChevronRight } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 
 const StaffProfile = () => {
-  const { user } = useAuth();
-  const [editing, setEditing] = useState(false);
+  const { user } = useAuth()
+  const [editing, setEditing] = useState(false)
 
-  const displayName = user?.fullName || 'Nguyễn Văn An';
-  const displayEmail = user?.email || 'staff@pbms.vn';
-  const displayRole = user?.role?.roleName || 'Staff';
+  const displayName = user?.fullName || 'Nguyễn Văn An'
+  const displayEmail = user?.email || 'staff@pbms.vn'
+  const displayRole = user?.role?.roleName || 'Staff'
 
   const infoFields = [
     { icon: <User size={16} className="text-blue-500" />, label: 'Họ và tên', value: displayName },
@@ -16,25 +16,25 @@ const StaffProfile = () => {
     { icon: <Phone size={16} className="text-green-500" />, label: 'Số điện thoại', value: '0912 345 678' },
     { icon: <MapPin size={16} className="text-red-500" />, label: 'Cổng phụ trách', value: 'Cổng A – Gate 01' },
     { icon: <Calendar size={16} className="text-orange-500" />, label: 'Ngày bắt đầu làm', value: '01/01/2024' },
-    { icon: <Shield size={16} className="text-indigo-500" />, label: 'Vai trò', value: displayRole },
-  ];
+    { icon: <Shield size={16} className="text-indigo-500" />, label: 'Vai trò', value: displayRole }
+  ]
 
   const stats = [
     { label: 'Phiên hôm nay', value: '24', color: 'text-blue-600' },
     { label: 'Tổng tháng này', value: '312', color: 'text-green-600' },
     { label: 'Sự cố báo cáo', value: '3', color: 'text-orange-500' },
-    { label: 'Đánh giá', value: '4.9 ★', color: 'text-yellow-500' },
-  ];
+    { label: 'Đánh giá', value: '4.9 ★', color: 'text-yellow-500' }
+  ]
 
   const activities = [
     { time: '10:45', action: 'Check-in Walk-in – Biển 51H-999.88', type: 'checkin' },
     { time: '10:30', action: 'Xác thực Booking BK-8829', type: 'booking' },
     { time: '09:58', action: 'Check-out – Biển 43A-552.12', type: 'checkout' },
     { time: '09:15', action: 'Check-in Walk-in – Biển 29D-111.90', type: 'checkin' },
-    { time: '08:40', action: 'Báo cáo sự cố #INC-0034', type: 'incident' },
-  ];
+    { time: '08:40', action: 'Báo cáo sự cố #INC-0034', type: 'incident' }
+  ]
 
-  const actColor = { checkin: 'bg-green-100 text-green-600', checkout: 'bg-orange-100 text-orange-600', booking: 'bg-blue-100 text-blue-600', incident: 'bg-red-100 text-red-600' };
+  const actColor = { checkin: 'bg-green-100 text-green-600', checkout: 'bg-orange-100 text-orange-600', booking: 'bg-blue-100 text-blue-600', incident: 'bg-red-100 text-red-600' }
 
   return (
     <div className="flex flex-col h-full">
@@ -132,7 +132,7 @@ const StaffProfile = () => {
               {[
                 { label: 'Ca hiện tại', value: 'Ca Ngày (07:00 – 19:00)' },
                 { label: 'Cổng phụ trách', value: 'Gate A – Cổng Vào Chính' },
-                { label: 'Mã nhân viên', value: 'ST-1011-200' },
+                { label: 'Mã nhân viên', value: 'ST-1011-200' }
               ].map(({ label, value }) => (
                 <div key={label} className="bg-blue-50 rounded-xl p-4 border border-blue-100">
                   <p className="text-xs text-blue-500 font-semibold uppercase mb-1">{label}</p>
@@ -165,7 +165,7 @@ const StaffProfile = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffProfile;
+export default StaffProfile

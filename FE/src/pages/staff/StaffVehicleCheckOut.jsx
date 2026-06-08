@@ -1,17 +1,17 @@
-import React from 'react';
-import { ChevronRight, Search, FileSearch, Filter, AlertTriangle, UserPlus, HelpCircle, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react'
+import { ChevronRight, Search, FileSearch, Filter, AlertTriangle, UserPlus, HelpCircle, AlertCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const StaffVehicleCheckOut = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const sessions = [
     { id: 'SS-45071', type: 'Walk-in', booking: '-', plate: '29A-123.45', vehicle: 'Ô tô 4 chỗ', timeIn: '08:15 - 14 Th1', slot: 'A-12', duration: '1h 15m', status: 'Đang đỗ' },
     { id: 'SS-45072', type: 'Booking', booking: 'BK-7721', plate: '12F-9874.12', vehicle: 'Ô tô 7 chỗ', timeIn: '08:30 - 14 Th1', slot: 'B-01', duration: '4h 30m', status: 'Đang đỗ' },
     { id: 'SS-45073', type: 'Walk-in', booking: '-', plate: '30H-1445.71', vehicle: 'Xe máy', timeIn: '11:05 - 14 Th1', slot: 'M-44', duration: '1h 00m', status: 'Đang đỗ' },
     { id: 'SS-45074', type: 'Booking', booking: 'BK-0102', plate: '51G-666.11', vehicle: 'Ô tô 4 chỗ', timeIn: '11:45 - 14 Th1', slot: 'A-34', duration: '1h 45m', status: 'Đang đỗ' },
-    { id: 'SS-45075', type: 'Walk-in', booking: '-', plate: '49A-001.21', vehicle: 'Ô tô bán tải', timeIn: '07:15 - 14 Th1', slot: 'C-02', duration: '5h 15m', status: 'Đang đỗ' },
-  ];
+    { id: 'SS-45075', type: 'Walk-in', booking: '-', plate: '49A-001.21', vehicle: 'Ô tô bán tải', timeIn: '07:15 - 14 Th1', slot: 'C-02', duration: '5h 15m', status: 'Đang đỗ' }
+  ]
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-16">
@@ -21,7 +21,7 @@ const StaffVehicleCheckOut = () => {
         <span>Thanh toán</span> <ChevronRight size={14} />
         <span className="text-blue-600 font-medium">Vehicle Check-out</span>
       </div>
-      
+
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Vehicle Check-out</h1>
         <div className="flex items-center gap-4 text-sm font-medium text-gray-600">
@@ -34,14 +34,14 @@ const StaffVehicleCheckOut = () => {
       <div className="flex gap-6 flex-1">
         {/* Left/Main Column */}
         <div className="flex-[3] space-y-6">
-          
+
           {/* Search Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 mb-2">
               <FileSearch size={20} className="text-blue-600" /> Tìm kiếm phiên gửi xe
             </h3>
             <p className="text-sm text-gray-500 mb-6">Nhập thông tin 1 trong 3 trường để tìm kiếm phiên đỗ xe.</p>
-            
+
             <div className="flex gap-4 items-end">
               <div className="flex-1">
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Biển số xe (Thực tế)</label>
@@ -105,7 +105,7 @@ const StaffVehicleCheckOut = () => {
                         <span className="px-2 py-1 bg-green-50 text-green-600 border border-green-200 rounded text-xs font-bold">{item.status}</span>
                       </td>
                       <td className="py-3 px-2 text-right">
-                        <button 
+                        <button
                           onClick={() => navigate('/staff/payment')}
                           className="px-4 py-1.5 bg-white border border-blue-600 text-blue-600 font-semibold rounded-lg text-xs hover:bg-blue-50"
                         >
@@ -131,7 +131,7 @@ const StaffVehicleCheckOut = () => {
                 <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-gray-50">
                   <Search size={16} /> Thử lại Tra cứu Phiên
                 </button>
-                <button 
+                <button
                   onClick={() => navigate('/staff/create-incident')}
                   className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-red-100"
                 >
@@ -191,7 +191,7 @@ const StaffVehicleCheckOut = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffVehicleCheckOut;
+export default StaffVehicleCheckOut

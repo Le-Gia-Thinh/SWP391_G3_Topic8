@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { Map, RefreshCcw, Car, Bike, Info, ZoomIn, ZoomOut } from 'lucide-react';
+import React, { useState } from 'react'
+import { Map, RefreshCcw, Car, Bike, Info, ZoomIn, ZoomOut } from 'lucide-react'
 
 const ZONES = [
   {
     id: 'A',
     label: 'Khu A – Tầng B1',
     rows: [
-      ['A01','A02','A03','A04','A05','A06','A07','A08','A09','A10'],
-      ['A11','A12','A13','A14','A15','A16','A17','A18','A19','A20'],
-      ['A21','A22','A23','A24','A25','A26','A27','A28','A29','A30'],
+      ['A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10'],
+      ['A11', 'A12', 'A13', 'A14', 'A15', 'A16', 'A17', 'A18', 'A19', 'A20'],
+      ['A21', 'A22', 'A23', 'A24', 'A25', 'A26', 'A27', 'A28', 'A29', 'A30']
     ],
     statuses: {
       A01: 'occupied', A02: 'occupied', A03: 'available', A04: 'reserved', A05: 'available',
@@ -16,63 +16,63 @@ const ZONES = [
       A11: 'available', A12: 'selected', A13: 'occupied', A14: 'available', A15: 'reserved',
       A16: 'available', A17: 'occupied', A18: 'available', A19: 'available', A20: 'occupied',
       A21: 'maintenance', A22: 'maintenance', A23: 'available', A24: 'available', A25: 'occupied',
-      A26: 'available', A27: 'available', A28: 'occupied', A29: 'available', A30: 'available',
-    },
+      A26: 'available', A27: 'available', A28: 'occupied', A29: 'available', A30: 'available'
+    }
   },
   {
     id: 'B',
     label: 'Khu B – Tầng B2',
     rows: [
-      ['B01','B02','B03','B04','B05','B06','B07','B08','B09','B10'],
-      ['B11','B12','B13','B14','B15','B16','B17','B18','B19','B20'],
+      ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10'],
+      ['B11', 'B12', 'B13', 'B14', 'B15', 'B16', 'B17', 'B18', 'B19', 'B20']
     ],
     statuses: {
       B01: 'occupied', B02: 'available', B03: 'available', B04: 'occupied', B05: 'occupied',
       B06: 'reserved', B07: 'available', B08: 'occupied', B09: 'available', B10: 'available',
       B11: 'available', B12: 'occupied', B13: 'available', B14: 'reserved', B15: 'available',
-      B16: 'available', B17: 'maintenance', B18: 'occupied', B19: 'available', B20: 'available',
-    },
+      B16: 'available', B17: 'maintenance', B18: 'occupied', B19: 'available', B20: 'available'
+    }
   },
   {
     id: 'M',
     label: 'Khu M – Xe máy',
     rows: [
-      ['M01','M02','M03','M04','M05','M06','M07','M08','M09','M10'],
+      ['M01', 'M02', 'M03', 'M04', 'M05', 'M06', 'M07', 'M08', 'M09', 'M10']
     ],
     statuses: {
       M01: 'occupied', M02: 'occupied', M03: 'occupied', M04: 'available', M05: 'available',
-      M06: 'occupied', M07: 'available', M08: 'occupied', M09: 'available', M10: 'available',
-    },
-  },
-];
+      M06: 'occupied', M07: 'available', M08: 'occupied', M09: 'available', M10: 'available'
+    }
+  }
+]
 
 const STATUS_CONFIG = {
-  available:    { label: 'Trống',      bg: 'bg-green-50',   border: 'border-green-300',  text: 'text-green-700' },
-  occupied:     { label: 'Đã đỗ',     bg: 'bg-red-50',     border: 'border-red-300',    text: 'text-red-700' },
-  reserved:     { label: 'Đã đặt',    bg: 'bg-orange-50',  border: 'border-orange-400', text: 'text-orange-700' },
-  maintenance:  { label: 'Bảo trì',   bg: 'bg-gray-100',   border: 'border-gray-400',   text: 'text-gray-500' },
-  selected:     { label: 'Đang xem',  bg: 'bg-blue-600',   border: 'border-blue-600',   text: 'text-white' },
-};
+  available:    { label: 'Trống', bg: 'bg-green-50', border: 'border-green-300', text: 'text-green-700' },
+  occupied:     { label: 'Đã đỗ', bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700' },
+  reserved:     { label: 'Đã đặt', bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-700' },
+  maintenance:  { label: 'Bảo trì', bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-500' },
+  selected:     { label: 'Đang xem', bg: 'bg-blue-600', border: 'border-blue-600', text: 'text-white' }
+}
 
 const StaffParkingMap = () => {
-  const [activeZone, setActiveZone] = useState('A');
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [zoom, setZoom] = useState(1);
+  const [activeZone, setActiveZone] = useState('A')
+  const [selectedSlot, setSelectedSlot] = useState(null)
+  const [zoom, setZoom] = useState(1)
 
-  const zone = ZONES.find(z => z.id === activeZone);
+  const zone = ZONES.find(z => z.id === activeZone)
 
-  const getStatus = (slotId) => zone.statuses[slotId] || 'available';
+  const getStatus = (slotId) => zone.statuses[slotId] || 'available'
 
-  const totalSlots = Object.keys(zone.statuses).length;
-  const availableCount = Object.values(zone.statuses).filter(s => s === 'available').length;
-  const occupiedCount = Object.values(zone.statuses).filter(s => s === 'occupied').length;
-  const reservedCount = Object.values(zone.statuses).filter(s => s === 'reserved').length;
+  const totalSlots = Object.keys(zone.statuses).length
+  const availableCount = Object.values(zone.statuses).filter(s => s === 'available').length
+  const occupiedCount = Object.values(zone.statuses).filter(s => s === 'occupied').length
+  const reservedCount = Object.values(zone.statuses).filter(s => s === 'reserved').length
 
   const selectedInfo = selectedSlot ? {
     id: selectedSlot,
     status: getStatus(selectedSlot),
-    zone: activeZone,
-  } : null;
+    zone: activeZone
+  } : null
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -97,7 +97,7 @@ const StaffParkingMap = () => {
             {ZONES.map(z => (
               <button
                 key={z.id}
-                onClick={() => { setActiveZone(z.id); setSelectedSlot(null); }}
+                onClick={() => { setActiveZone(z.id); setSelectedSlot(null) }}
                 className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${
                   activeZone === z.id
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
@@ -125,7 +125,7 @@ const StaffParkingMap = () => {
               { label: 'Tổng ô', value: totalSlots, color: 'text-gray-800' },
               { label: 'Trống', value: availableCount, color: 'text-green-600' },
               { label: 'Đã đỗ', value: occupiedCount, color: 'text-red-600' },
-              { label: 'Đã đặt', value: reservedCount, color: 'text-orange-500' },
+              { label: 'Đã đặt', value: reservedCount, color: 'text-orange-500' }
             ].map(item => (
               <div key={item.label} className="bg-white rounded-lg border border-gray-100 px-4 py-2 text-center shadow-sm flex-1">
                 <p className={`text-xl font-black ${item.color}`}>{item.value}</p>
@@ -145,9 +145,9 @@ const StaffParkingMap = () => {
               {zone.rows.map((row, ri) => (
                 <div key={ri} className="flex gap-2 mb-2 justify-center">
                   {row.map(slotId => {
-                    const st = getStatus(slotId);
-                    const cfg = STATUS_CONFIG[st];
-                    const isSelected = selectedSlot === slotId;
+                    const st = getStatus(slotId)
+                    const cfg = STATUS_CONFIG[st]
+                    const isSelected = selectedSlot === slotId
                     return (
                       <button
                         key={slotId}
@@ -165,7 +165,7 @@ const StaffParkingMap = () => {
                         {(st === 'reserved') && <span className="text-[8px] font-bold opacity-70">ĐẶT</span>}
                         {(st === 'maintenance') && <span className="text-[8px] font-bold opacity-70">BT</span>}
                       </button>
-                    );
+                    )
                   })}
                 </div>
               ))}
@@ -264,7 +264,7 @@ const StaffParkingMap = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffParkingMap;
+export default StaffParkingMap

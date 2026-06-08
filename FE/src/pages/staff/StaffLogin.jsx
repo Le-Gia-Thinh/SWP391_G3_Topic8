@@ -1,47 +1,47 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import { toast } from 'react-toastify';
+import React, { useState } from 'react'
+import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react'
+import { Link, useNavigate, Navigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
+import { toast } from 'react-toastify'
 
 const StaffLogin = () => {
-  const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('bob@email.com');
-  const [password, setPassword] = useState('123456');
-  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false)
+  const [email, setEmail] = useState('bob@email.com')
+  const [password, setPassword] = useState('123456')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const { login, isAuthenticated, getRedirectPath, user } = useAuth();
-  const navigate = useNavigate();
+  const { login, isAuthenticated, getRedirectPath, user } = useAuth()
+  const navigate = useNavigate()
 
   if (isAuthenticated) {
-    return <Navigate to={getRedirectPath(user?.roleName)} replace />;
+    return <Navigate to={getRedirectPath(user?.roleName)} replace />
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+    e.preventDefault()
+    setIsLoading(true)
     try {
-      const loggedUser = await login({ email, password });
-      toast.success('Đăng nhập thành công');
-      navigate(getRedirectPath(loggedUser.roleName), { replace: true });
+      const loggedUser = await login({ email, password })
+      toast.success('Đăng nhập thành công')
+      navigate(getRedirectPath(loggedUser.roleName), { replace: true })
     } catch (error) {
-      const message = error.response?.data?.message || 'Email hoặc mật khẩu không đúng';
-      toast.error(message);
+      const message = error.response?.data?.message || 'Email hoặc mật khẩu không đúng'
+      toast.error(message)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-sans">
       <div className="max-w-5xl w-full bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row border border-gray-100">
-        
+
         {/* Left Side - Image/Branding */}
         <div className="md:w-1/2 bg-blue-600 p-12 text-white flex flex-col justify-between relative overflow-hidden hidden md:flex">
           {/* Background Decorative Elements */}
           <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-blue-500 opacity-50 blur-3xl"></div>
           <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 rounded-full bg-blue-700 opacity-50 blur-3xl"></div>
-          
+
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-12">
               <div className="w-10 h-10 bg-white text-blue-600 rounded-xl flex items-center justify-center font-bold text-2xl shadow-md">
@@ -49,7 +49,7 @@ const StaffLogin = () => {
               </div>
               <span className="text-2xl font-bold tracking-tight">PBMS</span>
             </div>
-            
+
             <h1 className="text-4xl font-extrabold mb-6 leading-tight">
               Quản lý bãi đỗ xe <br/> thông minh
             </h1>
@@ -167,7 +167,7 @@ const StaffLogin = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffLogin;
+export default StaffLogin

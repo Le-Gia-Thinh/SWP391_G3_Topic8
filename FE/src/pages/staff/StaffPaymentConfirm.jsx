@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { ChevronRight, CreditCard, Banknote, QrCode, AlertTriangle, ShieldCheck, Clock, MapPin, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react'
+import { ChevronRight, CreditCard, Banknote, QrCode, AlertTriangle, ShieldCheck, Clock, MapPin, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const StaffPaymentConfirm = () => {
-  const navigate = useNavigate();
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [confirmedPlate, setConfirmedPlate] = useState(false);
+  const navigate = useNavigate()
+  const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [confirmedPlate, setConfirmedPlate] = useState(false)
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-24">
@@ -15,7 +15,7 @@ const StaffPaymentConfirm = () => {
         <span>Thanh toán</span> <ChevronRight size={14} />
         <span className="text-blue-600 font-medium">Xác nhận & Thu phí</span>
       </div>
-      
+
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Chi phí & Xác nhận thanh toán</h1>
       </header>
@@ -23,7 +23,7 @@ const StaffPaymentConfirm = () => {
       <div className="flex gap-6 flex-1">
         {/* Left Column */}
         <div className="flex-[2] space-y-6">
-          
+
           {/* Info Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
@@ -81,7 +81,7 @@ const StaffPaymentConfirm = () => {
             <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X size={20} /></button>
             <h3 className="text-base font-bold text-gray-800 mb-4">Nhận dạng phương tiện</h3>
             <p className="text-sm text-gray-500 mb-4">Vui lòng đối chiếu hình ảnh thực tế và dữ liệu đăng ký/vào bãi.</p>
-            
+
             <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
               <div>
                 <p className="text-xs text-gray-500 font-semibold mb-1 uppercase">Biển số xe ghi nhận</p>
@@ -94,11 +94,11 @@ const StaffPaymentConfirm = () => {
               </div>
               <div className="w-px h-12 bg-gray-300"></div>
               <label className="flex items-center gap-3 cursor-pointer">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={confirmedPlate}
                   onChange={(e) => setConfirmedPlate(e.target.checked)}
-                  className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
+                  className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                 />
                 <span className="font-semibold text-gray-800">Xác nhận đúng phương tiện này để thanh toán</span>
               </label>
@@ -113,7 +113,7 @@ const StaffPaymentConfirm = () => {
           {/* Fee Details */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-6">Chi tiết tính phí</h3>
-            
+
             <div className="space-y-4 mb-6">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Phí cơ bản (2 giờ đầu)</span>
@@ -150,7 +150,7 @@ const StaffPaymentConfirm = () => {
 
         {/* Right Column */}
         <div className="flex-1 space-y-6">
-          
+
           {/* Payment Methods */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-base font-bold text-gray-800 mb-4">Xác nhận Thanh toán</h3>
@@ -187,7 +187,7 @@ const StaffPaymentConfirm = () => {
               <span className="text-sm font-bold text-orange-500 bg-orange-50 px-3 py-1 rounded">Chưa thanh toán</span>
             </div>
 
-            <button 
+            <button
               disabled={!confirmedPlate}
               onClick={() => navigate('/staff/checkout-completed')}
               className={`w-full py-4 rounded-xl font-bold text-lg shadow-md transition-all ${confirmedPlate ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200' : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'}`}
@@ -252,7 +252,7 @@ const StaffPaymentConfirm = () => {
             <button className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-colors">
               Hủy bỏ
             </button>
-            <button 
+            <button
               disabled={!confirmedPlate}
               onClick={() => navigate('/staff/checkout-completed')}
               className={`px-8 py-2.5 rounded-xl font-bold transition-colors ${confirmedPlate ? 'bg-blue-600 text-white shadow-md shadow-blue-200 hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
@@ -263,7 +263,7 @@ const StaffPaymentConfirm = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffPaymentConfirm;
+export default StaffPaymentConfirm

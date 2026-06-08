@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Search, Car, Clock, MapPin, ChevronRight, CheckCircle2, XCircle, AlertTriangle, RefreshCcw, Filter } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react'
+import { Search, Car, Clock, MapPin, ChevronRight, CheckCircle2, XCircle, AlertTriangle, RefreshCcw, Filter } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const MOCK_SESSIONS = [
   {
@@ -14,7 +14,7 @@ const MOCK_SESSIONS = [
     checkIn: '18/05/2026 14:30',
     checkOut: null,
     status: 'active',
-    staff: 'Nguyễn Văn An',
+    staff: 'Nguyễn Văn An'
   },
   {
     id: 'PS-20240518-0010',
@@ -27,7 +27,7 @@ const MOCK_SESSIONS = [
     checkIn: '18/05/2026 10:42',
     checkOut: '18/05/2026 13:15',
     status: 'completed',
-    staff: 'Nguyễn Văn An',
+    staff: 'Nguyễn Văn An'
   },
   {
     id: 'PS-20240518-0008',
@@ -40,7 +40,7 @@ const MOCK_SESSIONS = [
     checkIn: '18/05/2026 09:15',
     checkOut: '18/05/2026 11:50',
     status: 'completed',
-    staff: 'Trần Minh Hòa',
+    staff: 'Trần Minh Hòa'
   },
   {
     id: 'PS-20240517-0099',
@@ -53,7 +53,7 @@ const MOCK_SESSIONS = [
     checkIn: '17/05/2026 08:00',
     checkOut: '17/05/2026 17:30',
     status: 'completed',
-    staff: 'Lê Thị Hoa',
+    staff: 'Lê Thị Hoa'
   },
   {
     id: 'PS-20240518-0015',
@@ -66,30 +66,30 @@ const MOCK_SESSIONS = [
     checkIn: '18/05/2026 15:00',
     checkOut: null,
     status: 'active',
-    staff: 'Nguyễn Văn An',
-  },
-];
+    staff: 'Nguyễn Văn An'
+  }
+]
 
 const STATUS_CONFIG = {
-  active:    { label: 'Đang đỗ',   icon: <Clock size={14} />,        color: 'bg-green-50 text-green-700 border-green-200' },
+  active:    { label: 'Đang đỗ', icon: <Clock size={14} />, color: 'bg-green-50 text-green-700 border-green-200' },
   completed: { label: 'Đã hoàn thành', icon: <CheckCircle2 size={14} />, color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  incident:  { label: 'Sự cố',     icon: <AlertTriangle size={14} />, color: 'bg-red-50 text-red-600 border-red-200' },
-};
+  incident:  { label: 'Sự cố', icon: <AlertTriangle size={14} />, color: 'bg-red-50 text-red-600 border-red-200' }
+}
 
 const StaffSearchSession = () => {
-  const navigate = useNavigate();
-  const [query, setQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedSession, setSelectedSession] = useState(null);
+  const navigate = useNavigate()
+  const [query, setQuery] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [selectedSession, setSelectedSession] = useState(null)
 
   const filtered = MOCK_SESSIONS.filter(s => {
     const matchQuery =
       query === '' ||
       s.plate.toLowerCase().includes(query.toLowerCase()) ||
-      s.id.toLowerCase().includes(query.toLowerCase());
-    const matchStatus = filterStatus === 'all' || s.status === filterStatus;
-    return matchQuery && matchStatus;
-  });
+      s.id.toLowerCase().includes(query.toLowerCase())
+    const matchStatus = filterStatus === 'all' || s.status === filterStatus
+    return matchQuery && matchStatus
+  })
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -164,8 +164,8 @@ const StaffSearchSession = () => {
             </div>
           ) : (
             filtered.map(session => {
-              const stCfg = STATUS_CONFIG[session.status] || STATUS_CONFIG.completed;
-              const isSelected = selectedSession?.id === session.id;
+              const stCfg = STATUS_CONFIG[session.status] || STATUS_CONFIG.completed
+              const isSelected = selectedSession?.id === session.id
               return (
                 <button
                   key={session.id}
@@ -221,7 +221,7 @@ const StaffSearchSession = () => {
                     </div>
                   )}
                 </button>
-              );
+              )
             })
           )}
         </div>
@@ -251,7 +251,7 @@ const StaffSearchSession = () => {
                     { label: 'Cổng vào', value: selectedSession.gate },
                     { label: 'Giờ vào', value: selectedSession.checkIn },
                     { label: 'Giờ ra', value: selectedSession.checkOut || '— Đang đỗ' },
-                    { label: 'Nhân viên', value: selectedSession.staff },
+                    { label: 'Nhân viên', value: selectedSession.staff }
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between items-start">
                       <span className="text-gray-400 font-semibold">{label}</span>
@@ -300,7 +300,7 @@ const StaffSearchSession = () => {
               {[
                 { label: 'Tổng phiên', value: MOCK_SESSIONS.length, color: 'text-gray-800' },
                 { label: 'Đang đỗ', value: MOCK_SESSIONS.filter(s => s.status === 'active').length, color: 'text-green-600' },
-                { label: 'Đã hoàn thành', value: MOCK_SESSIONS.filter(s => s.status === 'completed').length, color: 'text-gray-500' },
+                { label: 'Đã hoàn thành', value: MOCK_SESSIONS.filter(s => s.status === 'completed').length, color: 'text-gray-500' }
               ].map(({ label, value, color }) => (
                 <div key={label} className="flex justify-between items-center">
                   <span className="text-xs text-gray-400">{label}</span>
@@ -312,7 +312,7 @@ const StaffSearchSession = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffSearchSession;
+export default StaffSearchSession

@@ -534,7 +534,6 @@ BEGIN
         INSERT INTO UserAuthProviders (UserID, ProviderName, ProviderUserID, ProviderEmail)
         VALUES (@UserID, @ProviderName, @ProviderUserID, @Email);
     END
-
     SELECT
         u.UserID, u.FullName, u.Email, u.PhoneNumber,
         u.RoleID, r.RoleName, u.IsActive, u.IsEmailVerified,

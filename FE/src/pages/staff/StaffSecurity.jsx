@@ -1,43 +1,43 @@
-import React, { useState } from 'react';
-import { Shield, Lock, Eye, EyeOff, Smartphone, Key, AlertTriangle, CheckCircle2, LogOut, Clock } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react'
+import { Shield, Lock, Eye, EyeOff, Smartphone, Key, AlertTriangle, CheckCircle2, LogOut, Clock } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 const StaffSecurity = () => {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
+  const { logout } = useAuth()
+  const navigate = useNavigate()
 
-  const [showOld, setShowOld] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [oldPw, setOldPw] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
-  const [twoFA, setTwoFA] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [showOld, setShowOld] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [oldPw, setOldPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [twoFA, setTwoFA] = useState(false)
+  const [saved, setSaved] = useState(false)
 
-  const strength = newPw.length === 0 ? 0 : newPw.length < 6 ? 1 : newPw.length < 10 ? 2 : 3;
-  const strengthLabel = ['', 'Yếu', 'Trung bình', 'Mạnh'];
-  const strengthColor = ['', 'bg-red-400', 'bg-yellow-400', 'bg-green-500'];
-  const strengthText  = ['', 'text-red-500', 'text-yellow-600', 'text-green-600'];
+  const strength = newPw.length === 0 ? 0 : newPw.length < 6 ? 1 : newPw.length < 10 ? 2 : 3
+  const strengthLabel = ['', 'Yếu', 'Trung bình', 'Mạnh']
+  const strengthColor = ['', 'bg-red-400', 'bg-yellow-400', 'bg-green-500']
+  const strengthText = ['', 'text-red-500', 'text-yellow-600', 'text-green-600']
 
   const handleChangePassword = (e) => {
-    e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-    setOldPw(''); setNewPw(''); setConfirmPw('');
-  };
+    e.preventDefault()
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+    setOldPw(''); setNewPw(''); setConfirmPw('')
+  }
 
   const handleLogoutAll = async () => {
-    await logout();
-    navigate('/login');
-  };
+    await logout()
+    navigate('/login')
+  }
 
   const loginHistory = [
     { device: 'Máy tính Gate A', location: 'TP. Hồ Chí Minh, VN', time: 'Hôm nay, 07:02', current: true },
     { device: 'Điện thoại (Android)', location: 'TP. Hồ Chí Minh, VN', time: 'Hôm qua, 22:15', current: false },
-    { device: 'Chrome trên macOS', location: 'Hà Nội, VN', time: '05/06/2026, 08:40', current: false },
-  ];
+    { device: 'Chrome trên macOS', location: 'Hà Nội, VN', time: '05/06/2026, 08:40', current: false }
+  ]
 
   return (
     <div className="flex flex-col h-full">
@@ -88,8 +88,8 @@ const StaffSecurity = () => {
             <form onSubmit={handleChangePassword} className="space-y-4">
               {[
                 { label: 'Mật khẩu hiện tại', val: oldPw, setVal: setOldPw, show: showOld, setShow: setShowOld },
-                { label: 'Mật khẩu mới',      val: newPw, setVal: setNewPw, show: showNew, setShow: setShowNew },
-                { label: 'Xác nhận mật khẩu mới', val: confirmPw, setVal: setConfirmPw, show: showConfirm, setShow: setShowConfirm },
+                { label: 'Mật khẩu mới', val: newPw, setVal: setNewPw, show: showNew, setShow: setShowNew },
+                { label: 'Xác nhận mật khẩu mới', val: confirmPw, setVal: setConfirmPw, show: showConfirm, setShow: setShowConfirm }
               ].map(({ label, val, setVal, show, setShow }) => (
                 <div key={label}>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
@@ -112,7 +112,7 @@ const StaffSecurity = () => {
               {newPw.length > 0 && (
                 <div>
                   <div className="flex gap-1.5 mb-1">
-                    {[1,2,3].map(i => (
+                    {[1, 2, 3].map(i => (
                       <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${strength >= i ? strengthColor[strength] : 'bg-gray-200'}`} />
                     ))}
                   </div>
@@ -206,7 +206,7 @@ const StaffSecurity = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffSecurity;
+export default StaffSecurity
