@@ -186,7 +186,7 @@ const StaffVehicleCheckOut = () => {
           </div>
           <div className="flex gap-4">
             <span>Local Network: Connected</span>
-            <a href="#" className="text-blue-600 hover:underline">Verify last sync record</a>
+            <a href="javascript:void(0)" className="text-blue-600 hover:underline">Verify last sync record</a>
           </div>
         </div>
       </div>
