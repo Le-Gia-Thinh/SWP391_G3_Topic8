@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CalendarDays,
   MapPin,
@@ -75,6 +75,15 @@ const isStartTimeValid = (dateValue, timeValue) => {
   return selected >= getMinimumStartDate()
 }
 
+const getMinutesDiff = (dateValue, timeValueA, timeValueB) => {
+  const dateA = buildLocalDateTime(dateValue, timeValueA)
+  const dateB = buildLocalDateTime(dateValue, timeValueB)
+
+  if (!dateA || !dateB) return 0
+
+  return Math.abs(Math.floor((dateA.getTime() - dateB.getTime()) / 60000))
+}
+
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN').format(value || 0)
 }
@@ -99,6 +108,7 @@ const uniqueBy = (items, keyGetter) => {
 
 const DriverBooking = () => {
   const navigate = useNavigate()
+  const latestSlotRequestRef = useRef(0)
 
   const [buildingOptions, setBuildingOptions] = useState(DEFAULT_BUILDINGS)
   const [availableSlots, setAvailableSlots] = useState([])
@@ -108,6 +118,7 @@ const DriverBooking = () => {
   const [vehicleType, setVehicleType] = useState('CAR')
   const [bookingDate, setBookingDate] = useState(getTodayDateValue())
   const [startTime, setStartTime] = useState(getMinimumStartTimeValue())
+  const [isStartTimeTouched, setIsStartTimeTouched] = useState(false)
   const [duration, setDuration] = useState('4h')
   const [buildingId, setBuildingId] = useState('1')
   const [floorId, setFloorId] = useState('')
@@ -195,6 +206,14 @@ const DriverBooking = () => {
             label: building.BuildingName
           }))
         )
+
+        const currentBuildingExists = buildings.some(
+          (building) => String(building.BuildingID) === String(buildingId)
+        )
+
+        if (!currentBuildingExists) {
+          setBuildingId(String(buildings[0].BuildingID))
+        }
       }
     } catch (error) {
       console.error('Get buildings failed:', error)
@@ -203,14 +222,23 @@ const DriverBooking = () => {
 
   const fetchAvailableSlots = async () => {
     if (!buildingId || !vehicleType || !bookingDate || !startTime || !duration) {
+      setAvailableSlots([])
+      setFloorId('')
+      setZoneId('')
+      setSelectedSlotId(null)
       return
     }
 
     if (!isStartTimeValid(bookingDate, startTime)) {
       setAvailableSlots([])
+      setFloorId('')
+      setZoneId('')
       setSelectedSlotId(null)
       return
     }
+
+    const requestId = latestSlotRequestRef.current + 1
+    latestSlotRequestRef.current = requestId
 
     try {
       setIsLoadingSlots(true)
@@ -226,24 +254,50 @@ const DriverBooking = () => {
         }
       })
 
+      if (requestId !== latestSlotRequestRef.current) {
+        return
+      }
+
       const data = response.data?.data || []
 
       setAvailableSlots(data)
 
-      const stillValid = data.some(
+      if (data.length === 0) {
+        setFloorId('')
+        setZoneId('')
+        setSelectedSlotId(null)
+        return
+      }
+
+      const firstFloorId = String(data[0].FloorID)
+
+      const firstZoneInFloor = data.find(
+        (slot) => String(slot.FloorID) === firstFloorId
+      )
+
+      const firstZoneId = firstZoneInFloor
+        ? String(firstZoneInFloor.ZoneID)
+        : String(data[0].ZoneID)
+
+      setFloorId(firstFloorId)
+      setZoneId(firstZoneId)
+
+      const scopedSlots = data.filter(
         (slot) =>
-          slot.SlotID === selectedSlotId &&
-          slot.DisplayStatus === 'available'
+          String(slot.FloorID) === firstFloorId &&
+          String(slot.ZoneID) === firstZoneId
       )
 
-      if (stillValid) return
-
-      const nearestAvailable = data.find(
-        (slot) => slot.DisplayStatus === 'available'
-      )
+      const nearestAvailable =
+        scopedSlots.find((slot) => slot.DisplayStatus === 'available') ||
+        data.find((slot) => slot.DisplayStatus === 'available')
 
       setSelectedSlotId(nearestAvailable?.SlotID || null)
     } catch (error) {
+      if (requestId !== latestSlotRequestRef.current) {
+        return
+      }
+
       console.error('Get available slots failed:', error)
 
       const message =
@@ -252,14 +306,19 @@ const DriverBooking = () => {
 
       setErrorMessage(message)
       setAvailableSlots([])
+      setFloorId('')
+      setZoneId('')
       setSelectedSlotId(null)
     } finally {
-      setIsLoadingSlots(false)
+      if (requestId === latestSlotRequestRef.current) {
+        setIsLoadingSlots(false)
+      }
     }
   }
 
   useEffect(() => {
     fetchBuildings()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -268,30 +327,35 @@ const DriverBooking = () => {
   }, [buildingId, vehicleType, bookingDate, startTime, duration])
 
   useEffect(() => {
-    if (floorOptions.length === 0) {
-      setFloorId('')
-      return
-    }
+    const timer = setInterval(() => {
+      const today = getTodayDateValue()
+      const minimumTime = getMinimumStartTimeValue()
 
-    const exists = floorOptions.some((item) => item.value === String(floorId))
+      if (bookingDate !== today) return
 
-    if (!floorId || !exists) {
-      setFloorId(floorOptions[0].value)
-    }
-  }, [floorOptions, floorId])
+      const currentStartIsValid = isStartTimeValid(bookingDate, startTime)
 
-  useEffect(() => {
-    if (zoneOptions.length === 0) {
-      setZoneId('')
-      return
-    }
+      if (!currentStartIsValid) {
+        setStartTime(minimumTime)
+        setIsStartTimeTouched(false)
+        return
+      }
 
-    const exists = zoneOptions.some((item) => item.value === String(zoneId))
+      if (!isStartTimeTouched) {
+        setStartTime(minimumTime)
+        return
+      }
 
-    if (!zoneId || !exists) {
-      setZoneId(zoneOptions[0].value)
-    }
-  }, [zoneOptions, zoneId])
+      const diffMinutes = getMinutesDiff(bookingDate, startTime, minimumTime)
+
+      if (diffMinutes <= 1) {
+        setStartTime(minimumTime)
+        setIsStartTimeTouched(false)
+      }
+    }, 30000)
+
+    return () => clearInterval(timer)
+  }, [bookingDate, startTime, isStartTimeTouched])
 
   useEffect(() => {
     if (!autoSelect) return
@@ -304,12 +368,20 @@ const DriverBooking = () => {
 
     if (selectedVisible) return
 
-    const nearestAvailable = filteredSlots.find(
+    const scopedNearestAvailable = filteredSlots.find(
       (slot) => slot.DisplayStatus === 'available'
     )
 
-    setSelectedSlotId(nearestAvailable?.SlotID || null)
-  }, [autoSelect, filteredSlots, selectedSlotId])
+    const globalNearestAvailable = availableSlots.find(
+      (slot) => slot.DisplayStatus === 'available'
+    )
+
+    setSelectedSlotId(
+      scopedNearestAvailable?.SlotID ||
+        globalNearestAvailable?.SlotID ||
+        null
+    )
+  }, [autoSelect, filteredSlots, availableSlots, selectedSlotId])
 
   const handleChangeDate = (event) => {
     const value = event.target.value
@@ -318,15 +390,20 @@ const DriverBooking = () => {
     if (value < today) {
       setBookingDate(today)
       setStartTime(getMinimumStartTimeValue())
+      setIsStartTimeTouched(false)
       setErrorMessage('Không thể chọn ngày trong quá khứ.')
       return
     }
 
     setBookingDate(value)
 
-    if (value === today && !isStartTimeValid(value, startTime)) {
-      setErrorMessage('Giờ bắt đầu phải cách thời gian hiện tại tối thiểu 15 phút.')
-      return
+    if (value === today) {
+      const minimumTime = getMinimumStartTimeValue()
+
+      if (!isStartTimeValid(value, startTime)) {
+        setStartTime(minimumTime)
+        setIsStartTimeTouched(false)
+      }
     }
 
     setErrorMessage('')
@@ -334,29 +411,87 @@ const DriverBooking = () => {
 
   const handleChangeStartTime = (event) => {
     const value = event.target.value
+    const minimumTime = getMinimumStartTimeValue()
 
-    setStartTime(value)
+    setIsStartTimeTouched(true)
 
     if (isToday(bookingDate) && !isStartTimeValid(bookingDate, value)) {
-      setErrorMessage('Giờ bắt đầu phải cách thời gian hiện tại tối thiểu 15 phút.')
+      setStartTime(minimumTime)
+      setIsStartTimeTouched(false)
+      setErrorMessage('Giờ bắt đầu đã được tự động cập nhật để cách hiện tại tối thiểu 15 phút.')
       return
     }
 
+    setStartTime(value)
     setErrorMessage('')
   }
 
   const handleChangeBuilding = (event) => {
     setBuildingId(event.target.value)
+
+    latestSlotRequestRef.current += 1
+
+    setAvailableSlots([])
     setFloorId('')
     setZoneId('')
     setSelectedSlotId(null)
+    setErrorMessage('')
   }
 
   const handleChangeVehicleType = (event) => {
     setVehicleType(event.target.value)
+
+    latestSlotRequestRef.current += 1
+
+    setAvailableSlots([])
     setFloorId('')
     setZoneId('')
     setSelectedSlotId(null)
+    setErrorMessage('')
+  }
+
+  const handleChangeFloor = (event) => {
+    const newFloorId = event.target.value
+
+    setFloorId(newFloorId)
+
+    const firstZoneInFloor = availableSlots.find(
+      (slot) => String(slot.FloorID) === String(newFloorId)
+    )
+
+    const newZoneId = firstZoneInFloor ? String(firstZoneInFloor.ZoneID) : ''
+
+    setZoneId(newZoneId)
+
+    const scopedSlots = availableSlots.filter(
+      (slot) =>
+        String(slot.FloorID) === String(newFloorId) &&
+        String(slot.ZoneID) === String(newZoneId)
+    )
+
+    const nearestAvailable = scopedSlots.find(
+      (slot) => slot.DisplayStatus === 'available'
+    )
+
+    setSelectedSlotId(nearestAvailable?.SlotID || null)
+  }
+
+  const handleChangeZone = (event) => {
+    const newZoneId = event.target.value
+
+    setZoneId(newZoneId)
+
+    const scopedSlots = availableSlots.filter(
+      (slot) =>
+        String(slot.FloorID) === String(floorId) &&
+        String(slot.ZoneID) === String(newZoneId)
+    )
+
+    const nearestAvailable = scopedSlots.find(
+      (slot) => slot.DisplayStatus === 'available'
+    )
+
+    setSelectedSlotId(nearestAvailable?.SlotID || null)
   }
 
   const handleAutoSelectChange = (event) => {
@@ -364,11 +499,19 @@ const DriverBooking = () => {
     setAutoSelect(checked)
 
     if (checked) {
-      const nearestAvailable = filteredSlots.find(
+      const scopedNearestAvailable = filteredSlots.find(
         (slot) => slot.DisplayStatus === 'available'
       )
 
-      setSelectedSlotId(nearestAvailable?.SlotID || null)
+      const globalNearestAvailable = availableSlots.find(
+        (slot) => slot.DisplayStatus === 'available'
+      )
+
+      setSelectedSlotId(
+        scopedNearestAvailable?.SlotID ||
+          globalNearestAvailable?.SlotID ||
+          null
+      )
     }
   }
 
@@ -380,99 +523,102 @@ const DriverBooking = () => {
   }
 
   const handleSubmit = async (event) => {
-  event.preventDefault()
-  setErrorMessage('')
+    event.preventDefault()
+    setErrorMessage('')
 
-  if (!licensePlate.trim()) {
-    setErrorMessage('Vui lòng nhập biển số xe.')
-    return
-  }
-
-  if (!isStartTimeValid(bookingDate, startTime)) {
-    setErrorMessage('Thời gian đặt chỗ phải cách thời gian hiện tại tối thiểu 15 phút.')
-    return
-  }
-
-  if (!selectedSlotId) {
-    setErrorMessage('Vui lòng chọn một vị trí đỗ xe còn trống.')
-    return
-  }
-
-  try {
-    setIsSubmitting(true)
-
-    const response = await authorizeAxios.post('/reservations', {
-      vehicleType,
-      licensePlate: licensePlate.trim().toUpperCase(),
-      bookingDate,
-      startTime,
-      duration,
-      buildingId: Number(buildingId),
-      slotId: selectedSlotId
-    })
-
-    console.log('CREATE RESERVATION RESPONSE:', response.data)
-
-    const responseData = response.data?.data
-
-    const reservation =
-      responseData?.reservation ||
-      responseData?.data?.reservation ||
-      responseData?.data ||
-      responseData ||
-      response.data?.reservation ||
-      response.data
-
-    const reservationId =
-      reservation?.ReservationID ||
-      reservation?.reservationId ||
-      reservation?.ReservationId ||
-      reservation?.id
-
-    if (!reservationId) {
-      console.error('Không tìm thấy ReservationID trong response:', response.data)
-      setErrorMessage(
-        'Đặt chỗ thành công nhưng không lấy được mã đặt chỗ để chuyển sang trang xác nhận.'
-      )
+    if (!licensePlate.trim()) {
+      setErrorMessage('Vui lòng nhập biển số xe.')
       return
     }
 
-    navigate(`/driver/booking-confirmation?reservationId=${reservationId}`, {
-      state: {
-        reservationId,
-        bookingCode: reservation?.BookingCode,
-        parkingName: reservation?.BuildingName,
-        address: reservation?.Address,
-        licensePlate: licensePlate.trim().toUpperCase(),
+    if (!isStartTimeValid(bookingDate, startTime)) {
+      const minimumTime = getMinimumStartTimeValue()
+      setStartTime(minimumTime)
+      setIsStartTimeTouched(false)
+      setErrorMessage('Thời gian đặt chỗ đã được cập nhật. Vui lòng bấm xác nhận lại.')
+      return
+    }
+
+    if (!selectedSlotId) {
+      setErrorMessage('Vui lòng chọn một vị trí đỗ xe còn trống.')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+
+      const response = await authorizeAxios.post('/reservations', {
         vehicleType,
-        vehicleName: reservation?.VehicleName,
-        floor: reservation?.FloorName,
-        zone: reservation?.ZoneName,
-        selectedSlot: reservation?.SlotCode,
-        startTimeText: reservation?.StartTimeText,
-        endTimeText: reservation?.EndTimeText,
-        startClockText: reservation?.StartClockText,
-        endClockText: reservation?.EndClockText,
-        temporaryPrice,
-        statusValue: reservation?.StatusValue || 'active',
-        statusLabel: reservation?.StatusLabel || 'Đang hoạt động'
+        licensePlate: licensePlate.trim().toUpperCase(),
+        bookingDate,
+        startTime,
+        duration,
+        buildingId: Number(buildingId),
+        slotId: selectedSlotId
+      })
+
+      console.log('CREATE RESERVATION RESPONSE:', response.data)
+
+      const responseData = response.data?.data
+
+      const reservation =
+        responseData?.reservation ||
+        responseData?.data?.reservation ||
+        responseData?.data ||
+        responseData ||
+        response.data?.reservation ||
+        response.data
+
+      const reservationId =
+        reservation?.ReservationID ||
+        reservation?.reservationId ||
+        reservation?.ReservationId ||
+        reservation?.id
+
+      if (!reservationId) {
+        console.error('Không tìm thấy ReservationID trong response:', response.data)
+        setErrorMessage(
+          'Đặt chỗ thành công nhưng không lấy được mã đặt chỗ để chuyển sang trang xác nhận.'
+        )
+        return
       }
-    })
-  } catch (error) {
-    console.error('Create booking failed:', error)
-    console.error('Create booking response:', error.response?.data)
 
-    const message =
-      error.response?.data?.message ||
-      error.response?.data?.errors?.[0] ||
-      'Đặt chỗ thất bại. Vui lòng thử lại.'
+      navigate(`/driver/booking-confirmation?reservationId=${reservationId}`, {
+        state: {
+          reservationId,
+          bookingCode: reservation?.BookingCode,
+          parkingName: reservation?.BuildingName,
+          address: reservation?.Address,
+          licensePlate: licensePlate.trim().toUpperCase(),
+          vehicleType,
+          vehicleName: reservation?.VehicleName,
+          floor: reservation?.FloorName,
+          zone: reservation?.ZoneName,
+          selectedSlot: reservation?.SlotCode,
+          startTimeText: reservation?.StartTimeText,
+          endTimeText: reservation?.EndTimeText,
+          startClockText: reservation?.StartClockText,
+          endClockText: reservation?.EndClockText,
+          temporaryPrice,
+          statusValue: reservation?.StatusValue || 'active',
+          statusLabel: reservation?.StatusLabel || 'Đang hoạt động'
+        }
+      })
+    } catch (error) {
+      console.error('Create booking failed:', error)
+      console.error('Create booking response:', error.response?.data)
 
-    setErrorMessage(message)
-    await fetchAvailableSlots()
-  } finally {
-    setIsSubmitting(false)
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.errors?.[0] ||
+        'Đặt chỗ thất bại. Vui lòng thử lại.'
+
+      setErrorMessage(message)
+      await fetchAvailableSlots()
+    } finally {
+      setIsSubmitting(false)
+    }
   }
-}
 
   const buildingLabel = getOptionLabel(buildingOptions, buildingId)
   const vehicleLabel = getOptionLabel(VEHICLE_TYPES, vehicleType)
@@ -502,7 +648,7 @@ const DriverBooking = () => {
                   Thông tin đặt chỗ
                 </h2>
                 <p className="text-xs text-gray-500">
-                  Thời gian đặt chỗ phải cách hiện tại tối thiểu 15 phút.
+                  Giờ bắt đầu sẽ tự động bám theo thời gian hiện tại + 15 phút nếu bạn chưa chọn giờ xa hơn.
                 </p>
               </div>
             </div>
@@ -560,8 +706,7 @@ const DriverBooking = () => {
             <div className="mt-5 flex items-start gap-1 text-xs text-gray-500">
               <Info size={14} className="mt-0.5 shrink-0 text-blue-500" />
               <span>
-                FE gửi ngày và giờ dạng local Việt Nam: bookingDate + startTime.
-                Backend lưu xuống SQL Server bằng DATETIME local.
+                Nếu bạn để giờ bắt đầu ở mốc sớm nhất, hệ thống sẽ tự tăng theo thời gian thực để luôn hợp lệ.
               </span>
             </div>
 
@@ -650,33 +795,36 @@ const DriverBooking = () => {
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
               <select
                 value={floorId}
-                onChange={(event) => {
-                  setFloorId(event.target.value)
-                  setZoneId('')
-                  setSelectedSlotId(null)
-                }}
+                onChange={handleChangeFloor}
                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:w-48"
+                disabled={floorOptions.length === 0}
               >
-                {floorOptions.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
+                {floorOptions.length === 0 ? (
+                  <option value="">Chọn tầng...</option>
+                ) : (
+                  floorOptions.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))
+                )}
               </select>
 
               <select
                 value={zoneId}
-                onChange={(event) => {
-                  setZoneId(event.target.value)
-                  setSelectedSlotId(null)
-                }}
+                onChange={handleChangeZone}
                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:w-64"
+                disabled={zoneOptions.length === 0}
               >
-                {zoneOptions.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
+                {zoneOptions.length === 0 ? (
+                  <option value="">Chọn khu...</option>
+                ) : (
+                  zoneOptions.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))
+                )}
               </select>
 
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 sm:ml-auto">
@@ -794,8 +942,8 @@ const DriverBooking = () => {
               </h4>
 
               <ul className="list-disc space-y-1.5 pl-4 text-[11px] font-medium text-orange-700 opacity-90">
+                <li>Giờ bắt đầu tự cập nhật nếu đang ở mốc sớm nhất.</li>
                 <li>Booking chỉ hết hạn khi EndTime nhỏ hơn giờ hiện tại của SQL Server.</li>
-                <li>Slot Reserved quá hạn sẽ tự được trả về Available.</li>
                 <li>Khi staff check-in, xe chuyển sang phiên gửi hiện tại.</li>
               </ul>
             </div>
