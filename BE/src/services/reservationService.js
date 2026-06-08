@@ -174,7 +174,7 @@ export async function getReservations(req) {
     request.input("DriverID", sql.Int, userId);
     whereSql = "WHERE r.DriverID = @DriverID";
   }
-
+  
   const result = await request.query(`
     ${reservationBaseSelect()}
     ${whereSql}

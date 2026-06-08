@@ -15,10 +15,10 @@ const DriverTerms = () => {
 
       <div className="prose prose-sm prose-blue max-w-none text-gray-600 leading-relaxed space-y-4">
         <p className="font-semibold text-gray-800">Cập nhật lần cuối: 24/05/2026</p>
-        
+
         <h3 className="text-lg font-bold text-gray-900 mt-6">1. Chấp nhận điều khoản</h3>
         <p>Bằng việc đăng ký và sử dụng dịch vụ của Parking Building Management System (PBMS), bạn đồng ý tuân thủ các quy định và điều kiện được nêu trong tài liệu này.</p>
-        
+
         <h3 className="text-lg font-bold text-gray-900 mt-6">2. Quy định khi gửi xe</h3>
         <ul className="list-disc pl-5 space-y-2">
           <li>Bạn phải đỗ xe đúng vị trí đã được chỉ định (đối với xe có đặt trước) hoặc theo sự hướng dẫn của nhân viên bãi xe.</li>

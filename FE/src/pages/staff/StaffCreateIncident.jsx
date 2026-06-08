@@ -1,16 +1,16 @@
-import React from 'react';
-import { ChevronLeft, ChevronRight, AlertTriangle, Link2, UserCog, UploadCloud, FileText, Image as ImageIcon, X, Trash2, Search, Info } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react'
+import { ChevronLeft, ChevronRight, AlertTriangle, Link2, UserCog, UploadCloud, FileText, Image as ImageIcon, X, Trash2, Search, Info } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const StaffCreateIncident = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-24">
       {/* Header */}
       <header className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={() => navigate('/staff/dashboard')}
             className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
           >
@@ -29,7 +29,7 @@ const StaffCreateIncident = () => {
       <div className="flex gap-6 flex-1">
         {/* Left Column */}
         <div className="flex-[3] space-y-6">
-          
+
           {/* Section A */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex justify-between items-center mb-6">
@@ -38,7 +38,7 @@ const StaffCreateIncident = () => {
               </h3>
               <span className="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">Bắt buộc điền thông tin chung (*)</span>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Loại sự cố <span className="text-red-500">*</span></label>
@@ -67,10 +67,10 @@ const StaffCreateIncident = () => {
             <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
               <FileText size={20} className="text-blue-600" /> Section C: Mô tả chi tiết
             </h3>
-            
+
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">Mô tả diễn biến sự cố <span className="text-red-500">*</span></label>
-              <textarea 
+              <textarea
                 rows="4"
                 placeholder="Mô tả chi tiết sự việc để quản lý có thể phân bổ hướng giải quyết nhanh..."
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm resize-none"
@@ -130,20 +130,20 @@ const StaffCreateIncident = () => {
 
         {/* Right Column */}
         <div className="flex-[2] space-y-6">
-          
+
           {/* Section B */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
               <Link2 size={20} className="text-blue-600" /> Section B: Dữ liệu liên quan
             </h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Mã Phiên hệ thống (Session ID)</label>
                 <div className="relative">
-                  <input 
-                    type="text" 
-                    placeholder="Nhập ID phiên..." 
+                  <input
+                    type="text"
+                    placeholder="Nhập ID phiên..."
                     className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
                   />
                   <div className="absolute right-3 top-2.5 bg-gray-100 p-1 rounded cursor-pointer hover:bg-gray-200"><Search size={14} className="text-gray-600" /></div>
@@ -217,7 +217,7 @@ const StaffCreateIncident = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Ghi chú nội bộ</label>
-                <textarea 
+                <textarea
                   rows="2"
                   placeholder="Ghi chú dành cho quản lý (hiển thị ẩn với khách hàng)..."
                   className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm resize-none"
@@ -242,7 +242,7 @@ const StaffCreateIncident = () => {
             <button className="px-6 py-2.5 rounded-xl border border-blue-600 text-blue-600 font-bold hover:bg-blue-50 transition-colors">
               Lưu nháp
             </button>
-            <button 
+            <button
               onClick={() => navigate('/staff/dashboard')}
               className="px-8 py-2.5 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-200 hover:bg-blue-700 transition-colors"
             >
@@ -252,7 +252,7 @@ const StaffCreateIncident = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffCreateIncident;
+export default StaffCreateIncident

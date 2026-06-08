@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import React, { useState } from 'react'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   CarFront,
@@ -12,46 +12,46 @@ import {
   Menu,
   X,
   Car
-} from 'lucide-react';
-import StaffNavbar from './StaffNavbar';
-import { useAuth } from '../../contexts/AuthContext';
+} from 'lucide-react'
+import StaffNavbar from './StaffNavbar'
+import { useAuth } from '../../contexts/AuthContext'
 
 const StaffLayout = () => {
-  const location = useLocation();
-  const { user, logout } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation()
+  const { user, logout } = useAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const displayName = user?.fullName || 'Nguyễn Văn An';
-  const displayRole = user?.role?.roleName || 'Nhân viên';
+  const displayName = user?.fullName || 'Nguyễn Văn An'
+  const displayRole = user?.role?.roleName || 'Nhân viên'
 
   const mainMenu = [
     { name: 'Bảng điều khiển', path: '/staff/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Nhận xe vãng lai', path: '/staff/checkin-walkin', icon: <CarFront size={20} /> },
     { name: 'Nhận xe đặt trước', path: '/staff/checkin-booking', icon: <CalendarCheck size={20} /> },
-    { name: 'Thanh toán & Trả xe', path: '/staff/checkout', icon: <LogOut size={20} /> },
-  ];
+    { name: 'Thanh toán & Trả xe', path: '/staff/checkout', icon: <LogOut size={20} /> }
+  ]
 
   const manageMenu = [
     { name: 'Báo cáo sự cố', path: '/staff/create-incident', icon: <AlertCircle size={20} /> },
     { name: 'Xem sơ đồ chỗ', path: '/staff/parking-map', icon: <Map size={20} /> },
-    { name: 'Tra cứu phiên', path: '/staff/search-session', icon: <Search size={20} /> },
-  ];
+    { name: 'Tra cứu phiên', path: '/staff/search-session', icon: <Search size={20} /> }
+  ]
 
   const isActive = (path) => {
     if (path === '/staff/dashboard') {
-      return location.pathname === '/staff' || location.pathname === '/staff/dashboard';
+      return location.pathname === '/staff' || location.pathname === '/staff/dashboard'
     }
-    return location.pathname === path || location.pathname.startsWith(`${path}/`);
-  };
+    return location.pathname === path || location.pathname.startsWith(`${path}/`)
+  }
 
   const handleNavigate = () => {
-    setSidebarOpen(false);
-  };
+    setSidebarOpen(false)
+  }
 
   const handleLogout = async () => {
-    setSidebarOpen(false);
-    await logout();
-  };
+    setSidebarOpen(false)
+    await logout()
+  }
 
   return (
     <div className="flex h-screen bg-[#f7f9fb] text-gray-900 font-sans">
@@ -201,7 +201,7 @@ const StaffLayout = () => {
         </footer>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffLayout;
+export default StaffLayout

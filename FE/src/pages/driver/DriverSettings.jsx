@@ -65,10 +65,10 @@ const DriverSettings = () => {
             </div>
           )}
 
-            {activeTab === 'notifications' && (
+          {activeTab === 'notifications' && (
             <div className="space-y-6">
               <h2 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-4">Tùy chọn thông báo</h2>
-              
+
               <div className="space-y-4">
                 {[
                   { title: 'Thông báo đẩy (Push Notifications)', desc: 'Nhận thông báo trực tiếp trên trình duyệt hoặc thiết bị', checked: true },
@@ -92,11 +92,11 @@ const DriverSettings = () => {
           )}
 
           {activeTab !== 'account' && activeTab !== 'notifications' && (
-             <div className="flex flex-col items-center justify-center h-full text-center py-20">
-               <Shield size={48} className="text-gray-200 mb-4" />
-               <h3 className="text-lg font-bold text-gray-900 mb-1">Mục này đang được cập nhật</h3>
-               <p className="text-sm text-gray-500 max-w-md">Tính năng quản lý {SETTINGS_TABS.find(t => t.id === activeTab)?.label.toLowerCase()} sẽ sớm ra mắt trong bản cập nhật tiếp theo.</p>
-             </div>
+            <div className="flex flex-col items-center justify-center h-full text-center py-20">
+              <Shield size={48} className="text-gray-200 mb-4" />
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Mục này đang được cập nhật</h3>
+              <p className="text-sm text-gray-500 max-w-md">Tính năng quản lý {SETTINGS_TABS.find(t => t.id === activeTab)?.label.toLowerCase()} sẽ sớm ra mắt trong bản cập nhật tiếp theo.</p>
+            </div>
           )}
         </main>
       </div>

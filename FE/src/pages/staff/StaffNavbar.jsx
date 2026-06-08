@@ -1,25 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Bell, ChevronDown, LogOut, User, Settings, Shield,
   Clock, AlertTriangle, CheckCircle2, X, ExternalLink
-} from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+} from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 
 const MOCK_NOTIFICATIONS = [
   { id: 1, type: 'warning', title: 'Sai lịch biển số: 51G-123.45', time: '5 phút trước', read: false },
-  { id: 2, type: 'info',    title: 'Lượt đặt trước #BK-992 sắp hết hạn', time: '12 phút trước', read: false },
-  { id: 3, type: 'error',   title: 'Cần thanh toán: Xe 30H-112.00 quá hạn 2h', time: '20 phút trước', read: false },
+  { id: 2, type: 'info', title: 'Lượt đặt trước #BK-992 sắp hết hạn', time: '12 phút trước', read: false },
+  { id: 3, type: 'error', title: 'Cần thanh toán: Xe 30H-112.00 quá hạn 2h', time: '20 phút trước', read: false },
   { id: 4, type: 'success', title: 'Check-in thành công – Biển 43A-552.12', time: '1 giờ trước', read: true },
-  { id: 5, type: 'warning', title: 'Bảo trì ô đỗ khu vực C-010', time: '1 giờ trước', read: true },
-];
+  { id: 5, type: 'warning', title: 'Bảo trì ô đỗ khu vực C-010', time: '1 giờ trước', read: true }
+]
 
 const NOTIF_ICON = {
   warning: <AlertTriangle size={14} className="text-orange-500" />,
   error:   <AlertTriangle size={14} className="text-red-500" />,
   info:    <Clock size={14} className="text-blue-500" />,
-  success: <CheckCircle2 size={14} className="text-green-500" />,
-};
+  success: <CheckCircle2 size={14} className="text-green-500" />
+}
 
 const PAGE_TITLES = {
   '/staff/dashboard':       'Bảng điều khiển',
@@ -33,78 +33,78 @@ const PAGE_TITLES = {
   '/staff/checkout-completed': 'Check-out hoàn tất',
   '/staff/create-incident': 'Báo cáo sự cố',
   '/staff/parking-map':     'Sơ đồ bãi đỗ xe',
-  '/staff/search-session':  'Tra cứu phiên',
-};
+  '/staff/search-session':  'Tra cứu phiên'
+}
 
 const StaffNavbar = () => {
-  const { user, logout } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const { user, logout } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
 
-  const [activeGate, setActiveGate] = useState('A');
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [showNotif, setShowNotif] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [activeGate, setActiveGate] = useState('A')
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [showNotif, setShowNotif] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
+  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS)
+  const [currentTime, setCurrentTime] = useState(new Date())
 
-  const notifRef = useRef(null);
-  const profileRef = useRef(null);
+  const notifRef = useRef(null)
+  const profileRef = useRef(null)
 
   // Clock
   useEffect(() => {
-    const t = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
+    const t = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
 
   // Network status
   useEffect(() => {
-    const on = () => setIsOnline(true);
-    const off = () => setIsOnline(false);
-    window.addEventListener('online', on);
-    window.addEventListener('offline', off);
-    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
-  }, []);
+    const on = () => setIsOnline(true)
+    const off = () => setIsOnline(false)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
+  }, [])
 
   // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotif(false);
-      if (profileRef.current && !profileRef.current.contains(e.target)) setShowProfile(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotif(false)
+      if (profileRef.current && !profileRef.current.contains(e.target)) setShowProfile(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   // Close dropdowns on route change
   useEffect(() => {
-    setShowNotif(false);
-    setShowProfile(false);
-  }, [location.pathname]);
+    setShowNotif(false)
+    setShowProfile(false)
+  }, [location.pathname])
 
-  const pageTitle = PAGE_TITLES[location.pathname] || 'Staff Gate Dashboard';
+  const pageTitle = PAGE_TITLES[location.pathname] || 'Staff Gate Dashboard'
 
   const dateStr = new Intl.DateTimeFormat('vi-VN', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-  }).format(currentTime);
+  }).format(currentTime)
 
-  const timeStr = currentTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const timeStr = currentTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.read).length
 
-  const markAllRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  const dismissNotif = (id) => setNotifications(prev => prev.filter(n => n.id !== id));
+  const markAllRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  const dismissNotif = (id) => setNotifications(prev => prev.filter(n => n.id !== id))
 
   const handleLogout = async () => {
-    setShowProfile(false);
-    await logout();
-    navigate('/login');
-  };
+    setShowProfile(false)
+    await logout()
+    navigate('/login')
+  }
 
-  const avatarSrc = user?.avatar || 'https://i.pravatar.cc/150?img=11';
-  const displayName = user?.fullName || 'Nguyễn Văn An';
-  const displayEmail = user?.email || 'staff@pbms.vn';
-  const displayRole = user?.role?.roleName || 'Nhân viên';
+  const avatarSrc = user?.avatar || 'https://i.pravatar.cc/150?img=11'
+  const displayName = user?.fullName || 'Nguyễn Văn An'
+  const displayEmail = user?.email || 'staff@pbms.vn'
+  const displayRole = user?.role?.roleName || 'Nhân viên'
 
   return (
     <header className="flex justify-between items-center px-8 py-4 bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
@@ -147,7 +147,7 @@ const StaffNavbar = () => {
         {/* Notification bell */}
         <div className="relative" ref={notifRef}>
           <button
-            onClick={() => { setShowNotif(v => !v); setShowProfile(false); }}
+            onClick={() => { setShowNotif(v => !v); setShowProfile(false) }}
             className={`relative p-2.5 rounded-full border transition-all ${
               showNotif ? 'bg-blue-50 border-blue-300 text-blue-600' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
             }`}
@@ -225,7 +225,7 @@ const StaffNavbar = () => {
         {/* Profile dropdown */}
         <div className="relative" ref={profileRef}>
           <button
-            onClick={() => { setShowProfile(v => !v); setShowNotif(false); }}
+            onClick={() => { setShowProfile(v => !v); setShowNotif(false) }}
             className="flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-full hover:bg-gray-100 transition-all border border-transparent hover:border-gray-200"
           >
             <img
@@ -260,7 +260,7 @@ const StaffNavbar = () => {
               {/* Menu items */}
               <div className="py-1.5">
                 <button
-                  onClick={() => { setShowProfile(false); navigate('/staff/profile'); }}
+                  onClick={() => { setShowProfile(false); navigate('/staff/profile') }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -270,7 +270,7 @@ const StaffNavbar = () => {
                 </button>
 
                 <button
-                  onClick={() => { setShowProfile(false); navigate('/staff/settings'); }}
+                  onClick={() => { setShowProfile(false); navigate('/staff/settings') }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
@@ -280,7 +280,7 @@ const StaffNavbar = () => {
                 </button>
 
                 <button
-                  onClick={() => { setShowProfile(false); navigate('/staff/security'); }}
+                  onClick={() => { setShowProfile(false); navigate('/staff/security') }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
@@ -319,7 +319,7 @@ const StaffNavbar = () => {
         </div>
       </div>
     </header>
-  );
-};
+  )
+}
 
-export default StaffNavbar;
+export default StaffNavbar

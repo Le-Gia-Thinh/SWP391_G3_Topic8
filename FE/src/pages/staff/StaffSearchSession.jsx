@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Car, Clock, MapPin, ChevronRight, CheckCircle2, XCircle, AlertTriangle, RefreshCcw, Filter, ChevronDown, ChevronUp, Calendar, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo } from 'react'
+import { Search, Car, Clock, MapPin, ChevronRight, CheckCircle2, XCircle, AlertTriangle, RefreshCcw, Filter, ChevronDown, ChevronUp, Calendar, User } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const MOCK_SESSIONS = [
   {
@@ -14,7 +14,7 @@ const MOCK_SESSIONS = [
     checkIn: '18/05/2026 14:30',
     checkOut: null,
     status: 'active',
-    staff: 'Nguyễn Văn An',
+    staff: 'Nguyễn Văn An'
   },
   {
     id: 'PS-20240518-0010',
@@ -27,7 +27,7 @@ const MOCK_SESSIONS = [
     checkIn: '18/05/2026 10:42',
     checkOut: '18/05/2026 13:15',
     status: 'completed',
-    staff: 'Nguyễn Văn An',
+    staff: 'Nguyễn Văn An'
   },
   {
     id: 'PS-20240518-0008',
@@ -40,7 +40,7 @@ const MOCK_SESSIONS = [
     checkIn: '18/05/2026 09:15',
     checkOut: '18/05/2026 11:50',
     status: 'completed',
-    staff: 'Trần Minh Hòa',
+    staff: 'Trần Minh Hòa'
   },
   {
     id: 'PS-20240517-0099',
@@ -53,7 +53,7 @@ const MOCK_SESSIONS = [
     checkIn: '17/05/2026 08:00',
     checkOut: '17/05/2026 17:30',
     status: 'completed',
-    staff: 'Lê Thị Hoa',
+    staff: 'Lê Thị Hoa'
   },
   {
     id: 'PS-20240518-0015',
@@ -66,69 +66,69 @@ const MOCK_SESSIONS = [
     checkIn: '18/05/2026 15:00',
     checkOut: null,
     status: 'active',
-    staff: 'Nguyễn Văn An',
-  },
-];
+    staff: 'Nguyễn Văn An'
+  }
+]
 
 const STATUS_CONFIG = {
-  active:    { label: 'Đang đỗ',   icon: <Clock size={14} />,        color: 'bg-green-50 text-green-700 border-green-200' },
+  active:    { label: 'Đang đỗ', icon: <Clock size={14} />, color: 'bg-green-50 text-green-700 border-green-200' },
   completed: { label: 'Đã hoàn thành', icon: <CheckCircle2 size={14} />, color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  incident:  { label: 'Sự cố',     icon: <AlertTriangle size={14} />, color: 'bg-red-50 text-red-600 border-red-200' },
-};
+  incident:  { label: 'Sự cố', icon: <AlertTriangle size={14} />, color: 'bg-red-50 text-red-600 border-red-200' }
+}
 
 const StaffSearchSession = () => {
-  const navigate = useNavigate();
-  
+  const navigate = useNavigate()
+
   // Search and Filter States
-  const [query, setQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [query, setQuery] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({
     status: 'all',
     type: 'all',
     vehicle: 'all',
     gate: 'all',
     date: ''
-  });
-  
-  const [selectedSession, setSelectedSession] = useState(null);
+  })
+
+  const [selectedSession, setSelectedSession] = useState(null)
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
+    setFilters(prev => ({ ...prev, [key]: value }))
+  }
 
   const clearFilters = () => {
-    setFilters({ status: 'all', type: 'all', vehicle: 'all', gate: 'all', date: '' });
-    setQuery('');
-  };
+    setFilters({ status: 'all', type: 'all', vehicle: 'all', gate: 'all', date: '' })
+    setQuery('')
+  }
 
   // Filter Logic
   const filtered = useMemo(() => {
     return MOCK_SESSIONS.filter(s => {
-      const matchQuery = query === '' || 
-        s.plate.toLowerCase().includes(query.toLowerCase()) || 
-        s.id.toLowerCase().includes(query.toLowerCase());
-      
-      const matchStatus = filters.status === 'all' || s.status === filters.status;
-      const matchType = filters.type === 'all' || s.type === filters.type;
-      const matchVehicle = filters.vehicle === 'all' || s.vehicle === filters.vehicle;
-      const matchGate = filters.gate === 'all' || s.gate === filters.gate;
-      const matchDate = filters.date === '' || s.checkIn.includes(filters.date.split('-').reverse().join('/'));
+      const matchQuery = query === '' ||
+        s.plate.toLowerCase().includes(query.toLowerCase()) ||
+        s.id.toLowerCase().includes(query.toLowerCase())
 
-      return matchQuery && matchStatus && matchType && matchVehicle && matchGate && matchDate;
-    });
-  }, [query, filters]);
+      const matchStatus = filters.status === 'all' || s.status === filters.status
+      const matchType = filters.type === 'all' || s.type === filters.type
+      const matchVehicle = filters.vehicle === 'all' || s.vehicle === filters.vehicle
+      const matchGate = filters.gate === 'all' || s.gate === filters.gate
+      const matchDate = filters.date === '' || s.checkIn.includes(filters.date.split('-').reverse().join('/'))
 
-  const activeFiltersCount = Object.values(filters).filter(v => v !== 'all' && v !== '').length + (query ? 1 : 0);
+      return matchQuery && matchStatus && matchType && matchVehicle && matchGate && matchDate
+    })
+  }, [query, filters])
+
+  const activeFiltersCount = Object.values(filters).filter(v => v !== 'all' && v !== '').length + (query ? 1 : 0)
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      
+
       {/* Top Compact Search Bar */}
       <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-3 mb-4 flex flex-wrap items-center gap-4">
         <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2 pl-2 whitespace-nowrap">
           <Search size={20} className="text-blue-600" /> Tra cứu
         </h1>
-        
+
         <div className="flex-1 min-w-[250px] relative">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -145,11 +145,11 @@ const StaffSearchSession = () => {
           )}
         </div>
 
-        <button 
+        <button
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all border ${
             showFilters || activeFiltersCount > 0
-              ? 'bg-blue-50 border-blue-200 text-blue-700' 
+              ? 'bg-blue-50 border-blue-200 text-blue-700'
               : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
           }`}
         >
@@ -165,12 +165,12 @@ const StaffSearchSession = () => {
             <h3 className="text-sm font-bold text-gray-800">Tùy chọn tra cứu nâng cao</h3>
             <button onClick={clearFilters} className="text-xs font-semibold text-red-500 hover:underline">Xóa bộ lọc</button>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Status */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Trạng thái</label>
-              <select 
+              <select
                 value={filters.status} onChange={e => handleFilterChange('status', e.target.value)}
                 className="w-full bg-slate-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-400"
               >
@@ -183,7 +183,7 @@ const StaffSearchSession = () => {
             {/* Vehicle Type */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Loại xe</label>
-              <select 
+              <select
                 value={filters.vehicle} onChange={e => handleFilterChange('vehicle', e.target.value)}
                 className="w-full bg-slate-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-400"
               >
@@ -198,7 +198,7 @@ const StaffSearchSession = () => {
             {/* Session Type */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Hình thức</label>
-              <select 
+              <select
                 value={filters.type} onChange={e => handleFilterChange('type', e.target.value)}
                 className="w-full bg-slate-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-400"
               >
@@ -211,7 +211,7 @@ const StaffSearchSession = () => {
             {/* Gate */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Cổng / Gate</label>
-              <select 
+              <select
                 value={filters.gate} onChange={e => handleFilterChange('gate', e.target.value)}
                 className="w-full bg-slate-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-blue-400"
               >
@@ -227,8 +227,8 @@ const StaffSearchSession = () => {
               <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">Ngày check-in</label>
               <div className="relative">
                 <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   value={filters.date} onChange={e => handleFilterChange('date', e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:border-blue-400"
                 />
@@ -249,7 +249,7 @@ const StaffSearchSession = () => {
 
       {/* Results + Detail Panel */}
       <div className="flex gap-6 flex-1 min-h-0">
-        
+
         {/* Left: List */}
         <div className="flex-1 min-w-0 space-y-3 overflow-auto pr-1 pb-4">
           {filtered.length === 0 ? (
@@ -265,8 +265,8 @@ const StaffSearchSession = () => {
             </div>
           ) : (
             filtered.map(session => {
-              const stCfg = STATUS_CONFIG[session.status] || STATUS_CONFIG.completed;
-              const isSelected = selectedSession?.id === session.id;
+              const stCfg = STATUS_CONFIG[session.status] || STATUS_CONFIG.completed
+              const isSelected = selectedSession?.id === session.id
               return (
                 <button
                   key={session.id}
@@ -316,7 +316,7 @@ const StaffSearchSession = () => {
                     </div>
                   </div>
                 </button>
-              );
+              )
             })
           )}
         </div>
@@ -333,7 +333,7 @@ const StaffSearchSession = () => {
                   <p className="text-3xl font-black text-white tracking-widest relative z-10 drop-shadow-md">{selectedSession.plate}</p>
                   <p className="text-sm font-medium text-blue-100 mt-1 relative z-10">{selectedSession.vehicle}</p>
                 </div>
-                
+
                 <div className="p-6">
                   <div className={`flex justify-center items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-bold mb-6 border ${STATUS_CONFIG[selectedSession.status]?.color}`}>
                     {STATUS_CONFIG[selectedSession.status]?.icon}
@@ -415,7 +415,7 @@ const StaffSearchSession = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffSearchSession;
+export default StaffSearchSession

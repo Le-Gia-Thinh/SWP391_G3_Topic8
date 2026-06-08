@@ -32,6 +32,8 @@ import DriverSession from './pages/driver/DriverSession'
 import DriverPayment from './pages/driver/DriverPayment'
 import DriverReport from './pages/driver/DriverReport'
 import DriverProfile from './pages/driver/DriverProfile'
+import DriverPaymentResult from './pages/driver/DriverPaymentResult'
+import DriverPaymentHistory from './pages/driver/DriverPaymentHistory'
 import DriverSupport from './pages/driver/DriverSupport'
 import DriverSettings from './pages/driver/DriverSettings'
 import DriverTerms from './pages/driver/DriverTerms'
@@ -152,6 +154,9 @@ const App = () => {
           <Route path="payment" element={<DriverPayment />} />
           <Route path="report" element={<DriverReport />} />
           <Route path="profile" element={<DriverProfile />} />
+          <Route path="payment" element={<DriverPayment />} />
+          <Route path="payment-result" element={<DriverPaymentResult />} />
+          <Route path="payment-history" element={<DriverPaymentHistory />} />
           <Route path="support" element={<DriverSupport />} />
           <Route path="settings" element={<DriverSettings />} />
           <Route path="terms" element={<DriverTerms />} />

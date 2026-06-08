@@ -144,7 +144,7 @@ const ManagerConfig = () => {
               </thead>
               <tbody>
                 {floors.map((floor) => (
-                  <tr key={floor.code} className="border-t border-slate-200 bg-white"> 
+                  <tr key={floor.code} className="border-t border-slate-200 bg-white">
                     <td className="px-4 py-4 font-semibold text-slate-900">{floor.code}</td>
                     <td className="px-4 py-4">{floor.name}</td>
                     <td className="px-4 py-4">{floor.zones}</td>

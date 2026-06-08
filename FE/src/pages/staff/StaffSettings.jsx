@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Settings, Bell, Monitor, Globe, Moon, Sun, Eye, EyeOff, Smartphone, Save, RefreshCcw } from 'lucide-react';
+import React, { useState } from 'react'
+import { Settings, Bell, Monitor, Globe, Moon, Sun, Eye, EyeOff, Smartphone, Save, RefreshCcw } from 'lucide-react'
 
 const Toggle = ({ checked, onChange, label, desc }) => (
   <div className="flex items-center justify-between py-3.5 border-b border-gray-50 last:border-0">
@@ -14,7 +14,7 @@ const Toggle = ({ checked, onChange, label, desc }) => (
       <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-6' : 'translate-x-0'}`} />
     </button>
   </div>
-);
+)
 
 const StaffSettings = () => {
   const [settings, setSettings] = useState({
@@ -27,16 +27,16 @@ const StaffSettings = () => {
     showPlate: true,
     compactView: false,
     language: 'vi',
-    timezone: 'Asia/Ho_Chi_Minh',
-  });
+    timezone: 'Asia/Ho_Chi_Minh'
+  })
 
-  const set = (key) => (val) => setSettings(prev => ({ ...prev, [key]: val }));
-  const [saved, setSaved] = useState(false);
+  const set = (key) => (val) => setSettings(prev => ({ ...prev, [key]: val }))
+  const [saved, setSaved] = useState(false)
 
   const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -79,7 +79,7 @@ const StaffSettings = () => {
                 {[
                   { id: 'light', icon: <Sun size={18} />, label: 'Sáng' },
                   { id: 'dark', icon: <Moon size={18} />, label: 'Tối' },
-                  { id: 'system', icon: <Monitor size={18} />, label: 'Hệ thống' },
+                  { id: 'system', icon: <Monitor size={18} />, label: 'Hệ thống' }
                 ].map(({ id, icon, label }) => (
                   <button
                     key={id}
@@ -165,7 +165,7 @@ const StaffSettings = () => {
               <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Thiết bị đang đăng nhập</p>
               {[
                 { name: 'Máy tính Gate A', os: 'Windows 11 – Chrome', active: true },
-                { name: 'Điện thoại cá nhân', os: 'Android – App', active: false },
+                { name: 'Điện thoại cá nhân', os: 'Android – App', active: false }
               ].map(device => (
                 <div key={device.name} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-xl">
                   <div>
@@ -187,7 +187,7 @@ const StaffSettings = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffSettings;
+export default StaffSettings

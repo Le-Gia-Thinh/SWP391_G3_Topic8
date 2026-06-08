@@ -2,10 +2,10 @@ import React from 'react'
 import { LifeBuoy, Phone, Mail, MessageSquare, ChevronRight } from 'lucide-react'
 
 const FAQs = [
-  { q: "Làm thế nào để hủy đặt chỗ?", a: "Bạn có thể hủy đặt chỗ trong phần 'Lịch sử đặt chỗ' ít nhất 30 phút trước thời gian check-in dự kiến để không bị mất phí." },
-  { q: "Tôi có thể thay đổi biển số xe không?", a: "Có thể, bạn vui lòng vào mục 'Cài đặt hệ thống' hoặc 'Hồ sơ cá nhân' để cập nhật biển số xe của mình." },
-  { q: "Làm sao để lấy hóa đơn VAT?", a: "Hóa đơn VAT sẽ được gửi tự động qua email của bạn sau khi quá trình thanh toán hoàn tất." },
-  { q: "Tôi quên vị trí đỗ xe của mình?", a: "Bạn có thể xem lại vị trí ô đỗ trực tiếp trong ứng dụng ở phần 'Phiên gửi xe hiện tại'." }
+  { q: 'Làm thế nào để hủy đặt chỗ?', a: 'Bạn có thể hủy đặt chỗ trong phần \'Lịch sử đặt chỗ\' ít nhất 30 phút trước thời gian check-in dự kiến để không bị mất phí.' },
+  { q: 'Tôi có thể thay đổi biển số xe không?', a: 'Có thể, bạn vui lòng vào mục \'Cài đặt hệ thống\' hoặc \'Hồ sơ cá nhân\' để cập nhật biển số xe của mình.' },
+  { q: 'Làm sao để lấy hóa đơn VAT?', a: 'Hóa đơn VAT sẽ được gửi tự động qua email của bạn sau khi quá trình thanh toán hoàn tất.' },
+  { q: 'Tôi quên vị trí đỗ xe của mình?', a: 'Bạn có thể xem lại vị trí ô đỗ trực tiếp trong ứng dụng ở phần \'Phiên gửi xe hiện tại\'.' }
 ]
 
 const DriverSupport = () => {
@@ -50,7 +50,7 @@ const DriverSupport = () => {
           <LifeBuoy className="text-blue-500" size={24} />
           <h2 className="text-xl font-bold text-gray-900">Câu hỏi thường gặp (FAQ)</h2>
         </div>
-        
+
         <div className="space-y-4">
           {FAQs.map((faq, idx) => (
             <div key={idx} className="rounded-xl border border-gray-100 bg-gray-50 p-5 transition hover:border-blue-100 hover:bg-blue-50/30">

@@ -118,7 +118,7 @@ const DriverReport = () => {
                     className={`rounded-xl border p-3 text-sm font-semibold transition-colors ${active
                       ? 'border-blue-500 bg-blue-50/50 text-blue-700'
                       : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                      }`}
+                    }`}
                   >
                     {issue.label}
                   </button>
@@ -329,7 +329,7 @@ const DriverReport = () => {
                   className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${isSubmitted
                     ? 'bg-emerald-100 text-emerald-600'
                     : 'bg-orange-100 text-orange-600'
-                    }`}
+                  }`}
                 >
                   {isSubmitted ? 'Đã gửi' : 'Đang chờ'}
                 </span>
@@ -353,7 +353,7 @@ const DriverReport = () => {
                 className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors ${isSubmitted
                   ? 'cursor-not-allowed bg-blue-400'
                   : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
+                }`}
               >
                 <span>➤</span>
                 {isSubmitted ? 'Đã gửi báo cáo' : 'Gửi báo cáo ngay'}
@@ -419,7 +419,7 @@ const SummaryRow = ({ label, value, border = false }) => {
   return (
     <div
       className={`flex items-center justify-between ${border ? 'border-b border-gray-100 pb-4' : ''
-        }`}
+      }`}
     >
       <span className="text-gray-500">
         {label}

@@ -1,18 +1,18 @@
-import React from 'react';
-import { 
-  Car, 
-  Grid, 
-  LogOut, 
-  CreditCard, 
-  Clock, 
+import React from 'react'
+import {
+  Car,
+  Grid,
+  LogOut,
+  CreditCard,
+  Clock,
   ChevronRight,
   Search,
   AlertTriangle,
   Map,
   ArrowRightLeft,
   Bell
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const StatCard = ({ title, value, icon, colorClass, borderColorClass }) => (
   <div className={`bg-white rounded-xl p-5 border-l-4 ${borderColorClass} shadow-sm flex flex-col justify-between`}>
@@ -24,7 +24,7 @@ const StatCard = ({ title, value, icon, colorClass, borderColorClass }) => (
     </div>
     <span className="text-2xl font-bold text-gray-800">{value}</span>
   </div>
-);
+)
 
 const QuickActionCard = ({ title, desc, icon, iconColorClass, onClick }) => (
   <button onClick={onClick} className="bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all rounded-xl p-4 flex items-center gap-4 text-left group">
@@ -37,10 +37,10 @@ const QuickActionCard = ({ title, desc, icon, iconColorClass, onClick }) => (
     </div>
     <ChevronRight size={18} className="text-gray-400 group-hover:text-blue-600 transition-colors" />
   </button>
-);
+)
 
 const AlertItem = ({ title, time, type }) => {
-  const isError = type === 'error';
+  const isError = type === 'error'
   return (
     <div className={`p-4 rounded-xl border ${isError ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'} flex gap-3 mb-3`}>
       <div className="mt-0.5">
@@ -53,17 +53,17 @@ const AlertItem = ({ title, time, type }) => {
         </p>
       </div>
     </div>
-  );
-};
+  )
+}
 
 const StaffDashboardScreen = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
   const recentIns = [
     { id: '#8821', type: 'Vãng lai', typeColor: 'bg-gray-100 text-gray-600', plate: '51G-123.45', vehicle: 'Ô tô 4 chỗ', time: '10:45:12', slot: 'A-024', staff: 'Nguyễn An' },
     { id: '#8820', type: 'Booking', typeColor: 'bg-blue-50 text-blue-600', plate: '30H-998.21', vehicle: 'Ô tô 7 chỗ', time: '10:42:05', slot: 'B-112', staff: 'Nguyễn An' },
     { id: '#8819', type: 'Vãng lai', typeColor: 'bg-gray-100 text-gray-600', plate: '43A-552.12', vehicle: 'Xe máy', time: '10:39:58', slot: 'M-005', staff: 'Nguyễn An' },
-    { id: '#8818', type: 'Vãng lai', typeColor: 'bg-gray-100 text-gray-600', plate: '29D-111.90', vehicle: 'Bán tải', time: '10:25:30', slot: 'C-010', staff: 'Nguyễn An' },
-  ];
+    { id: '#8818', type: 'Vãng lai', typeColor: 'bg-gray-100 text-gray-600', plate: '29D-111.90', vehicle: 'Bán tải', time: '10:25:30', slot: 'C-010', staff: 'Nguyễn An' }
+  ]
 
   return (
     <div className="flex flex-col h-full">
@@ -156,7 +156,7 @@ const StaffDashboardScreen = () => {
               </h3>
               <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-md">8 Mới</span>
             </div>
-            
+
             <div className="space-y-1">
               <AlertItem title="Sai lệch biển số: 51G-123.45 (Cổng A)" time="3 phút trước" type="error" />
               <AlertItem title="Lượt đặt trước #BK-992 sắp hết hạn" time="15 phút trước" type="warning" />
@@ -175,9 +175,9 @@ const StaffDashboardScreen = () => {
               <Search size={16} /> Tra cứu nhanh biển số
             </h3>
             <div className="relative">
-              <input 
-                type="text" 
-                placeholder="Nhập biển số xe..." 
+              <input
+                type="text"
+                placeholder="Nhập biển số xe..."
                 className="w-full py-2.5 pl-4 pr-10 rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
               />
               <Search size={18} className="absolute right-3 top-2.5 text-blue-400" />
@@ -186,7 +186,7 @@ const StaffDashboardScreen = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffDashboardScreen;
+export default StaffDashboardScreen

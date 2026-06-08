@@ -1,9 +1,9 @@
-import React from 'react';
-import { ChevronLeft, ChevronRight, Calendar, Search, ShieldCheck, AlertTriangle, XCircle, FileText, RefreshCcw } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react'
+import { ChevronLeft, ChevronRight, Calendar, Search, ShieldCheck, AlertTriangle, XCircle, FileText, RefreshCcw } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 
 const StaffVerifyBooking = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-24">
@@ -14,7 +14,7 @@ const StaffVerifyBooking = () => {
         <span>Check-in đặt chỗ</span> <ChevronRight size={14} />
         <span className="text-blue-600 font-medium">Xác thực</span>
       </div>
-      
+
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Xác thực Đặt chỗ</h1>
         <div className="flex items-center gap-4 text-sm font-medium text-gray-600">
@@ -26,7 +26,7 @@ const StaffVerifyBooking = () => {
 
       {/* Main Content */}
       <div className="space-y-6 flex-1">
-        
+
         {/* Top Banner */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
@@ -38,7 +38,7 @@ const StaffVerifyBooking = () => {
               <p className="text-sm text-blue-700">Vui lòng đối soát thông tin bên dưới trước khi cho xe vào.</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => navigate('/staff/dashboard')}
             className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
           >
@@ -49,7 +49,7 @@ const StaffVerifyBooking = () => {
         <div className="flex gap-6">
           {/* Left Column */}
           <div className="flex-[2] space-y-6">
-            
+
             {/* Booking Info */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
@@ -135,7 +135,7 @@ const StaffVerifyBooking = () => {
 
           {/* Right Column */}
           <div className="flex-1 space-y-6">
-            
+
             {/* Validation Results */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-base font-bold text-gray-800 mb-1">Kết quả Đối soát</h3>
@@ -194,7 +194,7 @@ const StaffVerifyBooking = () => {
 
             {/* Actions */}
             <div className="space-y-3 pt-2">
-              <button 
+              <button
                 onClick={() => navigate('/staff/checkin-success')}
                 className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-200 transition-colors text-lg"
               >
@@ -236,7 +236,7 @@ const StaffVerifyBooking = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffVerifyBooking;
+export default StaffVerifyBooking

@@ -238,7 +238,7 @@ export async function resetPassword(req, res, next) {
 // GET /api/auth/me
 export async function getMe(req, res, next) {
   try {
-    const userId = req.jwtDecoded?.userId || req.user?.userId;
+    const userId = req.jwtDecoded?.userId || req.user?.UserID 
     if (!userId) {
       return res.status(StatusCodes.UNAUTHORIZED).json({
         success: false,

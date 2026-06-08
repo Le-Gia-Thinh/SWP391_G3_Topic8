@@ -229,7 +229,7 @@ const DriverLayout = () => {
               <ChevronDown
                 size={14}
                 className={`text-blue-400 transition-transform ${isLocationOpen ? 'rotate-180' : ''
-                  }`}
+                }`}
               />
             </button>
 
@@ -253,7 +253,7 @@ const DriverLayout = () => {
                         className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-all ${active
                           ? 'bg-blue-50 font-bold text-blue-600'
                           : 'font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                          }`}
+                        }`}
                       >
                         <span>{locationName}</span>
 
@@ -289,7 +289,7 @@ const DriverLayout = () => {
               <ChevronDown
                 size={12}
                 className={`text-gray-400 transition-transform ${isNotificationsOpen ? 'rotate-180' : ''
-                  }`}
+                }`}
               />
             </button>
 
@@ -336,7 +336,7 @@ const DriverLayout = () => {
                           className={`flex items-start gap-3 px-5 py-3.5 transition-colors ${notification.unread
                             ? 'bg-blue-50/30'
                             : 'hover:bg-gray-50/50'
-                            }`}
+                          }`}
                         >
                           <div className="mt-1 shrink-0">
                             <div
@@ -352,7 +352,7 @@ const DriverLayout = () => {
                                 className={`truncate text-sm ${notification.unread
                                   ? 'font-bold text-gray-800'
                                   : 'font-semibold text-gray-700'
-                                  }`}
+                                }`}
                               >
                                 {notification.title}
                               </p>
@@ -398,7 +398,7 @@ const DriverLayout = () => {
               <ChevronDown
                 size={14}
                 className={`text-blue-500 transition-transform ${isProfileOpen ? 'rotate-180' : ''
-                  }`}
+                }`}
               />
             </button>
 
@@ -462,7 +462,7 @@ const DriverLayout = () => {
       {/* Body */}
       <div className="flex min-h-0 flex-1 relative">
         {/* Sidebar */}
-        <aside 
+        <aside
           className={`fixed inset-y-0 left-0 z-50 w-[270px] flex-col justify-between border-r border-gray-100 bg-white shadow-xl transition-transform duration-300 ${
             sidebarOpen ? 'translate-x-0 flex' : '-translate-x-full hidden'
           }`}
@@ -478,7 +478,7 @@ const DriverLayout = () => {
                   <p className="mt-1 text-[10px] text-gray-400">Parking Building System</p>
                 </div>
               </Link>
-              <button 
+              <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-2 rounded-xl text-gray-400 hover:bg-gray-50"
               >
@@ -501,7 +501,7 @@ const DriverLayout = () => {
                     className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${active
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-100'
                       : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
-                      }`}
+                    }`}
                   >
                     <Icon size={18} />
                     <span>{item.label}</span>
@@ -521,7 +521,7 @@ const DriverLayout = () => {
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${isActiveMenu('/driver/settings')
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-100'
                 : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
-                }`}
+              }`}
             >
               <Settings size={18} />
               <span>Cài đặt hệ thống</span>

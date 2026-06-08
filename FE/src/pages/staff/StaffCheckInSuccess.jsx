@@ -1,9 +1,9 @@
-import React from 'react';
-import { CheckCircle2, ChevronRight, Info, Car, MapPin, ArrowRight, Clock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react'
+import { CheckCircle2, ChevronRight, Info, Car, MapPin, ArrowRight, Clock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const StaffCheckInSuccess = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-24">
@@ -13,7 +13,7 @@ const StaffCheckInSuccess = () => {
         <span>Check-in Vãng lai</span> <ChevronRight size={14} />
         <span className="text-blue-600 font-medium">Thành công</span>
       </div>
-      
+
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Check-in Thành công</h1>
         <div className="flex items-center gap-4 text-sm font-medium text-gray-600">
@@ -50,7 +50,7 @@ const StaffCheckInSuccess = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <button 
+              <button
                 onClick={() => navigate('/staff/checkin-walkin')}
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center gap-2 transition-colors"
               >
@@ -172,7 +172,7 @@ const StaffCheckInSuccess = () => {
             <span className="flex items-center gap-2"><Clock size={16} /> Đồng bộ cuối: 14:32:05 - 18/05/2026</span>
           </div>
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => navigate('/staff/dashboard')}
               className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-colors"
             >
@@ -181,7 +181,7 @@ const StaffCheckInSuccess = () => {
             <button className="px-6 py-2.5 rounded-xl bg-white border-2 border-blue-600 text-blue-600 font-bold hover:bg-blue-50 transition-colors">
               Tới màn hình Check-out
             </button>
-            <button 
+            <button
               onClick={() => navigate('/staff/checkin-walkin')}
               className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-200 hover:bg-blue-700 transition-colors"
             >
@@ -191,7 +191,7 @@ const StaffCheckInSuccess = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaffCheckInSuccess;
+export default StaffCheckInSuccess

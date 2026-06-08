@@ -266,8 +266,40 @@ const DriverBookingConfirmation = () => {
   }
 
   useEffect(() => {
-    fetchReservationDetail()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false
+
+    const loadReservationDetail = async () => {
+      if (!reservationId) return
+
+      try {
+        const response = await authorizeAxios.get(`/reservations/${reservationId}`)
+
+        if (!cancelled) {
+          setReservation(response.data?.data || null)
+          setErrorMessage('')
+        }
+      } catch (error) {
+        console.error('Get reservation detail failed:', error)
+
+        const message =
+          error.response?.data?.message ||
+          'Không thể tải chi tiết đặt chỗ. Vui lòng thử lại.'
+
+        if (!cancelled) {
+          setErrorMessage(message)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void loadReservationDetail()
+
+    return () => {
+      cancelled = true
+    }
   }, [reservationId])
 
   const booking = useMemo(() => {
@@ -279,8 +311,7 @@ const DriverBookingConfirmation = () => {
 
   const canCancel = booking?.statusValue === 'active'
 
-  const fullSlotName = `${booking?.floor || '--'} / Khu ${
-    booking?.zone || '--'
+  const fullSlotName = `${booking?.floor || '--'} / Khu ${booking?.zone || '--'
   } / Slot ${booking?.selectedSlot || '--'}`
 
   const vehicleLabel =
@@ -595,8 +626,7 @@ const DetailRow = ({
 
   return (
     <div
-      className={`flex flex-col justify-between gap-1 py-3 sm:flex-row sm:items-center ${
-        noBorder ? '' : 'border-b border-gray-50'
+      className={`flex flex-col justify-between gap-1 py-3 sm:flex-row sm:items-center ${noBorder ? '' : 'border-b border-gray-50'
       }`}
     >
       <span className="flex items-center gap-2 text-sm text-gray-500">

@@ -317,12 +317,12 @@ const DriverBooking = () => {
   }
 
   useEffect(() => {
-    fetchBuildings()
+    void Promise.resolve().then(fetchBuildings)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    fetchAvailableSlots()
+    void Promise.resolve().then(fetchAvailableSlots)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildingId, vehicleType, bookingDate, startTime, duration])
 
@@ -358,7 +358,7 @@ const DriverBooking = () => {
   }, [bookingDate, startTime, isStartTimeTouched])
 
   useEffect(() => {
-    if (!autoSelect) return
+    if (!autoSelect) return undefined
 
     const selectedVisible = filteredSlots.some(
       (slot) =>
@@ -366,7 +366,7 @@ const DriverBooking = () => {
         slot.DisplayStatus === 'available'
     )
 
-    if (selectedVisible) return
+    if (selectedVisible) return undefined
 
     const scopedNearestAvailable = filteredSlots.find(
       (slot) => slot.DisplayStatus === 'available'
@@ -376,11 +376,24 @@ const DriverBooking = () => {
       (slot) => slot.DisplayStatus === 'available'
     )
 
-    setSelectedSlotId(
+    const nextSelectedSlotId =
       scopedNearestAvailable?.SlotID ||
-        globalNearestAvailable?.SlotID ||
-        null
-    )
+      globalNearestAvailable?.SlotID ||
+      null
+
+    if (nextSelectedSlotId === selectedSlotId) return undefined
+
+    let cancelled = false
+
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setSelectedSlotId(nextSelectedSlotId)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [autoSelect, filteredSlots, availableSlots, selectedSlotId])
 
   const handleChangeDate = (event) => {
@@ -509,8 +522,8 @@ const DriverBooking = () => {
 
       setSelectedSlotId(
         scopedNearestAvailable?.SlotID ||
-          globalNearestAvailable?.SlotID ||
-          null
+        globalNearestAvailable?.SlotID ||
+        null
       )
     }
   }
@@ -855,12 +868,11 @@ const DriverBooking = () => {
                       type="button"
                       disabled={slot.uiStatus === 'occupied'}
                       onClick={() => handleSelectSlot(slot)}
-                      className={`flex h-12 items-center justify-center rounded-lg border text-xs font-bold outline-none transition-all ${
-                        slot.uiStatus === 'occupied'
-                          ? 'cursor-not-allowed border-gray-300 bg-gray-100 font-black text-gray-700 opacity-80'
-                          : slot.uiStatus === 'selected'
-                            ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-sm ring-2 ring-blue-100'
-                            : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:text-blue-500'
+                      className={`flex h-12 items-center justify-center rounded-lg border text-xs font-bold outline-none transition-all ${slot.uiStatus === 'occupied'
+                        ? 'cursor-not-allowed border-gray-300 bg-gray-100 font-black text-gray-700 opacity-80'
+                        : slot.uiStatus === 'selected'
+                          ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-sm ring-2 ring-blue-100'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:text-blue-500'
                       }`}
                     >
                       {slot.SlotCode}

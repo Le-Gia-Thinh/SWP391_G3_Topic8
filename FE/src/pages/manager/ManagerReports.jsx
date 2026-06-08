@@ -5,7 +5,7 @@ const REPORTS = [
   { title: 'Báo cáo doanh thu tháng 05/2026', type: 'Doanh thu', date: '24/05/2026', size: '1.2 MB' },
   { title: 'Thống kê lưu lượng xe Quý 1', type: 'Vận hành', date: '01/04/2026', size: '3.4 MB' },
   { title: 'Danh sách sự cố tháng 04/2026', type: 'Sự cố', date: '30/04/2026', size: '840 KB' },
-  { title: 'Báo cáo hiệu suất thẻ từ', type: 'Kỹ thuật', date: '15/04/2026', size: '1.5 MB' },
+  { title: 'Báo cáo hiệu suất thẻ từ', type: 'Kỹ thuật', date: '15/04/2026', size: '1.5 MB' }
 ]
 
 const ManagerReports = () => {
