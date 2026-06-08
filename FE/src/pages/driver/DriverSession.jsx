@@ -9,9 +9,13 @@ import {
   ArrowRightLeft,
   AlertTriangle,
   Check,
-  RefreshCcw
+  RefreshCcw,
+  Map
 } from 'lucide-react'
 import authorizeAxios from '../../utils/authorizeAxios'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Modal from '../../components/ui/Modal'
 
 const parseBackendDate = (value) => {
   if (!value) return null
@@ -113,6 +117,7 @@ const DriverSession = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [mapModal, setMapModal] = useState({ isOpen: false })
 
   const fetchCurrentSession = async () => {
     try {
@@ -203,16 +208,16 @@ const DriverSession = () => {
   }
 
   const handleViewMap = () => {
-    console.log('View parking map')
+    setMapModal({ isOpen: true })
   }
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-sm">
+      <Card className="p-10 text-center">
         <p className="font-bold text-gray-700">
           Đang tải phiên đỗ hiện tại...
         </p>
-      </div>
+      </Card>
     )
   }
 
@@ -223,14 +228,14 @@ const DriverSession = () => {
           {errorMessage}
         </p>
 
-        <button
-          type="button"
+        <Button
           onClick={fetchCurrentSession}
-          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
+          variant="danger"
+          className="mt-4"
+          icon={RefreshCcw}
         >
-          <RefreshCcw size={16} />
           Thử lại
-        </button>
+        </Button>
       </div>
     )
   }
@@ -250,7 +255,7 @@ const DriverSession = () => {
           </h1>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-sm">
+        <Card className="p-10 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-blue-600">
             <Info size={26} />
           </div>
@@ -263,14 +268,13 @@ const DriverSession = () => {
             Phiên đỗ hiện tại chỉ xuất hiện sau khi nhân viên check-in xe của bạn vào bãi.
           </p>
 
-          <button
-            type="button"
+          <Button
             onClick={() => navigate('/driver/booking')}
-            className="mt-5 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-200 hover:bg-blue-700"
+            className="mt-5"
           >
             Đặt chỗ mới
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     )
   }
@@ -289,20 +293,20 @@ const DriverSession = () => {
             Chi tiết phiên đỗ hiện tại
           </h1>
 
-          <button
-            type="button"
+          <Button
             onClick={fetchCurrentSession}
-            className="flex w-fit items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+            variant="secondary"
+            className="w-fit"
+            icon={RefreshCcw}
           >
-            <RefreshCcw size={16} />
             Làm mới
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <Card>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">
@@ -353,9 +357,9 @@ const DriverSession = () => {
                 xe khi di chuyển ra cổng kiểm soát.
               </p>
             </div>
-          </div>
+          </Card>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <Card>
             <h2 className="mb-4 text-lg font-bold text-gray-900">
               Thông tin phương tiện
             </h2>
@@ -420,22 +424,22 @@ const DriverSession = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <Card>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-lg font-bold text-gray-900">
                 Vị trí đỗ xe
               </h2>
 
-              <button
-                type="button"
+              <Button
                 onClick={handleViewMap}
-                className="flex w-fit items-center gap-2 rounded-lg border border-blue-100 px-3 py-1.5 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
+                variant="outline"
+                size="sm"
+                icon={MapPin}
               >
-                <MapPin size={16} />
                 Xem sơ đồ vị trí
-              </button>
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -460,11 +464,11 @@ const DriverSession = () => {
                 active
               />
             </div>
-          </div>
+          </Card>
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <Card>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">
                 Tạm tính chi phí
@@ -502,26 +506,22 @@ const DriverSession = () => {
             </div>
 
             <div className="space-y-3">
-              <button
-                type="button"
-                onClick={handleGoPayment}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors hover:bg-blue-700"
-              >
+              <Button onClick={handleGoPayment} className="w-full">
                 Thanh toán ngay
-              </button>
+              </Button>
 
-              <button
-                type="button"
+              <Button
                 onClick={handleGoReport}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+                variant="secondary"
+                className="w-full border-orange-200 text-orange-600 hover:bg-orange-50"
+                icon={AlertTriangle}
               >
-                <AlertTriangle size={18} className="text-orange-500" />
                 Báo cáo sự cố đỗ xe
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <Card>
             <h2 className="mb-6 text-lg font-bold text-gray-900">
               Trình trạng phiên
             </h2>
@@ -534,9 +534,9 @@ const DriverSession = () => {
                 />
               ))}
             </div>
-          </div>
+          </Card>
 
-          <div className="rounded-2xl border border-gray-100 bg-gray-50/80 p-5">
+          <Card className="rounded-2xl border border-gray-100 bg-gray-50/80 p-5">
             <div className="flex items-start gap-4">
               <div className="mt-1 rounded-full bg-white p-2 text-blue-500 shadow-sm">
                 <Info size={20} />
@@ -555,18 +555,34 @@ const DriverSession = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <button
-            type="button"
+          <Button
             onClick={fetchCurrentSession}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+            variant="secondary"
+            className="w-full"
+            icon={RefreshCcw}
           >
-            <RefreshCcw size={16} />
             Làm mới phiên hiện tại
-          </button>
+          </Button>
         </div>
       </div>
+
+      <Modal
+        isOpen={mapModal.isOpen}
+        onClose={() => setMapModal({ isOpen: false })}
+        title="Sơ đồ vị trí đỗ xe"
+        maxWidth="max-w-2xl"
+        footer={<Button onClick={() => setMapModal({ isOpen: false })}>Đóng</Button>}
+      >
+        <div className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <Map className="w-24 h-24 text-gray-300 mb-4" />
+          <h3 className="text-lg font-bold text-gray-700">Sơ đồ tĩnh đang phát triển</h3>
+          <p className="text-sm text-gray-500 text-center mt-2 max-w-sm">
+            Tính năng xem sơ đồ định tuyến động cho người lái đang được cập nhật. Vui lòng hỏi nhân viên để được hướng dẫn đến vị trí đỗ <span className="font-bold text-blue-600">{sessionInfo?.SlotCode}</span>.
+          </p>
+        </div>
+      </Modal>
     </div>
   )
 }

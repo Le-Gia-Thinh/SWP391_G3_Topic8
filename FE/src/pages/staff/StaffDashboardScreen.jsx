@@ -94,9 +94,9 @@ const StaffDashboardScreen = () => {
               <QuickActionCard title="Nhận xe vãng lai" desc="Nhập biển số cho xe không có đặt trước" icon={<Car size={20} className="text-blue-600" />} iconColorClass="bg-blue-50" onClick={() => navigate('/staff/checkin-walkin')} />
               <QuickActionCard title="Nhận xe đặt trước" desc="Quét mã hoặc nhập mã đặt chỗ" icon={<Clock size={20} className="text-purple-600" />} iconColorClass="bg-purple-50" onClick={() => navigate('/staff/checkin-booking')} />
               <QuickActionCard title="Thanh toán & Trả xe" desc="Tính tiền và xác nhận xe ra" icon={<LogOut size={20} className="text-orange-600" />} iconColorClass="bg-orange-50" onClick={() => navigate('/staff/checkout')} />
-              <QuickActionCard title="Tra cứu phiên" desc="Tìm kiếm lịch sử vào/ra theo biển số" icon={<Search size={20} className="text-indigo-600" />} iconColorClass="bg-indigo-50" />
+              <QuickActionCard title="Tra cứu phiên" desc="Tìm kiếm lịch sử vào/ra theo biển số" icon={<Search size={20} className="text-indigo-600" />} iconColorClass="bg-indigo-50" onClick={() => navigate('/staff/search-session')} />
               <QuickActionCard title="Tạo sự cố" desc="Báo cáo mất thẻ, hỏng thiết bị, va chạm" icon={<AlertTriangle size={20} className="text-red-600" />} iconColorClass="bg-red-50" onClick={() => navigate('/staff/create-incident')} />
-              <QuickActionCard title="Xem sơ đồ chỗ" desc="Kiểm tra chi tiết vị trí các ô đỗ" icon={<Map size={20} className="text-green-600" />} iconColorClass="bg-green-50" />
+              <QuickActionCard title="Xem sơ đồ chỗ" desc="Kiểm tra chi tiết vị trí các ô đỗ" icon={<Map size={20} className="text-green-600" />} iconColorClass="bg-green-50" onClick={() => navigate('/staff/parking-map')} />
             </div>
           </div>
 

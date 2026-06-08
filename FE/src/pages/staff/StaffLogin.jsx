@@ -3,12 +3,15 @@ import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react'
 import { Link, useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
+import Modal from '../../components/ui/Modal'
+import Button from '../../components/ui/Button'
 
 const StaffLogin = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('bob@email.com')
   const [password, setPassword] = useState('123456')
   const [isLoading, setIsLoading] = useState(false)
+  const [infoModal, setInfoModal] = useState({ isOpen: false, title: '', message: '' })
 
   const { login, isAuthenticated, getRedirectPath, user } = useAuth()
   const navigate = useNavigate()
@@ -141,9 +144,13 @@ const StaffLogin = () => {
               </div>
 
               <div className="text-sm">
-                <Link to="#" className="font-semibold text-blue-600 hover:text-blue-500 hover:underline">
+                <button 
+                  type="button" 
+                  onClick={() => setInfoModal({ isOpen: true, title: 'Quên mật khẩu', message: 'Tính năng Khôi phục mật khẩu đang được phát triển. Vui lòng liên hệ Quản lý trực tiếp để reset mật khẩu.' })}
+                  className="font-semibold text-blue-600 hover:text-blue-500 hover:underline"
+                >
                   Quên mật khẩu?
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -159,13 +166,26 @@ const StaffLogin = () => {
           <div className="mt-8 pt-8 border-t border-gray-100 text-center">
             <p className="text-sm text-gray-500">
               Bạn gặp vấn đề khi đăng nhập?{' '}
-              <Link to="#" className="font-semibold text-blue-600 hover:text-blue-500">
+              <button 
+                type="button"
+                onClick={() => setInfoModal({ isOpen: true, title: 'Liên hệ IT Support', message: 'Hotline IT Support: 1900 1234. Email: it.support@parkingsafe.com' })}
+                className="font-semibold text-blue-600 hover:text-blue-500 hover:underline"
+              >
                 Liên hệ IT Support
-              </Link>
+              </button>
             </p>
           </div>
         </div>
       </div>
+
+      <Modal 
+        isOpen={infoModal.isOpen} 
+        onClose={() => setInfoModal({ isOpen: false, title: '', message: '' })}
+        title={infoModal.title}
+        footer={<Button variant="primary" onClick={() => setInfoModal({ isOpen: false, title: '', message: '' })}>Đóng</Button>}
+      >
+        <p className="text-gray-700">{infoModal.message}</p>
+      </Modal>
     </div>
   )
 }

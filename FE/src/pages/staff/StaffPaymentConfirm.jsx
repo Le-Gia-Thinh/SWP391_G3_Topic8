@@ -189,7 +189,7 @@ const StaffPaymentConfirm = () => {
 
             <button
               disabled={!confirmedPlate}
-              onClick={() => navigate('/staff/checkout-completed')}
+              onClick={() => navigate('/staff/checkout-completed', { state: { actionType: 'checkout' } })}
               className={`w-full py-4 rounded-xl font-bold text-lg shadow-md transition-all ${confirmedPlate ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200' : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'}`}
             >
               XÁC NHẬN THANH TOÁN
@@ -254,7 +254,7 @@ const StaffPaymentConfirm = () => {
             </button>
             <button
               disabled={!confirmedPlate}
-              onClick={() => navigate('/staff/checkout-completed')}
+              onClick={() => navigate('/staff/checkout-completed', { state: { actionType: 'checkout' } })}
               className={`px-8 py-2.5 rounded-xl font-bold transition-colors ${confirmedPlate ? 'bg-blue-600 text-white shadow-md shadow-blue-200 hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
             >
               Hoàn tất thanh toán

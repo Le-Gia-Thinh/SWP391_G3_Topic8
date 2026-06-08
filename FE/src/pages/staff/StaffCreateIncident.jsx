@@ -1,9 +1,55 @@
-import React from 'react'
-import { ChevronLeft, ChevronRight, AlertTriangle, Link2, UserCog, UploadCloud, FileText, Image as ImageIcon, X, Trash2, Search, Info } from 'lucide-react'
+import React, { useState } from 'react'
+import { ChevronLeft, ChevronRight, AlertTriangle, Link2, UserCog, UploadCloud, FileText, Image as ImageIcon, X, Trash2, Search, Info, ChevronUp, ChevronDown } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 const StaffCreateIncident = () => {
   const navigate = useNavigate()
+  const [isLoading, setIsLoading] = useState(false)
+
+  const [files, setFiles] = useState([
+    { id: 1, name: 'anh_hien_truong_01.jpg', size: '1.2 MB', type: 'image', previews: ['https://images.unsplash.com/photo-1562853274-b2586e3fcdb4?w=150&h=100&fit=crop', 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=150&h=100&fit=crop'] },
+    { id: 2, name: 'bien_ban_ghi_nhan.pdf', size: '450 KB', type: 'pdf' }
+  ])
+  const [isEscalated, setIsEscalated] = useState(false)
+  const [isActionBarVisible, setIsActionBarVisible] = useState(true)
+
+  const fileInputRef = React.useRef(null)
+
+  const handleSubmit = () => {
+    setIsLoading(true)
+    setTimeout(() => {
+      setIsLoading(false)
+      toast.success('Báo cáo sự cố thành công!')
+      navigate('/staff/dashboard')
+    }, 1500)
+  }
+
+  const handleDeleteFile = (id) => {
+    setFiles(files.filter(f => f.id !== id))
+  }
+
+  const handleFileUpload = (e) => {
+    const uploadedFiles = Array.from(e.target.files)
+    if (uploadedFiles.length === 0) return
+
+    const newFiles = uploadedFiles.map(file => {
+      const isImage = file.type.startsWith('image/')
+      return {
+        id: Date.now() + Math.random(),
+        name: file.name,
+        size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+        type: isImage ? 'image' : 'pdf',
+        previews: isImage ? [URL.createObjectURL(file)] : null
+      }
+    })
+
+    setFiles([...files, ...newFiles])
+    // Reset input value to allow uploading the same file again if deleted
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-24">
@@ -80,7 +126,15 @@ const StaffCreateIncident = () => {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Tệp đính kèm (Hình ảnh hiện trường, Bằng lái...) <span className="text-red-500">*</span></label>
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                className="hidden" 
+                multiple 
+                accept="image/*,.pdf" 
+              />
+              <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
                 <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-3">
                   <UploadCloud size={24} />
                 </div>
@@ -90,39 +144,29 @@ const StaffCreateIncident = () => {
 
               {/* Uploaded Files */}
               <div className="mt-4 grid grid-cols-2 gap-4">
-                <div className="border border-gray-200 rounded-xl p-3 flex flex-col">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 shrink-0">
-                        <ImageIcon size={20} />
+                {files.map(file => (
+                  <div key={file.id} className="border border-gray-200 rounded-xl p-3 flex flex-col justify-between">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${file.type === 'image' ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
+                          {file.type === 'image' ? <ImageIcon size={20} /> : <FileText size={20} />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-gray-800 truncate" title={file.name}>{file.name}</p>
+                          <p className="text-xs text-gray-500">{file.size}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-gray-800 truncate">anh_hien_truong_01.jpg</p>
-                        <p className="text-xs text-gray-500">1.2 MB</p>
-                      </div>
+                      <button onClick={() => handleDeleteFile(file.id)} className="text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
                     </div>
-                    <button className="text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                  </div>
-                  <div className="flex gap-2">
-                    <img src="https://images.unsplash.com/photo-1562853274-b2586e3fcdb4?w=150&h=100&fit=crop" alt="preview 1" className="h-16 w-24 object-cover rounded-md border border-gray-200" />
-                    <img src="https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=150&h=100&fit=crop" alt="preview 2" className="h-16 w-24 object-cover rounded-md border border-gray-200" />
-                  </div>
-                </div>
-
-                <div className="border border-gray-200 rounded-xl p-3 flex flex-col justify-between">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-600 shrink-0">
-                        <FileText size={20} />
+                    {file.previews && (
+                      <div className="flex gap-2">
+                        {file.previews.map((preview, i) => (
+                          <img key={i} src={preview} alt={`preview ${i+1}`} className="h-16 w-24 object-cover rounded-md border border-gray-200" />
+                        ))}
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-gray-800 truncate">bien_ban_ghi_nhan.pdf</p>
-                        <p className="text-xs text-gray-500">450 KB</p>
-                      </div>
-                    </div>
-                    <button className="text-gray-400 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                    )}
                   </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -207,13 +251,13 @@ const StaffCreateIncident = () => {
                 </select>
               </div>
 
-              <div className="border border-red-200 bg-red-50 p-4 rounded-xl flex items-start gap-3">
-                <input type="checkbox" className="mt-1 w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500" />
+              <label className="border border-red-200 bg-red-50 p-4 rounded-xl flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={isEscalated} onChange={(e) => setIsEscalated(e.target.checked)} className="mt-1 w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500 cursor-pointer" />
                 <div>
-                  <label className="text-sm font-bold text-red-800 block mb-1">Chuyển Quản lý xử lý (Escalate)</label>
+                  <span className="text-sm font-bold text-red-800 block mb-1">Chuyển Quản lý xử lý (Escalate)</span>
                   <p className="text-xs text-red-600">Tích vào đây nếu sự cố này vượt quyền hạn xử lý của nhân viên ca trực, quản lý sẽ nhận được thông báo khẩn.</p>
                 </div>
-              </div>
+              </label>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Ghi chú nội bộ</label>
@@ -229,25 +273,77 @@ const StaffCreateIncident = () => {
         </div>
       </div>
 
-      {/* Sticky Footer */}
-      <div className="fixed bottom-0 left-64 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div> Không có trích xuất API từ Code...
+      {/* Dynamic Island Action Bar */}
+      <div 
+        className="fixed bottom-6 left-[calc(16rem+1.5rem)] right-6 z-30 flex justify-center group"
+        onMouseEnter={() => setIsActionBarVisible(true)}
+        onMouseLeave={() => setIsActionBarVisible(false)}
+      >
+        {/* Animated Gradient Glow (only visible when expanded) */}
+        <div className={`absolute top-0 bottom-0 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isActionBarVisible ? 'w-full max-w-4xl opacity-20' : 'w-[240px] opacity-0'} bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-[20px] blur animate-pulse pointer-events-none`}></div>
+
+        <div 
+          className={`relative bg-white/85 backdrop-blur-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden ring-1 ring-black/5 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] flex items-center ${
+            isActionBarVisible 
+              ? 'w-full max-w-4xl rounded-2xl px-6 py-4 justify-between h-[80px]' 
+              : 'w-[240px] rounded-full px-4 py-3 justify-center cursor-pointer hover:bg-white h-[48px]'
+          }`}
+        >
+          {/* Collapsed State Content */}
+          <div className={`flex items-center gap-3 absolute transition-all duration-300 ${isActionBarVisible ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100 delay-200'}`}>
+            <div className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border border-white"></span>
+            </div>
+            <span className="text-sm font-bold text-gray-700">Tùy chọn thao tác</span>
+            <ChevronUp size={16} className="text-gray-400 group-hover:animate-bounce" />
           </div>
-          <div className="flex items-center gap-4">
-            <button className="px-6 py-2.5 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition-colors">
-              Hủy bỏ
-            </button>
-            <button className="px-6 py-2.5 rounded-xl border border-blue-600 text-blue-600 font-bold hover:bg-blue-50 transition-colors">
-              Lưu nháp
-            </button>
-            <button
-              onClick={() => navigate('/staff/dashboard')}
-              className="px-8 py-2.5 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-200 hover:bg-blue-700 transition-colors"
-            >
-              Tạo sự cố
-            </button>
+
+          {/* Expanded State Content */}
+          <div className={`w-full flex items-center justify-between transition-all duration-500 ${isActionBarVisible ? 'opacity-100 scale-100 delay-100' : 'opacity-0 scale-95 pointer-events-none absolute'}`}>
+            <div className="flex items-center gap-4">
+              <div className="relative flex h-4 w-4 items-center justify-center">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border border-white shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+              </div>
+              <div>
+                <p className="text-sm font-black bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Sẵn sàng báo cáo</p>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">Hệ thống đã tự động lưu thông tin an toàn</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => navigate('/staff/dashboard')}
+                className="px-6 py-2.5 rounded-xl bg-gray-50/80 backdrop-blur-sm text-gray-600 font-bold hover:bg-gray-200 hover:text-gray-900 transition-all focus:ring-2 focus:ring-gray-200"
+              >
+                Hủy bỏ
+              </button>
+              <button className="px-6 py-2.5 rounded-xl bg-blue-50/80 backdrop-blur-sm text-blue-700 font-bold hover:bg-blue-100 transition-all focus:ring-2 focus:ring-blue-200">
+                Lưu nháp
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isLoading}
+                className="relative group/btn px-8 py-2.5 rounded-xl text-white font-bold transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center min-w-[170px] overflow-hidden hover:scale-105 active:scale-95 duration-300"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 transition-all duration-500 group-hover/btn:scale-110 group-hover/btn:opacity-90"></div>
+                <div className="absolute inset-0 opacity-0 group-hover/btn:opacity-20 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.5)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] animate-[shimmer_2s_infinite]"></div>
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3/4 h-4 bg-blue-600 blur-xl opacity-0 group-hover/btn:opacity-100 transition-opacity duration-500"></div>
+
+                {isLoading ? (
+                  <div className="flex items-center gap-2 relative z-10">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Đang gửi...</span>
+                  </div>
+                ) : (
+                  <span className="flex items-center gap-2 relative z-10 drop-shadow-md">
+                    <AlertTriangle size={18} className="animate-bounce" style={{ animationDuration: '2s' }} /> 
+                    Gửi Sự Cố Ngay
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

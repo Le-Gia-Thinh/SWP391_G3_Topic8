@@ -195,7 +195,7 @@ const StaffVerifyBooking = () => {
             {/* Actions */}
             <div className="space-y-3 pt-2">
               <button
-                onClick={() => navigate('/staff/checkin-success')}
+                onClick={() => navigate('/staff/checkin-success', { state: { actionType: 'booking-checkin' } })}
                 className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md shadow-blue-200 transition-colors text-lg"
               >
                 Xác nhận Cho xe vào
@@ -204,7 +204,7 @@ const StaffVerifyBooking = () => {
                 <button className="flex-1 py-3 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-colors flex justify-center items-center gap-2">
                   <XCircle size={18} /> Từ chối (Reject)
                 </button>
-                <button className="flex-1 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors flex justify-center items-center gap-2">
+                <button onClick={() => navigate('/staff/create-incident')} className="flex-1 py-3 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors flex justify-center items-center gap-2">
                   <FileText size={18} /> Tạo Sự cố
                 </button>
               </div>
@@ -214,25 +214,22 @@ const StaffVerifyBooking = () => {
         </div>
       </div>
 
-      {/* Sticky Footer */}
-      <div className="fixed bottom-0 left-64 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-8 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            <span className="flex items-center gap-2"><div className="w-2 h-2 bg-gray-400 rounded-full"></div> Quy trình nghiệp vụ tự động</span>
-            <span>Cập nhật trạng thái: ĐÃ SỬ DỤNG</span>
-            <span>Kích hoạt Phiên: ACTIVE_SESSION</span>
-            <span>Đổi trạng thái Slot: ĐANG ĐỖ</span>
-            <span>Lưu dữ liệu phục vụ Check-out</span>
-          </div>
-          <div className="flex items-center gap-6 text-xs text-gray-400 font-medium">
-            <span>© 2026 SmartPark System</span>
-            <span>Phiên bản: v2.4.0-stable</span>
-            <div className="flex justify-center gap-6 text-sm text-gray-500 border-t border-gray-100 pt-6 mt-8">
-              <Link to="/staff/user-guide" className="hover:text-gray-600 transition-colors">Hướng dẫn sử dụng</Link>
-              <Link to="/staff/support" className="hover:text-gray-600 transition-colors">Báo cáo lỗi</Link>
-              <Link to="/staff/support" className="hover:text-gray-600 transition-colors">Trung tâm trợ giúp</Link>
+      {/* Minimal Status Footer */}
+      <div className="fixed bottom-0 left-64 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-200/60 py-3 px-6 z-20 flex justify-between items-center text-xs shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+        <div className="flex items-center gap-3 text-gray-500">
+           <div className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
             </div>
-          </div>
+            <span className="font-bold text-gray-700 uppercase tracking-wide">Quy trình tự động:</span>
+            <span className="hidden md:inline">Cập nhật trạng thái Booking <span className="mx-1.5 text-gray-300">|</span> Kích hoạt Phiên <span className="mx-1.5 text-gray-300">|</span> Cập nhật Slot</span>
+        </div>
+        <div className="flex items-center gap-4 text-gray-400 font-medium">
+          <Link to="/staff/user-guide" className="hover:text-blue-600 transition-colors">Hướng dẫn</Link>
+          <span className="text-gray-200">|</span>
+          <Link to="/staff/support" className="hover:text-blue-600 transition-colors">Hỗ trợ & Báo lỗi</Link>
+          <span className="text-gray-200">|</span>
+          <span>v2.4.0-stable</span>
         </div>
       </div>
     </div>

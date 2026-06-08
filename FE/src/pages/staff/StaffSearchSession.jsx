@@ -2,73 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, Car, Clock, MapPin, ChevronRight, CheckCircle2, XCircle, AlertTriangle, RefreshCcw, Filter, ChevronDown, ChevronUp, Calendar, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const MOCK_SESSIONS = [
-  {
-    id: 'PS-20240518-0012',
-    plate: '51H-999.88',
-    vehicle: 'Ô tô 4 chỗ',
-    type: 'Vãng lai',
-    typeColor: 'bg-gray-100 text-gray-600',
-    slot: 'A-102',
-    gate: 'Gate 02',
-    checkIn: '18/05/2026 14:30',
-    checkOut: null,
-    status: 'active',
-    staff: 'Nguyễn Văn An'
-  },
-  {
-    id: 'PS-20240518-0010',
-    plate: '30A-997.21',
-    vehicle: 'Ô tô 7 chỗ',
-    type: 'Booking',
-    typeColor: 'bg-blue-50 text-blue-600',
-    slot: 'B-112',
-    gate: 'Gate 01',
-    checkIn: '18/05/2026 10:42',
-    checkOut: '18/05/2026 13:15',
-    status: 'completed',
-    staff: 'Nguyễn Văn An'
-  },
-  {
-    id: 'PS-20240518-0008',
-    plate: '43A-552.12',
-    vehicle: 'Xe máy',
-    type: 'Vãng lai',
-    typeColor: 'bg-gray-100 text-gray-600',
-    slot: 'M-005',
-    gate: 'Gate 03',
-    checkIn: '18/05/2026 09:15',
-    checkOut: '18/05/2026 11:50',
-    status: 'completed',
-    staff: 'Trần Minh Hòa'
-  },
-  {
-    id: 'PS-20240517-0099',
-    plate: '29D-111.90',
-    vehicle: 'Bán tải',
-    type: 'Vãng lai',
-    typeColor: 'bg-gray-100 text-gray-600',
-    slot: 'C-010',
-    gate: 'Gate 01',
-    checkIn: '17/05/2026 08:00',
-    checkOut: '17/05/2026 17:30',
-    status: 'completed',
-    staff: 'Lê Thị Hoa'
-  },
-  {
-    id: 'PS-20240518-0015',
-    plate: '51G-888.77',
-    vehicle: 'Ô tô 4 chỗ',
-    type: 'Booking',
-    typeColor: 'bg-blue-50 text-blue-600',
-    slot: 'A-008',
-    gate: 'Gate 01',
-    checkIn: '18/05/2026 15:00',
-    checkOut: null,
-    status: 'active',
-    staff: 'Nguyễn Văn An'
-  }
-]
+import { getSessions } from '../../apis/staffApi';
 
 const STATUS_CONFIG = {
   active:    { label: 'Đang đỗ', icon: <Clock size={14} />, color: 'bg-green-50 text-green-700 border-green-200' },
@@ -78,6 +12,11 @@ const STATUS_CONFIG = {
 
 const StaffSearchSession = () => {
   const navigate = useNavigate();
+  const [sessions, setSessions] = React.useState([]);
+  
+  React.useEffect(() => {
+    getSessions().then(data => setSessions(data));
+  }, []);
   
   // Search and Filter States
   const [query, setQuery] = useState('');
@@ -103,7 +42,7 @@ const StaffSearchSession = () => {
 
   // Filter Logic
   const filtered = useMemo(() => {
-    return MOCK_SESSIONS.filter(s => {
+    return sessions.filter(s => {
       const matchQuery = query === '' || 
         s.plate.toLowerCase().includes(query.toLowerCase()) || 
         s.id.toLowerCase().includes(query.toLowerCase());
@@ -116,7 +55,7 @@ const StaffSearchSession = () => {
 
       return matchQuery && matchStatus && matchType && matchVehicle && matchGate && matchDate;
     });
-  }, [query, filters]);
+  }, [query, filters, sessions]);
 
   const activeFiltersCount = Object.values(filters).filter(v => v !== 'all' && v !== '').length + (query ? 1 : 0);
 
@@ -268,10 +207,12 @@ const StaffSearchSession = () => {
               const stCfg = STATUS_CONFIG[session.status] || STATUS_CONFIG.completed
               const isSelected = selectedSession?.id === session.id
               return (
-                <button
+                <div
                   key={session.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedSession(isSelected ? null : session)}
-                  className={`w-full text-left bg-white rounded-2xl border transition-all hover:shadow-md p-5 ${
+                  className={`w-full text-left bg-white rounded-2xl border transition-all hover:shadow-md p-5 cursor-pointer outline-none ${
                     isSelected ? 'border-blue-400 shadow-md ring-2 ring-blue-100' : 'border-gray-200 hover:border-blue-300'
                   }`}
                 >
@@ -281,10 +222,10 @@ const StaffSearchSession = () => {
                         <Car size={24} />
                       </div>
                       <div>
-                        <p className="text-xl font-black text-gray-900 tracking-wide leading-none">{session.plate}</p>
-                        <p className="text-xs font-semibold text-gray-400 mt-1.5 flex items-center gap-1.5">
+                        <div className="text-xl font-black text-gray-900 tracking-wide leading-none">{session.plate}</div>
+                        <div className="text-xs font-semibold text-gray-400 mt-1.5 flex items-center gap-1.5">
                           {session.id} <span className="w-1 h-1 rounded-full bg-gray-300"></span> {session.vehicle}
-                        </p>
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -297,25 +238,25 @@ const StaffSearchSession = () => {
 
                   <div className="grid grid-cols-4 gap-4 text-sm bg-gray-50 rounded-xl p-3 border border-gray-100">
                     <div>
-                      <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Vị trí (Slot)</p>
-                      <p className="font-black text-blue-600">{session.slot}</p>
+                      <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Vị trí (Slot)</div>
+                      <div className="font-black text-blue-600">{session.slot}</div>
                     </div>
                     <div>
-                      <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Cổng (Gate)</p>
-                      <p className="font-bold text-gray-700">{session.gate}</p>
+                      <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Cổng (Gate)</div>
+                      <div className="font-bold text-gray-700">{session.gate}</div>
                     </div>
                     <div>
-                      <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Thời gian vào</p>
-                      <p className="font-bold text-gray-700">{session.checkIn}</p>
+                      <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Thời gian vào</div>
+                      <div className="font-bold text-gray-700">{session.checkIn}</div>
                     </div>
                     <div>
-                      <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Thời gian ra</p>
-                      <p className={`font-bold ${session.checkOut ? 'text-gray-700' : 'text-green-600 flex items-center gap-1'}`}>
-                        {session.checkOut || <><div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div> Đang đỗ</>}
-                      </p>
+                      <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Thời gian ra</div>
+                      <div className={`font-bold ${session.checkOut ? 'text-gray-700' : 'text-green-600 flex items-center gap-1'}`}>
+                        {session.checkOut || <><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse block"></span> Đang đỗ</>}
+                      </div>
                     </div>
                   </div>
-                </button>
+                </div>
               )
             })
           )}
