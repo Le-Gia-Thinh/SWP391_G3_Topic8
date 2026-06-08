@@ -11,7 +11,9 @@ import {
   LogOut,
   MapPin,
   Bell,
-  ChevronDown
+  ChevronDown,
+  Menu,
+  X
 } from 'lucide-react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -72,6 +74,7 @@ const DriverLayout = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isLocationOpen, setIsLocationOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const [selectedLocation, setSelectedLocation] = useState('District 1 Parking Tower')
 
@@ -173,20 +176,36 @@ const DriverLayout = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f8fafc] font-sans text-gray-900">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Top Navbar */}
-      <header className="sticky top-0 z-30 flex h-20 w-full shrink-0 items-center justify-between border-b border-gray-100 bg-white px-8">
+      <header className="sticky top-0 z-30 flex h-20 w-full shrink-0 items-center justify-between border-b border-gray-100 bg-white px-4 md:px-8">
         {/* Left: Logo & Location */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center md:gap-6 gap-3">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="flex items-center justify-center p-2 rounded-xl text-gray-500 hover:bg-gray-50"
+          >
+            <Menu size={24} />
+          </button>
+
           <Link
             to="/driver/home"
             onClick={closeAllDropdowns}
             className="flex items-center gap-3 transition-opacity hover:opacity-90"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-              <Car size={24} />
+            <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+              <Car size={20} className="md:w-6 md:h-6" />
             </div>
 
-            <div>
+            <div className="hidden sm:block">
               <h1 className="text-2xl font-black leading-none text-blue-600 tracking-tight">
                 PBMS
               </h1>
@@ -441,10 +460,31 @@ const DriverLayout = () => {
       </header>
 
       {/* Body */}
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 relative">
         {/* Sidebar */}
-        <aside className="hidden w-[270px] shrink-0 flex-col justify-between border-r border-gray-100 bg-white md:flex">
-          <div className="py-6">
+        <aside 
+          className={`fixed inset-y-0 left-0 z-50 w-[270px] flex-col justify-between border-r border-gray-100 bg-white shadow-xl transition-transform duration-300 ${
+            sidebarOpen ? 'translate-x-0 flex' : '-translate-x-full hidden'
+          }`}
+        >
+          <div className="py-6 flex-1 overflow-y-auto">
+            <div className="px-4 mb-6 flex items-center justify-between border-b border-gray-100 pb-4">
+              <Link to="/driver/home" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                  <Car size={20} className="w-6 h-6" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-black leading-none text-blue-600 tracking-tight">PBMS</h1>
+                  <p className="mt-1 text-[10px] text-gray-400">Parking Building System</p>
+                </div>
+              </Link>
+              <button 
+                onClick={() => setSidebarOpen(false)}
+                className="p-2 rounded-xl text-gray-400 hover:bg-gray-50"
+              >
+                <X size={20} />
+              </button>
+            </div>
             <nav className="space-y-1 px-4">
               {MENU_ITEMS.map((item) => {
                 const Icon = item.icon
@@ -454,7 +494,10 @@ const DriverLayout = () => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    onClick={closeAllDropdowns}
+                    onClick={() => {
+                      closeAllDropdowns()
+                      setSidebarOpen(false)
+                    }}
                     className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${active
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-100'
                       : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
@@ -471,7 +514,10 @@ const DriverLayout = () => {
           <div className="space-y-1 border-t border-gray-100 p-4">
             <Link
               to="/driver/settings"
-              onClick={closeAllDropdowns}
+              onClick={() => {
+                closeAllDropdowns()
+                setSidebarOpen(false)
+              }}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all ${isActiveMenu('/driver/settings')
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-100'
                 : 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
