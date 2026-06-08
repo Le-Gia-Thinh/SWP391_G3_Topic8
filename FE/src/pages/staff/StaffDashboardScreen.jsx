@@ -12,6 +12,7 @@ import {
   ArrowRightLeft,
   Bell
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const StatCard = ({ title, value, icon, colorClass, borderColorClass }) => (
   <div className={`bg-white rounded-xl p-5 border-l-4 ${borderColorClass} shadow-sm flex flex-col justify-between`}>
@@ -25,8 +26,8 @@ const StatCard = ({ title, value, icon, colorClass, borderColorClass }) => (
   </div>
 );
 
-const QuickActionCard = ({ title, desc, icon, iconColorClass }) => (
-  <button className="bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all rounded-xl p-4 flex items-center gap-4 text-left group">
+const QuickActionCard = ({ title, desc, icon, iconColorClass, onClick }) => (
+  <button onClick={onClick} className="bg-white border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all rounded-xl p-4 flex items-center gap-4 text-left group">
     <div className={`p-3 rounded-xl ${iconColorClass} group-hover:scale-110 transition-transform`}>
       {icon}
     </div>
@@ -56,6 +57,7 @@ const AlertItem = ({ title, time, type }) => {
 };
 
 const StaffDashboardScreen = () => {
+  const navigate = useNavigate();
   const recentIns = [
     { id: '#8821', type: 'Vãng lai', typeColor: 'bg-gray-100 text-gray-600', plate: '51G-123.45', vehicle: 'Ô tô 4 chỗ', time: '10:45:12', slot: 'A-024', staff: 'Nguyễn An' },
     { id: '#8820', type: 'Booking', typeColor: 'bg-blue-50 text-blue-600', plate: '30H-998.21', vehicle: 'Ô tô 7 chỗ', time: '10:42:05', slot: 'B-112', staff: 'Nguyễn An' },
@@ -65,28 +67,6 @@ const StaffDashboardScreen = () => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <header className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Staff Gate Dashboard</h1>
-          <p className="text-sm text-gray-500">Thứ Ba, 19 Tháng 5, 2026</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex bg-white rounded-full p-1 border border-gray-200 shadow-sm text-sm font-medium">
-            <button className="px-4 py-1.5 rounded-full bg-blue-50 text-blue-600">CỔNG VÀO A</button>
-            <button className="px-4 py-1.5 rounded-full text-gray-500 hover:bg-gray-50">CỔNG RA B</button>
-          </div>
-          <div className="px-3 py-1.5 rounded-full bg-green-50 border border-green-200 text-green-700 text-sm font-medium flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-            Trực tuyến
-          </div>
-          <button className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 relative">
-            <Bell size={20} />
-            <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-          </button>
-        </div>
-      </header>
-
       <div className="flex gap-6">
         {/* Main Content (Left) */}
         <div className="flex-1 space-y-6">
@@ -111,11 +91,11 @@ const StaffDashboardScreen = () => {
               <ArrowRightLeft size={20} className="text-blue-500" /> Thao tác nhanh
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <QuickActionCard title="Nhận xe vãng lai" desc="Nhập biển số cho xe không có đặt trước" icon={<Car size={20} className="text-blue-600" />} iconColorClass="bg-blue-50" />
-              <QuickActionCard title="Nhận xe đặt trước" desc="Quét mã hoặc nhập mã đặt chỗ" icon={<Clock size={20} className="text-purple-600" />} iconColorClass="bg-purple-50" />
-              <QuickActionCard title="Thanh toán & Trả xe" desc="Tính tiền và xác nhận xe ra" icon={<LogOut size={20} className="text-orange-600" />} iconColorClass="bg-orange-50" />
+              <QuickActionCard title="Nhận xe vãng lai" desc="Nhập biển số cho xe không có đặt trước" icon={<Car size={20} className="text-blue-600" />} iconColorClass="bg-blue-50" onClick={() => navigate('/staff/checkin-walkin')} />
+              <QuickActionCard title="Nhận xe đặt trước" desc="Quét mã hoặc nhập mã đặt chỗ" icon={<Clock size={20} className="text-purple-600" />} iconColorClass="bg-purple-50" onClick={() => navigate('/staff/checkin-booking')} />
+              <QuickActionCard title="Thanh toán & Trả xe" desc="Tính tiền và xác nhận xe ra" icon={<LogOut size={20} className="text-orange-600" />} iconColorClass="bg-orange-50" onClick={() => navigate('/staff/checkout')} />
               <QuickActionCard title="Tra cứu phiên" desc="Tìm kiếm lịch sử vào/ra theo biển số" icon={<Search size={20} className="text-indigo-600" />} iconColorClass="bg-indigo-50" />
-              <QuickActionCard title="Tạo sự cố" desc="Báo cáo mất thẻ, hỏng thiết bị, va chạm" icon={<AlertTriangle size={20} className="text-red-600" />} iconColorClass="bg-red-50" />
+              <QuickActionCard title="Tạo sự cố" desc="Báo cáo mất thẻ, hỏng thiết bị, va chạm" icon={<AlertTriangle size={20} className="text-red-600" />} iconColorClass="bg-red-50" onClick={() => navigate('/staff/create-incident')} />
               <QuickActionCard title="Xem sơ đồ chỗ" desc="Kiểm tra chi tiết vị trí các ô đỗ" icon={<Map size={20} className="text-green-600" />} iconColorClass="bg-green-50" />
             </div>
           </div>

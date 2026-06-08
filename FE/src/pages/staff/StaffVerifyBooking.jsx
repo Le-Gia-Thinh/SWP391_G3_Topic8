@@ -1,6 +1,6 @@
 import React from 'react';
-import { ChevronLeft, Calendar, Search, ShieldCheck, AlertTriangle, XCircle, FileText, RefreshCcw } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Calendar, Search, ShieldCheck, AlertTriangle, XCircle, FileText, RefreshCcw } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const StaffVerifyBooking = () => {
   const navigate = useNavigate();
@@ -227,10 +227,10 @@ const StaffVerifyBooking = () => {
           <div className="flex items-center gap-6 text-xs text-gray-400 font-medium">
             <span>© 2026 SmartPark System</span>
             <span>Phiên bản: v2.4.0-stable</span>
-            <div className="flex gap-4">
-              <a href="#" className="hover:text-gray-600 transition-colors">Hướng dẫn sử dụng</a>
-              <a href="#" className="hover:text-gray-600 transition-colors">Báo cáo lỗi</a>
-              <a href="#" className="hover:text-gray-600 transition-colors">Trung tâm trợ giúp</a>
+            <div className="flex justify-center gap-6 text-sm text-gray-500 border-t border-gray-100 pt-6 mt-8">
+              <Link to="/staff/user-guide" className="hover:text-gray-600 transition-colors">Hướng dẫn sử dụng</Link>
+              <Link to="/staff/support" className="hover:text-gray-600 transition-colors">Báo cáo lỗi</Link>
+              <Link to="/staff/support" className="hover:text-gray-600 transition-colors">Trung tâm trợ giúp</Link>
             </div>
           </div>
         </div>

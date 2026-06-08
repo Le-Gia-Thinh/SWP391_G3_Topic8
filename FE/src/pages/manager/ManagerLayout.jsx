@@ -13,7 +13,9 @@ import {
   User,
   Search,
   Calendar,
-  Car
+  Car,
+  Menu,
+  X
 } from 'lucide-react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -91,6 +93,7 @@ const ManagerLayout = () => {
   const [isLocationOpen, setIsLocationOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifications, setNotifications] = useState(notificationsData)
 
   const unreadCount = useMemo(
@@ -139,15 +142,35 @@ const ManagerLayout = () => {
 
   return (
     <div className="flex min-h-screen bg-[#f7f9fb] text-gray-900">
-      <aside className="hidden w-72 flex-col border-r border-gray-200 bg-white px-4 py-6 lg:flex">
-        <div className="mb-10 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-sky-100 text-sky-600 shadow-sm">
-            <Car size={20} />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">{appName}</p>
-            <p className="text-xs text-gray-500">{appSubtitle}</p>
-          </div>
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside 
+        className={`fixed inset-y-0 left-0 z-50 w-72 flex-col border-r border-gray-200 bg-white px-4 py-6 shadow-xl transition-transform duration-300 ${
+          sidebarOpen ? 'translate-x-0 flex' : '-translate-x-full hidden'
+        }`}
+      >
+        <div className="mb-10 flex items-center justify-between">
+          <Link to="/manager" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-sky-100 text-sky-600 shadow-sm">
+              <Car size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">{appName}</p>
+              <p className="text-xs text-gray-500">{appSubtitle}</p>
+            </div>
+          </Link>
+          <button 
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 rounded-xl text-gray-400 hover:bg-gray-50"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         <nav className="space-y-2">
@@ -157,6 +180,7 @@ const ManagerLayout = () => {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${isActive(item.path)
                   ? 'bg-blue-600 text-white shadow-lg'
                   : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
@@ -187,12 +211,31 @@ const ManagerLayout = () => {
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-gray-200 bg-white px-6 py-4 shadow-sm">
+      <div className="flex flex-1 flex-col min-w-0">
+        <header className="sticky top-0 z-30 border-b border-gray-200 bg-white px-4 lg:px-6 py-4 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="rounded-3xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                {selectedLocation}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(true)}
+                  className="flex items-center justify-center p-2 rounded-xl text-gray-500 hover:bg-gray-50"
+                >
+                  <Menu size={24} />
+                </button>
+                
+                <Link to="/manager" className="flex items-center gap-3 hover:opacity-80 transition-opacity ml-2 mr-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-100 text-sky-600 shadow-sm">
+                    <Car size={20} />
+                  </div>
+                  <div className="hidden sm:block">
+                    <p className="text-sm font-semibold text-gray-900">{appName}</p>
+                    <p className="text-[10px] text-gray-500">{appSubtitle}</p>
+                  </div>
+                </Link>
+                <div className="rounded-3xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 hidden sm:block">
+                  {selectedLocation}
+                </div>
               </div>
               <div className="relative hidden md:block">
                 <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />

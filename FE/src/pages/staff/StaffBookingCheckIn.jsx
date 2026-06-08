@@ -171,7 +171,7 @@ const StaffBookingCheckIn = () => {
           </div>
           <div className="flex gap-4">
             <span>Phiên bản v2.4.12-STABLE</span>
-            <a href="#" className="text-blue-600 hover:underline">Hỗ trợ kỹ thuật</a>
+            <a href="javascript:void(0)" className="text-blue-600 hover:underline">Hỗ trợ kỹ thuật</a>
           </div>
         </div>
       </div>

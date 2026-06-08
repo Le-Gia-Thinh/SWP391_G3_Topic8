@@ -16,6 +16,13 @@ import StaffCreateIncident from './pages/staff/StaffCreateIncident'
 import StaffVehicleCheckOut from './pages/staff/StaffVehicleCheckOut'
 import StaffPaymentConfirm from './pages/staff/StaffPaymentConfirm'
 import StaffCheckOutCompleted from './pages/staff/StaffCheckOutCompleted'
+import StaffParkingMap from './pages/staff/StaffParkingMap'
+import StaffSearchSession from './pages/staff/StaffSearchSession'
+import StaffProfile from './pages/staff/StaffProfile'
+import StaffSettings from './pages/staff/StaffSettings'
+import StaffSecurity from './pages/staff/StaffSecurity'
+import StaffSupport from './pages/staff/StaffSupport'
+import StaffUserGuide from './pages/staff/StaffUserGuide'
 import DriverLayout from './pages/driver/DriverLayout'
 import DriverHome from './pages/driver/DriverHome'
 import DriverBooking from './pages/driver/DriverBooking'
@@ -25,6 +32,10 @@ import DriverSession from './pages/driver/DriverSession'
 import DriverPayment from './pages/driver/DriverPayment'
 import DriverReport from './pages/driver/DriverReport'
 import DriverProfile from './pages/driver/DriverProfile'
+import DriverSupport from './pages/driver/DriverSupport'
+import DriverSettings from './pages/driver/DriverSettings'
+import DriverTerms from './pages/driver/DriverTerms'
+import DriverPrivacy from './pages/driver/DriverPrivacy'
 
 import ManagerLayout from './pages/manager/ManagerLayout'
 import ManagerDashboard from './pages/manager/ManagerDashboard'
@@ -32,6 +43,8 @@ import ManagerConfig from './pages/manager/ManagerConfig'
 import ManagerPricing from './pages/manager/ManagerPricing'
 import ManagerSlots from './pages/manager/ManagerSlots'
 import ManagerProfile from './pages/manager/ManagerProfile'
+import ManagerIncidents from './pages/manager/ManagerIncidents'
+import ManagerReports from './pages/manager/ManagerReports'
 
 import {
   VerifyEmailPending,
@@ -91,17 +104,8 @@ const App = () => {
           <Route path="positions" element={<ManagerSlots />} />
           <Route path="config" element={<ManagerConfig />} />
           <Route path="pricing" element={<ManagerPricing />} />
-          <Route
-            path="reports"
-            element={
-              <div className="rounded-3xl bg-white p-8 shadow-sm">
-                <h2 className="text-2xl font-bold">Báo cáo định kỳ</h2>
-                <p className="mt-2 text-sm text-gray-500">
-                  Trang đang được xây dựng.
-                </p>
-              </div>
-            }
-          />
+          <Route path="incidents" element={<ManagerIncidents />} />
+          <Route path="reports" element={<ManagerReports />} />
           <Route path="profile" element={<ManagerProfile />} />
         </Route>
       </Route>
@@ -120,6 +124,13 @@ const App = () => {
           <Route path="checkout" element={<StaffVehicleCheckOut />} />
           <Route path="payment" element={<StaffPaymentConfirm />} />
           <Route path="checkout-completed" element={<StaffCheckOutCompleted />} />
+          <Route path="parking-map" element={<StaffParkingMap />} />
+          <Route path="search-session" element={<StaffSearchSession />} />
+          <Route path="profile" element={<StaffProfile />} />
+          <Route path="settings" element={<StaffSettings />} />
+          <Route path="security" element={<StaffSecurity />} />
+          <Route path="support" element={<StaffSupport />} />
+          <Route path="user-guide" element={<StaffUserGuide />} />
         </Route>
       </Route>
 
@@ -141,6 +152,10 @@ const App = () => {
           <Route path="payment" element={<DriverPayment />} />
           <Route path="report" element={<DriverReport />} />
           <Route path="profile" element={<DriverProfile />} />
+          <Route path="support" element={<DriverSupport />} />
+          <Route path="settings" element={<DriverSettings />} />
+          <Route path="terms" element={<DriverTerms />} />
+          <Route path="privacy" element={<DriverPrivacy />} />
         </Route>
       </Route>
 

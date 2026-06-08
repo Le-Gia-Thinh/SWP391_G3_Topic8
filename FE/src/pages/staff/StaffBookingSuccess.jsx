@@ -110,7 +110,7 @@ const StaffBookingSuccess = () => {
             <span className="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1 rounded-full border border-blue-200 mb-6">SỬ DỤNG</span>
 
             <p className="text-xs text-gray-500 italic mb-8 border border-gray-100 bg-gray-50 p-3 rounded-lg text-left">
-              "Trong quá trình xuất bãi xe này sẽ tự động tra dữ liệu Booking vì loại hình Check-in là BOOKING. Nhân viên không cần phải nhập thủ công mã Booking."
+              &quot;Trong quá trình xuất bãi xe này sẽ tự động tra dữ liệu Booking vì loại hình Check-in là BOOKING. Nhân viên không cần phải nhập thủ công mã Booking.&quot;
             </p>
 
             <div className="flex gap-3 w-full">
