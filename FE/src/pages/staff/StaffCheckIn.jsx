@@ -175,7 +175,7 @@ const WalkInContent = () => {
                 <div key={groupName} className="mb-4">
                   <p className="text-xs font-bold text-gray-500 uppercase mb-2">{groupName}</p>
                   <div className="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-10 gap-2">
-                    {groupSlots.map(slot => {
+                    {groupSlots.map((slot, slotIndex) => {
                       const isSelected = selectedSlotId === slot.SlotID
                       const isDisabled = slot.SlotStatus !== 'Available'
                       const style = isSelected
@@ -183,7 +183,7 @@ const WalkInContent = () => {
                         : (SLOT_STATUS_STYLE[slot.SlotStatus] || SLOT_STATUS_STYLE.Available)
                       return (
                         <button
-                          key={slot.SlotID}
+                          key={`slot-${slot.SlotID}-${slotIndex}`}
                           disabled={isDisabled}
                           onClick={() => setSelectedSlotId(slot.SlotID)}
                           className={`border rounded-lg p-2 text-center transition-all h-12 flex items-center justify-center ${style}`}

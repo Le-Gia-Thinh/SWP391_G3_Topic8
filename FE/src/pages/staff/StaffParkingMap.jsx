@@ -7,7 +7,35 @@ const STATUS_CONFIG = {
   occupied: { label: 'Đã đỗ', bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700' },
   reserved: { label: 'Đã đặt', bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-700' },
   maintenance: { label: 'Bảo trì', bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-500' },
-  blocked: { label: 'Khóa', bg: 'bg-gray-800', border: 'border-gray-800', text: 'white' },
+  blocked: { label: 'Khóa', bg: 'bg-gray-800', border: 'border-gray-800', text: 'text-white' },
+}
+
+// Transform flat slots array → grouped zones for display
+function buildZones(slots) {
+  const zoneMap = {}
+  slots.forEach(slot => {
+    const key = slot.ZoneID
+    if (!zoneMap[key]) {
+      zoneMap[key] = {
+        id: slot.ZoneID,
+        label: `${slot.BuildingName} · ${slot.FloorName} · ${slot.ZoneName}`,
+        statuses: {},   // SlotCode → status (lowercase)
+        slotCodes: [],  // ordered list of SlotCodes
+      }
+    }
+    zoneMap[key].statuses[slot.SlotCode] = (slot.SlotStatus || 'Available').toLowerCase()
+    zoneMap[key].slotCodes.push(slot.SlotCode)
+  })
+
+  // Build rows (10 slots per row)
+  return Object.values(zoneMap).map(zone => {
+    const codes = [...new Set(zone.slotCodes)].sort()
+    const rows = []
+    for (let i = 0; i < codes.length; i += 10) {
+      rows.push(codes.slice(i, i + 10))
+    }
+    return { ...zone, rows }
+  })
 }
 
 const StaffParkingMap = () => {
@@ -21,17 +49,12 @@ const StaffParkingMap = () => {
     setLoading(true)
     try {
       const res = await axios.get('/staff/parking-map')
-      const data = res.data?.data || []
-
-      const normalized = data.map(zone => ({
-        ...zone,
-        statuses: Object.fromEntries(
-          Object.entries(zone.statuses || {}).map(([k, v]) => [k, (v || 'available').toLowerCase()])
-        ),
-      }))
-
-      setZones(normalized)
-      setActiveZone(prev => normalized.find(z => z.id === prev) ? prev : (normalized[0]?.id ?? null))
+      const flatSlots = res.data?.data || []
+      const built = buildZones(flatSlots)
+      setZones(built)
+      setActiveZone(prev =>
+        built.find(z => z.id === prev) ? prev : (built[0]?.id ?? null)
+      )
     } catch (err) {
       console.error('Fetch parking map error:', err)
       setZones([])
@@ -51,30 +74,24 @@ const StaffParkingMap = () => {
   }
 
   const zone = zones.find(z => z.id === activeZone)
-  const getStatus = (slotId) => zone?.statuses[slotId] || 'available'
+  const getStatus = (slotCode) => zone?.statuses[slotCode] || 'available'
   const totalSlots = zone ? Object.keys(zone.statuses).length : 0
   const availableCount = zone ? Object.values(zone.statuses).filter(s => s === 'available').length : 0
   const occupiedCount = zone ? Object.values(zone.statuses).filter(s => s === 'occupied').length : 0
   const reservedCount = zone ? Object.values(zone.statuses).filter(s => s === 'reserved').length : 0
 
-  // fetch slot detail when click
-  const handleSelectSlot = async (slotId) => {
+  const handleSelectSlot = async (slotCode) => {
     try {
-      const res = await axios.get(`/staff/slots/${slotId}`)
+      const res = await axios.get(`/staff/slots/${slotCode}`)
       setSelectedSlot({
-        id: slotId,
-        status: getStatus(slotId),
+        id: slotCode,
+        status: getStatus(slotCode),
         zone: zone?.label,
         details: res.data?.data
       })
     } catch (err) {
       console.error('Fetch slot details error:', err)
-      setSelectedSlot({
-        id: slotId,
-        status: getStatus(slotId),
-        zone: zone?.label,
-        details: null
-      })
+      setSelectedSlot({ id: slotCode, status: getStatus(slotCode), zone: zone?.label, details: null })
     }
   }
 
@@ -111,13 +128,12 @@ const StaffParkingMap = () => {
                     : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300'
                   }`}
               >
-                {z.label || `Zone ${z.id}`}
+                {z.label}
               </button>
             ))}
-
             <div className="ml-auto flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2">
               <button onClick={() => setZoom(z => Math.max(0.7, z - 0.1))} className="p-1.5 text-gray-500 hover:text-gray-800"><ZoomOut size={16} /></button>
-              <span className="text-xs font-semibold text-gray-600 w-10 text-center">{Math.round(zoom*100)}%</span>
+              <span className="text-xs font-semibold text-gray-600 w-10 text-center">{Math.round(zoom * 100)}%</span>
               <button onClick={() => setZoom(z => Math.min(1.5, z + 0.1))} className="p-1.5 text-gray-500 hover:text-gray-800"><ZoomIn size={16} /></button>
             </div>
           </div>
@@ -142,27 +158,25 @@ const StaffParkingMap = () => {
             <div className="h-6 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center mb-4">
               <span className="text-xs text-gray-400 font-semibold tracking-widest">◀ LỐI VÀO / RA ▶</span>
             </div>
-
             <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', transition: 'transform 0.2s' }}>
               {zone?.rows.map((row, ri) => (
                 <div key={`row-${ri}`} className="flex gap-2 mb-2 justify-center">
-                  {row.map(slotId => {
-                    if (!slotId) return null
-                    const st = getStatus(slotId)
+                  {row.map(slotCode => {
+                    const st = getStatus(slotCode)
                     const cfg = STATUS_CONFIG[st] || STATUS_CONFIG.available
-                    const isSelected = selectedSlot?.id === slotId
+                    const isSelected = selectedSlot?.id === slotCode
                     return (
                       <button
-                        key={`slot-${slotId}`}
-                        onClick={() => handleSelectSlot(slotId)}
+                        key={`slot-${slotCode}`}
+                        onClick={() => handleSelectSlot(slotCode)}
                         className={`w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center
                           transition-all hover:scale-110 hover:shadow-md ${isSelected
                             ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110'
                             : `${cfg.bg} ${cfg.border} ${cfg.text}`
                           }`}
-                        title={`${slotId} – ${cfg.label}`}
+                        title={`${slotCode} – ${cfg.label}`}
                       >
-                        <span className="font-bold text-xs">{slotId}</span>
+                        <span className="font-bold text-xs">{slotCode}</span>
                         {st === 'occupied' && <Car size={10} className="mt-0.5 opacity-70" />}
                         {st === 'available' && <span className="text-[8px] opacity-50 font-semibold">TRỐNG</span>}
                         {st === 'reserved' && <span className="text-[8px] font-bold opacity-70">ĐẶT</span>}
@@ -177,7 +191,7 @@ const StaffParkingMap = () => {
           </div>
         </div>
 
-        {/* Sidebar – slot detail */}
+        {/* Sidebar */}
         <div className="w-64 flex flex-col gap-4">
           {selectedSlot ? (
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-left">
@@ -186,11 +200,12 @@ const StaffParkingMap = () => {
                 <div className="text-4xl font-black text-blue-600">{selectedSlot.id}</div>
                 <div className="text-xs text-gray-400 mt-1">{selectedSlot.zone}</div>
               </div>
-              <div className={`text-center py-2 px-3 rounded-lg font-bold text-sm mb-4 ${STATUS_CONFIG[selectedSlot.status]?.bg} ${STATUS_CONFIG[selectedSlot.status]?.text} border ${STATUS_CONFIG[selectedSlot.status]?.border}`}>
+              <div className={`text-center py-2 px-3 rounded-lg font-bold text-sm mb-4
+                ${STATUS_CONFIG[selectedSlot.status]?.bg}
+                ${STATUS_CONFIG[selectedSlot.status]?.text}
+                border ${STATUS_CONFIG[selectedSlot.status]?.border}`}>
                 {STATUS_CONFIG[selectedSlot.status]?.label.toUpperCase()}
               </div>
-
-              {/* Chi tiết đầy đủ */}
               {selectedSlot.details && (
                 <div className="text-xs text-gray-600 space-y-1">
                   {selectedSlot.details.DriverName && <p><strong>Người gửi:</strong> {selectedSlot.details.DriverName}</p>}
@@ -200,9 +215,11 @@ const StaffParkingMap = () => {
                   {selectedSlot.details.EndTime && <p><strong>Dự kiến ra:</strong> {new Date(selectedSlot.details.EndTime).toLocaleString()}</p>}
                   {selectedSlot.details.BookingCode && <p><strong>Mã booking:</strong> {selectedSlot.details.BookingCode}</p>}
                   {selectedSlot.details.SessionCode && <p><strong>Mã session:</strong> {selectedSlot.details.SessionCode}</p>}
-                  {selectedSlot.details.PaymentStatus && <p><strong>Trạng thái thanh toán:</strong> {selectedSlot.details.PaymentStatus}</p>}
-                  {selectedSlot.details.FinalAmount != null && <p><strong>Tổng phí:</strong> {selectedSlot.details.FinalAmount.toLocaleString()} VND</p>}
-                  {selectedSlot.details.SurchargeAmount != null && selectedSlot.details.SurchargeAmount > 0 && (
+                  {selectedSlot.details.PaymentStatus && <p><strong>Thanh toán:</strong> {selectedSlot.details.PaymentStatus}</p>}
+                  {selectedSlot.details.FinalAmount != null && (
+                    <p><strong>Tổng phí:</strong> {selectedSlot.details.FinalAmount.toLocaleString()} VND</p>
+                  )}
+                  {selectedSlot.details.SurchargeAmount > 0 && (
                     <p><strong>Phụ trội:</strong> {selectedSlot.details.SurchargeAmount.toLocaleString()} VND</p>
                   )}
                 </div>

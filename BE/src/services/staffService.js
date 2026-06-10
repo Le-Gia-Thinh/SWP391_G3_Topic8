@@ -468,10 +468,66 @@ export async function checkInBooking(reservationId) {
     }
 }
 
-export async function searchSessions({ keyword, status, vehicleTypeId, fromDate, toDate }) {
+export async function searchSessions({ keyword, status, vehicleTypeId, fromDate, toDate } = {}) {
     const pool = await getPool()
-    const request = pool.request()
 
+    // ── Case đặc biệt: Reserved → query bảng Reservations ──
+    if (status === 'Reserved') {
+        const request = pool.request()
+        let where = "WHERE r.ReservationStatus = 'Reserved'"
+
+        if (keyword) {
+            request.input('keyword', sql.NVarChar(100), `%${keyword}%`)
+            where += ` AND (
+                u.FullName LIKE @keyword
+                OR sl.SlotCode LIKE @keyword
+                OR CAST(r.ReservationID AS NVARCHAR) LIKE @keyword
+            )`
+        }
+
+        if (vehicleTypeId && vehicleTypeId !== 'all') {
+            request.input('vehicleTypeId', sql.Int, Number(vehicleTypeId))
+            where += ' AND r.VehicleTypeID = @vehicleTypeId'
+        }
+
+        const result = await request.query(`
+            SELECT
+                NULL AS SessionID,
+                NULL AS SessionCode,
+                r.SlotID,
+                sl.SlotCode,
+                z.ZoneName,
+                f.FloorName,
+                b.BuildingName,
+                r.DriverID,
+                u.FullName AS DriverName,
+                u.PhoneNumber,
+                NULL AS PlateNumber,
+                r.VehicleTypeID,
+                vt.VehicleName,
+                vt.VehicleCode,
+                r.StartTime AS EntryTime,
+                r.EndTime AS ExitTime,
+                'Reserved' AS SessionStatus,
+                r.ReservationID,
+                CONCAT('BK-', RIGHT('0000'+CAST(r.ReservationID AS VARCHAR(10)),4)) AS BookingCode,
+                r.ReservationStatus
+            FROM Reservations r
+            JOIN Users u ON r.DriverID = u.UserID
+            JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
+            LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
+            LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
+            LEFT JOIN Floors f ON z.FloorID = f.FloorID
+            LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
+            ${where}
+            ORDER BY r.StartTime ASC
+        `)
+
+        return result.recordset
+    }
+
+    // ── Case bình thường: query ParkingSessions ──
+    const request = pool.request()
     let where = 'WHERE 1 = 1'
 
     if (keyword) {
@@ -482,8 +538,7 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
             OR ps.PlateNumber LIKE @keyword
             OR u.FullName LIKE @keyword
             OR sl.SlotCode LIKE @keyword
-        )
-        `
+        )`
     }
 
     if (status && status !== 'all') {
@@ -830,10 +885,19 @@ export async function getProfile(staffId) {
         stats: statsResult.recordset[0]
     }
 }
+export async function getVehicleTypes() {
+    const pool = await getPool()
+    const result = await pool.request().query(`
+    SELECT VehicleTypeID, VehicleCode, VehicleName, Description
+    FROM VehicleTypes
+    WHERE IsActive = 1
+    ORDER BY VehicleTypeID
+  `)
+    return result.recordset
+}
 export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status } = {}) {
     const pool = await getPool()
 
-    // Lấy tất cả slot kèm trạng thái từ ParkingSessions + Reservations
     const result = await pool.request()
         .input('BuildingID', sql.Int, buildingId || null)
         .input('FloorID', sql.Int, floorId || null)
@@ -845,30 +909,28 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
                 ps.VehicleTypeID,
                 ps.ZoneID,
                 z.ZoneName,
+                f.FloorID,
                 f.FloorName,
-                ps.SlotStatus AS OriginalStatus,
-
-                -- Check nếu đang có session Active → Occupied
-                CASE WHEN EXISTS (
-                    SELECT 1 FROM ParkingSessions s
-                    WHERE s.SlotID = ps.SlotID
-                      AND s.SessionStatus = 'Active'
-                ) THEN 'Occupied'
-                -- Check nếu đã có booking Reserved → Reserved
-                WHEN EXISTS (
-                    SELECT 1 FROM Reservations r
-                    WHERE r.SlotID = ps.SlotID
-                      AND r.ReservationStatus = 'Reserved'
-                ) THEN 'Reserved'
-                ELSE ps.SlotStatus
+                b.BuildingID,
+                b.BuildingName,
+                CASE 
+                    WHEN ps.SlotStatus IN ('Maintenance','Blocked') THEN ps.SlotStatus
+                    WHEN EXISTS (
+                        SELECT 1 FROM ParkingSessions s
+                        WHERE s.SlotID = ps.SlotID AND s.SessionStatus = 'Active'
+                    ) THEN 'Occupied'
+                    WHEN EXISTS (
+                        SELECT 1 FROM Reservations r
+                        WHERE r.SlotID = ps.SlotID AND r.ReservationStatus = 'Reserved'
+                    ) THEN 'Reserved'
+                    ELSE 'Available'
                 END AS SlotStatus,
-
-                -- Lấy thông tin session / booking (nếu muốn)
                 sess.SessionID,
                 rsv.ReservationID
             FROM ParkingSlots ps
             JOIN Zones z ON ps.ZoneID = z.ZoneID
             JOIN Floors f ON z.FloorID = f.FloorID
+            JOIN Buildings b ON f.BuildingID = b.BuildingID
             LEFT JOIN ParkingSessions sess
                 ON sess.SlotID = ps.SlotID AND sess.SessionStatus = 'Active'
             LEFT JOIN Reservations rsv
@@ -880,6 +942,7 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
             ORDER BY z.ZoneID, ps.SlotCode
         `)
 
+    return result.recordset  // flat array
     const slots = result.recordset
 
     // Group theo Zone
@@ -908,23 +971,22 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
     return Object.values(zonesMap)
 }
 export async function getSlotDetail(slotCode) {
-    const pool = await getPool()
+    const pool = await getPool();
     const result = await pool.request()
         .input('SlotCode', sql.NVarChar(20), slotCode)
         .query(`
-      SELECT 
-        ps.SlotID, ps.SlotCode, ps.SlotStatus,
-        r.ReservationID, r.StartTime, r.EndTime, r.ReservationStatus,
-        CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
-        s.SessionID, CONCAT('SS-', RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)),5)) AS SessionCode,
-        u.FullName AS DriverName, u.Email AS DriverEmail, u.PhoneNumber AS DriverPhone,
-        p.PaymentStatus, p.FinalAmount, p.SurchargeAmount
-      FROM ParkingSlots ps
-      LEFT JOIN Reservations r ON r.SlotID = ps.SlotID AND r.ReservationStatus='Reserved'
-      LEFT JOIN ParkingSessions s ON s.SlotID = ps.SlotID AND s.SessionStatus='Active'
-      LEFT JOIN Users u ON u.UserID = COALESCE(s.DriverID, r.DriverID)
-      LEFT JOIN Payments p ON p.SessionID = s.SessionID
-      WHERE ps.SlotCode = @SlotCode
-    `)
-    return result.recordset[0] || null
+        SELECT ps.SlotID, ps.SlotCode, ps.SlotStatus,
+               r.ReservationID, r.StartTime, r.EndTime, r.ReservationStatus,
+               CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
+               s.SessionID, CONCAT('SS-', RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)),5)) AS SessionCode,
+               u.FullName AS DriverName, u.Email AS DriverEmail, u.PhoneNumber AS DriverPhone,
+               p.PaymentStatus, p.FinalAmount, p.SurchargeAmount
+        FROM ParkingSlots ps
+        LEFT JOIN Reservations r ON r.SlotID = ps.SlotID AND r.ReservationStatus IN ('Reserved','Completed')
+        LEFT JOIN ParkingSessions s ON s.SlotID = ps.SlotID AND s.SessionStatus = 'Active'
+        LEFT JOIN Users u ON u.UserID = COALESCE(s.DriverID, r.DriverID)
+        LEFT JOIN Payments p ON p.SessionID = s.SessionID
+        WHERE ps.SlotCode = @SlotCode
+      `);
+    return result.recordset[0] || null;
 }

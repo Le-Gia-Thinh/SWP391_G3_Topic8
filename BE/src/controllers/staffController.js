@@ -1,6 +1,13 @@
 import { StatusCodes } from 'http-status-codes'
 import * as staffService from '../services/staffService.js'
+import * as sessionService from '../services/sessionService.js';
 
+export async function getSessions(req, res, next) {
+    try {
+        const data = await sessionService.getSessions();
+        res.status(StatusCodes.OK).json({ success: true, data });
+    } catch (err) { next(err); }
+}
 const getUserId = (req) => {
     return req.user?.UserID || req.user?.userId || req.jwtDecoded?.userId
 }
@@ -231,19 +238,12 @@ export async function getProfile(req, res, next) {
 // GET /api/staff/vehicle-types
 export async function getVehicleTypes(req, res, next) {
     try {
-        const pool = await getPool()
-        const result = await pool.request().query(
-            `SELECT VehicleTypeID, VehicleCode, VehicleName, Description
-             FROM VehicleTypes
-             WHERE IsActive = 1
-             ORDER BY VehicleTypeID`
-        )
-        res.status(StatusCodes.OK).json({ success: true, data: result.recordset })
-    } catch (error) {
-        next(error)
+        const data = await staffService.getVehicleTypes()
+        res.status(StatusCodes.OK).json({ success: true, data })
+    } catch (err) {
+        next(err)
     }
 }
-
 export async function getSlotDetail(req, res, next) {
     try {
         const { slotCode } = req.params
