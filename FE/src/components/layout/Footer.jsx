@@ -19,9 +19,9 @@ const Footer = () => {
               Nền tảng quản lý bãi đỗ xe thông minh, tối ưu hóa không gian, tiết kiệm thời gian cho người dùng với công nghệ nhận diện tự động.
             </p>
             <div className="flex items-center gap-4 text-gray-400">
-              <a href="#" className="hover:text-blue-600 transition-colors"><div className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center">FB</div></a>
-              <a href="#" className="hover:text-blue-600 transition-colors"><div className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center">YT</div></a>
-              <a href="#" className="hover:text-blue-600 transition-colors"><div className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center">IN</div></a>
+              <a href="javascript:void(0)" className="hover:text-blue-600 transition-colors"><div className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center">FB</div></a>
+              <a href="javascript:void(0)" className="hover:text-blue-600 transition-colors"><div className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center">YT</div></a>
+              <a href="javascript:void(0)" className="hover:text-blue-600 transition-colors"><div className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center">IN</div></a>
             </div>
           </div>
 
@@ -29,10 +29,10 @@ const Footer = () => {
           <div>
             <h3 className="font-bold text-gray-900 mb-4">Hỗ trợ</h3>
             <ul className="space-y-3">
-              <li><a href="#" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Về chúng tôi</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Gửi email hỗ trợ</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Chính sách bảo mật</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Điều khoản & Dịch vụ</a></li>
+              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Về chúng tôi</a></li>
+              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Gửi email hỗ trợ</a></li>
+              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Chính sách bảo mật</a></li>
+              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Điều khoản & Dịch vụ</a></li>
             </ul>
           </div>
 
@@ -85,8 +85,8 @@ const Footer = () => {
             © 2024 Parking Building Management System. Tất cả quyền được bảo lưu.
           </p>
           <div className="flex items-center gap-6 text-xs text-gray-400">
-            <a href="#" className="hover:text-gray-600">Điều khoản dịch vụ</a>
-            <a href="#" className="hover:text-gray-600">Chính sách bảo mật</a>
+            <a href="javascript:void(0)" className="hover:text-gray-600">Điều khoản dịch vụ</a>
+            <a href="javascript:void(0)" className="hover:text-gray-600">Chính sách bảo mật</a>
           </div>
         </div>
       </div>

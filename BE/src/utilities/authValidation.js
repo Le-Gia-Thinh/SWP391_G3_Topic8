@@ -163,66 +163,80 @@ export function validateSocialLogin(req, res, next) {
 export function validateCreateReservation(req, res, next) {
   const errors = [];
 
-  const driverId = Number(req.body.driverId);
-  const vehicleTypeId = Number(req.body.vehicleTypeId);
-  const slotId = Number(req.body.slotId);
-  const reservationDate = trim(req.body.reservationDate);
+  const vehicleType = req.body.vehicleTypeId || req.body.vehicleType;
+  const reservationDate = req.body.reservationDate || req.body.bookingDate;
   const startTime = req.body.startTime;
   const endTime = req.body.endTime;
+  const duration = req.body.duration;
+  const slotId = Number(req.body.slotId);
 
-  if (!Number.isInteger(driverId) || driverId <= 0) {
-    errors.push("driverId không hợp lệ");
-  }
-
-  if (!Number.isInteger(vehicleTypeId) || vehicleTypeId <= 0) {
-    errors.push("vehicleTypeId không hợp lệ");
-  }
-
-  if (!Number.isInteger(slotId) || slotId <= 0) {
-    errors.push("slotId không hợp lệ");
+  if (!vehicleType) {
+    errors.push("Loại phương tiện là bắt buộc");
   }
 
   if (!reservationDate) {
-    errors.push("reservationDate là bắt buộc");
+    errors.push("Ngày đặt chỗ là bắt buộc");
   }
 
   if (!startTime) {
-    errors.push("startTime là bắt buộc");
+    errors.push("Thời gian bắt đầu là bắt buộc");
   }
 
-  if (!endTime) {
-    errors.push("endTime là bắt buộc");
+  if (!endTime && !duration) {
+    errors.push("Cần có thời gian kết thúc hoặc thời lượng đặt chỗ");
   }
 
-  const start = new Date(startTime);
-  const end = new Date(endTime);
-
-  if (startTime && Number.isNaN(start.getTime())) {
-    errors.push("startTime không hợp lệ");
-  }
-
-  if (endTime && Number.isNaN(end.getTime())) {
-    errors.push("endTime không hợp lệ");
-  }
-
-  if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end <= start) {
-    errors.push("endTime phải lớn hơn startTime");
+  if (!Number.isInteger(slotId) || slotId <= 0) {
+    errors.push("Vị trí đỗ xe là bắt buộc");
   }
 
   if (errors.length > 0) {
-    return sendValidationError(res, errors);
+    return res.status(400).json({
+      success: false,
+      message: errors.join(", "),
+      errors,
+    });
   }
 
-  req.body.driverId = driverId;
-  req.body.vehicleTypeId = vehicleTypeId;
   req.body.slotId = slotId;
-  req.body.reservationDate = reservationDate;
 
   next();
 }
 
 export function validateCheckIn(req, res, next) {
   const errors = [];
+
+  const bookingCode = trim(req.body.bookingCode);
+  const reservationId = Number(req.body.reservationId);
+
+  const hasBookingCode = Boolean(bookingCode);
+  const hasReservationId = Number.isInteger(reservationId) && reservationId > 0;
+
+  if (hasBookingCode || hasReservationId) {
+    const plateNumber = trim(req.body.plateNumber).toUpperCase();
+
+    if (plateNumber && !plateNumberRegex.test(plateNumber)) {
+      errors.push("plateNumber không đúng định dạng. Ví dụ: 59A-12345 hoặc 59A-123.45");
+    }
+
+    if (errors.length > 0) {
+      return sendValidationError(res, errors);
+    }
+
+    if (hasReservationId) {
+      req.body.reservationId = reservationId;
+    }
+
+    if (hasBookingCode) {
+      req.body.bookingCode = bookingCode.toUpperCase();
+    }
+
+    if (plateNumber) {
+      req.body.plateNumber = plateNumber;
+    }
+
+    return next();
+  }
 
   const driverId = Number(req.body.driverId);
   const vehicleTypeId = Number(req.body.vehicleTypeId);

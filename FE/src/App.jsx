@@ -1,69 +1,124 @@
-  // src/App.jsx
-  import { Route, Routes } from 'react-router-dom'
-  import { GuestRoute, ProtectedRoute, RoleRoute } from './components/ProtectedRoute'
+import React, { Suspense } from 'react'
+import { Route, Routes } from 'react-router-dom'
+import { GuestRoute, ProtectedRoute, RoleRoute } from './components/ProtectedRoute'
+import {
+  LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut
+} from 'lucide-react'
 
-  import Home from './pages/Home'
-  import AdminLogin from './pages/AdminLogin'
-  import DriverRegister from './pages/DriverRegister'
-  import ManagerDashboard from './pages/ManagerDashboard'
-  import StaffDashboard from './pages/StaffDashboard'
-  
-  import DriverLayout from './pages/driver/DriverLayout'
-  import DriverHome from './pages/driver/DriverHome'
-  import DriverBooking from './pages/driver/DriverBooking'
-  import DriverBookingConfirmation from './pages/driver/DriverBookingConfirmation'
-  import './index.css'
+// Import Layouts
+import DashboardLayout from './components/layout/DashboardLayout'
 
-  const CheckIn = () => (
-    <div style={{ padding: 24 }}>
-      🚗 Check In - Staff/Manager
-    </div>
-  )
+// Import Common Pages (Lazy)
+const Home = React.lazy(() => import('./pages/Home'))
+const AdminLogin = React.lazy(() => import('./pages/AdminLogin'))
+const DriverRegister = React.lazy(() => import('./pages/DriverRegister'))
+const NotFound = React.lazy(() => import('./pages/common/NotFound'))
+const Forbidden = React.lazy(() => import('./pages/common/Forbidden'))
+const CheckIn = React.lazy(() => import('./pages/common/CheckIn'))
+const UserProfile = React.lazy(() => import('./pages/common/UserProfile'))
 
-  const Booking = () => (
-    <div style={{ padding: 24 }}>
-      📅 Booking - Driver
-    </div>
-  )
+import { VerifyEmailPending, VerifyEmailSuccess, VerifyEmailError } from './pages/VerifyEmailPages'
 
-  const Forbidden = () => (
-    <div style={{ padding: 24 }}>
-      403 - Bạn không có quyền truy cập
-    </div>
-  )
+// Manager Pages (Lazy)
+const ManagerDashboard = React.lazy(() => import('./pages/manager/ManagerDashboard'))
+const ManagerSlots = React.lazy(() => import('./pages/manager/ManagerSlots'))
+const ManagerConfig = React.lazy(() => import('./pages/manager/ManagerConfig'))
+const ManagerPricing = React.lazy(() => import('./pages/manager/ManagerPricing'))
+const ManagerIncidents = React.lazy(() => import('./pages/manager/ManagerIncidents'))
+const ManagerReports = React.lazy(() => import('./pages/manager/ManagerReports'))
 
-  const NotFound = () => (
-    <div style={{ padding: 24 }}>
-      404 - Không tìm thấy trang
-    </div>
-  )
+// Staff Pages (Lazy)
+const StaffDashboardScreen = React.lazy(() => import('./pages/staff/StaffDashboardScreen'))
+const StaffCheckIn = React.lazy(() => import('./pages/staff/StaffCheckIn'))
+const StaffActionSuccess = React.lazy(() => import('./pages/staff/StaffActionSuccess'))
+const StaffVerifyBooking = React.lazy(() => import('./pages/staff/StaffVerifyBooking'))
+const StaffCreateIncident = React.lazy(() => import('./pages/staff/StaffCreateIncident'))
+const StaffVehicleCheckOut = React.lazy(() => import('./pages/staff/StaffVehicleCheckOut'))
+const StaffPaymentConfirm = React.lazy(() => import('./pages/staff/StaffPaymentConfirm'))
+const StaffParkingMap = React.lazy(() => import('./pages/staff/StaffParkingMap'))
+const StaffSearchSession = React.lazy(() => import('./pages/staff/StaffSearchSession'))
+const StaffSupport = React.lazy(() => import('./pages/staff/StaffSupport'))
+const StaffUserGuide = React.lazy(() => import('./pages/staff/StaffUserGuide'))
 
-  const App = () => {
-    return (
+// Driver Pages (Lazy)
+const DriverHome = React.lazy(() => import('./pages/driver/DriverHome'))
+const DriverBooking = React.lazy(() => import('./pages/driver/DriverBooking'))
+const DriverBookingConfirmation = React.lazy(() => import('./pages/driver/DriverBookingConfirmation'))
+const DriverHistory = React.lazy(() => import('./pages/driver/DriverHistory'))
+const DriverSession = React.lazy(() => import('./pages/driver/DriverSession'))
+const DriverPayment = React.lazy(() => import('./pages/driver/DriverPayment'))
+const DriverReport = React.lazy(() => import('./pages/driver/DriverReport'))
+const DriverPaymentResult = React.lazy(() => import('./pages/driver/DriverPaymentResult'))
+const DriverHelp = React.lazy(() => import('./pages/driver/DriverHelp'))
+
+import './index.css'
+
+const managerLinks = [
+  { path: '/manager/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+  { path: '/manager/positions', label: 'Vị trí đỗ', icon: Map },
+  { path: '/manager/reports', label: 'Báo cáo', icon: FileText },
+  { isDivider: true },
+  { labelOnly: 'Cấu hình' },
+  { path: '/manager/pricing', label: 'Bảng giá', icon: Wallet },
+  { path: '/manager/config', label: 'Cấu hình bãi đỗ', icon: Settings },
+  { path: '/manager/incidents', label: 'Sự cố', icon: AlertTriangle }
+]
+
+const staffLinks = [
+  { path: '/staff/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+  { path: '/staff/parking-map', label: 'Bản đồ bãi đỗ', icon: Map },
+  { isDivider: true },
+  { labelOnly: 'Nghiệp vụ' },
+  { path: '/staff/checkin', label: 'Check-in (Vào)', icon: CheckSquare },
+  { path: '/staff/checkout', label: 'Check-out (Ra)', icon: LogOut },
+  { path: '/staff/search-session', label: 'Tìm kiếm phiên', icon: Search },
+  { path: '/staff/verify-booking', label: 'Xác thực Booking', icon: ShieldCheck },
+  { isDivider: true },
+  { labelOnly: 'Khác' },
+  { path: '/staff/create-incident', label: 'Báo cáo sự cố', icon: AlertTriangle },
+  { path: '/staff/user-guide', label: 'Hướng dẫn sử dụng', icon: BookOpen }
+]
+
+const driverLinks = [
+  { path: '/driver/home', label: 'Trang chủ', icon: HomeIcon },
+  { path: '/driver/session', label: 'Phiên đỗ xe', icon: Clock },
+  { path: '/driver/history', label: 'Lịch sử', icon: FileText },
+  { path: '/driver/payment', label: 'Thanh toán', icon: Wallet },
+  { isDivider: true },
+  { labelOnly: 'Hỗ trợ' },
+  { path: '/driver/report', label: 'Báo cáo sự cố', icon: AlertTriangle },
+  { path: '/driver/help', label: 'Trung tâm trợ giúp', icon: HelpCircle }
+]
+
+const LoadingFallback = () => (
+  <div className="flex min-h-screen items-center justify-center">
+    <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+  </div>
+)
+
+const App = () => {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
       <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
         <Route path="/403" element={<Forbidden />} />
 
-        {/* Chỉ user chưa login mới được vào */}
+        {/* Verify email routes */}
+        <Route path="/verify-email/pending" element={<VerifyEmailPending />} />
+        <Route path="/verify-email/success" element={<VerifyEmailSuccess />} />
+        <Route path="/verify-email/error" element={<VerifyEmailError />} />
+        <Route path="/verify-email" element={<VerifyEmailPending />} />
+
+        {/* Guest only */}
         <Route element={<GuestRoute />}>
           <Route path="/login" element={<AdminLogin />} />
           <Route path="/register" element={<DriverRegister />} />
         </Route>
 
-        {/* Chỉ cần login là vào được */}
+        {/* Protected */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/profile" element={<div>Profile test</div>} />
-        </Route>
-
-        {/* Manager only */}
-        <Route element={<RoleRoute allowedRoles={['Manager']} />}>
-          <Route path="/manager/dashboard" element={<ManagerDashboard />} />
-        </Route>
-
-        {/* Staff only */}
-        <Route element={<RoleRoute allowedRoles={['Staff']} />}>
-          <Route path="/staff/dashboard" element={<StaffDashboard />} />
+          <Route path="/profile" element={<UserProfile />} />
         </Route>
 
         {/* Staff + Manager */}
@@ -71,20 +126,92 @@
           <Route path="/checkin" element={<CheckIn />} />
         </Route>
 
+        {/* Manager only */}
+        <Route element={<RoleRoute allowedRoles={['Manager']} />}>
+          <Route path="/manager" element={<DashboardLayout links={managerLinks} roleName="Manager" profileLink="/manager/profile" />}>
+            <Route index element={<ManagerDashboard />} />
+            <Route path="dashboard" element={<ManagerDashboard />} />
+            <Route path="positions" element={<ManagerSlots />} />
+            <Route path="config" element={<ManagerConfig />} />
+            <Route path="pricing" element={<ManagerPricing />} />
+            <Route path="incidents" element={<ManagerIncidents />} />
+            <Route path="reports" element={<ManagerReports />} />
+            <Route path="profile" element={<UserProfile />} />
+          </Route>
+        </Route>
+
+        {/* Staff only */}
+        <Route element={<RoleRoute allowedRoles={['Staff']} />}>
+          <Route path="/staff" element={<DashboardLayout links={staffLinks} roleName="Staff" profileLink="/staff/profile" />}>
+            {/* Dashboard */}
+            <Route index element={<StaffDashboardScreen />} />
+            <Route path="dashboard" element={<StaffDashboardScreen />} />
+
+            {/* Check-in */}
+            <Route path="checkin" element={<StaffCheckIn />} />
+            <Route path="checkin-walkin" element={<StaffCheckIn />} />
+            <Route path="checkin-booking" element={<StaffCheckIn />} />
+
+            {/* Verify Booking với reservationId */}
+            <Route path="verify-booking/:reservationId" element={<StaffVerifyBooking />} />
+
+            {/* Action Success */}
+            <Route path="checkin-success" element={<StaffActionSuccess />} />
+            <Route path="booking-success" element={<StaffActionSuccess />} />
+            <Route path="checkout-completed" element={<StaffActionSuccess />} />
+
+            {/* Checkout */}
+            <Route path="checkout" element={<StaffVehicleCheckOut />} />
+
+            {/* Create Incident */}
+            <Route path="create-incident" element={<StaffCreateIncident />} />
+
+            {/* Payment */}
+            <Route path="payment/:sessionId" element={<StaffPaymentConfirm />} />
+
+            {/* Parking Map */}
+            <Route path="parking-map" element={<StaffParkingMap />} />
+
+            {/* Search Session */}
+            <Route path="search-session" element={<StaffSearchSession />} />
+
+            {/* Profile / Settings */}
+            <Route path="profile" element={<UserProfile />} />
+            <Route path="settings" element={<UserProfile />} />
+            <Route path="security" element={<UserProfile />} />
+
+            {/* Support / User Guide */}
+            <Route path="support" element={<StaffSupport />} />
+            <Route path="user-guide" element={<StaffUserGuide />} />
+          </Route>
+        </Route>
+
         {/* Driver only */}
         <Route element={<RoleRoute allowedRoles={['Driver']} />}>
-          <Route path="/driver" element={<DriverLayout />}>
+          <Route path="/driver" element={<DashboardLayout links={driverLinks} roleName="Driver" profileLink="/driver/profile" />}>
             <Route index element={<DriverHome />} />
             <Route path="dashboard" element={<DriverHome />} />
             <Route path="home" element={<DriverHome />} />
             <Route path="booking" element={<DriverBooking />} />
             <Route path="booking-confirmation" element={<DriverBookingConfirmation />} />
+            <Route path="history" element={<DriverHistory />} />
+            <Route path="session" element={<DriverSession />} />
+            <Route path="payment" element={<DriverPayment />} />
+            <Route path="report" element={<DriverReport />} />
+            <Route path="profile" element={<UserProfile />} />
+            <Route path="payment-result" element={<DriverPaymentResult />} />
+            <Route path="settings" element={<UserProfile />} />
+            <Route path="help" element={<DriverHelp />} />
+            <Route path="terms" element={<DriverHelp />} />
+            <Route path="privacy" element={<DriverHelp />} />
+            <Route path="support" element={<DriverHelp />} />
           </Route>
         </Route>
 
         <Route path="*" element={<NotFound />} />
       </Routes>
-    )
-  }
+    </Suspense>
+  )
+}
 
-  export default App
+export default App

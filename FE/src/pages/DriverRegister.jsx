@@ -202,17 +202,13 @@ export default function DriverRegister() {
         phoneNumber: formData.phoneNumber.trim(),
         email: formData.email.trim(),
         password: formData.password,
-        // plateNumber và vehicleType: BE hiện chưa có field này trong DB
-        // → gửi kèm để sau này BE mở rộng, không gây lỗi
         ...(formData.plateNumber.trim() && { plateNumber: formData.plateNumber.trim() })
       })
 
-      // FIX 4: dùng toast thay vì state successMsg
-      // → đồng nhất UX với toàn app
-      toast.success('Đăng ký thành công! Vui lòng đăng nhập.')
-      setFormData(INITIAL_FORM)
-
-      setTimeout(() => navigate('/login', { replace: true }), 1500)
+      localStorage.setItem('pendingVerifyEmail', formData.email.trim().toLowerCase())
+      localStorage.removeItem('emailVerified')
+      toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác minh tài khoản.')
+      navigate('/verify-email/pending', { replace: true })
     } catch {
       // FIX 5: lỗi từ server đã được authorizeAxios interceptor toast rồi
       // Chỉ cần set serverErrors nếu cần hiển thị thêm chi tiết
