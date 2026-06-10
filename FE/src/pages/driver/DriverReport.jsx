@@ -1,4 +1,8 @@
 import React, { useMemo, useState } from 'react'
+import authorizeAxios from '../../utils/authorizeAxios'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Modal from '../../components/ui/Modal'
 
 const ISSUE_TYPES = [
   { id: 'not_found', label: 'Không tìm thấy đặt chỗ', severity: 'Trung bình' },
@@ -29,6 +33,8 @@ const DriverReport = () => {
     { id: 2, name: 'Error.png' }
   ])
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [alertModal, setAlertModal] = useState({ isOpen: false, message: '', title: '' })
 
   const selectedIssueData = useMemo(() => {
     return ISSUE_TYPES.find((issue) => issue.id === selectedIssue)
@@ -52,7 +58,7 @@ const DriverReport = () => {
     setAttachments((prev) => prev.filter((file) => file.id !== fileId))
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const payload = {
       issueType: selectedIssue,
       issueLabel: selectedIssueData?.label,
@@ -63,8 +69,17 @@ const DriverReport = () => {
       attachments
     }
 
-    console.log('Report payload:', payload)
-    setIsSubmitted(true)
+    try {
+      setIsSubmitting(true)
+      await authorizeAxios.post('/driver/report', payload)
+      setIsSubmitted(true)
+      setAlertModal({ isOpen: true, title: 'Thành công', message: 'Báo cáo của bạn đã được gửi thành công.' })
+    } catch (error) {
+      console.error('Submit report failed:', error)
+      setAlertModal({ isOpen: true, title: 'Lỗi', message: error.response?.data?.message || 'Không thể gửi báo cáo. Vui lòng thử lại.' })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleCancel = () => {
@@ -184,12 +199,9 @@ const DriverReport = () => {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  className="w-fit rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
-                >
+                <Button variant="secondary" size="sm">
                   Thay đổi
-                </button>
+                </Button>
               </div>
             </div>
           </SectionCard>
@@ -282,7 +294,7 @@ const DriverReport = () => {
         {/* Right Column */}
         <div className="space-y-6">
           {/* Summary */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <Card>
             <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-4">
               <h2 className="text-lg font-bold text-blue-700">
                 Tóm tắt báo cáo
@@ -346,31 +358,27 @@ const DriverReport = () => {
             </div>
 
             <div className="mt-6 space-y-3">
-              <button
-                type="button"
+              <Button
                 onClick={handleSubmit}
-                disabled={isSubmitted}
-                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors ${isSubmitted
-                  ? 'cursor-not-allowed bg-blue-400'
-                  : 'bg-blue-600 hover:bg-blue-700'
-                }`}
+                disabled={isSubmitted || isSubmitting}
+                isLoading={isSubmitting}
+                className="w-full"
               >
-                <span>➤</span>
                 {isSubmitted ? 'Đã gửi báo cáo' : 'Gửi báo cáo ngay'}
-              </button>
+              </Button>
 
-              <button
-                type="button"
+              <Button
                 onClick={handleCancel}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-3 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+                variant="secondary"
+                className="w-full"
               >
                 Hủy bỏ
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
 
           {/* Support */}
-          <div className="rounded-2xl border border-gray-100 bg-gray-50/80 p-5">
+          <Card className="bg-gray-50/80 p-5">
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
               Hỗ trợ kỹ thuật
             </h3>
@@ -384,16 +392,25 @@ const DriverReport = () => {
               <span>PHIÊN BẢN HỆ THỐNG 2.4.0-RELEASE</span>
               <span>© 2026 PARKINGSAFE INC.</span>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
+
+      <Modal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ isOpen: false, message: '', title: '' })}
+        title={alertModal.title}
+        footer={<Button variant="primary" onClick={() => setAlertModal({ isOpen: false, message: '', title: '' })}>Đóng</Button>}
+      >
+        <p className="text-gray-700">{alertModal.message}</p>
+      </Modal>
     </div>
   )
 }
 
 const SectionCard = ({ step, title, description, children }) => {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+    <Card>
       <div className="mb-4 flex items-center gap-3">
         <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-100 text-xs font-bold text-blue-600">
           {step}
@@ -411,7 +428,7 @@ const SectionCard = ({ step, title, description, children }) => {
       </div>
 
       {children}
-    </div>
+    </Card>
   )
 }
 

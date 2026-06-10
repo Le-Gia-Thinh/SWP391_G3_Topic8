@@ -1,3 +1,4 @@
+// src/routes/staffRoutes.js
 import express from 'express'
 import * as staffController from '../controllers/staffController.js'
 import { isAuthorized, isStaffOrManager } from '../middlewares/authMiddleware.js'
@@ -13,6 +14,9 @@ router.get('/dashboard', staffController.getDashboard)
 // Parking map / slots
 router.get('/parking-map', staffController.getParkingMap)
 router.patch('/slots/:slotId/status', staffController.updateSlotStatus)
+
+// Vehicle types (cho dropdown walk-in)
+router.get('/vehicle-types', staffController.getVehicleTypes)
 
 // Walk-in check-in
 router.post('/check-in/walk-in', staffController.checkInWalkIn)
@@ -35,5 +39,6 @@ router.get('/incidents', staffController.getIncidents)
 
 // Profile
 router.get('/profile', staffController.getProfile)
+router.get('/slots/:slotCode', staffController.getSlotDetail)
 
 export default router

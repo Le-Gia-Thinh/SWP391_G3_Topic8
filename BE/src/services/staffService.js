@@ -58,13 +58,13 @@ function formatSessionCode(sessionId) {
 
 async function getDefaultDriverId(pool) {
     const result = await pool.request().query(`
-    SELECT TOP 1 UserID
-    FROM Users u
-    JOIN Roles r ON u.RoleID = r.RoleID
-    WHERE r.RoleName = 'Driver'
-      AND u.IsActive = 1
-    ORDER BY u.UserID
-  `)
+        SELECT TOP 1 UserID
+        FROM Users u
+        JOIN Roles r ON u.RoleID = r.RoleID
+        WHERE r.RoleName = 'Driver'
+        AND u.IsActive = 1
+        ORDER BY u.UserID
+    `)
 
     const user = result.recordset[0]
 
@@ -91,62 +91,62 @@ export async function getDashboard() {
     const pool = await getPool()
 
     const stats = await pool.request().query(`
-    SELECT
-      (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Active') AS activeSessions,
-      (SELECT COUNT(*) FROM ParkingSessions WHERE CAST(EntryTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckIns,
-      (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Completed' AND CAST(ExitTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckOuts,
-      (SELECT ISNULL(SUM(ISNULL(FinalAmount, Amount)), 0)
-       FROM Payments
-       WHERE PaymentStatus = 'Completed'
-         AND CAST(ISNULL(PaymentTime, SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE)) AS todayRevenue,
-      (SELECT COUNT(*) FROM Incidents WHERE IncidentStatus IN ('Open', 'InProgress')) AS openIncidents,
-      (SELECT COUNT(*) FROM Reservations WHERE ReservationStatus = 'Reserved') AS pendingBookings,
-      (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Available') AS availableSlots,
-      (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Occupied') AS occupiedSlots
-  `)
+        SELECT
+        (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Active') AS activeSessions,
+        (SELECT COUNT(*) FROM ParkingSessions WHERE CAST(EntryTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckIns,
+        (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Completed' AND CAST(ExitTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckOuts,
+        (SELECT ISNULL(SUM(ISNULL(FinalAmount, Amount)), 0)
+        FROM Payments
+        WHERE PaymentStatus = 'Completed'
+            AND CAST(ISNULL(PaymentTime, SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE)) AS todayRevenue,
+        (SELECT COUNT(*) FROM Incidents WHERE IncidentStatus IN ('Open', 'InProgress')) AS openIncidents,
+        (SELECT COUNT(*) FROM Reservations WHERE ReservationStatus = 'Reserved') AS pendingBookings,
+        (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Available') AS availableSlots,
+        (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Occupied') AS occupiedSlots
+    `)
 
     const recentCheckIns = await pool.request().query(`
-    SELECT TOP 8
-      ps.SessionID,
-      CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
-      ps.PlateNumber,
-      ps.EntryTime,
-      ps.SessionStatus,
-      vt.VehicleName,
-      vt.VehicleCode,
-      sl.SlotCode,
-      z.ZoneName,
-      f.FloorName,
-      b.BuildingName,
-      u.FullName AS DriverName
-    FROM ParkingSessions ps
-    JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
-    JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
-    JOIN Zones z ON sl.ZoneID = z.ZoneID
-    JOIN Floors f ON z.FloorID = f.FloorID
-    JOIN Buildings b ON f.BuildingID = b.BuildingID
-    JOIN Users u ON ps.DriverID = u.UserID
-    ORDER BY ps.EntryTime DESC
-  `)
+        SELECT TOP 8
+        ps.SessionID,
+        CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
+        ps.PlateNumber,
+        ps.EntryTime,
+        ps.SessionStatus,
+        vt.VehicleName,
+        vt.VehicleCode,
+        sl.SlotCode,
+        z.ZoneName,
+        f.FloorName,
+        b.BuildingName,
+        u.FullName AS DriverName
+        FROM ParkingSessions ps
+        JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
+        JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
+        JOIN Zones z ON sl.ZoneID = z.ZoneID
+        JOIN Floors f ON z.FloorID = f.FloorID
+        JOIN Buildings b ON f.BuildingID = b.BuildingID
+        JOIN Users u ON ps.DriverID = u.UserID
+        ORDER BY ps.EntryTime DESC
+    `)
 
     const alerts = await pool.request().query(`
-    SELECT TOP 6
-      IncidentID,
-      IncidentType,
-      IncidentStatus,
-      Priority,
-      Description,
-      CreatedAt
-    FROM Incidents
-    WHERE IncidentStatus IN ('Open', 'InProgress')
-    ORDER BY
-      CASE Priority
-        WHEN 'High' THEN 1
-        WHEN 'Normal' THEN 2
-        ELSE 3
-      END,
-      CreatedAt DESC
-  `)
+        SELECT TOP 6
+        IncidentID,
+        IncidentType,
+        IncidentStatus,
+        Priority,
+        Description,
+        CreatedAt
+        FROM Incidents
+        WHERE IncidentStatus IN ('Open', 'InProgress')
+        ORDER BY
+        CASE Priority
+            WHEN 'High' THEN 1
+            WHEN 'Normal' THEN 2
+            ELSE 3
+        END,
+        CreatedAt DESC
+    `)
 
     return {
         stats: stats.recordset[0],
@@ -155,65 +155,7 @@ export async function getDashboard() {
     }
 }
 
-export async function getParkingMap({ buildingId, floorId, zoneId, vehicleTypeId, status }) {
-    const pool = await getPool()
-    const request = pool.request()
 
-    let where = 'WHERE 1 = 1'
-
-    if (buildingId) {
-        request.input('buildingId', sql.Int, Number(buildingId))
-        where += ' AND b.BuildingID = @buildingId'
-    }
-
-    if (floorId) {
-        request.input('floorId', sql.Int, Number(floorId))
-        where += ' AND f.FloorID = @floorId'
-    }
-
-    if (zoneId) {
-        request.input('zoneId', sql.Int, Number(zoneId))
-        where += ' AND z.ZoneID = @zoneId'
-    }
-
-    if (vehicleTypeId) {
-        request.input('vehicleTypeId', sql.Int, Number(vehicleTypeId))
-        where += ' AND sl.VehicleTypeID = @vehicleTypeId'
-    }
-
-    if (status && status !== 'all') {
-        request.input('slotStatus', sql.NVarChar(20), normalizeSlotStatus(status))
-        where += ' AND sl.SlotStatus = @slotStatus'
-    }
-
-    const result = await request.query(`
-    SELECT
-      b.BuildingID,
-      b.BuildingName,
-      b.Address,
-      b.OperatingHours,
-      f.FloorID,
-      f.FloorName,
-      z.ZoneID,
-      z.ZoneName,
-      z.AllowedVehicleTypeID,
-      sl.SlotID,
-      sl.SlotCode,
-      sl.SlotStatus,
-      sl.VehicleTypeID,
-      vt.VehicleCode,
-      vt.VehicleName
-    FROM ParkingSlots sl
-    JOIN Zones z ON sl.ZoneID = z.ZoneID
-    JOIN Floors f ON z.FloorID = f.FloorID
-    JOIN Buildings b ON f.BuildingID = b.BuildingID
-    JOIN VehicleTypes vt ON sl.VehicleTypeID = vt.VehicleTypeID
-    ${where}
-    ORDER BY b.BuildingID, f.FloorID, z.ZoneID, sl.SlotCode
-  `)
-
-    return result.recordset
-}
 
 export async function updateSlotStatus(slotId, slotStatus) {
     if (!slotId) {
@@ -232,11 +174,11 @@ export async function updateSlotStatus(slotId, slotStatus) {
         .input('slotId', sql.Int, Number(slotId))
         .input('slotStatus', sql.NVarChar(20), normalizedStatus)
         .query(`
-      UPDATE ParkingSlots
-      SET SlotStatus = @slotStatus
-      OUTPUT INSERTED.*
-      WHERE SlotID = @slotId
-    `)
+        UPDATE ParkingSlots
+        SET SlotStatus = @slotStatus
+        OUTPUT INSERTED.*
+        WHERE SlotID = @slotId
+        `)
 
     const slot = result.recordset[0]
 
@@ -303,64 +245,17 @@ export async function getBookings({ status, keyword }) {
     if (keyword) {
         request.input('keyword', sql.NVarChar(100), `%${keyword}%`)
         where += `
-      AND (
-        CAST(r.ReservationID AS NVARCHAR(50)) LIKE @keyword
-        OR u.FullName LIKE @keyword
-        OR u.PhoneNumber LIKE @keyword
-        OR sl.SlotCode LIKE @keyword
-      )
-    `
+        AND (
+            CAST(r.ReservationID AS NVARCHAR(50)) LIKE @keyword
+            OR u.FullName LIKE @keyword
+            OR u.PhoneNumber LIKE @keyword
+            OR sl.SlotCode LIKE @keyword
+        )
+        `
     }
 
     const result = await request.query(`
-    SELECT TOP 100
-      r.ReservationID,
-      CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
-      r.DriverID,
-      u.FullName AS DriverName,
-      u.PhoneNumber,
-      u.Email,
-      r.VehicleTypeID,
-      vt.VehicleName,
-      vt.VehicleCode,
-      r.SlotID,
-      sl.SlotCode,
-      sl.SlotStatus,
-      z.ZoneName,
-      f.FloorName,
-      b.BuildingName,
-      r.ReservationDate,
-      r.StartTime,
-      r.EndTime,
-      r.ReservationStatus,
-      r.CreatedAt
-    FROM Reservations r
-    JOIN Users u ON r.DriverID = u.UserID
-    JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
-    LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
-    LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
-    LEFT JOIN Floors f ON z.FloorID = f.FloorID
-    LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
-    ${where}
-    ORDER BY r.StartTime ASC
-  `)
-
-    return result.recordset
-}
-
-export async function getBookingDetail(reservationId) {
-    const id = parseReservationId(reservationId)
-
-    if (!id) {
-        throw badRequest('ReservationID không hợp lệ.', 'INVALID_RESERVATION_ID')
-    }
-
-    const pool = await getPool()
-
-    const result = await pool.request()
-        .input('reservationId', sql.Int, id)
-        .query(`
-      SELECT
+        SELECT TOP 100
         r.ReservationID,
         CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
         r.DriverID,
@@ -381,15 +276,62 @@ export async function getBookingDetail(reservationId) {
         r.EndTime,
         r.ReservationStatus,
         r.CreatedAt
-      FROM Reservations r
-      JOIN Users u ON r.DriverID = u.UserID
-      JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
-      LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
-      LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
-      LEFT JOIN Floors f ON z.FloorID = f.FloorID
-      LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
-      WHERE r.ReservationID = @reservationId
+        FROM Reservations r
+        JOIN Users u ON r.DriverID = u.UserID
+        JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
+        LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
+        LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
+        LEFT JOIN Floors f ON z.FloorID = f.FloorID
+        LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
+        ${where}
+        ORDER BY r.StartTime ASC
     `)
+
+    return result.recordset
+}
+
+export async function getBookingDetail(reservationId) {
+    const id = parseReservationId(reservationId)
+
+    if (!id) {
+        throw badRequest('ReservationID không hợp lệ.', 'INVALID_RESERVATION_ID')
+    }
+
+    const pool = await getPool()
+
+    const result = await pool.request()
+        .input('reservationId', sql.Int, id)
+        .query(`
+        SELECT
+            r.ReservationID,
+            CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
+            r.DriverID,
+            u.FullName AS DriverName,
+            u.PhoneNumber,
+            u.Email,
+            r.VehicleTypeID,
+            vt.VehicleName,
+            vt.VehicleCode,
+            r.SlotID,
+            sl.SlotCode,
+            sl.SlotStatus,
+            z.ZoneName,
+            f.FloorName,
+            b.BuildingName,
+            r.ReservationDate,
+            r.StartTime,
+            r.EndTime,
+            r.ReservationStatus,
+            r.CreatedAt
+        FROM Reservations r
+        JOIN Users u ON r.DriverID = u.UserID
+        JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
+        LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
+        LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
+        LEFT JOIN Floors f ON z.FloorID = f.FloorID
+        LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
+        WHERE r.ReservationID = @reservationId
+        `)
 
     const booking = result.recordset[0]
 
@@ -416,13 +358,13 @@ export async function checkInBooking(reservationId) {
         const bookingResult = await new sql.Request(transaction)
             .input('reservationId', sql.Int, id)
             .query(`
-        SELECT
-          r.*,
-          sl.SlotStatus
-        FROM Reservations r WITH (UPDLOCK, ROWLOCK)
-        LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
-        WHERE r.ReservationID = @reservationId
-      `)
+            SELECT
+            r.*,
+            sl.SlotStatus
+            FROM Reservations r WITH (UPDLOCK, ROWLOCK)
+            LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
+            WHERE r.ReservationID = @reservationId
+        `)
 
         const booking = bookingResult.recordset[0]
 
@@ -438,10 +380,10 @@ export async function checkInBooking(reservationId) {
             await new sql.Request(transaction)
                 .input('reservationId', sql.Int, id)
                 .query(`
-          UPDATE Reservations
-          SET ReservationStatus = 'Expired'
-          WHERE ReservationID = @reservationId
-        `)
+            UPDATE Reservations
+            SET ReservationStatus = 'Expired'
+            WHERE ReservationID = @reservationId
+            `)
 
             throw conflict('Booking đã hết hạn.', 'BOOKING_EXPIRED')
         }
@@ -462,54 +404,54 @@ export async function checkInBooking(reservationId) {
             .input('plateNumber', sql.NVarChar(20), plateNumber)
             .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
             .query(`
-        INSERT INTO ParkingSessions (
-          SlotID,
-          DriverID,
-          PlateNumber,
-          VehicleTypeID,
-          EntryTime,
-          SessionStatus
-        )
-        OUTPUT INSERTED.*
-        VALUES (
-          @slotId,
-          @driverId,
-          @plateNumber,
-          @vehicleTypeId,
-          GETDATE(),
-          'Active'
-        )
-      `)
+            INSERT INTO ParkingSessions (
+            SlotID,
+            DriverID,
+            PlateNumber,
+            VehicleTypeID,
+            EntryTime,
+            SessionStatus
+            )
+            OUTPUT INSERTED.*
+            VALUES (
+            @slotId,
+            @driverId,
+            @plateNumber,
+            @vehicleTypeId,
+            GETDATE(),
+            'Active'
+            )
+        `)
 
         const session = insertSessionResult.recordset[0]
 
         await new sql.Request(transaction)
             .input('reservationId', sql.Int, id)
             .query(`
-        UPDATE Reservations
-        SET ReservationStatus = 'Completed'
-        WHERE ReservationID = @reservationId
-      `)
+            UPDATE Reservations
+            SET ReservationStatus = 'Completed'
+            WHERE ReservationID = @reservationId
+        `)
 
         await new sql.Request(transaction)
             .input('sessionId', sql.Int, session.SessionID)
             .query(`
-        IF NOT EXISTS (SELECT 1 FROM Payments WHERE SessionID = @sessionId)
-        BEGIN
-          INSERT INTO Payments (
-            SessionID,
-            Amount,
-            PaymentMethod,
-            PaymentStatus
-          )
-          VALUES (
-            @sessionId,
-            0,
-            'Pending',
-            'Pending'
-          )
-        END
-      `)
+            IF NOT EXISTS (SELECT 1 FROM Payments WHERE SessionID = @sessionId)
+            BEGIN
+            INSERT INTO Payments (
+                SessionID,
+                Amount,
+                PaymentMethod,
+                PaymentStatus
+            )
+            VALUES (
+                @sessionId,
+                0,
+                'Pending',
+                'Pending'
+            )
+            END
+        `)
 
         await transaction.commit()
 
@@ -535,13 +477,13 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
     if (keyword) {
         request.input('keyword', sql.NVarChar(100), `%${keyword}%`)
         where += `
-      AND (
-        CAST(ps.SessionID AS NVARCHAR(50)) LIKE @keyword
-        OR ps.PlateNumber LIKE @keyword
-        OR u.FullName LIKE @keyword
-        OR sl.SlotCode LIKE @keyword
-      )
-    `
+        AND (
+            CAST(ps.SessionID AS NVARCHAR(50)) LIKE @keyword
+            OR ps.PlateNumber LIKE @keyword
+            OR u.FullName LIKE @keyword
+            OR sl.SlotCode LIKE @keyword
+        )
+        `
     }
 
     if (status && status !== 'all') {
@@ -565,43 +507,43 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
     }
 
     const result = await request.query(`
-    SELECT TOP 200
-      ps.SessionID,
-      CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
-      ps.SlotID,
-      sl.SlotCode,
-      z.ZoneName,
-      f.FloorName,
-      b.BuildingName,
-      ps.DriverID,
-      u.FullName AS DriverName,
-      u.PhoneNumber,
-      ps.PlateNumber,
-      ps.VehicleTypeID,
-      vt.VehicleName,
-      vt.VehicleCode,
-      ps.EntryTime,
-      ps.ExitTime,
-      ps.SessionStatus,
-      p.PaymentID,
-      p.Amount,
-      p.FinalAmount,
-      p.PrepaidAmount,
-      p.SurchargeAmount,
-      p.PaymentMethod,
-      p.PaymentStatus,
-      p.SurchargeStatus
-    FROM ParkingSessions ps
-    JOIN Users u ON ps.DriverID = u.UserID
-    JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
-    JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
-    JOIN Zones z ON sl.ZoneID = z.ZoneID
-    JOIN Floors f ON z.FloorID = f.FloorID
-    JOIN Buildings b ON f.BuildingID = b.BuildingID
-    LEFT JOIN Payments p ON ps.SessionID = p.SessionID
-    ${where}
-    ORDER BY ps.EntryTime DESC
-  `)
+        SELECT TOP 200
+        ps.SessionID,
+        CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
+        ps.SlotID,
+        sl.SlotCode,
+        z.ZoneName,
+        f.FloorName,
+        b.BuildingName,
+        ps.DriverID,
+        u.FullName AS DriverName,
+        u.PhoneNumber,
+        ps.PlateNumber,
+        ps.VehicleTypeID,
+        vt.VehicleName,
+        vt.VehicleCode,
+        ps.EntryTime,
+        ps.ExitTime,
+        ps.SessionStatus,
+        p.PaymentID,
+        p.Amount,
+        p.FinalAmount,
+        p.PrepaidAmount,
+        p.SurchargeAmount,
+        p.PaymentMethod,
+        p.PaymentStatus,
+        p.SurchargeStatus
+        FROM ParkingSessions ps
+        JOIN Users u ON ps.DriverID = u.UserID
+        JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
+        JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
+        JOIN Zones z ON sl.ZoneID = z.ZoneID
+        JOIN Floors f ON z.FloorID = f.FloorID
+        JOIN Buildings b ON f.BuildingID = b.BuildingID
+        LEFT JOIN Payments p ON ps.SessionID = p.SessionID
+        ${where}
+        ORDER BY ps.EntryTime DESC
+    `)
 
     return result.recordset
 }
@@ -624,38 +566,38 @@ export async function getCheckoutPreview(sessionId) {
     const result = await pool.request()
         .input('sessionId', sql.Int, Number(sessionId))
         .query(`
-      SELECT
-        ps.SessionID,
-        CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
-        ps.SlotID,
-        sl.SlotCode,
-        z.ZoneName,
-        f.FloorName,
-        b.BuildingName,
-        ps.DriverID,
-        u.FullName AS DriverName,
-        ps.PlateNumber,
-        ps.VehicleTypeID,
-        vt.VehicleName,
-        vt.VehicleCode,
-        ps.EntryTime,
-        ps.ExitTime,
-        ps.SessionStatus,
-        p.PaymentID,
-        p.Amount,
-        p.PrepaidAmount,
-        p.PaymentStatus,
-        p.SurchargeStatus
-      FROM ParkingSessions ps
-      JOIN Users u ON ps.DriverID = u.UserID
-      JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
-      JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
-      JOIN Zones z ON sl.ZoneID = z.ZoneID
-      JOIN Floors f ON z.FloorID = f.FloorID
-      JOIN Buildings b ON f.BuildingID = b.BuildingID
-      LEFT JOIN Payments p ON ps.SessionID = p.SessionID
-      WHERE ps.SessionID = @sessionId
-    `)
+        SELECT
+            ps.SessionID,
+            CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
+            ps.SlotID,
+            sl.SlotCode,
+            z.ZoneName,
+            f.FloorName,
+            b.BuildingName,
+            ps.DriverID,
+            u.FullName AS DriverName,
+            ps.PlateNumber,
+            ps.VehicleTypeID,
+            vt.VehicleName,
+            vt.VehicleCode,
+            ps.EntryTime,
+            ps.ExitTime,
+            ps.SessionStatus,
+            p.PaymentID,
+            p.Amount,
+            p.PrepaidAmount,
+            p.PaymentStatus,
+            p.SurchargeStatus
+        FROM ParkingSessions ps
+        JOIN Users u ON ps.DriverID = u.UserID
+        JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
+        JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
+        JOIN Zones z ON sl.ZoneID = z.ZoneID
+        JOIN Floors f ON z.FloorID = f.FloorID
+        JOIN Buildings b ON f.BuildingID = b.BuildingID
+        LEFT JOIN Payments p ON ps.SessionID = p.SessionID
+        WHERE ps.SessionID = @sessionId
+        `)
 
     const session = result.recordset[0]
 
@@ -752,10 +694,10 @@ export async function createIncident({
         const sessionResult = await pool.request()
             .input('sessionId', sql.Int, Number(sessionId))
             .query(`
-        SELECT DriverID
-        FROM ParkingSessions
-        WHERE SessionID = @sessionId
-      `)
+            SELECT DriverID
+            FROM ParkingSessions
+            WHERE SessionID = @sessionId
+        `)
 
         const session = sessionResult.recordset[0]
 
@@ -774,30 +716,30 @@ export async function createIncident({
         .input('description', sql.NVarChar(500), description || null)
         .input('staffId', sql.Int, staffId || null)
         .query(`
-      INSERT INTO Incidents (
-        SessionID,
-        DriverID,
-        IncidentType,
-        IncidentStatus,
-        Priority,
-        Description,
-        AssignedStaffID,
-        CreatedAt,
-        UpdatedAt
-      )
-      OUTPUT INSERTED.*
-      VALUES (
-        @sessionId,
-        @driverId,
-        @incidentType,
-        'Open',
-        @priority,
-        @description,
-        @staffId,
-        GETDATE(),
-        GETDATE()
-      )
-    `)
+        INSERT INTO Incidents (
+            SessionID,
+            DriverID,
+            IncidentType,
+            IncidentStatus,
+            Priority,
+            Description,
+            AssignedStaffID,
+            CreatedAt,
+            UpdatedAt
+        )
+        OUTPUT INSERTED.*
+        VALUES (
+            @sessionId,
+            @driverId,
+            @incidentType,
+            'Open',
+            @priority,
+            @description,
+            @staffId,
+            GETDATE(),
+            GETDATE()
+        )
+        `)
 
     return result.recordset[0]
 }
@@ -819,28 +761,28 @@ export async function getIncidents({ status, priority }) {
     }
 
     const result = await request.query(`
-    SELECT TOP 100
-      i.IncidentID,
-      i.SessionID,
-      CONCAT('SS-', RIGHT('00000' + CAST(i.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
-      i.DriverID,
-      u.FullName AS DriverName,
-      ps.PlateNumber,
-      i.IncidentType,
-      i.IncidentStatus,
-      i.Priority,
-      i.Description,
-      i.AssignedStaffID,
-      staff.FullName AS AssignedStaffName,
-      i.CreatedAt,
-      i.UpdatedAt
-    FROM Incidents i
-    JOIN Users u ON i.DriverID = u.UserID
-    LEFT JOIN ParkingSessions ps ON i.SessionID = ps.SessionID
-    LEFT JOIN Users staff ON i.AssignedStaffID = staff.UserID
-    ${where}
-    ORDER BY i.CreatedAt DESC
-  `)
+        SELECT TOP 100
+        i.IncidentID,
+        i.SessionID,
+        CONCAT('SS-', RIGHT('00000' + CAST(i.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
+        i.DriverID,
+        u.FullName AS DriverName,
+        ps.PlateNumber,
+        i.IncidentType,
+        i.IncidentStatus,
+        i.Priority,
+        i.Description,
+        i.AssignedStaffID,
+        staff.FullName AS AssignedStaffName,
+        i.CreatedAt,
+        i.UpdatedAt
+        FROM Incidents i
+        JOIN Users u ON i.DriverID = u.UserID
+        LEFT JOIN ParkingSessions ps ON i.SessionID = ps.SessionID
+        LEFT JOIN Users staff ON i.AssignedStaffID = staff.UserID
+        ${where}
+        ORDER BY i.CreatedAt DESC
+    `)
 
     return result.recordset
 }
@@ -855,18 +797,18 @@ export async function getProfile(staffId) {
     const userResult = await pool.request()
         .input('staffId', sql.Int, Number(staffId))
         .query(`
-      SELECT
-        u.UserID,
-        u.FullName,
-        u.Email,
-        u.PhoneNumber,
-        u.AvatarUrl,
-        u.IsActive,
-        r.RoleName
-      FROM Users u
-      JOIN Roles r ON u.RoleID = r.RoleID
-      WHERE u.UserID = @staffId
-    `)
+        SELECT
+            u.UserID,
+            u.FullName,
+            u.Email,
+            u.PhoneNumber,
+            u.AvatarUrl,
+            u.IsActive,
+            r.RoleName
+        FROM Users u
+        JOIN Roles r ON u.RoleID = r.RoleID
+        WHERE u.UserID = @staffId
+        `)
 
     const user = userResult.recordset[0]
 
@@ -877,14 +819,112 @@ export async function getProfile(staffId) {
     const statsResult = await pool.request()
         .input('staffId', sql.Int, Number(staffId))
         .query(`
-      SELECT
-        (SELECT COUNT(*) FROM Incidents WHERE AssignedStaffID = @staffId) AS assignedIncidents,
-        (SELECT COUNT(*) FROM Incidents WHERE AssignedStaffID = @staffId AND IncidentStatus = 'Resolved') AS resolvedIncidents,
-        (SELECT COUNT(*) FROM Incidents WHERE AssignedStaffID = @staffId AND IncidentStatus IN ('Open','InProgress')) AS openIncidents
-    `)
+        SELECT
+            (SELECT COUNT(*) FROM Incidents WHERE AssignedStaffID = @staffId) AS assignedIncidents,
+            (SELECT COUNT(*) FROM Incidents WHERE AssignedStaffID = @staffId AND IncidentStatus = 'Resolved') AS resolvedIncidents,
+            (SELECT COUNT(*) FROM Incidents WHERE AssignedStaffID = @staffId AND IncidentStatus IN ('Open','InProgress')) AS openIncidents
+        `)
 
     return {
         user,
         stats: statsResult.recordset[0]
     }
+}
+export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status } = {}) {
+    const pool = await getPool()
+
+    // Lấy tất cả slot kèm trạng thái từ ParkingSessions + Reservations
+    const result = await pool.request()
+        .input('BuildingID', sql.Int, buildingId || null)
+        .input('FloorID', sql.Int, floorId || null)
+        .input('VehicleTypeID', sql.Int, vehicleTypeId || null)
+        .query(`
+            SELECT 
+                ps.SlotID,
+                ps.SlotCode,
+                ps.VehicleTypeID,
+                ps.ZoneID,
+                z.ZoneName,
+                f.FloorName,
+                ps.SlotStatus AS OriginalStatus,
+
+                -- Check nếu đang có session Active → Occupied
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM ParkingSessions s
+                    WHERE s.SlotID = ps.SlotID
+                      AND s.SessionStatus = 'Active'
+                ) THEN 'Occupied'
+                -- Check nếu đã có booking Reserved → Reserved
+                WHEN EXISTS (
+                    SELECT 1 FROM Reservations r
+                    WHERE r.SlotID = ps.SlotID
+                      AND r.ReservationStatus = 'Reserved'
+                ) THEN 'Reserved'
+                ELSE ps.SlotStatus
+                END AS SlotStatus,
+
+                -- Lấy thông tin session / booking (nếu muốn)
+                sess.SessionID,
+                rsv.ReservationID
+            FROM ParkingSlots ps
+            JOIN Zones z ON ps.ZoneID = z.ZoneID
+            JOIN Floors f ON z.FloorID = f.FloorID
+            LEFT JOIN ParkingSessions sess
+                ON sess.SlotID = ps.SlotID AND sess.SessionStatus = 'Active'
+            LEFT JOIN Reservations rsv
+                ON rsv.SlotID = ps.SlotID AND rsv.ReservationStatus = 'Reserved'
+            WHERE f.IsActive = 1
+              AND (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
+              AND (@FloorID IS NULL OR z.FloorID = @FloorID)
+              AND (@VehicleTypeID IS NULL OR ps.VehicleTypeID = @VehicleTypeID)
+            ORDER BY z.ZoneID, ps.SlotCode
+        `)
+
+    const slots = result.recordset
+
+    // Group theo Zone
+    const zonesMap = {}
+    slots.forEach(slot => {
+        if (!zonesMap[slot.ZoneID]) {
+            zonesMap[slot.ZoneID] = {
+                id: slot.ZoneID,
+                label: `${slot.ZoneName} – ${slot.FloorName}`,
+                rows: [],
+                statuses: {}
+            }
+        }
+        zonesMap[slot.ZoneID].statuses[slot.SlotCode] = slot.SlotStatus
+    })
+
+    // Tạo rows (10 slots / row)
+    Object.values(zonesMap).forEach(zone => {
+        const slotCodes = Object.keys(zone.statuses).sort() // sort để FE hiển thị đúng
+        const rowCount = Math.ceil(slotCodes.length / 10)
+        for (let i = 0; i < rowCount; i++) {
+            zone.rows.push(slotCodes.slice(i * 10, i * 10 + 10))
+        }
+    })
+
+    return Object.values(zonesMap)
+}
+export async function getSlotDetail(slotCode) {
+    const pool = await getPool()
+    const result = await pool.request()
+        .input('SlotCode', sql.NVarChar(20), slotCode)
+        .query(`
+      SELECT 
+        ps.SlotID, ps.SlotCode, ps.SlotStatus,
+        r.ReservationID, r.StartTime, r.EndTime, r.ReservationStatus,
+        CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
+        s.SessionID, CONCAT('SS-', RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)),5)) AS SessionCode,
+        u.FullName AS DriverName, u.Email AS DriverEmail, u.PhoneNumber AS DriverPhone,
+        p.PaymentStatus, p.FinalAmount, p.SurchargeAmount
+      FROM ParkingSlots ps
+      LEFT JOIN Reservations r ON r.SlotID = ps.SlotID AND r.ReservationStatus='Reserved'
+      LEFT JOIN ParkingSessions s ON s.SlotID = ps.SlotID AND s.SessionStatus='Active'
+      LEFT JOIN Users u ON u.UserID = COALESCE(s.DriverID, r.DriverID)
+      LEFT JOIN Payments p ON p.SessionID = s.SessionID
+      WHERE ps.SlotCode = @SlotCode
+    `)
+    return result.recordset[0] || null
 }

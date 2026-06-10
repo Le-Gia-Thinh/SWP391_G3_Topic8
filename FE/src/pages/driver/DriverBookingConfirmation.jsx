@@ -21,6 +21,9 @@ import {
   useSearchParams
 } from 'react-router-dom'
 import authorizeAxios from '../../utils/authorizeAxios'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Modal from '../../components/ui/Modal'
 
 const PARKING_INFO = {
   name: 'District 1 Parking Tower',
@@ -239,6 +242,8 @@ const DriverBookingConfirmation = () => {
   const [reservation, setReservation] = useState(null)
   const [isLoading, setIsLoading] = useState(Boolean(reservationId))
   const [errorMessage, setErrorMessage] = useState('')
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false })
+  const [alertModal, setAlertModal] = useState({ isOpen: false, message: '' })
 
   const fetchReservationDetail = async () => {
     if (!reservationId) {
@@ -327,35 +332,23 @@ const DriverBookingConfirmation = () => {
       // ignore
     }
   }
-
-  const handleCancelBooking = async () => {
+  const handleCancelBooking = () => {
     if (!booking?.reservationId) {
       navigate('/driver/history')
       return
     }
+    setConfirmModal({ isOpen: true })
+  }
 
-    if (!canCancel) {
-      alert('Chỉ có thể hủy booking đang hoạt động/chưa check-in.')
-      return
-    }
-
-    const confirmed = window.confirm(
-      `Bạn có chắc muốn hủy đặt chỗ ${booking.bookingCode} không?`
-    )
-
-    if (!confirmed) return
-
+  const confirmCancel = async () => {
+    setConfirmModal({ isOpen: false })
     try {
       await authorizeAxios.patch(`/reservations/${booking.reservationId}/cancel`)
       navigate('/driver/history')
     } catch (error) {
       console.error('Cancel reservation failed:', error)
-
-      const message =
-        error.response?.data?.message ||
-        'Hủy đặt chỗ thất bại. Vui lòng thử lại.'
-
-      alert(message)
+      const message = error.response?.data?.message || 'Hủy đặt chỗ thất bại. Vui lòng thử lại.'
+      setAlertModal({ isOpen: true, message })
     }
   }
 
@@ -376,14 +369,14 @@ const DriverBookingConfirmation = () => {
           {errorMessage}
         </p>
 
-        <button
-          type="button"
+        <Button
           onClick={fetchReservationDetail}
-          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
+          variant="danger"
+          className="mt-4"
+          icon={RefreshCcw}
         >
-          <RefreshCcw size={16} />
           Thử lại
-        </button>
+        </Button>
       </div>
     )
   }
@@ -608,6 +601,30 @@ const DriverBookingConfirmation = () => {
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false })}
+        title="Xác nhận hủy đặt chỗ"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirmModal({ isOpen: false })}>Quay lại</Button>
+            <Button variant="danger" onClick={confirmCancel}>Xác nhận hủy</Button>
+          </>
+        }
+      >
+        <p className="text-gray-600">Bạn có chắc chắn muốn hủy đặt chỗ <span className="font-bold text-gray-900">{booking?.bookingCode}</span> không?</p>
+        <p className="text-sm text-gray-500 mt-2">Lưu ý: Thao tác này không thể hoàn tác.</p>
+      </Modal>
+
+      <Modal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ isOpen: false, message: '' })}
+        title="Thông báo"
+        footer={<Button variant="primary" onClick={() => setAlertModal({ isOpen: false, message: '' })}>Đóng</Button>}
+      >
+        <p className="text-gray-700">{alertModal.message}</p>
+      </Modal>
     </div>
   )
 }

@@ -11,6 +11,7 @@ Trong FE : khởi tạo yarn + vite : yarn create vite ==> đặt tên ==> chọ
                     yarn add @hookform/resolvers yup
                     yarn add @react-oauth/google
                     yarn add @mui/icons-material
+                    yarn add qrcode
 Trong BE :
                     Chạy lệnh yarn install trước 
                     chạy lệnh trong sql
@@ -18,4 +19,5 @@ Trong BE :
                     Chạy lệnh yarn add express cors dotenv mssql cookie-parser jsonwebtoken bcryptjs axios google-auth-library ms http-status-codes cài đặt thư viện
                     yarn add nodemailer
                     yarn seed:password
+                    yarn add ngrok   
                     ==> chạy test yarn dev                
