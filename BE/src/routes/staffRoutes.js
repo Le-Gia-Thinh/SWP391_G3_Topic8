@@ -36,9 +36,13 @@ router.post('/sessions/:sessionId/confirm-surcharge', staffController.confirmSur
 // Incidents
 router.post('/incidents', staffController.createIncident)
 router.get('/incidents', staffController.getIncidents)
-
+router.get('/incidents/:incidentId', staffController.getIncidentById)
+router.patch('/incidents/:incidentId/status', staffController.updateIncidentStatus)
 // Profile
 router.get('/profile', staffController.getProfile)
 router.get('/slots/:slotCode', staffController.getSlotDetail)
 
+//Payment confirmation
+router.get('/sessions/pending-payments', staffController.getPendingPayments)
+router.get('/drivers/:driverId/payment-history', staffController.getPaymentHistory)
 export default router

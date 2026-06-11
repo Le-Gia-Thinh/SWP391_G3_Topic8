@@ -123,3 +123,32 @@ BEGIN
     ORDER BY z.ZoneID, ps.SlotCode;
 END
 GO
+
+USE ParkingManagementDB;
+GO
+
+-- =====================================================
+-- MIGRATION: Thêm cột Attachments vào bảng Incidents
+-- Lưu dạng JSON array base64, tối đa 15 ảnh
+-- =====================================================
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID('Incidents') AND name = 'Attachments'
+)
+BEGIN
+    ALTER TABLE Incidents
+    ADD Attachments NVARCHAR(MAX) NULL;
+    PRINT 'Đã thêm cột Attachments vào bảng Incidents.';
+END
+ELSE
+BEGIN
+    PRINT 'Cột Attachments đã tồn tại.';
+END
+GO
+
+-- Kiểm tra
+SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'Incidents' AND COLUMN_NAME = 'Attachments';
+GO

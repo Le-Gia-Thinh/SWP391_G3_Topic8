@@ -55,7 +55,32 @@ function formatBookingCode(reservationId) {
 function formatSessionCode(sessionId) {
     return `SS-${String(sessionId).padStart(5, '0')}`
 }
+function serializeAttachments(attachments) {
+    if (!attachments || !Array.isArray(attachments) || attachments.length === 0) {
+        return null
+    }
+    if (attachments.length > 15) {
+        throw badRequest('Tối đa 15 ảnh đính kèm.', 'TOO_MANY_ATTACHMENTS')
+    }
+    // Chỉ lưu string (base64 data URL), bỏ qua phần tử không hợp lệ
+    const valid = attachments
+        .filter(a => typeof a === 'string' && a.startsWith('data:image/'))
+        .slice(0, 15)
+    return valid.length > 0 ? JSON.stringify(valid) : null
+}
 
+/**
+ * Parse JSON attachments từ DB, trả về mảng rỗng nếu lỗi
+ */
+function parseAttachments(raw) {
+    if (!raw) return []
+    try {
+        const parsed = JSON.parse(raw)
+        return Array.isArray(parsed) ? parsed : []
+    } catch {
+        return []
+    }
+}
 async function getDefaultDriverId(pool) {
     const result = await pool.request().query(`
         SELECT TOP 1 UserID
@@ -604,11 +629,31 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
 }
 
 async function getSessionById(sessionId) {
-    const rows = await searchSessions({
-        keyword: String(sessionId)
-    })
-
-    return rows.find(s => Number(s.SessionID) === Number(sessionId)) || null
+    const pool = await getPool()
+    const result = await pool.request()
+        .input('sessionId', sql.Int, Number(sessionId))
+        .query(`
+            SELECT TOP 1
+                ps.SessionID,
+                CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
+                ps.SlotID, sl.SlotCode,
+                z.ZoneName, f.FloorName, b.BuildingName,
+                ps.DriverID, u.FullName AS DriverName, u.PhoneNumber,
+                ps.PlateNumber, ps.VehicleTypeID, vt.VehicleName, vt.VehicleCode,
+                ps.EntryTime, ps.ExitTime, ps.SessionStatus,
+                p.PaymentID, p.Amount, p.FinalAmount, p.PrepaidAmount,
+                p.SurchargeAmount, p.PaymentMethod, p.PaymentStatus, p.SurchargeStatus
+            FROM ParkingSessions ps
+            JOIN Users u         ON ps.DriverID      = u.UserID
+            JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
+            JOIN ParkingSlots sl ON ps.SlotID        = sl.SlotID
+            JOIN Zones z         ON sl.ZoneID        = z.ZoneID
+            JOIN Floors f        ON z.FloorID        = f.FloorID
+            JOIN Buildings b     ON f.BuildingID     = b.BuildingID
+            LEFT JOIN Payments p ON ps.SessionID     = p.SessionID
+            WHERE ps.SessionID = @sessionId
+        `)
+    return result.recordset[0] || null
 }
 
 export async function getCheckoutPreview(sessionId) {
@@ -725,81 +770,78 @@ export async function confirmSurcharge(sessionId, paymentMethod = 'Cash') {
     return result.recordset[0]
 }
 
+
+// ─── Incidents ─────────────────────────────────────────────────────────────────
+
 export async function createIncident({
-    sessionId,
-    driverId,
-    incidentType,
-    priority,
-    description,
-    staffId
+    sessionId, driverId, plateNumber,
+    incidentType, priority, description, staffId,
+    attachments  // ← NEW: mảng base64 strings
 }) {
-    if (!incidentType) {
-        throw badRequest('Vui lòng chọn loại sự cố.', 'INCIDENT_TYPE_REQUIRED')
+    if (!incidentType) throw badRequest('Vui lòng chọn loại sự cố.', 'INCIDENT_TYPE_REQUIRED')
+    if (!description || description.trim().length < 20) {
+        throw badRequest('Mô tả phải có ít nhất 20 ký tự.', 'DESCRIPTION_TOO_SHORT')
     }
 
-    if (!driverId && !sessionId) {
-        throw badRequest('Cần có DriverID hoặc SessionID để tạo sự cố.', 'DRIVER_OR_SESSION_REQUIRED')
-    }
+    const attachmentsJson = serializeAttachments(attachments)
 
     const pool = await getPool()
-
     let finalDriverId = driverId ? Number(driverId) : null
+    let finalSessionId = sessionId ? Number(sessionId) : null
 
-    if (!finalDriverId && sessionId) {
-        const sessionResult = await pool.request()
-            .input('sessionId', sql.Int, Number(sessionId))
+    if (!finalDriverId && finalSessionId) {
+        const r = await pool.request()
+            .input('sessionId', sql.Int, finalSessionId)
+            .query(`SELECT DriverID FROM ParkingSessions WHERE SessionID = @sessionId`)
+        if (r.recordset[0]) finalDriverId = r.recordset[0].DriverID
+    }
+
+    if (!finalDriverId && plateNumber) {
+        const r = await pool.request()
+            .input('plate', sql.NVarChar(20), plateNumber.trim().toUpperCase())
             .query(`
-            SELECT DriverID
-            FROM ParkingSessions
-            WHERE SessionID = @sessionId
-        `)
-
-        const session = sessionResult.recordset[0]
-
-        if (!session) {
-            throw notFound('Không tìm thấy session để tạo sự cố.', 'SESSION_NOT_FOUND')
+                SELECT TOP 1 DriverID, SessionID FROM ParkingSessions
+                WHERE PlateNumber = @plate AND SessionStatus = 'Active'
+                ORDER BY EntryTime DESC
+            `)
+        if (r.recordset[0]) {
+            finalDriverId = r.recordset[0].DriverID
+            if (!finalSessionId) finalSessionId = r.recordset[0].SessionID
         }
+    }
 
-        finalDriverId = session.DriverID
+    if (!finalDriverId) {
+        finalDriverId = await getDefaultDriverId(pool)
     }
 
     const result = await pool.request()
-        .input('sessionId', sql.Int, sessionId ? Number(sessionId) : null)
+        .input('sessionId', sql.Int, finalSessionId)
         .input('driverId', sql.Int, finalDriverId)
         .input('incidentType', sql.NVarChar(50), incidentType)
         .input('priority', sql.NVarChar(20), priority || 'Normal')
-        .input('description', sql.NVarChar(500), description || null)
+        .input('description', sql.NVarChar(500), description.trim())
         .input('staffId', sql.Int, staffId || null)
+        .input('attachments', sql.NVarChar(sql.MAX), attachmentsJson)
         .query(`
-        INSERT INTO Incidents (
-            SessionID,
-            DriverID,
-            IncidentType,
-            IncidentStatus,
-            Priority,
-            Description,
-            AssignedStaffID,
-            CreatedAt,
-            UpdatedAt
-        )
-        OUTPUT INSERTED.*
-        VALUES (
-            @sessionId,
-            @driverId,
-            @incidentType,
-            'Open',
-            @priority,
-            @description,
-            @staffId,
-            GETDATE(),
-            GETDATE()
-        )
+            INSERT INTO Incidents (
+                SessionID, DriverID, IncidentType, IncidentStatus,
+                Priority, Description, AssignedStaffID, Attachments, CreatedAt, UpdatedAt
+            )
+            OUTPUT INSERTED.*
+            VALUES (
+                @sessionId, @driverId, @incidentType, 'Open',
+                @priority, @description, @staffId, @attachments, GETDATE(), GETDATE()
+            )
         `)
 
-    return result.recordset[0]
+    const row = result.recordset[0]
+    return {
+        ...row,
+        Attachments: parseAttachments(row.Attachments)
+    }
 }
 
-export async function getIncidents({ status, priority }) {
+export async function getIncidents({ status, priority, keyword, fromDate, toDate } = {}) {
     const pool = await getPool()
     const request = pool.request()
 
@@ -809,28 +851,51 @@ export async function getIncidents({ status, priority }) {
         request.input('status', sql.NVarChar(20), status)
         where += ' AND i.IncidentStatus = @status'
     }
-
     if (priority && priority !== 'all') {
         request.input('priority', sql.NVarChar(20), priority)
         where += ' AND i.Priority = @priority'
     }
+    if (keyword) {
+        request.input('keyword', sql.NVarChar(100), `%${keyword}%`)
+        where += ` AND (
+            CAST(i.IncidentID AS NVARCHAR) LIKE @keyword
+            OR i.IncidentType LIKE @keyword
+            OR u.FullName LIKE @keyword
+            OR ps.PlateNumber LIKE @keyword
+        )`
+    }
+    if (fromDate) {
+        request.input('fromDate', sql.DateTime, new Date(fromDate))
+        where += ' AND i.CreatedAt >= @fromDate'
+    }
+    if (toDate) {
+        // Đến cuối ngày
+        const to = new Date(toDate)
+        to.setHours(23, 59, 59, 999)
+        request.input('toDate', sql.DateTime, to)
+        where += ' AND i.CreatedAt <= @toDate'
+    }
 
     const result = await request.query(`
-        SELECT TOP 100
-        i.IncidentID,
-        i.SessionID,
-        CONCAT('SS-', RIGHT('00000' + CAST(i.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
-        i.DriverID,
-        u.FullName AS DriverName,
-        ps.PlateNumber,
-        i.IncidentType,
-        i.IncidentStatus,
-        i.Priority,
-        i.Description,
-        i.AssignedStaffID,
-        staff.FullName AS AssignedStaffName,
-        i.CreatedAt,
-        i.UpdatedAt
+        SELECT TOP 200
+            i.IncidentID,
+            i.SessionID,
+            CASE WHEN i.SessionID IS NOT NULL
+                 THEN CONCAT('SS-', RIGHT('00000' + CAST(i.SessionID AS VARCHAR(10)), 5))
+                 ELSE NULL
+            END AS SessionCode,
+            i.DriverID,
+            u.FullName AS DriverName,
+            ps.PlateNumber,
+            i.IncidentType,
+            i.IncidentStatus,
+            i.Priority,
+            i.Description,
+            i.Attachments,
+            i.AssignedStaffID,
+            staff.FullName AS AssignedStaffName,
+            i.CreatedAt,
+            i.UpdatedAt
         FROM Incidents i
         JOIN Users u ON i.DriverID = u.UserID
         LEFT JOIN ParkingSessions ps ON i.SessionID = ps.SessionID
@@ -839,7 +904,92 @@ export async function getIncidents({ status, priority }) {
         ORDER BY i.CreatedAt DESC
     `)
 
-    return result.recordset
+    return result.recordset.map(row => ({
+        ...row,
+        Attachments: parseAttachments(row.Attachments)
+    }))
+}
+
+export async function getIncidentById(incidentId) {
+    if (!incidentId) throw badRequest('Thiếu IncidentID.', 'INCIDENT_ID_REQUIRED')
+
+    const pool = await getPool()
+    const result = await pool.request()
+        .input('id', sql.Int, Number(incidentId))
+        .query(`
+            SELECT
+                i.IncidentID,
+                i.SessionID,
+                CONCAT('SS-', RIGHT('00000' + CAST(i.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
+                i.DriverID,
+                u.FullName AS DriverName,
+                u.PhoneNumber AS DriverPhone,
+                ps.PlateNumber,
+                i.IncidentType, i.IncidentStatus, i.Priority,
+                i.Description,
+                i.Attachments,
+                i.AssignedStaffID,
+                staff.FullName AS AssignedStaffName,
+                i.CreatedAt, i.UpdatedAt
+            FROM Incidents i
+            JOIN Users u ON i.DriverID = u.UserID
+            LEFT JOIN ParkingSessions ps ON i.SessionID = ps.SessionID
+            LEFT JOIN Users staff ON i.AssignedStaffID = staff.UserID
+            WHERE i.IncidentID = @id
+        `)
+
+    const incident = result.recordset[0]
+    if (!incident) throw notFound('Không tìm thấy sự cố.', 'INCIDENT_NOT_FOUND')
+
+    return {
+        ...incident,
+        Attachments: parseAttachments(incident.Attachments)
+    }
+}
+
+export async function updateIncidentStatus(incidentId, { status, note, attachments }) {
+    if (!incidentId) throw badRequest('Thiếu IncidentID.', 'INCIDENT_ID_REQUIRED')
+
+    const validStatuses = ['Open', 'InProgress', 'Resolved']
+    if (!validStatuses.includes(status)) {
+        throw badRequest('Trạng thái không hợp lệ.', 'INVALID_STATUS')
+    }
+
+    // attachments: nếu truyền lên thì thay toàn bộ; nếu không truyền (undefined) thì giữ nguyên
+    const hasNewAttachments = Array.isArray(attachments)
+    const attachmentsJson = hasNewAttachments ? serializeAttachments(attachments) : undefined
+
+    const pool = await getPool()
+    const request = pool.request()
+        .input('id', sql.Int, Number(incidentId))
+        .input('status', sql.NVarChar(20), status)
+        .input('note', sql.NVarChar(500), note || null)
+
+    let attachmentClause = ''
+    if (hasNewAttachments) {
+        request.input('attachments', sql.NVarChar(sql.MAX), attachmentsJson)
+        attachmentClause = ', Attachments = @attachments'
+    }
+
+    const result = await request.query(`
+        UPDATE Incidents
+        SET IncidentStatus = @status,
+            Description = CASE WHEN @note IS NOT NULL
+                THEN Description + CHAR(10) + '[Cập nhật] ' + @note
+                ELSE Description END
+            ${attachmentClause},
+            UpdatedAt = GETDATE()
+        OUTPUT INSERTED.*
+        WHERE IncidentID = @id
+    `)
+
+    const incident = result.recordset[0]
+    if (!incident) throw notFound('Không tìm thấy sự cố.', 'INCIDENT_NOT_FOUND')
+
+    return {
+        ...incident,
+        Attachments: parseAttachments(incident.Attachments)
+    }
 }
 
 export async function getProfile(staffId) {
@@ -989,4 +1139,13 @@ export async function getSlotDetail(slotCode) {
         WHERE ps.SlotCode = @SlotCode
       `);
     return result.recordset[0] || null;
+}
+export async function getPaymentHistory(driverId) {
+    const pool = await getPool()
+    const result = await pool.request()
+        .input('DriverID', sql.Int, driverId)
+        .input('Limit', sql.Int, 50)
+        .input('Offset', sql.Int, 0)
+        .execute('sp_GetPaymentHistory')
+    return result.recordset
 }
