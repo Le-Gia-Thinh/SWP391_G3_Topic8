@@ -51,7 +51,11 @@ const staffApi = {
 
   // ── Sessions / checkout ──────────────────────────────────────
   searchSessions: async (params = {}) => {
-    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/sessions`, { params })
+    // Lọc bỏ undefined để URL không có key thừa
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+    )
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/sessions`, { params: cleanParams })
     return res.data
   },
 
@@ -76,8 +80,8 @@ const staffApi = {
   },
 
   // ── Incidents ────────────────────────────────────────────────
-  createIncident: async (payload) => {
-    const res = await authorizedAxiosInstance.post(`${STAFF_BASE}/incidents`, payload)
+  createIncident: async (body) => {
+    const res = await authorizedAxiosInstance.post(`${STAFF_BASE}/incidents`, body)
     return res.data
   },
 
@@ -86,6 +90,15 @@ const staffApi = {
     return res.data
   },
 
+  getIncidentById: async (incidentId) => {
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/incidents/${incidentId}`)
+    return res.data
+  },
+
+  updateIncidentStatus: async (incidentId, body) => {
+    const res = await authorizedAxiosInstance.patch(`${STAFF_BASE}/incidents/${incidentId}/status`, body)
+    return res.data
+  },
   // ── Profile ──────────────────────────────────────────────────
   getStaffProfile: async () => {
     const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/profile`)

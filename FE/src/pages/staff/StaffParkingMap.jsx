@@ -7,7 +7,7 @@ const STATUS_CONFIG = {
   occupied: { label: 'Đã đỗ', bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700' },
   reserved: { label: 'Đã đặt', bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-700' },
   maintenance: { label: 'Bảo trì', bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-500' },
-  blocked: { label: 'Khóa', bg: 'bg-gray-800', border: 'border-gray-800', text: 'text-white' },
+  blocked: { label: 'Khóa', bg: 'bg-gray-800', border: 'border-gray-800', text: 'text-white' }
 }
 
 // Transform flat slots array → grouped zones for display
@@ -19,8 +19,8 @@ function buildZones(slots) {
       zoneMap[key] = {
         id: slot.ZoneID,
         label: `${slot.BuildingName} · ${slot.FloorName} · ${slot.ZoneName}`,
-        statuses: {},   // SlotCode → status (lowercase)
-        slotCodes: [],  // ordered list of SlotCodes
+        statuses: {}, // SlotCode → status (lowercase)
+        slotCodes: [] // ordered list of SlotCodes
       }
     }
     zoneMap[key].statuses[slot.SlotCode] = (slot.SlotStatus || 'Available').toLowerCase()
@@ -124,9 +124,9 @@ const StaffParkingMap = () => {
                 key={`zone-${z.id}`}
                 onClick={() => { setActiveZone(z.id); setSelectedSlot(null) }}
                 className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${activeZone === z.id
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300'
-                  }`}
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300'
+                }`}
               >
                 {z.label}
               </button>
@@ -144,7 +144,7 @@ const StaffParkingMap = () => {
               { label: 'Tổng ô', value: totalSlots, color: 'text-gray-800' },
               { label: 'Trống', value: availableCount, color: 'text-green-600' },
               { label: 'Đã đỗ', value: occupiedCount, color: 'text-red-600' },
-              { label: 'Đã đặt', value: reservedCount, color: 'text-orange-500' },
+              { label: 'Đã đặt', value: reservedCount, color: 'text-orange-500' }
             ].map(item => (
               <div key={item.label} className="bg-white rounded-lg border border-gray-100 px-4 py-2 text-center shadow-sm flex-1">
                 <p className={`text-xl font-black ${item.color}`}>{item.value}</p>
@@ -171,9 +171,9 @@ const StaffParkingMap = () => {
                         onClick={() => handleSelectSlot(slotCode)}
                         className={`w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center
                           transition-all hover:scale-110 hover:shadow-md ${isSelected
-                            ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110'
-                            : `${cfg.bg} ${cfg.border} ${cfg.text}`
-                          }`}
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110'
+                        : `${cfg.bg} ${cfg.border} ${cfg.text}`
+                      }`}
                         title={`${slotCode} – ${cfg.label}`}
                       >
                         <span className="font-bold text-xs">{slotCode}</span>

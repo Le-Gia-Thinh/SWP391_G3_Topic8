@@ -73,10 +73,13 @@ const staffLinks = [
   { path: '/staff/checkout', label: 'Check-out (Ra)', icon: LogOut },
   { path: '/staff/search-session', label: 'Tìm kiếm phiên', icon: Search },
   { path: '/staff/verify-booking', label: 'Xác thực Booking', icon: ShieldCheck },
+  { path: '/staff/payment-confirm', label: 'Xác nhận thanh toán', icon: Wallet },
+
   { isDivider: true },
   { labelOnly: 'Khác' },
   { path: '/staff/create-incident', label: 'Báo cáo sự cố', icon: AlertTriangle },
-  { path: '/staff/user-guide', label: 'Hướng dẫn sử dụng', icon: BookOpen }
+  { path: '/staff/user-guide', label: 'Hướng dẫn sử dụng', icon: BookOpen },
+  { path: '/staff/support', label: 'Hỗ trợ kỹ thuật', icon: HelpCircle }
 ]
 
 const driverLinks = [
@@ -153,6 +156,7 @@ const App = () => {
             <Route path="checkin-booking" element={<StaffCheckIn />} />
 
             {/* Verify Booking với reservationId */}
+            <Route path="verify-booking" element={<StaffVerifyBooking />} />
             <Route path="verify-booking/:reservationId" element={<StaffVerifyBooking />} />
 
             {/* Action Success */}
@@ -162,15 +166,17 @@ const App = () => {
 
             {/* Checkout */}
             <Route path="checkout" element={<StaffVehicleCheckOut />} />
-
+            <Route path="/staff/checkout/:sessionId" element={<StaffPaymentConfirm />} />
             {/* Create Incident */}
             <Route path="create-incident" element={<StaffCreateIncident />} />
 
             {/* Payment */}
-            <Route path="payment/:sessionId" element={<StaffPaymentConfirm />} />
+            <Route path="payment-confirm" element={<StaffPaymentConfirm />} />
+            <Route path="/staff/checkout/:sessionId" element={<StaffPaymentConfirm />} />
 
             {/* Parking Map */}
             <Route path="parking-map" element={<StaffParkingMap />} />
+
 
             {/* Search Session */}
             <Route path="search-session" element={<StaffSearchSession />} />
