@@ -6,8 +6,10 @@ import * as sessionController from "../controllers/sessionController.js";
 import * as reservationController from "../controllers/reservationController.js";
 import * as reportController from "../controllers/reportController.js";
 import * as driverController from "../controllers/driverController.js";
-import paymentRoutes from './paymentRoutes.js'
-import staffRoutes from './staffRoutes.js'
+
+import paymentRoutes from "./paymentRoutes.js";
+import staffRoutes from "./staffRoutes.js";
+
 import {
   isAuthorized,
   isManager,
@@ -29,7 +31,10 @@ import {
 const router = express.Router();
 
 router.get("/health", (req, res) =>
-  res.json({ success: true, message: "API is working" })
+  res.json({
+    success: true,
+    message: "API is working",
+  })
 );
 
 // Auth public
@@ -37,8 +42,16 @@ router.post("/auth/register", validateRegister, authController.register);
 router.post("/auth/login", validateLogin, authController.login);
 router.post("/auth/logout", authController.logout);
 router.post("/auth/refresh", authController.refreshToken);
-router.post("/auth/forgot-password", validateForgotPassword, authController.forgotPassword);
-router.post("/auth/reset-password", validateResetPassword, authController.resetPassword);
+router.post(
+  "/auth/forgot-password",
+  validateForgotPassword,
+  authController.forgotPassword
+);
+router.post(
+  "/auth/reset-password",
+  validateResetPassword,
+  authController.resetPassword
+);
 
 // Email verify
 router.get("/auth/verify-email", authController.verifyEmail);
@@ -71,6 +84,48 @@ router.get(
   isAuthorized,
   isDriver,
   sessionController.getCurrentDriverSession
+);
+
+router.get(
+  "/driver/current-sessions",
+  isAuthorized,
+  isDriver,
+  sessionController.getCurrentDriverSessions
+);
+
+router.get(
+  "/driver/profile",
+  isAuthorized,
+  isDriver,
+  driverController.getDriverProfile
+);
+
+router.patch(
+  "/driver/profile",
+  isAuthorized,
+  isDriver,
+  driverController.updateDriverProfile
+);
+
+router.get(
+  "/driver/report-context",
+  isAuthorized,
+  isDriver,
+  driverController.getDriverReportContext
+);
+
+router.get(
+  "/driver/reports",
+  isAuthorized,
+  isDriver,
+  driverController.getDriverReports
+);
+
+router.post(
+  "/driver/reports",
+  isAuthorized,
+  isDriver,
+  driverController.createDriverReport
 );
 
 // Sessions
@@ -139,6 +194,11 @@ router.get(
   isManager,
   reportController.dashboard
 );
-router.use('/', paymentRoutes)
-router.use('/staff', staffRoutes)
+
+// Payment routes
+router.use("/", paymentRoutes);
+
+// Staff routes
+router.use("/staff", staffRoutes);
+
 export default router;

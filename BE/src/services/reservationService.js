@@ -1,4 +1,5 @@
 import { getPool, sql } from "../config/db.js";
+import { syncParkingSlotStatuses } from "./slotSyncService.js";
 import {
   buildDateTime,
   getDurationHours,
@@ -36,43 +37,8 @@ function normalizeVehicleTypeId(value) {
   return null;
 }
 
-function buildBookingCode(reservationId) {
-  return `BK-${String(reservationId).padStart(4, "0")}`;
-}
-
 async function expireOverdueReservations(pool) {
-  await pool.request().query(`
-    UPDATE Reservations
-    SET ReservationStatus = 'Expired'
-    WHERE ReservationStatus = 'Reserved'
-      AND EndTime < GETDATE();
-
-    UPDATE ps
-    SET ps.SlotStatus =
-      CASE
-        WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
-
-        WHEN EXISTS (
-          SELECT 1
-          FROM ParkingSessions s
-          WHERE s.SlotID = ps.SlotID
-            AND s.SessionStatus = 'Active'
-            AND s.ExitTime IS NULL
-        ) THEN 'Occupied'
-
-        WHEN EXISTS (
-          SELECT 1
-          FROM Reservations r
-          WHERE r.SlotID = ps.SlotID
-            AND r.ReservationStatus = 'Reserved'
-            AND r.EndTime >= GETDATE()
-        ) THEN 'Reserved'
-
-        ELSE 'Available'
-      END
-    FROM ParkingSlots ps
-    WHERE ps.SlotStatus IN ('Available', 'Occupied', 'Reserved');
-  `);
+  await syncParkingSlotStatuses(pool);
 }
 
 function reservationBaseSelect() {
@@ -174,7 +140,7 @@ export async function getReservations(req) {
     request.input("DriverID", sql.Int, userId);
     whereSql = "WHERE r.DriverID = @DriverID";
   }
-  
+
   const result = await request.query(`
     ${reservationBaseSelect()}
     ${whereSql}
