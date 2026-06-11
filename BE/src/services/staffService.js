@@ -1122,23 +1122,103 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
 }
 export async function getSlotDetail(slotCode) {
     const pool = await getPool();
+
+    // Lấy slot info + active session (ưu tiên Active session)
     const result = await pool.request()
         .input('SlotCode', sql.NVarChar(20), slotCode)
         .query(`
-        SELECT ps.SlotID, ps.SlotCode, ps.SlotStatus,
-               r.ReservationID, r.StartTime, r.EndTime, r.ReservationStatus,
-               CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
-               s.SessionID, CONCAT('SS-', RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)),5)) AS SessionCode,
-               u.FullName AS DriverName, u.Email AS DriverEmail, u.PhoneNumber AS DriverPhone,
-               p.PaymentStatus, p.FinalAmount, p.SurchargeAmount
-        FROM ParkingSlots ps
-        LEFT JOIN Reservations r ON r.SlotID = ps.SlotID AND r.ReservationStatus IN ('Reserved','Completed')
-        LEFT JOIN ParkingSessions s ON s.SlotID = ps.SlotID AND s.SessionStatus = 'Active'
-        LEFT JOIN Users u ON u.UserID = COALESCE(s.DriverID, r.DriverID)
-        LEFT JOIN Payments p ON p.SessionID = s.SessionID
-        WHERE ps.SlotCode = @SlotCode
-      `);
-    return result.recordset[0] || null;
+            SELECT 
+                ps.SlotID,
+                ps.SlotCode,
+                ps.SlotStatus,
+                -- Active Session Info
+                s.SessionID,
+                CASE WHEN s.SessionID IS NOT NULL 
+                     THEN CONCAT('SS-', RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)), 5))
+                     ELSE NULL 
+                END AS SessionCode,
+                s.EntryTime,
+                s.ExitTime,
+                s.PlateNumber,
+                -- Reservation Info (nếu không có active session)
+                r.ReservationID,
+                r.StartTime,
+                r.EndTime,
+                r.ReservationStatus,
+                CASE WHEN r.ReservationID IS NOT NULL 
+                     THEN CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4))
+                     ELSE NULL 
+                END AS BookingCode,
+                -- Driver Info (từ session nếu có, else từ reservation)
+                u.FullName AS DriverName,
+                u.Email AS DriverEmail,
+                u.PhoneNumber AS DriverPhone,
+                -- Payment Info (từ active session)
+                p.PaymentID,
+                p.PaymentStatus,
+                p.Amount,
+                p.FinalAmount,
+                p.PrepaidAmount,
+                p.SurchargeAmount,
+                p.PaymentMethod
+            FROM ParkingSlots ps
+            LEFT JOIN ParkingSessions s 
+                ON s.SlotID = ps.SlotID 
+                AND s.SessionStatus = 'Active'
+            LEFT JOIN Reservations r 
+                ON r.SlotID = ps.SlotID 
+                AND r.ReservationStatus = 'Reserved'
+                AND s.SessionID IS NULL  -- Chỉ lấy reservation khi không có active session
+            LEFT JOIN Users u 
+                ON u.UserID = COALESCE(s.DriverID, r.DriverID)
+            LEFT JOIN Payments p 
+                ON p.SessionID = s.SessionID
+            WHERE ps.SlotCode = @SlotCode
+        `);
+
+    const slotDetail = result.recordset[0];
+
+    if (!slotDetail) {
+        return null;
+    }
+
+    // Format response - để frontend dễ handle
+    return {
+        slotId: slotDetail.SlotID,
+        slotCode: slotDetail.SlotCode,
+        slotStatus: slotDetail.SlotStatus,
+
+        // Session data (nếu có active session)
+        sessionId: slotDetail.SessionID,
+        sessionCode: slotDetail.SessionCode,
+        entryTime: slotDetail.EntryTime,
+        exitTime: slotDetail.ExitTime,
+        plateNumber: slotDetail.PlateNumber,
+
+        // Reservation data (nếu không có session)
+        reservationId: slotDetail.ReservationID,
+        bookingCode: slotDetail.BookingCode,
+        startTime: slotDetail.StartTime,
+        endTime: slotDetail.EndTime,
+        reservationStatus: slotDetail.ReservationStatus,
+
+        // Driver info
+        driverName: slotDetail.DriverName,
+        driverEmail: slotDetail.DriverEmail,
+        driverPhone: slotDetail.DriverPhone,
+
+        // Payment info
+        paymentId: slotDetail.PaymentID,
+        paymentStatus: slotDetail.PaymentStatus,
+        amount: slotDetail.Amount,
+        finalAmount: slotDetail.FinalAmount,
+        prepaidAmount: slotDetail.PrepaidAmount,
+        surchargeAmount: slotDetail.SurchargeAmount,
+        paymentMethod: slotDetail.PaymentMethod,
+
+        // Để frontend biết đây là session hay reservation
+        type: slotDetail.SessionID ? 'session' : (slotDetail.ReservationID ? 'reservation' : null)
+    };
 }
 export async function getPaymentHistory(driverId) {
     const pool = await getPool()

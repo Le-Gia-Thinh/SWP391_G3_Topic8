@@ -1,15 +1,16 @@
-// src/pages/Staff/StaffVehicleCheckOut.jsx
+// src/pages/staff/StaffVehicleCheckOut.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ChevronRight, Search, FileSearch, AlertTriangle, AlertCircle,
   RefreshCcw, Loader2, Car, Clock, ArrowUp, ArrowDown,
-  ArrowUpDown, X, SlidersHorizontal, Receipt, MapPin, TrendingUp
+  ArrowUpDown, X, SlidersHorizontal, Receipt, MapPin, TrendingUp,
+  CalendarRange
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import staffApi from '../../apis/staffApi'
 
-// ── Helpers ─────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 const formatVND = (v) => Number(v || 0).toLocaleString('vi-VN') + ' đ'
 
 const calcDurationMinutes = (entryTime) => {
@@ -27,24 +28,51 @@ const formatDuration = (entryTime) => {
 const formatTime = (dt) => {
   if (!dt) return '—'
   const d = new Date(dt)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} - ${d.getDate()} Th${d.getMonth() + 1}`
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} — ${d.getDate()} Th${d.getMonth() + 1}`
 }
 
-// ── Sort & Filter ─────────────────────────────────────────────
+// BE trả về PaymentStatus từ LEFT JOIN Payments:
+//   'Prepaid'  → driver đã quét QR, xe vẫn Active
+//   'Pending'  → chưa trả gì
+//   null       → không có row Payments (hiếm, walk-in cũ)
+const hasPrepaid = (s) => s.PaymentStatus === 'Prepaid'
+
+// BookingCode: BE searchSessions không join Reservations,
+// nhưng PlateNumber được set = 'BOOKING-{id}' khi check-in booking.
+// Ta dùng điều đó + field BookingCode nếu có.
+const getBookingCode = (s) => {
+  if (s.BookingCode) return s.BookingCode
+  if (s.PlateNumber?.toUpperCase().startsWith('BOOKING-')) {
+    const id = s.PlateNumber.replace(/BOOKING-/i, '').padStart(4, '0')
+    return `BK-${id}`
+  }
+  return null
+}
+
+// Phí hiển thị trên card (ước tính — server tính chính xác lúc checkout)
+const getDisplayFee = (s) => {
+  if (s.FinalAmount != null) return Number(s.FinalAmount)
+  const prepaid = Number(s.PrepaidAmount ?? 0)
+  const surcharge = Number(s.SurchargeAmount ?? 0)
+  if (prepaid > 0) return prepaid + surcharge
+  return Number(s.Amount ?? 0)
+}
+
+// ── Sort & Filter ─────────────────────────────────────────────────────────────
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Mới vào nhất', icon: ArrowDown },
   { value: 'oldest', label: 'Cũ vào nhất', icon: ArrowUp },
   { value: 'duration_desc', label: 'Lâu nhất', icon: ArrowDown },
   { value: 'duration_asc', label: 'Ngắn nhất', icon: ArrowUp },
   { value: 'plate', label: 'Biển số A→Z', icon: ArrowUpDown },
-  { value: 'fee_desc', label: 'Phí cao nhất', icon: ArrowDown }
+  { value: 'fee_desc', label: 'Phí cao nhất', icon: ArrowDown },
 ]
 
 const VEHICLE_FILTER_OPTIONS = [
   { value: 'all', label: 'Tất cả loại xe' },
   { value: '1', label: 'Xe máy' },
   { value: '2', label: 'Ô tô' },
-  { value: '3', label: 'Xe tải' }
+  { value: '3', label: 'Xe tải' },
 ]
 
 function sortSessions(list, key) {
@@ -55,12 +83,12 @@ function sortSessions(list, key) {
     case 'duration_desc': return arr.sort((a, b) => calcDurationMinutes(b.EntryTime) - calcDurationMinutes(a.EntryTime))
     case 'duration_asc': return arr.sort((a, b) => calcDurationMinutes(a.EntryTime) - calcDurationMinutes(b.EntryTime))
     case 'plate': return arr.sort((a, b) => (a.PlateNumber || '').localeCompare(b.PlateNumber || ''))
-    case 'fee_desc': return arr.sort((a, b) => Number(b.Amount || 0) - Number(a.Amount || 0))
+    case 'fee_desc': return arr.sort((a, b) => getDisplayFee(b) - getDisplayFee(a))
     default: return arr
   }
 }
 
-// ── Filter Popover ────────────────────────────────────────────
+// ── Filter Popover ────────────────────────────────────────────────────────────
 const FilterPopover = ({ vehicleType, setVehicleType, sortKey, setSortKey, onClose }) => (
   <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 z-30 p-4">
     <div className="flex items-center justify-between mb-3">
@@ -71,10 +99,16 @@ const FilterPopover = ({ vehicleType, setVehicleType, sortKey, setSortKey, onClo
     <p className="text-xs font-bold text-gray-400 uppercase mb-1.5">Loại xe</p>
     <div className="flex flex-col gap-0.5 mb-4">
       {VEHICLE_FILTER_OPTIONS.map(opt => (
-        <button key={opt.value}
+        <button
+          key={opt.value}
           onClick={() => { setVehicleType(opt.value); onClose() }}
-          className={`text-left px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${vehicleType === opt.value ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
-        >{opt.label}</button>
+          className={`text-left px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${vehicleType === opt.value
+            ? 'bg-blue-50 text-blue-700 font-bold'
+            : 'text-gray-600 hover:bg-gray-50'
+            }`}
+        >
+          {opt.label}
+        </button>
       ))}
     </div>
 
@@ -83,8 +117,14 @@ const FilterPopover = ({ vehicleType, setVehicleType, sortKey, setSortKey, onClo
       {SORT_OPTIONS.map(opt => {
         const Icon = opt.icon
         return (
-          <button key={opt.value} onClick={() => { setSortKey(opt.value); onClose() }}
-            className={`text-left px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${sortKey === opt.value ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
+          <button
+            key={opt.value}
+            onClick={() => { setSortKey(opt.value); onClose() }}
+            className={`text-left px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${sortKey === opt.value
+              ? 'bg-blue-50 text-blue-700 font-bold'
+              : 'text-gray-600 hover:bg-gray-50'
+              }`}
+          >
             <Icon size={13} /> {opt.label}
           </button>
         )
@@ -93,74 +133,128 @@ const FilterPopover = ({ vehicleType, setVehicleType, sortKey, setSortKey, onClo
   </div>
 )
 
-// ── Session Card ──────────────────────────────────────────────
+// ── Session Card ──────────────────────────────────────────────────────────────
 const SessionCard = ({ session, onCheckout }) => {
-  const isBooking = !!session.BookingCode
+  const bookingCode = getBookingCode(session)
+  const isBooking = !!bookingCode
+  const isPrepaid = hasPrepaid(session)
   const isUnknown = session.PlateNumber === 'UNKNOWN'
   const durationMin = calcDurationMinutes(session.EntryTime)
   const isOverdue = durationMin >= 180
-  const feeDisplay = Number(
-    session.FinalAmount != null
-      ? session.FinalAmount
-      : ((session.PrepaidAmount ?? 0) + (session.SurchargeAmount ?? 0)) || session.Amount || 0
-  )
+  const feeDisplay = getDisplayFee(session)
 
   return (
-    <div className={`bg-white border rounded-xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col gap-3 ${isOverdue ? 'border-orange-200 hover:border-orange-400' : 'border-gray-100 hover:border-blue-200'}`}>
+    <div className={`bg-white border rounded-xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col gap-3 ${isOverdue ? 'border-orange-200 hover:border-orange-400' : 'border-gray-100 hover:border-blue-200'
+      }`}>
+      {/* Header row */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
-          <span className="text-blue-600 font-black text-sm shrink-0 font-mono">{session.SessionCode}</span>
-          <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${isBooking ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+          <span className="text-blue-600 font-black text-sm shrink-0 font-mono">
+            {session.SessionCode}
+          </span>
+
+          {/* Prepaid badge — quan trọng nhất, ưu tiên hiển thị */}
+          {isPrepaid && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold shrink-0 bg-green-100 text-green-700">
+              Đã trả QR
+            </span>
+          )}
+
+          <span className={`px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${isBooking ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+            }`}>
             {isBooking ? 'Booking' : 'Vãng lai'}
           </span>
-          {isBooking && <span className="text-xs text-purple-500 font-semibold">{session.BookingCode}</span>}
+
+          {isBooking && (
+            <span className="text-xs text-purple-500 font-semibold">{bookingCode}</span>
+          )}
         </div>
-        <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full shrink-0 ${isOverdue ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>
+
+        <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full shrink-0 ${isOverdue ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600'
+          }`}>
           <Clock size={11} /> {formatDuration(session.EntryTime)}
         </div>
       </div>
 
+      {/* Plate */}
       <div className="flex items-center gap-3">
-        <div className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${isUnknown ? 'bg-yellow-600 text-white' : 'bg-gray-800 text-white'}`}>
+        <div className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${isUnknown ? 'bg-yellow-600 text-white' : 'bg-gray-800 text-white'
+          }`}>
           <Car size={13} />
-          <span className="font-black text-sm tracking-wider">{isUnknown ? '? KHÔNG RÕ ?' : session.PlateNumber}</span>
+          <span className="font-black text-sm tracking-wider">
+            {isUnknown ? '? KHÔNG RÕ ?' : session.PlateNumber}
+          </span>
         </div>
         <span className="text-xs text-gray-500 font-medium">{session.VehicleName}</span>
       </div>
 
+      {/* Location & driver */}
       <div className="space-y-1 text-xs text-gray-600">
-        <div className="flex items-center gap-1.5"><MapPin size={11} className="text-gray-400 shrink-0" /><span className="font-semibold">{session.SlotCode}</span><span className="text-gray-400 truncate">· {session.ZoneName} · {session.FloorName} · {session.BuildingName}</span></div>
-        <div className="flex items-center gap-1.5"><Clock size={11} className="text-gray-400 shrink-0" /> <span>Vào: {formatTime(session.EntryTime)}</span></div>
-        <div className="flex items-center gap-1.5 truncate"><span className="text-gray-400">Khách:</span> <span className="font-medium truncate">{session.DriverName}</span> {session.PhoneNumber && <span className="text-gray-400 ml-1">{session.PhoneNumber}</span>}</div>
+        <div className="flex items-center gap-1.5">
+          <MapPin size={11} className="text-gray-400 shrink-0" />
+          <span className="font-semibold">{session.SlotCode}</span>
+          <span className="text-gray-400 truncate">
+            · {session.ZoneName} · {session.FloorName} · {session.BuildingName}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Clock size={11} className="text-gray-400 shrink-0" />
+          <span>Vào: {formatTime(session.EntryTime)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 truncate">
+          <span className="text-gray-400">Khách:</span>
+          <span className="font-medium truncate">{session.DriverName}</span>
+          {session.PhoneNumber && (
+            <span className="text-gray-400 ml-1">{session.PhoneNumber}</span>
+          )}
+        </div>
       </div>
 
-      <div className="bg-blue-50 rounded-lg px-3 py-2 flex items-center justify-between">
-        <span className="text-xs text-blue-600 font-semibold">Phí hiện tại</span>
-        <span className="font-black text-blue-800 text-sm">{feeDisplay > 0 ? formatVND(feeDisplay) : '—'}</span>
+      {/* Fee box */}
+      <div className={`rounded-lg px-3 py-2 flex items-center justify-between ${isPrepaid ? 'bg-green-50' : 'bg-blue-50'
+        }`}>
+        <span className={`text-xs font-semibold ${isPrepaid ? 'text-green-700' : 'text-blue-600'}`}>
+          {isPrepaid ? 'Đã trả trước' : 'Phí ước tính'}
+        </span>
+        <span className={`font-black text-sm ${isPrepaid ? 'text-green-800' : 'text-blue-800'}`}>
+          {feeDisplay > 0 ? formatVND(feeDisplay) : '—'}
+        </span>
       </div>
 
-      <button onClick={() => onCheckout(session)}
-        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2">
-        <Receipt size={14} /> Thanh toán & Ra xe
+      {/* CTA */}
+      <button
+        onClick={() => onCheckout(session)}
+        className={`w-full py-2 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 ${isPrepaid
+          ? 'bg-green-600 hover:bg-green-700 text-white'
+          : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
+      >
+        <Receipt size={14} />
+        {isPrepaid ? 'Hoàn tất & Ra xe' : 'Thanh toán & Ra xe'}
       </button>
     </div>
   )
 }
 
-// ── Main Component ──────────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────────────────────
 const StaffVehicleCheckOut = () => {
   const navigate = useNavigate()
+
   const [query, setQuery] = useState('')
-  const [sessions, setSessions] = useState([])
-  const [allSessions, setAllSessions] = useState([])
+  const [sessions, setSessions] = useState([])   // đang hiển thị (sau filter keyword)
+  const [allSessions, setAllSessions] = useState([])   // toàn bộ Active từ server
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [vehicleType, setVehicleType] = useState('all')
   const [sortKey, setSortKey] = useState('newest')
   const [showFilter, setShowFilter] = useState(false)
-  const [filters, setFilters] = useState({ fromDate: '', toDate: '' }) // ✅ thêm state filters
+  // Date range filter — có UI để dùng
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+
   const filterRef = useRef(null)
 
+  // Đóng popover khi click ra ngoài
   useEffect(() => {
     const h = (e) => {
       if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilter(false)
@@ -169,10 +263,12 @@ const StaffVehicleCheckOut = () => {
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
+  // Load tất cả phiên Active từ server
   const loadActive = useCallback(async () => {
     setLoading(true)
     try {
       const res = await staffApi.searchSessions({ status: 'Active' })
+      // searchSessions trả về res.data (axios wrapper) hoặc res trực tiếp
       const raw = res?.data ?? res ?? []
       const data = Array.isArray(raw) ? raw : []
       setAllSessions(data)
@@ -181,26 +277,29 @@ const StaffVehicleCheckOut = () => {
     } catch (err) {
       console.error('loadActive error:', err)
       toast.error('Không tải được danh sách phiên đỗ xe')
-    } finally { setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { loadActive() }, [loadActive])
 
-  // ── handle search với filter keyword + date ──
+  // Client-side search (keyword + date range)
   const handleSearch = () => {
     const kw = query.trim().toLowerCase()
     const filtered = allSessions.filter(s => {
       const entry = new Date(s.EntryTime)
-      const from = filters.fromDate ? new Date(filters.fromDate) : null
-      const to = filters.toDate ? new Date(filters.toDate) : null
+      const from = fromDate ? new Date(fromDate) : null
+      const to = toDate ? new Date(toDate + 'T23:59:59') : null   // cuối ngày
 
       const dateMatch = (!from || entry >= from) && (!to || entry <= to)
-      const keywordMatch =
-        String(s.SessionID || '').toLowerCase().includes(kw) ||
+      const bk = getBookingCode(s) || ''
+      const keywordMatch = !kw ||
+        String(s.SessionID || '').includes(kw) ||
         (s.SessionCode || '').toLowerCase().includes(kw) ||
         (s.PlateNumber || '').toLowerCase().includes(kw) ||
         (s.DriverName || '').toLowerCase().includes(kw) ||
-        (s.BookingCode || '').toLowerCase().includes(kw) ||
+        bk.toLowerCase().includes(kw) ||
         (s.SlotCode || '').toLowerCase().includes(kw) ||
         (s.PhoneNumber || '').toLowerCase().includes(kw)
 
@@ -208,39 +307,44 @@ const StaffVehicleCheckOut = () => {
     })
     setSessions(filtered)
     setSearched(true)
-    if (filtered.length === 0) toast.info('Không tìm thấy phiên nào khớp với từ khóa')
+    if (filtered.length === 0) toast.info('Không tìm thấy phiên nào khớp')
   }
 
   const handleReset = () => {
     setQuery('')
     setVehicleType('all')
     setSortKey('newest')
-    setFilters({ fromDate: '', toDate: '' })
+    setFromDate('')
+    setToDate('')
     loadActive()
   }
 
-  // ── Client-side filter + sort + map Amount FE/BE đồng bộ ──
+  // Vehicle-type filter + sort + fee normalisation
   const displayed = sortSessions(
-    (vehicleType === 'all' ? sessions : sessions.filter(s => String(s.VehicleTypeID) === vehicleType))
-      .map(s => ({
-        ...s,
-        Amount: s.FinalAmount != null
-          ? s.FinalAmount
-          : ((s.PrepaidAmount ?? 0) + (s.SurchargeAmount ?? 0)) || s.Amount || 0
-      })),
+    (vehicleType === 'all'
+      ? sessions
+      : sessions.filter(s => String(s.VehicleTypeID) === vehicleType)
+    ).map(s => ({ ...s, _displayFee: getDisplayFee(s) })),
     sortKey
   )
 
-  const activeFilters = (vehicleType !== 'all' ? 1 : 0) + (sortKey !== 'newest' ? 1 : 0)
-  const totalFee = displayed.reduce((sum, s) => sum + Number(s.Amount || 0), 0)
+  const activeFilters =
+    (vehicleType !== 'all' ? 1 : 0) +
+    (sortKey !== 'newest' ? 1 : 0) +
+    (fromDate || toDate ? 1 : 0)
 
+  const totalFee = displayed.reduce((sum, s) => sum + s._displayFee, 0)
+  const prepaidCount = displayed.filter(hasPrepaid).length
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-12">
+
       {/* Breadcrumb */}
       <div className="mb-2 text-sm text-gray-500 flex items-center gap-2">
-        <span>Nhân viên</span><ChevronRight size={14} />
-        <span>Thanh toán</span><ChevronRight size={14} />
+        <span>Nhân viên</span>
+        <ChevronRight size={14} />
+        <span>Thanh toán</span>
+        <ChevronRight size={14} />
         <span className="text-blue-600 font-medium">Vehicle Check-out</span>
       </div>
 
@@ -253,7 +357,8 @@ const StaffVehicleCheckOut = () => {
       </header>
 
       <div className="flex gap-6 flex-1 min-h-0">
-        {/* Main column */}
+
+        {/* ── Main column ─────────────────────────────────────────── */}
         <div className="flex-[3] flex flex-col gap-5 min-h-0">
 
           {/* Search bar */}
@@ -266,10 +371,11 @@ const StaffVehicleCheckOut = () => {
               <span className="font-semibold text-gray-700">Mã phiên (SS-XXXXX)</span> ·{' '}
               <span className="font-semibold text-gray-700">Mã booking (BK-XXXX)</span> ·{' '}
               <span className="font-semibold text-gray-700">Biển số</span> ·{' '}
-              <span className="font-semibold text-gray-700">Tên khách</span>
+              <span className="font-semibold text-gray-700">Tên / SĐT khách</span>
             </p>
 
-            <div className="flex gap-3">
+            {/* Row 1: keyword + filter btn + search + reset */}
+            <div className="flex gap-3 mb-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3.5 top-3 text-gray-400" size={16} />
                 <input
@@ -281,13 +387,16 @@ const StaffVehicleCheckOut = () => {
                   className="w-full pl-10 pr-9 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 text-sm font-medium"
                 />
                 {query && (
-                  <button onClick={handleReset} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
+                  <button
+                    onClick={() => setQuery('')}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                  >
                     <X size={15} />
                   </button>
                 )}
               </div>
 
-              {/* Filter dropdown */}
+              {/* Filter popover trigger */}
               <div className="relative" ref={filterRef}>
                 <button
                   onClick={() => setShowFilter(v => !v)}
@@ -312,16 +421,53 @@ const StaffVehicleCheckOut = () => {
                 )}
               </div>
 
-              <button onClick={handleSearch} disabled={loading}
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-md shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
-                {loading ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
-                Tìm phiên hoạt động
+              <button
+                onClick={handleSearch}
+                disabled={loading}
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-md shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {loading
+                  ? <Loader2 size={15} className="animate-spin" />
+                  : <Search size={15} />
+                }
+                Tìm kiếm
               </button>
 
-              <button onClick={handleReset} disabled={loading}
-                className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1.5">
+              <button
+                onClick={handleReset}
+                disabled={loading}
+                className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1.5"
+              >
                 <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} /> Làm mới
               </button>
+            </div>
+
+            {/* Row 2: date range filter */}
+            <div className="flex items-center gap-3">
+              <CalendarRange size={14} className="text-gray-400 shrink-0" />
+              <span className="text-xs text-gray-500 font-medium">Lọc theo ngày vào:</span>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-gray-400 text-sm">→</span>
+              <input
+                type="date"
+                value={toDate}
+                min={fromDate || undefined}
+                onChange={e => setToDate(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500"
+              />
+              {(fromDate || toDate) && (
+                <button
+                  onClick={() => { setFromDate(''); setToDate('') }}
+                  className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1"
+                >
+                  <X size={11} /> Xoá
+                </button>
+              )}
             </div>
 
             {/* Active filter chips */}
@@ -339,17 +485,28 @@ const StaffVehicleCheckOut = () => {
                     <button onClick={() => setSortKey('newest')}><X size={10} /></button>
                   </span>
                 )}
+                {(fromDate || toDate) && (
+                  <span className="flex items-center gap-1 px-2.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                    {fromDate || '...'} → {toDate || '...'}
+                    <button onClick={() => { setFromDate(''); setToDate('') }}><X size={10} /></button>
+                  </span>
+                )}
               </div>
             )}
           </div>
 
-          {/* Result count */}
+          {/* Result header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-gray-700">Danh sách Phiên đang hoạt động</h3>
+              <h3 className="text-sm font-bold text-gray-700">Phiên đang hoạt động</h3>
               {searched && (
                 <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
                   {displayed.length} phiên
+                </span>
+              )}
+              {prepaidCount > 0 && (
+                <span className="bg-green-100 text-green-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                  {prepaidCount} đã trả QR
                 </span>
               )}
             </div>
@@ -362,7 +519,10 @@ const StaffVehicleCheckOut = () => {
           </div>
 
           {/* Scrollable card grid */}
-          <div className="overflow-y-auto flex-1 pr-1 pb-4" style={{ maxHeight: 'calc(100vh - 380px)' }}>
+          <div
+            className="overflow-y-auto flex-1 pr-1 pb-4"
+            style={{ maxHeight: 'calc(100vh - 420px)' }}
+          >
             {loading ? (
               <div className="flex justify-center items-center py-20">
                 <div className="flex flex-col items-center gap-3">
@@ -376,6 +536,7 @@ const StaffVehicleCheckOut = () => {
                   <SessionCard
                     key={session.SessionID}
                     session={session}
+                    // navigate đến đúng route /staff/checkout/:sessionId
                     onCheckout={(s) => navigate(`/staff/checkout/${s.SessionID}`)}
                   />
                 ))}
@@ -386,20 +547,25 @@ const StaffVehicleCheckOut = () => {
                   <Search size={24} />
                 </div>
                 <h4 className="text-base font-bold text-gray-800 mb-2">
-                  {query
-                    ? `Không tìm thấy phiên khớp với "${query}"`
+                  {query || fromDate || toDate
+                    ? 'Không tìm thấy phiên nào khớp với bộ lọc'
                     : 'Không có phiên đỗ xe nào đang hoạt động'}
                 </h4>
                 <p className="text-sm text-gray-500 max-w-md mb-5">
-                  Kiểm tra lại Biển số xe / Mã Phiên / Mã Booking. Nếu xe đang ở cổng nhưng không có trong hệ thống, hãy tạo Báo cáo Sự cố.
+                  Kiểm tra lại Biển số xe / Mã Phiên / Mã Booking. Nếu xe đang ở cổng
+                  nhưng không có trong hệ thống, hãy tạo Báo cáo Sự cố.
                 </p>
                 <div className="flex gap-3">
-                  <button onClick={handleReset}
-                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-gray-50">
-                    <Search size={15} /> Thử lại
+                  <button
+                    onClick={handleReset}
+                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-gray-50"
+                  >
+                    <RefreshCcw size={15} /> Thử lại
                   </button>
-                  <button onClick={() => navigate('/staff/create-incident')}
-                    className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-red-100">
+                  <button
+                    onClick={() => navigate('/staff/create-incident')}
+                    className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-red-100"
+                  >
                     <AlertTriangle size={15} /> Tạo Báo cáo sự cố
                   </button>
                 </div>
@@ -408,8 +574,10 @@ const StaffVehicleCheckOut = () => {
           </div>
         </div>
 
-        {/* Right sidebar */}
+        {/* ── Right sidebar ──────────────────────────────────────── */}
         <div className="flex-1 flex flex-col gap-4">
+
+          {/* Guide */}
           <div className="bg-blue-50 rounded-xl border border-blue-100 p-5">
             <h3 className="text-sm font-bold text-blue-900 mb-4 flex items-center gap-2">
               <ChevronRight size={16} className="text-blue-500" /> Hướng dẫn xử lý
@@ -418,10 +586,13 @@ const StaffVehicleCheckOut = () => {
               {[
                 'Tìm bằng Biển số, Mã phiên (SS-XXXXX) hoặc Mã booking (BK-XXXX).',
                 'Luôn đối chiếu biển số thực tế với hệ thống trước khi tính tiền.',
-                'Phí cuối cùng do server tính khi bấm Thanh toán — không cần tính tay.'
+                'Phiên "Đã trả QR" — chỉ cần xác nhận biển số, hệ thống tự tính phụ trội nếu có.',
+                'Phí cuối cùng do server tính khi bấm Hoàn tất — không cần tính tay.',
               ].map((txt, i) => (
                 <li key={i} className="flex gap-3">
-                  <span className="w-5 h-5 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">{i + 1}</span>
+                  <span className="w-5 h-5 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
+                    {i + 1}
+                  </span>
                   <span>{txt}</span>
                 </li>
               ))}
@@ -431,21 +602,23 @@ const StaffVehicleCheckOut = () => {
               <div>
                 <p className="text-xs font-bold text-gray-800 mb-1">Không tìm thấy phiên?</p>
                 <p className="text-[11px] text-gray-600 leading-relaxed">
-                  Khách bị mất thẻ hoặc biển số mờ/thay đổi lúc check-in. Hỏi lại hoặc tạo báo cáo sự cố.
+                  Khách bị mất thẻ hoặc biển số mờ/thay đổi lúc check-in.
+                  Hỏi lại hoặc tạo báo cáo sự cố.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Quick stats */}
           <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
             <p className="text-xs font-bold text-gray-500 uppercase mb-3">Thống kê nhanh</p>
             <div className="space-y-2.5 text-sm">
               {[
                 { label: 'Tổng đang đỗ', value: allSessions.length, color: 'text-gray-800' },
-                { label: 'Walk-in', value: allSessions.filter(s => !s.BookingCode).length, color: 'text-blue-600' },
-                { label: 'Booking', value: allSessions.filter(s => !!s.BookingCode).length, color: 'text-purple-600' },
-                { label: 'Đang hiển thị', value: displayed.length, color: 'text-gray-800' }
+                { label: 'Walk-in', value: allSessions.filter(s => !getBookingCode(s)).length, color: 'text-blue-600' },
+                { label: 'Booking', value: allSessions.filter(s => !!getBookingCode(s)).length, color: 'text-purple-600' },
+                { label: 'Đã trả QR', value: allSessions.filter(hasPrepaid).length, color: 'text-green-600' },
+                { label: 'Đang hiển thị', value: displayed.length, color: 'text-gray-800' },
               ].map(item => (
                 <div key={item.label} className="flex justify-between">
                   <span className="text-gray-500">{item.label}</span>
@@ -454,7 +627,9 @@ const StaffVehicleCheckOut = () => {
               ))}
               {totalFee > 0 && (
                 <div className="border-t border-gray-100 pt-2 flex justify-between">
-                  <span className="text-gray-500 flex items-center gap-1"><TrendingUp size={12} /> Tổng phí ghi nhận</span>
+                  <span className="text-gray-500 flex items-center gap-1">
+                    <TrendingUp size={12} /> Tổng phí ghi nhận
+                  </span>
                   <span className="font-black text-green-700 text-xs">{formatVND(totalFee)}</span>
                 </div>
               )}

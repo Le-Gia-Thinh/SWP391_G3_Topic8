@@ -83,16 +83,81 @@ const StaffParkingMap = () => {
   const handleSelectSlot = async (slotCode) => {
     try {
       const res = await axios.get(`/staff/slots/${slotCode}`)
+      const slotData = res.data?.data
+
+      if (!slotData) {
+        setSelectedSlot({
+          id: slotCode,
+          status: getStatus(slotCode),
+          zone: zone?.label,
+          details: null,
+          error: 'Không có dữ liệu'
+        })
+        return
+      }
+
       setSelectedSlot({
         id: slotCode,
         status: getStatus(slotCode),
         zone: zone?.label,
-        details: res.data?.data
+        type: slotData.type, // 'session', 'reservation', or null
+        details: {
+          // Session/Reservation info
+          sessionCode: slotData.sessionCode,
+          bookingCode: slotData.bookingCode,
+          sessionId: slotData.sessionId,
+          reservationId: slotData.reservationId,
+
+          // Driver info
+          driverName: slotData.driverName,
+          driverEmail: slotData.driverEmail,
+          driverPhone: slotData.driverPhone,
+
+          // Time info
+          entryTime: slotData.entryTime,
+          exitTime: slotData.exitTime,
+          startTime: slotData.startTime,
+          endTime: slotData.endTime,
+
+          // Plate
+          plateNumber: slotData.plateNumber,
+
+          // Payment info
+          paymentStatus: slotData.paymentStatus,
+          amount: slotData.amount,
+          finalAmount: slotData.finalAmount,
+          prepaidAmount: slotData.prepaidAmount,
+          surchargeAmount: slotData.surchargeAmount,
+          paymentMethod: slotData.paymentMethod,
+
+          // Reservation status
+          reservationStatus: slotData.reservationStatus
+        }
       })
     } catch (err) {
       console.error('Fetch slot details error:', err)
-      setSelectedSlot({ id: slotCode, status: getStatus(slotCode), zone: zone?.label, details: null })
+      setSelectedSlot({
+        id: slotCode,
+        status: getStatus(slotCode),
+        zone: zone?.label,
+        details: null,
+        error: 'Lỗi tải dữ liệu'
+      })
     }
+  }
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A'
+    try {
+      return new Date(dateString).toLocaleString('vi-VN')
+    } catch {
+      return dateString
+    }
+  }
+
+  const formatCurrency = (value) => {
+    if (value === null || value === undefined) return '0 VND'
+    return Number(value).toLocaleString('vi-VN') + ' VND'
   }
 
   return (
@@ -126,7 +191,7 @@ const StaffParkingMap = () => {
                 className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${activeZone === z.id
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                   : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300'
-                }`}
+                  }`}
               >
                 {z.label}
               </button>
@@ -171,9 +236,9 @@ const StaffParkingMap = () => {
                         onClick={() => handleSelectSlot(slotCode)}
                         className={`w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center
                           transition-all hover:scale-110 hover:shadow-md ${isSelected
-                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110'
-                        : `${cfg.bg} ${cfg.border} ${cfg.text}`
-                      }`}
+                            ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110'
+                            : `${cfg.bg} ${cfg.border} ${cfg.text}`
+                          }`}
                         title={`${slotCode} – ${cfg.label}`}
                       >
                         <span className="font-bold text-xs">{slotCode}</span>
@@ -193,42 +258,103 @@ const StaffParkingMap = () => {
 
         {/* Sidebar */}
         <div className="w-64 flex flex-col gap-4">
-          {selectedSlot ? (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-left">
+          {selectedSlot && !selectedSlot.error ? (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-left max-h-[calc(100vh-300px)] overflow-y-auto">
               <h3 className="text-sm font-bold text-gray-600 uppercase mb-4 border-b pb-2">Chi tiết ô đỗ</h3>
+
+              {/* Slot code & zone */}
               <div className="text-center mb-4">
                 <div className="text-4xl font-black text-blue-600">{selectedSlot.id}</div>
                 <div className="text-xs text-gray-400 mt-1">{selectedSlot.zone}</div>
               </div>
+
+              {/* Status badge */}
               <div className={`text-center py-2 px-3 rounded-lg font-bold text-sm mb-4
                 ${STATUS_CONFIG[selectedSlot.status]?.bg}
                 ${STATUS_CONFIG[selectedSlot.status]?.text}
                 border ${STATUS_CONFIG[selectedSlot.status]?.border}`}>
                 {STATUS_CONFIG[selectedSlot.status]?.label.toUpperCase()}
               </div>
-              {selectedSlot.details && (
-                <div className="text-xs text-gray-600 space-y-1">
-                  {selectedSlot.details.DriverName && <p><strong>Người gửi:</strong> {selectedSlot.details.DriverName}</p>}
-                  {selectedSlot.details.DriverEmail && <p><strong>Email:</strong> {selectedSlot.details.DriverEmail}</p>}
-                  {selectedSlot.details.DriverPhone && <p><strong>Phone:</strong> {selectedSlot.details.DriverPhone}</p>}
-                  {selectedSlot.details.StartTime && <p><strong>Bắt đầu:</strong> {new Date(selectedSlot.details.StartTime).toLocaleString()}</p>}
-                  {selectedSlot.details.EndTime && <p><strong>Dự kiến ra:</strong> {new Date(selectedSlot.details.EndTime).toLocaleString()}</p>}
-                  {selectedSlot.details.BookingCode && <p><strong>Mã booking:</strong> {selectedSlot.details.BookingCode}</p>}
-                  {selectedSlot.details.SessionCode && <p><strong>Mã session:</strong> {selectedSlot.details.SessionCode}</p>}
-                  {selectedSlot.details.PaymentStatus && <p><strong>Thanh toán:</strong> {selectedSlot.details.PaymentStatus}</p>}
-                  {selectedSlot.details.FinalAmount != null && (
-                    <p><strong>Tổng phí:</strong> {selectedSlot.details.FinalAmount.toLocaleString()} VND</p>
+
+              {/* Details */}
+              {selectedSlot.details ? (
+                <div className="text-xs text-gray-600 space-y-2">
+                  {/* Nếu là Active Session */}
+                  {selectedSlot.type === 'session' && (
+                    <>
+                      <p className="font-bold text-gray-700 border-b pb-2">Phiên gửi xe</p>
+                      {selectedSlot.details.sessionCode &&
+                        <p><strong>Mã phiên:</strong> {selectedSlot.details.sessionCode}</p>
+                      }
+                      {selectedSlot.details.plateNumber &&
+                        <p><strong>Biển số:</strong> {selectedSlot.details.plateNumber}</p>
+                      }
+                      {selectedSlot.details.entryTime &&
+                        <p><strong>Vào lúc:</strong> {formatDateTime(selectedSlot.details.entryTime)}</p>
+                      }
+                    </>
                   )}
-                  {selectedSlot.details.SurchargeAmount > 0 && (
-                    <p><strong>Phụ trội:</strong> {selectedSlot.details.SurchargeAmount.toLocaleString()} VND</p>
+
+                  {/* Nếu là Reservation */}
+                  {selectedSlot.type === 'reservation' && (
+                    <>
+                      <p className="font-bold text-gray-700 border-b pb-2">Đặt chỗ</p>
+                      {selectedSlot.details.bookingCode &&
+                        <p><strong>Mã booking:</strong> {selectedSlot.details.bookingCode}</p>
+                      }
+                      {selectedSlot.details.startTime &&
+                        <p><strong>Bắt đầu:</strong> {formatDateTime(selectedSlot.details.startTime)}</p>
+                      }
+                      {selectedSlot.details.endTime &&
+                        <p><strong>Dự kiến ra:</strong> {formatDateTime(selectedSlot.details.endTime)}</p>
+                      }
+                      {selectedSlot.details.reservationStatus &&
+                        <p><strong>Trạng thái:</strong> {selectedSlot.details.reservationStatus}</p>
+                      }
+                    </>
+                  )}
+
+                  {/* Driver info */}
+                  <div className="border-t pt-2 mt-2">
+                    <p className="font-bold text-gray-700 mb-1">Thông tin tài xế</p>
+                    {selectedSlot.details.driverName &&
+                      <p><strong>Tên:</strong> {selectedSlot.details.driverName}</p>
+                    }
+                    {selectedSlot.details.driverEmail &&
+                      <p><strong>Email:</strong> {selectedSlot.details.driverEmail}</p>
+                    }
+                    {selectedSlot.details.driverPhone &&
+                      <p><strong>Điện thoại:</strong> {selectedSlot.details.driverPhone}</p>
+                    }
+                  </div>
+
+                  {/* Payment info */}
+                  {selectedSlot.details.paymentStatus && (
+                    <div className="border-t pt-2 mt-2">
+                      <p className="font-bold text-gray-700 mb-1">Thanh toán</p>
+                      <p><strong>Trạng thái:</strong> {selectedSlot.details.paymentStatus}</p>
+                      {selectedSlot.details.finalAmount !== null && selectedSlot.details.finalAmount !== undefined &&
+                        <p><strong>Tổng phí:</strong> {formatCurrency(selectedSlot.details.finalAmount)}</p>
+                      }
+                      {selectedSlot.details.prepaidAmount &&
+                        <p><strong>Đã thanh toán:</strong> {formatCurrency(selectedSlot.details.prepaidAmount)}</p>
+                      }
+                      {selectedSlot.details.surchargeAmount && selectedSlot.details.surchargeAmount > 0 &&
+                        <p><strong>Phụ trội:</strong> {formatCurrency(selectedSlot.details.surchargeAmount)}</p>
+                      }
+                    </div>
                   )}
                 </div>
+              ) : (
+                <p className="text-center text-gray-400 text-xs">Chưa có dữ liệu</p>
               )}
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-center">
               <Info size={32} className="text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">Nhấn vào một ô đỗ để xem chi tiết</p>
+              <p className="text-sm text-gray-400">
+                {selectedSlot?.error || 'Nhấn vào một ô đỗ để xem chi tiết'}
+              </p>
             </div>
           )}
         </div>
