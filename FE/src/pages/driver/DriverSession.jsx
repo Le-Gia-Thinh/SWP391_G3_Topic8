@@ -1,21 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Car,
-  ShieldCheck,
-  Clock,
-  MapPin,
-  Info,
-  ArrowRightLeft,
   AlertTriangle,
-  Check,
+  ArrowRightLeft,
+  Car,
+  Clock,
+  CreditCard,
+  Info,
+  Loader2,
+  MapPin,
   RefreshCcw,
-  Map
+  ShieldCheck
 } from 'lucide-react'
-import authorizeAxios from '../../utils/authorizeAxios'
-import Card from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import Modal from '../../components/ui/Modal'
+import driverApi from '../../apis/driverApi'
 
 const parseBackendDate = (value) => {
   if (!value) return null
@@ -24,8 +21,6 @@ const parseBackendDate = (value) => {
 
   let text = String(value)
 
-  // SQL Server datetime sometimes comes back with Z and JS treats it as UTC.
-  // Remove Z so FE treats it as local time for this project.
   if (text.endsWith('Z')) {
     text = text.slice(0, -1)
   }
@@ -77,61 +72,453 @@ const getParkedDuration = (entryTime, currentTime) => {
   return `${hours} giờ ${minutes} phút ${seconds} giây`
 }
 
-const getProgress = (sessionInfo, currentTime) => {
-  if (!sessionInfo?.EntryTime) return 5
-
-  const entry = parseBackendDate(sessionInfo.EntryTime)
+const getProgress = (session, currentTime) => {
+  const entry = parseBackendDate(session?.EntryTime)
   const now = currentTime || new Date()
 
   if (!entry) return 5
-
-  let totalMinutes = 240
-
-  if (sessionInfo.ReservationStartTime && sessionInfo.ReservationEndTime) {
-    const start = parseBackendDate(sessionInfo.ReservationStartTime)
-    const end = parseBackendDate(sessionInfo.ReservationEndTime)
-
-    if (start && end) {
-      totalMinutes = Math.max(
-        1,
-        Math.floor((end.getTime() - start.getTime()) / 60000)
-      )
-    }
-  }
 
   const parkedMinutes = Math.max(
     0,
     Math.floor((now.getTime() - entry.getTime()) / 60000)
   )
 
+  const defaultTotalMinutes = 240
+
   return Math.min(
     100,
-    Math.max(5, Math.round((parkedMinutes / totalMinutes) * 100))
+    Math.max(5, Math.round((parkedMinutes / defaultTotalMinutes) * 100))
+  )
+}
+
+const getSessionStatusLabel = (status) => {
+  const map = {
+    Active: 'Đang hoạt động',
+    Completed: 'Đã hoàn tất',
+    Cancelled: 'Đã hủy',
+    Pending: 'Đang chờ'
+  }
+
+  return map[status] || status || 'Đang hoạt động'
+}
+
+const getSessionTitle = (session) => {
+  return session?.SessionCode || `SESS-${session?.SessionID || '--'}`
+}
+
+const getSessionSubTitle = (session) => {
+  const plate = session?.PlateNumber || 'Chưa có biển số'
+  const slot = session?.SlotCode || 'Chưa có vị trí'
+  return `${plate} • ${slot}`
+}
+
+const normalizeSessionRows = (response) => {
+  if (Array.isArray(response?.data)) return response.data
+  if (Array.isArray(response)) return response
+  return []
+}
+
+const InfoRow = ({
+  icon,
+  label,
+  value,
+  valueClassName = 'font-semibold text-gray-800',
+  border = true
+}) => {
+  return (
+    <div
+      className={`flex items-center justify-between gap-4 ${
+        border ? 'border-b border-gray-100 pb-2' : ''
+      }`}
+    >
+      <div className="flex items-center gap-2 text-sm text-gray-500">
+        {icon && <span>{icon}</span>}
+        <span>{label}</span>
+      </div>
+
+      <span className={`text-right ${valueClassName}`}>
+        {value || '--'}
+      </span>
+    </div>
+  )
+}
+
+const LocationCard = ({ label, value, active = false }) => {
+  return (
+    <div
+      className={`rounded-xl border p-4 text-center transition-colors ${
+        active
+          ? 'border-blue-100 bg-blue-50/50'
+          : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'
+      }`}
+    >
+      <div
+        className={`mb-1 text-xs font-semibold uppercase ${
+          active ? 'text-blue-600' : 'text-gray-500'
+        }`}
+      >
+        {label}
+      </div>
+
+      <div
+        className={
+          active
+            ? 'text-xl font-black text-blue-600'
+            : 'font-bold text-gray-800'
+        }
+      >
+        {value || '--'}
+      </div>
+    </div>
+  )
+}
+
+const SessionListItem = ({ session, active, onClick, currentTime }) => {
+  const parkedDuration = getParkedDuration(session.EntryTime, currentTime)
+
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(session.SessionID)}
+      className={`w-full rounded-xl border p-4 text-left transition-all ${
+        active
+          ? 'border-blue-500 bg-blue-50 shadow-sm'
+          : 'border-gray-100 bg-white hover:border-blue-100 hover:bg-gray-50'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div
+            className={`font-black ${
+              active ? 'text-blue-700' : 'text-gray-900'
+            }`}
+          >
+            {getSessionTitle(session)}
+          </div>
+
+          <div className="mt-1 text-xs font-semibold text-gray-500">
+            {getSessionSubTitle(session)}
+          </div>
+        </div>
+
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+            active
+              ? 'bg-blue-600 text-white'
+              : 'bg-emerald-50 text-emerald-600'
+          }`}
+        >
+          {getSessionStatusLabel(session.SessionStatus)}
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-500">
+        <div>
+          <div className="font-semibold text-gray-400">Vào lúc</div>
+          <div className="font-bold text-gray-700">
+            {formatDateTime(session.EntryTime)}
+          </div>
+        </div>
+
+        <div>
+          <div className="font-semibold text-gray-400">Đã đỗ</div>
+          <div className="font-bold text-blue-600">
+            {parkedDuration}
+          </div>
+        </div>
+      </div>
+    </button>
+  )
+}
+
+const SessionDetail = ({
+  session,
+  currentTime,
+  onGoPayment,
+  onGoReport,
+  onViewMap
+}) => {
+  const parkedDuration = useMemo(() => {
+    return getParkedDuration(session.EntryTime, currentTime)
+  }, [session.EntryTime, currentTime])
+
+  const progress = useMemo(() => {
+    return getProgress(session, currentTime)
+  }, [session, currentTime])
+
+  const totalAmount = Number(session.Amount || 0)
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+      <div className="border-b border-gray-100 bg-gray-50/60 p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-black text-gray-900">
+                {getSessionTitle(session)}
+              </h2>
+
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
+                {getSessionStatusLabel(session.SessionStatus)}
+              </span>
+            </div>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Mã phiên nội bộ: #{session.SessionID}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onGoPayment(session.SessionID)}
+            className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700"
+          >
+            <CreditCard size={16} />
+            Thanh toán
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 p-5 xl:grid-cols-3">
+        <div className="space-y-5 xl:col-span-2">
+          <div className="rounded-xl border border-gray-100 bg-white p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <ArrowRightLeft size={18} className="text-blue-500" />
+              <h3 className="font-bold text-gray-900">
+                Thông tin phiên đỗ
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 rounded-xl bg-gray-50 p-4 sm:grid-cols-2">
+              <InfoRow
+                label="Loại phiên"
+                value={session.BookingCode ? 'Đặt chỗ trước' : 'Vãng lai'}
+              />
+
+              <InfoRow
+                label="Mã đặt chỗ"
+                value={session.BookingCode || 'Không có'}
+                valueClassName="font-bold text-blue-600"
+              />
+
+              <InfoRow
+                icon={<Clock size={16} />}
+                label="Thời điểm vào"
+                value={formatDateTime(session.EntryTime)}
+              />
+
+              <InfoRow
+                label="Thời gian đã đỗ"
+                value={parkedDuration}
+                valueClassName="font-bold text-blue-600"
+                border={false}
+              />
+            </div>
+
+            <div className="mt-4">
+              <div className="mb-2 flex items-center justify-between text-xs font-semibold">
+                <span className="text-gray-500">Tiến độ đỗ xe</span>
+                <span className="text-blue-600">{progress}%</span>
+              </div>
+
+              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-100 bg-white p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <Car size={18} className="text-blue-500" />
+              <h3 className="font-bold text-gray-900">
+                Thông tin phương tiện
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div>
+                <div className="flex h-24 items-center justify-center rounded-xl bg-gray-200/80 shadow-inner">
+                  <span className="text-3xl font-black tracking-widest text-gray-800">
+                    {session.PlateNumber || '--'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4 rounded-xl bg-gray-50 p-4">
+                <InfoRow
+                  icon={<Car size={16} />}
+                  label="Loại xe"
+                  value={session.VehicleName || '--'}
+                />
+
+                <InfoRow
+                  icon={<ShieldCheck size={16} />}
+                  label="Mã loại xe"
+                  value={session.VehicleCode || session.VehicleTypeID || '--'}
+                  border={false}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-100 bg-white p-5">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin size={18} className="text-blue-500" />
+                <h3 className="font-bold text-gray-900">
+                  Vị trí đỗ xe
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onViewMap(session.SessionID)}
+                className="flex w-fit items-center gap-2 rounded-lg border border-blue-100 px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+              >
+                <MapPin size={16} />
+                Xem sơ đồ vị trí
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <LocationCard
+                label="Tòa nhà"
+                value={session.BuildingName}
+              />
+
+              <LocationCard
+                label="Tầng"
+                value={session.FloorName}
+              />
+
+              <LocationCard
+                label="Khu vực"
+                value={session.ZoneName}
+              />
+
+              <LocationCard
+                label="Mã vị trí"
+                value={session.SlotCode}
+                active
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          <div className="rounded-xl border border-gray-100 bg-white p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-bold text-gray-900">
+                Tạm tính chi phí
+              </h3>
+
+              <span className="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                {session.PaymentStatus || 'Pending'}
+              </span>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Phí đỗ xe</span>
+                <span className="font-bold text-gray-800">
+                  {formatCurrency(totalAmount)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Phí quá giờ</span>
+                <span className="font-bold text-gray-800">0 VNĐ</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Phí khác</span>
+                <span className="font-bold text-gray-800">0 VNĐ</span>
+              </div>
+            </div>
+
+            <div className="mt-5 border-t border-gray-100 pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Tổng tạm tính
+              </p>
+
+              <p className="mt-1 text-2xl font-black text-gray-900">
+                {formatCurrency(totalAmount)}
+              </p>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              <button
+                type="button"
+                onClick={() => onGoPayment(session.SessionID)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700"
+              >
+                <CreditCard size={18} />
+                Thanh toán phiên này
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onGoReport(session.SessionID)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-3 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+              >
+                <AlertTriangle size={18} className="text-orange-500" />
+                Báo cáo sự cố
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+            <div className="flex gap-3 text-sm text-blue-800">
+              <Info size={20} className="mt-0.5 shrink-0 text-blue-500" />
+
+              <p>
+                Khi ra cổng, vui lòng cung cấp biển số xe hoặc mã phiên cho nhân viên để hoàn tất check-out.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
 const DriverSession = () => {
   const navigate = useNavigate()
 
-  const [sessionInfo, setSessionInfo] = useState(null)
+  const [sessions, setSessions] = useState([])
+  const [selectedSessionId, setSelectedSessionId] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [currentTime, setCurrentTime] = useState(new Date())
   const [mapModal, setMapModal] = useState({ isOpen: false })
 
-  const fetchCurrentSession = async () => {
+  const fetchCurrentSessions = async () => {
     try {
       setIsLoading(true)
       setErrorMessage('')
 
-      const response = await authorizeAxios.get('/driver/current-session')
-      setSessionInfo(response.data?.data || null)
+      const response = await driverApi.getCurrentSessions()
+      const rows = normalizeSessionRows(response)
+
+      setSessions(rows)
+
+      if (rows.length > 0) {
+        setSelectedSessionId((prev) => {
+          const exists = rows.some((item) => String(item.SessionID) === String(prev))
+          return exists ? prev : String(rows[0].SessionID)
+        })
+      } else {
+        setSelectedSessionId('')
+      }
     } catch (error) {
-      console.error('Get current session failed:', error)
+      console.error('Get current sessions failed:', error)
 
       const message =
         error.response?.data?.message ||
-        'Không thể tải phiên đỗ hiện tại. Vui lòng thử lại.'
+        'Không thể tải danh sách phiên đỗ hiện tại. Vui lòng thử lại.'
 
       setErrorMessage(message)
     } finally {
@@ -140,7 +527,7 @@ const DriverSession = () => {
   }
 
   useEffect(() => {
-    fetchCurrentSession()
+    fetchCurrentSessions()
   }, [])
 
   useEffect(() => {
@@ -151,73 +538,34 @@ const DriverSession = () => {
     return () => clearInterval(timer)
   }, [])
 
-  const parkedDuration = useMemo(() => {
-    return getParkedDuration(sessionInfo?.EntryTime, currentTime)
-  }, [sessionInfo?.EntryTime, currentTime])
+  const selectedSession = useMemo(() => {
+    return sessions.find((item) => String(item.SessionID) === String(selectedSessionId)) || sessions[0] || null
+  }, [sessions, selectedSessionId])
 
-  const progress = useMemo(() => {
-    return getProgress(sessionInfo, currentTime)
-  }, [sessionInfo, currentTime])
-
-  const totalAmount = Number(sessionInfo?.Amount || 0)
-
-  const costDetails = [
-    {
-      label: `Phí đỗ xe (${parkedDuration})`,
-      amount: formatCurrency(totalAmount)
-    },
-    {
-      label: 'Phí quá giờ',
-      amount: '0 VNĐ'
-    },
-    {
-      label: 'Phí dịch vụ khác',
-      amount: '0 VNĐ'
-    }
-  ]
-
-  const sessionTimeline = [
-    {
-      title: 'Nhân viên ghi nhận vào cổng',
-      time: formatDateTime(sessionInfo?.EntryTime),
-      status: 'done'
-    },
-    {
-      title: `Đã đỗ vào vị trí ${sessionInfo?.SlotCode || '--'}`,
-      time: formatDateTime(sessionInfo?.EntryTime),
-      status: 'done'
-    },
-    {
-      title: 'Đang trong thời gian đỗ',
-      time: `Đã đỗ ${parkedDuration}`,
-      status: 'active'
-    },
-    {
-      title: 'Chờ xác nhận ra cổng (Checkout)',
-      time: '',
-      status: 'pending'
-    }
-  ]
-
-  const handleGoPayment = () => {
-    navigate('/driver/payment')
+  const handleGoPayment = (sessionId) => {
+    navigate('/driver/payment', {
+      state: { sessionId }
+    })
   }
 
-  const handleGoReport = () => {
-    navigate('/driver/report')
+  const handleGoReport = (sessionId) => {
+    navigate('/driver/report', {
+      state: { sessionId }
+    })
   }
 
-  const handleViewMap = () => {
-    setMapModal({ isOpen: true })
+  const handleViewMap = (sessionId) => {
+    console.log('View parking map for session:', sessionId)
   }
 
   if (isLoading) {
     return (
-      <Card className="p-10 text-center">
-        <p className="font-bold text-gray-700">
-          Đang tải phiên đỗ hiện tại...
-        </p>
-      </Card>
+      <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-sm">
+        <div className="flex items-center justify-center gap-3 font-bold text-gray-700">
+          <Loader2 size={20} className="animate-spin text-blue-600" />
+          Đang tải các phiên đỗ hiện tại...
+        </div>
+      </div>
     )
   }
 
@@ -228,11 +576,10 @@ const DriverSession = () => {
           {errorMessage}
         </p>
 
-        <Button
-          onClick={fetchCurrentSession}
-          variant="danger"
-          className="mt-4"
-          icon={RefreshCcw}
+        <button
+          type="button"
+          onClick={fetchCurrentSessions}
+          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
         >
           Thử lại
         </Button>
@@ -240,7 +587,7 @@ const DriverSession = () => {
     )
   }
 
-  if (!sessionInfo) {
+  if (sessions.length === 0) {
     return (
       <div className="space-y-6">
         <div>
@@ -251,7 +598,7 @@ const DriverSession = () => {
           </div>
 
           <h1 className="mt-1 text-2xl font-bold text-gray-900">
-            Chi tiết phiên đỗ hiện tại
+            Phiên đỗ xe hiện tại
           </h1>
         </div>
 
@@ -289,283 +636,88 @@ const DriverSession = () => {
         </div>
 
         <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Chi tiết phiên đỗ hiện tại
-          </h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Phiên đỗ xe hiện tại
+            </h1>
 
-          <Button
-            onClick={fetchCurrentSession}
-            variant="secondary"
-            className="w-fit"
-            icon={RefreshCcw}
+            <p className="mt-1 text-sm text-gray-500">
+              Bạn đang có {sessions.length} phiên gửi xe đang hoạt động.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={fetchCurrentSessions}
+            className="flex w-fit items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
           >
             Làm mới
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Card>
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="block lg:hidden">
+        <label className="mb-2 block text-sm font-bold text-gray-700">
+          Chọn phiên đỗ xe
+        </label>
+
+        <select
+          value={selectedSessionId}
+          onChange={(event) => setSelectedSessionId(event.target.value)}
+          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+        >
+          {sessions.map((session) => (
+            <option key={session.SessionID} value={String(session.SessionID)}>
+              {getSessionTitle(session)} - {session.PlateNumber || 'Chưa có biển số'} - {session.SlotCode || 'Chưa có vị trí'}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="hidden lg:block">
+          <div className="sticky top-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">
-                  Thông tin phiên đỗ
+                <h2 className="font-bold text-gray-900">
+                  Danh sách phiên
                 </h2>
 
-                <p className="text-sm text-gray-500">
-                  Mã tham chiếu hệ thống:{' '}
-                  {sessionInfo.SessionCode || `SESS-${sessionInfo.SessionID}`}
+                <p className="text-xs text-gray-500">
+                  Chọn một phiên để xem chi tiết
                 </p>
               </div>
 
-              <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
-                {sessionInfo.statusLabel || 'Đang hoạt động'}
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
+                {sessions.length}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 rounded-xl border border-gray-100 bg-gray-50/50 p-4 sm:grid-cols-2">
-              <div>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Loại phiên
-                </div>
-
-                <div className="flex items-center gap-2 font-bold text-gray-800">
-                  <ArrowRightLeft size={16} className="text-blue-500" />
-                  {sessionInfo.sessionType || 'VÃNG LAI'}
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Mã đặt chỗ
-                </div>
-
-                <div className="font-bold text-blue-600">
-                  {sessionInfo.BookingCode || 'Không có'}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 flex gap-3 rounded-xl bg-blue-50/50 p-4 text-sm text-blue-800">
-              <Info size={20} className="mt-0.5 shrink-0 text-blue-500" />
-
-              <p>
-                Để hoàn tất phiên đỗ và thanh toán, vui lòng cung cấp{' '}
-                <span className="font-bold">biển số xe</span> hoặc{' '}
-                <span className="font-bold">mã đặt chỗ</span> cho nhân viên bãi
-                xe khi di chuyển ra cổng kiểm soát.
-              </p>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-4 text-lg font-bold text-gray-900">
-              Thông tin phương tiện
-            </h2>
-
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div>
-                <div className="flex h-24 items-center justify-center rounded-xl bg-gray-200/80 shadow-inner">
-                  <span className="text-3xl font-black tracking-widest text-gray-800">
-                    {sessionInfo.PlateNumber || '--'}
-                  </span>
-                </div>
-
-                <div className="mt-6 space-y-4">
-                  <InfoRow
-                    icon={<Car size={16} />}
-                    label="Loại xe"
-                    value={sessionInfo.VehicleName || '--'}
-                  />
-
-                  <InfoRow
-                    icon={<ShieldCheck size={16} />}
-                    label="Hãng xe"
-                    value="Chưa cập nhật"
-                    border={false}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4 rounded-xl border border-gray-100 bg-gray-50 p-5">
-                <InfoRow label="Cổng vào" value="Cổng chính" />
-
-                <InfoRow
-                  icon={<Clock size={16} />}
-                  label="Thời điểm vào"
-                  value={formatDateTime(sessionInfo.EntryTime)}
-                />
-
-                <InfoRow
-                  label="Thời gian đã đỗ"
-                  value={parkedDuration}
-                  valueClassName="font-bold text-blue-600"
-                  border={false}
-                />
-
-                <div className="pt-2">
-                  <div className="mb-2 flex items-center justify-between text-xs font-semibold">
-                    <span className="text-gray-500">
-                      Tiến độ đỗ xe
-                    </span>
-
-                    <span className="text-blue-600">
-                      {progress}%
-                    </span>
-                  </div>
-
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                    <div
-                      className="h-full rounded-full bg-blue-600 transition-all duration-500"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg font-bold text-gray-900">
-                Vị trí đỗ xe
-              </h2>
-
-              <Button
-                onClick={handleViewMap}
-                variant="outline"
-                size="sm"
-                icon={MapPin}
-              >
-                Xem sơ đồ vị trí
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <LocationCard
-                label="Tòa nhà"
-                value={sessionInfo.BuildingName || '--'}
-              />
-
-              <LocationCard
-                label="Tầng"
-                value={sessionInfo.FloorName || '--'}
-              />
-
-              <LocationCard
-                label="Khu vực"
-                value={sessionInfo.ZoneName || '--'}
-              />
-
-              <LocationCard
-                label="Mã vị trí"
-                value={sessionInfo.SlotCode || '--'}
-                active
-              />
-            </div>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <Card>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">
-                Tạm tính chi phí
-              </h2>
-
-              <span className="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                {sessionInfo.PaymentStatus || 'Pending'}
-              </span>
-            </div>
-
-            <div className="mb-6 space-y-3 text-sm">
-              {costDetails.map((item) => (
-                <CostRow
-                  key={item.label}
-                  label={item.label}
-                  amount={item.amount}
+            <div className="max-h-[calc(100vh-260px)] space-y-3 overflow-y-auto pr-1">
+              {sessions.map((session) => (
+                <SessionListItem
+                  key={session.SessionID}
+                  session={session}
+                  active={String(session.SessionID) === String(selectedSessionId)}
+                  onClick={setSelectedSessionId}
+                  currentTime={currentTime}
                 />
               ))}
             </div>
+          </div>
+        </aside>
 
-            <div className="mb-6 border-t border-gray-100 pt-4">
-              <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Tổng tạm tính
-              </div>
-
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                <span className="text-3xl font-black text-gray-900">
-                  {formatCurrency(totalAmount)}
-                </span>
-
-                <span className="mb-1 text-[10px] text-gray-400">
-                  Đã bao gồm VAT
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Button onClick={handleGoPayment} className="w-full">
-                Thanh toán ngay
-              </Button>
-
-              <Button
-                onClick={handleGoReport}
-                variant="secondary"
-                className="w-full border-orange-200 text-orange-600 hover:bg-orange-50"
-                icon={AlertTriangle}
-              >
-                Báo cáo sự cố đỗ xe
-              </Button>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-6 text-lg font-bold text-gray-900">
-              Trình trạng phiên
-            </h2>
-
-            <div className="relative ml-3 space-y-8 border-l-2 border-gray-100">
-              {sessionTimeline.map((item) => (
-                <TimelineItem
-                  key={item.title}
-                  item={item}
-                />
-              ))}
-            </div>
-          </Card>
-
-          <Card className="rounded-2xl border border-gray-100 bg-gray-50/80 p-5">
-            <div className="flex items-start gap-4">
-              <div className="mt-1 rounded-full bg-white p-2 text-blue-500 shadow-sm">
-                <Info size={20} />
-              </div>
-
-              <div>
-                <div className="font-bold text-gray-800">
-                  Hỗ trợ 24/7
-                </div>
-
-                <div className="mt-1 text-sm text-gray-500">
-                  Hotline:{' '}
-                  <span className="font-bold text-blue-600">
-                    1900 1234
-                  </span>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          <Button
-            onClick={fetchCurrentSession}
-            variant="secondary"
-            className="w-full"
-            icon={RefreshCcw}
-          >
-            Làm mới phiên hiện tại
-          </Button>
-        </div>
+        <main>
+          {selectedSession && (
+            <SessionDetail
+              session={selectedSession}
+              currentTime={currentTime}
+              onGoPayment={handleGoPayment}
+              onGoReport={handleGoReport}
+              onViewMap={handleViewMap}
+            />
+          )}
+        </main>
       </div>
 
       <Modal
@@ -583,121 +735,6 @@ const DriverSession = () => {
           </p>
         </div>
       </Modal>
-    </div>
-  )
-}
-
-const InfoRow = ({
-  icon,
-  label,
-  value,
-  valueClassName = 'font-semibold text-gray-800',
-  border = true
-}) => {
-  return (
-    <div
-      className={`flex items-center justify-between gap-4 ${
-        border ? 'border-b border-gray-100 pb-2' : ''
-      }`}
-    >
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        {icon && <span>{icon}</span>}
-        {label}
-      </div>
-
-      <span className={`text-right ${valueClassName}`}>
-        {value}
-      </span>
-    </div>
-  )
-}
-
-const LocationCard = ({ label, value, active = false }) => {
-  return (
-    <div
-      className={`rounded-xl border p-4 text-center transition-colors ${
-        active
-          ? 'border-blue-100 bg-blue-50/50'
-          : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
-      }`}
-    >
-      <div
-        className={`mb-1 text-xs font-semibold uppercase ${
-          active ? 'text-blue-600' : 'text-gray-500'
-        }`}
-      >
-        {label}
-      </div>
-
-      <div
-        className={
-          active
-            ? 'text-xl font-black text-blue-600'
-            : 'font-bold text-gray-800'
-        }
-      >
-        {value}
-      </div>
-    </div>
-  )
-}
-
-const CostRow = ({ label, amount }) => {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-gray-500">
-        {label}
-      </span>
-
-      <span className="font-bold text-gray-800">
-        {amount}
-      </span>
-    </div>
-  )
-}
-
-const TimelineItem = ({ item }) => {
-  const isDone = item.status === 'done'
-  const isActive = item.status === 'active'
-  const isPending = item.status === 'pending'
-
-  return (
-    <div className="relative pl-6">
-      <div className="absolute -left-[9px] top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white">
-        {isDone && (
-          <Check size={12} className="text-gray-400" />
-        )}
-
-        {isActive && (
-          <div className="h-3 w-3 rounded-full border-2 border-blue-600 bg-white" />
-        )}
-
-        {isPending && (
-          <div className="h-3 w-3 rounded-full border-2 border-gray-200 bg-white" />
-        )}
-      </div>
-
-      <div
-        className={`text-sm ${
-          isActive
-            ? 'font-bold text-blue-600'
-            : isPending
-              ? 'font-semibold text-gray-400'
-              : 'font-bold text-gray-800'
-        }`}
-      >
-        {item.title}
-      </div>
-
-      {item.time && (
-        <div
-          className={`text-xs ${
-            isActive ? 'text-blue-500' : 'text-gray-500'
-          }`}
-        >
-          {item.time}
-        </div>
-      )}
     </div>
   )
 }

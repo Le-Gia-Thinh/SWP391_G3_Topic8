@@ -1,8 +1,6 @@
-import React, { useMemo, useState } from 'react'
-import authorizeAxios from '../../utils/authorizeAxios'
-import Card from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import Modal from '../../components/ui/Modal'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'react-toastify'
+import driverApi from '../../apis/driverApi'
 
 const ISSUE_TYPES = [
   { id: 'not_found', label: 'Không tìm thấy đặt chỗ', severity: 'Trung bình' },
@@ -15,42 +13,208 @@ const ISSUE_TYPES = [
   { id: 'other', label: 'Vấn đề khác', severity: 'Thấp' }
 ]
 
-const CURRENT_SESSION = {
-  plateNumber: '51A-999.88',
-  status: 'Đang đỗ',
-  bookingCode: 'BK-2024-1029',
-  sessionCode: 'B-1029',
-  time: '12:45, 24/05/2024',
-  type: 'Booking'
+function getValue(obj, ...keys) {
+  for (const key of keys) {
+    if (obj && obj[key] !== undefined && obj[key] !== null) return obj[key]
+  }
+
+  return ''
+}
+
+function formatDateTime(value) {
+  if (!value) return '—'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) return '—'
+
+  return date.toLocaleString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
+
+function getStatusLabel(status) {
+  const map = {
+    Active: 'Đang đỗ',
+    Completed: 'Đã hoàn tất',
+    Reserved: 'Đã đặt',
+    Expired: 'Hết hạn',
+    Cancelled: 'Đã hủy',
+    Open: 'Đang mở',
+    InProgress: 'Đang xử lý',
+    Resolved: 'Đã xử lý'
+  }
+
+  return map[status] || status || '—'
+}
+
+function normalizeAttachments(files) {
+  return files.map((file) => ({
+    id: `${file.name}-${file.lastModified}-${file.size}`,
+    name: file.name,
+    size: file.size,
+    type: file.type
+  }))
 }
 
 const DriverReport = () => {
   const [selectedIssue, setSelectedIssue] = useState('not_found')
-  const [selectedSession, setSelectedSession] = useState('current')
+  const [selectedRelatedId, setSelectedRelatedId] = useState('')
   const [description, setDescription] = useState('')
-  const [attachments, setAttachments] = useState([
-    { id: 1, name: 'Receipt.jpg' },
-    { id: 2, name: 'Error.png' }
-  ])
+  const [attachments, setAttachments] = useState([])
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [alertModal, setAlertModal] = useState({ isOpen: false, message: '', title: '' })
 
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+
+  const [context, setContext] = useState({
+    currentSession: null,
+    reservations: [],
+    recentReports: []
+  })
+
   const selectedIssueData = useMemo(() => {
     return ISSUE_TYPES.find((issue) => issue.id === selectedIssue)
   }, [selectedIssue])
+
+  const relatedOptions = useMemo(() => {
+    const options = []
+
+    const currentSession = context.currentSession
+
+    if (currentSession) {
+      const sessionId = getValue(currentSession, 'SessionID', 'sessionId')
+
+      options.push({
+        id: `session-${sessionId}`,
+        kind: 'session',
+        label: `Phiên hiện tại (${getValue(currentSession, 'SessionCode', 'sessionCode') || sessionId} - ${getValue(currentSession, 'PlateNumber', 'plateNumber') || 'Chưa có biển số'})`,
+        sessionId,
+        reservationId: getValue(currentSession, 'ReservationID', 'reservationId') || null,
+        bookingCode: getValue(currentSession, 'BookingCode', 'bookingCode') || '',
+        plateNumber: getValue(currentSession, 'PlateNumber', 'plateNumber') || '',
+        vehicleName: getValue(currentSession, 'VehicleName', 'vehicleName') || '',
+        slotCode: getValue(currentSession, 'SlotCode', 'slotCode') || '',
+        buildingName: getValue(currentSession, 'BuildingName', 'buildingName') || '',
+        time: getValue(currentSession, 'EntryTime', 'entryTime'),
+        status: getValue(currentSession, 'SessionStatus', 'sessionStatus') || 'Active',
+        type: 'Phiên gửi xe hiện tại'
+      })
+    }
+
+    context.reservations.forEach((reservation) => {
+      const reservationId = getValue(reservation, 'ReservationID', 'reservationId')
+
+      if (!reservationId) return
+
+      options.push({
+        id: `reservation-${reservationId}`,
+        kind: 'reservation',
+        label: `${getValue(reservation, 'BookingCode', 'bookingCode') || `BK-${reservationId}`} - ${getValue(reservation, 'PlateNumber', 'plateNumber') || 'Chưa check-in'}`,
+        sessionId: getValue(reservation, 'SessionID', 'sessionId') || null,
+        reservationId,
+        bookingCode: getValue(reservation, 'BookingCode', 'bookingCode') || '',
+        plateNumber: getValue(reservation, 'PlateNumber', 'plateNumber') || '',
+        vehicleName: getValue(reservation, 'VehicleName', 'vehicleName') || '',
+        slotCode: getValue(reservation, 'SlotCode', 'slotCode') || '',
+        buildingName: getValue(reservation, 'BuildingName', 'buildingName') || '',
+        time: getValue(reservation, 'StartTime', 'startTime', 'CreatedAt', 'createdAt'),
+        status: getValue(reservation, 'ReservationStatus', 'reservationStatus'),
+        type: 'Đặt chỗ'
+      })
+    })
+
+    if (options.length === 0) {
+      options.push({
+        id: 'none',
+        kind: 'none',
+        label: 'Không có phiên/đặt chỗ liên quan',
+        sessionId: null,
+        reservationId: null,
+        bookingCode: '',
+        plateNumber: '',
+        vehicleName: '',
+        slotCode: '',
+        buildingName: '',
+        time: '',
+        status: '',
+        type: 'Không có dữ liệu liên quan'
+      })
+    }
+
+    return options
+  }, [context])
+
+  const selectedRelated = useMemo(() => {
+    return relatedOptions.find((item) => item.id === selectedRelatedId) || relatedOptions[0]
+  }, [relatedOptions, selectedRelatedId])
+
+  const loadReportContext = useCallback(async () => {
+    setLoading(true)
+
+    try {
+      const response = await driverApi.getReportContext()
+
+      setContext({
+        currentSession: response.data?.currentSession || null,
+        reservations: Array.isArray(response.data?.reservations) ? response.data.reservations : [],
+        recentReports: Array.isArray(response.data?.recentReports) ? response.data.recentReports : []
+      })
+    } catch {
+      // authorizeAxios đã toast lỗi
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadReportContext()
+  }, [loadReportContext])
+
+  useEffect(() => {
+    if (!selectedRelatedId && relatedOptions.length > 0) {
+      setSelectedRelatedId(relatedOptions[0].id)
+      return
+    }
+
+    const exists = relatedOptions.some((item) => item.id === selectedRelatedId)
+
+    if (!exists && relatedOptions.length > 0) {
+      setSelectedRelatedId(relatedOptions[0].id)
+    }
+  }, [relatedOptions, selectedRelatedId])
 
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files || [])
 
     if (files.length === 0) return
 
-    const newFiles = files.map((file, index) => ({
-      id: Date.now() + index,
-      name: file.name
-    }))
+    const invalidFile = files.find((file) => {
+      const validType = ['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)
+      const validSize = file.size <= 5 * 1024 * 1024
 
-    setAttachments((prev) => [...prev, ...newFiles])
+      return !validType || !validSize
+    })
+
+    if (invalidFile) {
+      toast.error('Chỉ chấp nhận ảnh JPG/PNG và mỗi file tối đa 5MB.')
+      event.target.value = ''
+      return
+    }
+
+    const nextFiles = normalizeAttachments(files)
+
+    setAttachments((prev) => {
+      const merged = [...prev, ...nextFiles]
+      return merged.slice(0, 5)
+    })
+
     event.target.value = ''
   }
 
@@ -59,40 +223,68 @@ const DriverReport = () => {
   }
 
   const handleSubmit = async () => {
+    if (!selectedIssue) {
+      toast.error('Vui lòng chọn loại sự cố.')
+      return
+    }
+
+    if (!description.trim() || description.trim().length < 5) {
+      toast.error('Vui lòng mô tả sự cố rõ hơn, tối thiểu 5 ký tự.')
+      return
+    }
+
     const payload = {
       issueType: selectedIssue,
-      issueLabel: selectedIssueData?.label,
-      session: selectedSession,
-      bookingCode: CURRENT_SESSION.bookingCode,
-      plateNumber: CURRENT_SESSION.plateNumber,
-      description,
+      issueLabel: selectedIssueData?.label || '',
+      sessionId: selectedRelated?.kind === 'session' ? selectedRelated.sessionId : selectedRelated?.sessionId || null,
+      reservationId: selectedRelated?.kind === 'reservation' ? selectedRelated.reservationId : selectedRelated?.reservationId || null,
+      bookingCode: selectedRelated?.bookingCode || '',
+      plateNumber: selectedRelated?.plateNumber || '',
+      description: description.trim(),
       attachments
     }
 
+    setSubmitting(true)
+
     try {
-      setIsSubmitting(true)
-      await authorizeAxios.post('/driver/report', payload)
+      const response = await driverApi.createReport(payload)
+
+      toast.success(response.message || 'Gửi báo cáo sự cố thành công.')
       setIsSubmitted(true)
-      setAlertModal({ isOpen: true, title: 'Thành công', message: 'Báo cáo của bạn đã được gửi thành công.' })
-    } catch (error) {
-      console.error('Submit report failed:', error)
-      setAlertModal({ isOpen: true, title: 'Lỗi', message: error.response?.data?.message || 'Không thể gửi báo cáo. Vui lòng thử lại.' })
+      setDescription('')
+      setAttachments([])
+
+      await loadReportContext()
+    } catch {
+      // authorizeAxios đã toast lỗi
     } finally {
-      setIsSubmitting(false)
+      setSubmitting(false)
     }
   }
 
   const handleCancel = () => {
     setSelectedIssue('not_found')
-    setSelectedSession('current')
     setDescription('')
     setAttachments([])
     setIsSubmitted(false)
+
+    if (relatedOptions.length > 0) {
+      setSelectedRelatedId(relatedOptions[0].id)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[500px] items-center justify-center">
+        <div className="rounded-2xl bg-white px-6 py-4 text-sm font-bold text-gray-600 shadow-sm">
+          Đang tải dữ liệu báo cáo...
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -101,7 +293,7 @@ const DriverReport = () => {
 
           <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
             <span>🏢</span>
-            <span>Tòa nhà Bitexco Financial Tower</span>
+            <span>{selectedRelated?.buildingName || 'Tòa nhà đang sử dụng'}</span>
           </div>
         </div>
 
@@ -113,9 +305,7 @@ const DriverReport = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left Column */}
         <div className="space-y-6 lg:col-span-2">
-          {/* A. Issue Type */}
           <SectionCard
             step="A"
             title="Chọn loại sự cố"
@@ -130,9 +320,10 @@ const DriverReport = () => {
                     key={issue.id}
                     type="button"
                     onClick={() => setSelectedIssue(issue.id)}
-                    className={`rounded-xl border p-3 text-sm font-semibold transition-colors ${active
-                      ? 'border-blue-500 bg-blue-50/50 text-blue-700'
-                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    className={`rounded-xl border p-3 text-sm font-semibold transition-colors ${
+                      active
+                        ? 'border-blue-500 bg-blue-50/50 text-blue-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
                     {issue.label}
@@ -142,7 +333,6 @@ const DriverReport = () => {
             </div>
           </SectionCard>
 
-          {/* B. Session Information */}
           <SectionCard
             step="B"
             title="Thông tin phiên gửi xe liên quan"
@@ -155,14 +345,15 @@ const DriverReport = () => {
                 </label>
 
                 <select
-                  value={selectedSession}
-                  onChange={(event) => setSelectedSession(event.target.value)}
+                  value={selectedRelatedId}
+                  onChange={(event) => setSelectedRelatedId(event.target.value)}
                   className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                 >
-                  <option value="current">
-                    Phiên hiện tại ({CURRENT_SESSION.sessionCode} - {CURRENT_SESSION.plateNumber})
-                  </option>
-                  <option value="other">Khác</option>
+                  {relatedOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -175,38 +366,47 @@ const DriverReport = () => {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-lg font-bold text-gray-900">
-                        {CURRENT_SESSION.plateNumber}
+                        {selectedRelated?.plateNumber || 'Chưa có biển số'}
                       </span>
 
                       <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                        {CURRENT_SESSION.status}
+                        {getStatusLabel(selectedRelated?.status)}
                       </span>
                     </div>
 
                     <div className="mt-1 text-xs text-gray-500">
                       Mã đặt chỗ:{' '}
                       <span className="font-semibold text-gray-700">
-                        {CURRENT_SESSION.bookingCode}
+                        {selectedRelated?.bookingCode || 'Không có'}
                       </span>
                     </div>
 
                     <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-gray-500">
                       <span>⏰</span>
-                      <span>{CURRENT_SESSION.time}</span>
+                      <span>{formatDateTime(selectedRelated?.time)}</span>
                       <span className="mx-1">•</span>
-                      <span>Loại: {CURRENT_SESSION.type}</span>
+                      <span>Loại: {selectedRelated?.type || '—'}</span>
+                      {selectedRelated?.slotCode && (
+                        <>
+                          <span className="mx-1">•</span>
+                          <span>Vị trí: {selectedRelated.slotCode}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <Button variant="secondary" size="sm">
-                  Thay đổi
-                </Button>
+                <button
+                  type="button"
+                  onClick={loadReportContext}
+                  className="w-fit rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+                >
+                  Làm mới
+                </button>
               </div>
             </div>
           </SectionCard>
 
-          {/* C. Description */}
           <SectionCard
             step="C"
             title="Mô tả sự cố"
@@ -232,7 +432,6 @@ const DriverReport = () => {
             </div>
           </SectionCard>
 
-          {/* D. Attachments */}
           <SectionCard
             step="D"
             title="Hình ảnh đính kèm"
@@ -241,7 +440,7 @@ const DriverReport = () => {
             <label className="block cursor-pointer rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-8 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30">
               <input
                 type="file"
-                accept="image/png,image/jpeg"
+                accept="image/png,image/jpeg,image/jpg"
                 multiple
                 onChange={handleFileChange}
                 className="hidden"
@@ -252,11 +451,11 @@ const DriverReport = () => {
               </div>
 
               <p className="mt-4 text-sm font-bold text-gray-700">
-                Nhấn để tải lên tập tin
+                Nhấn để chọn tập tin
               </p>
 
               <p className="mt-1 text-xs text-gray-500">
-                Chấp nhận JPG, PNG. Tối đa 5MB mỗi tệp.
+                Chấp nhận JPG, PNG. Tối đa 5MB mỗi tệp. Tối đa 5 tệp.
               </p>
             </label>
 
@@ -286,15 +485,13 @@ const DriverReport = () => {
             )}
 
             <p className="mt-4 text-xs italic text-gray-500">
-              * Lưu ý: Hệ thống không hỗ trợ chụp ảnh trực tiếp qua camera tại bước này.
+              * Hiện tại hệ thống lưu tên file đính kèm vào database. Nếu muốn upload ảnh thật, cần thêm API upload file riêng.
             </p>
           </SectionCard>
         </div>
 
-        {/* Right Column */}
         <div className="space-y-6">
-          {/* Summary */}
-          <Card>
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-4">
               <h2 className="text-lg font-bold text-blue-700">
                 Tóm tắt báo cáo
@@ -313,17 +510,17 @@ const DriverReport = () => {
 
               <SummaryRow
                 label="Liên quan"
-                value="Phiên đỗ xe hiện tại"
+                value={selectedRelated?.type || 'Không có'}
               />
 
               <SummaryRow
                 label="Mã đặt chỗ"
-                value={CURRENT_SESSION.bookingCode}
+                value={selectedRelated?.bookingCode || 'Không có'}
               />
 
               <SummaryRow
                 label="Biển số xe"
-                value={CURRENT_SESSION.plateNumber}
+                value={selectedRelated?.plateNumber || 'Chưa có'}
               />
 
               <SummaryRow
@@ -338,9 +535,10 @@ const DriverReport = () => {
                 </span>
 
                 <span
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${isSubmitted
-                    ? 'bg-emerald-100 text-emerald-600'
-                    : 'bg-orange-100 text-orange-600'
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                    isSubmitted
+                      ? 'bg-emerald-100 text-emerald-600'
+                      : 'bg-orange-100 text-orange-600'
                   }`}
                 >
                   {isSubmitted ? 'Đã gửi' : 'Đang chờ'}
@@ -352,20 +550,24 @@ const DriverReport = () => {
               <span className="mt-0.5 shrink-0">ℹ️</span>
 
               <p className="text-xs leading-relaxed">
-                Báo cáo của bạn sẽ được gửi trực tiếp đến bộ phận vận hành tòa nhà.
-                Thời gian phản hồi dự kiến từ 5-15 phút.
+                Báo cáo của bạn sẽ được lưu vào database và gửi đến bộ phận vận hành.
+                Trạng thái ban đầu là Open.
               </p>
             </div>
 
             <div className="mt-6 space-y-3">
               <Button
                 onClick={handleSubmit}
-                disabled={isSubmitted || isSubmitting}
-                isLoading={isSubmitting}
-                className="w-full"
+                disabled={submitting}
+                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors ${
+                  submitting
+                    ? 'cursor-not-allowed bg-blue-400'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
-                {isSubmitted ? 'Đã gửi báo cáo' : 'Gửi báo cáo ngay'}
-              </Button>
+                <span>➤</span>
+                {submitting ? 'Đang gửi...' : 'Gửi báo cáo ngay'}
+              </button>
 
               <Button
                 onClick={handleCancel}
@@ -377,8 +579,46 @@ const DriverReport = () => {
             </div>
           </Card>
 
-          {/* Support */}
-          <Card className="bg-gray-50/80 p-5">
+          <div className="rounded-2xl border border-gray-100 bg-gray-50/80 p-5">
+            <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
+              Báo cáo gần đây
+            </h3>
+
+            {context.recentReports.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                Bạn chưa có báo cáo nào.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {context.recentReports.slice(0, 5).map((report) => (
+                  <div
+                    key={report.IncidentID}
+                    className="rounded-xl border border-gray-100 bg-white p-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-bold text-gray-900">
+                        {report.ReportCode || `RP-${report.IncidentID}`}
+                      </span>
+
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600">
+                        {getStatusLabel(report.IncidentStatus)}
+                      </span>
+                    </div>
+
+                    <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+                      {report.Description || 'Không có mô tả'}
+                    </p>
+
+                    <p className="mt-2 text-[10px] text-gray-400">
+                      {formatDateTime(report.CreatedAt)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-gray-50/80 p-5">
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
               Hỗ trợ kỹ thuật
             </h3>
@@ -432,17 +672,14 @@ const SectionCard = ({ step, title, description, children }) => {
   )
 }
 
-const SummaryRow = ({ label, value, border = false }) => {
+const SummaryRow = ({ label, value, border }) => {
   return (
-    <div
-      className={`flex items-center justify-between ${border ? 'border-b border-gray-100 pb-4' : ''
-      }`}
-    >
+    <div className={`flex items-center justify-between gap-4 ${border ? 'border-b border-gray-100 pb-4' : ''}`}>
       <span className="text-gray-500">
         {label}
       </span>
 
-      <span className="text-right font-semibold text-gray-800">
+      <span className="text-right font-bold text-gray-900">
         {value}
       </span>
     </div>
@@ -451,10 +688,16 @@ const SummaryRow = ({ label, value, border = false }) => {
 
 const SupportRow = ({ icon, label, value }) => {
   return (
-    <div className="flex items-center gap-2 text-sm text-gray-600">
-      <span className="text-gray-400">{icon}</span>
-      <span className="font-medium">{label}</span>
-      <span className="font-bold text-gray-900">{value}</span>
+    <div className="flex items-center gap-2 text-sm">
+      <span>{icon}</span>
+
+      <span className="font-semibold text-gray-500">
+        {label}
+      </span>
+
+      <span className="font-bold text-gray-900">
+        {value}
+      </span>
     </div>
   )
 }

@@ -1,3 +1,6 @@
+-- =====================================================
+-- Stored Procedure: sp_GetParkingMap
+-- =====================================================
 IF OBJECT_ID('sp_GetParkingMap', 'P') IS NOT NULL DROP PROCEDURE sp_GetParkingMap;
 GO
 
@@ -60,14 +63,10 @@ BEGIN
         ps.VehicleTypeID,
         vt.VehicleCode,
         vt.VehicleName,
-
-        -- Active session info
         sess.SessionID,
         sess.PlateNumber,
         sess.EntryTime,
         sess.SessionStatus,
-
-        -- Active or completed reservation info
         rsv.ReservationID,
         rsv.StartTime,
         rsv.EndTime,
@@ -75,7 +74,6 @@ BEGIN
         driver.FullName  AS DriverName,
         driver.Email     AS DriverEmail,
         driver.PhoneNumber AS DriverPhone,
-
         CASE
             WHEN ps.SlotStatus IN ('Maintenance','Blocked') THEN ps.SlotStatus
             WHEN EXISTS (
@@ -91,7 +89,6 @@ BEGIN
     JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
     JOIN Zones z ON ps.ZoneID = z.ZoneID
     JOIN Floors f ON z.FloorID = f.FloorID
-
     LEFT JOIN (
         SELECT TOP 1 WITH TIES
             SlotID, SessionID, PlateNumber, EntryTime, SessionStatus
@@ -99,15 +96,12 @@ BEGIN
         WHERE SessionStatus = 'Active'
         ORDER BY ROW_NUMBER() OVER (PARTITION BY SlotID ORDER BY EntryTime DESC)
     ) sess ON sess.SlotID = ps.SlotID
-
     LEFT JOIN (
         SELECT *
         FROM Reservations r
         WHERE r.ReservationStatus IN ('Reserved','Completed')
     ) rsv ON rsv.SlotID = ps.SlotID
-
     LEFT JOIN Users driver ON driver.UserID = rsv.DriverID
-
     WHERE f.IsActive = 1
       AND (@buildingId IS NULL OR f.BuildingID = @buildingId)
       AND (@floorId IS NULL OR z.FloorID = @floorId)
@@ -124,14 +118,7 @@ BEGIN
 END
 GO
 
-USE ParkingManagementDB;
-GO
-
--- =====================================================
--- MIGRATION: Thêm cột Attachments vào bảng Incidents
--- Lưu dạng JSON array base64, tối đa 15 ảnh
--- =====================================================
-
+-- Migration: thêm cột Attachments vào Incidents
 IF NOT EXISTS (
     SELECT 1 FROM sys.columns
     WHERE object_id = OBJECT_ID('Incidents') AND name = 'Attachments'
@@ -139,16 +126,50 @@ IF NOT EXISTS (
 BEGIN
     ALTER TABLE Incidents
     ADD Attachments NVARCHAR(MAX) NULL;
-    PRINT 'Đã thêm cột Attachments vào bảng Incidents.';
+    PRINT 'Đã thêm cột Attachments vào bảng Incidents.'
 END
 ELSE
 BEGIN
-    PRINT 'Cột Attachments đã tồn tại.';
+    PRINT 'Cột Attachments đã tồn tại.'
 END
 GO
 
--- Kiểm tra
-SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = 'Incidents' AND COLUMN_NAME = 'Attachments';
+-- =====================================================
+-- Stored Procedure: sp_SyncParkingSlotStatuses
+-- =====================================================
+CREATE OR ALTER PROCEDURE sp_SyncParkingSlotStatuses
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  -- 1. Chuyển booking quá hạn sang Expired
+  UPDATE Reservations
+  SET ReservationStatus = 'Expired'
+  WHERE ReservationStatus = 'Reserved'
+    AND EndTime < GETDATE();
+
+  -- 2. Đồng bộ lại trạng thái slot
+  UPDATE ps
+  SET ps.SlotStatus =
+    CASE
+      WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
+      WHEN EXISTS (
+        SELECT 1
+        FROM ParkingSessions s
+        WHERE s.SlotID = ps.SlotID
+          AND s.SessionStatus = 'Active'
+          AND s.ExitTime IS NULL
+      ) THEN 'Occupied'
+      WHEN EXISTS (
+        SELECT 1
+        FROM Reservations r
+        WHERE r.SlotID = ps.SlotID
+          AND r.ReservationStatus = 'Reserved'
+          AND r.EndTime >= GETDATE()
+      ) THEN 'Reserved'
+      ELSE 'Available'
+    END
+  FROM ParkingSlots ps
+  WHERE ps.SlotStatus IN ('Available', 'Occupied', 'Reserved');
+END
 GO
