@@ -10,7 +10,12 @@ import {
   ChevronRight,
   ExternalLink,
   RefreshCcw,
-  Info
+  Info,
+  CalendarCheck2,
+  Activity,
+  CheckCircle2,
+  XCircle,
+  TrendingUp
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -19,62 +24,68 @@ import authorizeAxios from '../../utils/authorizeAxios'
 const QUICK_ACTIONS = [
   {
     title: 'Đặt chỗ đỗ xe',
-    description: 'Giữ chỗ trước cho chuyến đi sắp tới',
+    description: 'Giữ chỗ trước cho chuyến đi',
     to: '/driver/booking',
     Icon: CalendarDays,
     variant: 'primary'
   },
   {
     title: 'Phiên gửi xe',
-    description: 'Xem thời gian, vị trí và phí gửi xe',
+    description: 'Thời gian, vị trí, phí gửi',
     to: '/driver/session',
     Icon: Clock,
-    iconClass: 'text-blue-500'
+    iconClass: 'text-blue-500',
+    bgClass: 'bg-blue-50'
   },
   {
     title: 'Lịch sử đặt chỗ',
     description: 'Xem các booking đã tạo',
     to: '/driver/history',
     Icon: FileText,
-    iconClass: 'text-indigo-500'
+    iconClass: 'text-indigo-500',
+    bgClass: 'bg-indigo-50'
   },
   {
     title: 'Báo sự cố',
-    description: 'Gửi báo cáo khi gặp vấn đề tại bãi xe',
+    description: 'Gửi báo cáo vấn đề',
     to: '/driver/report',
     Icon: AlertCircle,
-    iconClass: 'text-red-500'
+    iconClass: 'text-rose-500',
+    bgClass: 'bg-rose-50'
   }
 ]
 
 const COLOR_CLASSES = {
   orange: {
-    border: 'border-orange-100',
-    bg: 'bg-orange-50/30',
-    iconBg: 'bg-orange-100',
-    iconText: 'text-orange-500'
+    border: 'border-amber-200/60',
+    bg: 'bg-gradient-to-br from-amber-50 to-white',
+    iconBg: 'bg-amber-100/80',
+    iconText: 'text-amber-600',
+    progress: 'bg-amber-500',
+    progressBg: 'bg-amber-100'
   },
   blue: {
-    border: 'border-blue-100',
-    bg: 'bg-blue-50/30',
-    iconBg: 'bg-blue-100',
-    iconText: 'text-blue-500'
+    border: 'border-blue-200/60',
+    bg: 'bg-gradient-to-br from-blue-50 to-white',
+    iconBg: 'bg-blue-100/80',
+    iconText: 'text-blue-600',
+    progress: 'bg-blue-500',
+    progressBg: 'bg-blue-100'
   },
   green: {
-    border: 'border-green-100',
-    bg: 'bg-green-50/30',
-    iconBg: 'bg-green-100',
-    iconText: 'text-green-500'
+    border: 'border-emerald-200/60',
+    bg: 'bg-gradient-to-br from-emerald-50 to-white',
+    iconBg: 'bg-emerald-100/80',
+    iconText: 'text-emerald-600',
+    progress: 'bg-emerald-500',
+    progressBg: 'bg-emerald-100'
   }
 }
 
 const formatDateTime = (value) => {
   if (!value) return '--'
-
   const date = new Date(String(value).endsWith('Z') ? String(value).slice(0, -1) : value)
-
   if (Number.isNaN(date.getTime())) return '--'
-
   return date.toLocaleString('vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
@@ -90,41 +101,33 @@ const formatCurrency = (value) => {
 
 const getVehicleIconAndColor = (vehicleCode, vehicleName) => {
   const text = `${vehicleCode || ''} ${vehicleName || ''}`.toLowerCase()
-
   if (text.includes('moto') || text.includes('bike') || text.includes('máy')) {
-    return {
-      Icon: Bike,
-      color: 'orange'
-    }
+    return { Icon: Bike, color: 'orange' }
   }
-
   if (text.includes('truck') || text.includes('tải')) {
-    return {
-      Icon: Truck,
-      color: 'green'
-    }
+    return { Icon: Truck, color: 'green' }
   }
-
-  return {
-    Icon: CarFront,
-    color: 'blue'
-  }
+  return { Icon: CarFront, color: 'blue' }
 }
 
 const SectionHeader = ({ icon: Icon, title, actionText, actionTo }) => {
   return (
-    <div className="mb-4 flex items-center justify-between">
-      <h2 className="flex items-center gap-2 text-lg font-bold text-gray-900">
-        {Icon && <Icon className="text-blue-500" size={20} />}
+    <div className="mb-5 flex items-center justify-between">
+      <h2 className="flex items-center gap-2.5 text-lg font-bold text-slate-900">
+        {Icon && (
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <Icon size={18} />
+          </div>
+        )}
         {title}
       </h2>
-
       {actionText && actionTo && (
         <Link
           to={actionTo}
-          className="text-sm font-medium text-blue-600 hover:underline"
+          className="group flex items-center gap-1 text-sm font-bold text-blue-600 transition-colors hover:text-blue-700"
         >
           {actionText}
+          <ChevronRight size={16} className="transition-transform group-hover:translate-x-1" />
         </Link>
       )}
     </div>
@@ -132,70 +135,60 @@ const SectionHeader = ({ icon: Icon, title, actionText, actionTo }) => {
 }
 
 const VehicleStatusCard = ({ vehicle }) => {
-  const { Icon, color } = getVehicleIconAndColor(
-    vehicle.VehicleCode,
-    vehicle.VehicleName
-  )
-
+  const { Icon, color } = getVehicleIconAndColor(vehicle.VehicleCode, vehicle.VehicleName)
   const classes = COLOR_CLASSES[color] || COLOR_CLASSES.blue
   const available = Number(vehicle.AvailableSlots || 0)
   const total = Number(vehicle.TotalSlots || 0)
+  const used = total - available
+  const percentage = total > 0 ? (used / total) * 100 : 0
 
   return (
-    <div
-      className={`flex items-center gap-4 rounded-xl border p-4 ${classes.border} ${classes.bg}`}
-    >
-      <div
-        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${classes.iconBg} ${classes.iconText}`}
-      >
-        <Icon size={24} />
+    <div className={`relative overflow-hidden rounded-[1.25rem] border p-5 transition-all hover:shadow-md hover:-translate-y-1 ${classes.border} ${classes.bg}`}>
+      <div className="flex items-start justify-between">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${classes.iconBg} ${classes.iconText}`}>
+          <Icon size={24} />
+        </div>
+        <div className="text-right">
+          <p className="mb-0.5 text-[11px] font-bold tracking-wider text-slate-500 uppercase">
+            {vehicle.VehicleName || 'Phương tiện'}
+          </p>
+          <div className="flex items-baseline justify-end gap-1">
+            <span className="text-2xl font-black text-slate-900">{available}</span>
+            <span className="text-xs font-bold text-slate-400">/ {total} trống</span>
+          </div>
+        </div>
       </div>
 
-      <div>
-        <p className="mb-1 text-xs font-bold tracking-wider text-gray-500">
-          {(vehicle.VehicleName || 'Phương tiện').toUpperCase()}
-        </p>
-
-        <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-black text-gray-900">
-            {available}
-          </span>
-
-          <span className="text-sm font-medium text-gray-400">
-            / {total} còn trống
-          </span>
+      <div className="mt-5">
+        <div className="flex justify-between text-[11px] font-bold text-slate-500 mb-1.5">
+          <span>Tỷ lệ lấp đầy</span>
+          <span>{percentage.toFixed(1)}%</span>
+        </div>
+        <div className={`h-2 w-full overflow-hidden rounded-full ${classes.progressBg}`}>
+          <div
+            className={`h-full rounded-full transition-all duration-1000 ease-out ${classes.progress}`}
+            style={{ width: `${percentage}%` }}
+          />
         </div>
       </div>
     </div>
   )
 }
 
-const QuickActionCard = ({
-  to,
-  title,
-  description,
-  Icon,
-  variant,
-  iconClass = 'text-blue-500'
-}) => {
+const QuickActionCard = ({ to, title, description, Icon, variant, iconClass, bgClass }) => {
   if (variant === 'primary') {
     return (
       <Link
         to={to}
-        className="group relative overflow-hidden rounded-2xl bg-blue-600 p-5 text-white shadow-md shadow-blue-200 transition-transform hover:-translate-y-1"
+        className="group relative overflow-hidden rounded-[1.25rem] bg-gradient-to-br from-blue-600 to-blue-700 p-6 text-white shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-600/30"
       >
-        <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 blur-xl transition-transform group-hover:scale-150" />
-
+        <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10 blur-2xl transition-transform duration-500 group-hover:scale-150" />
         <div className="relative z-10">
-          <Icon className="mb-3" size={24} />
-
-          <h3 className="mb-1 font-bold">
-            {title}
-          </h3>
-
-          <p className="text-xs text-blue-100">
-            {description}
-          </p>
+          <div className="mb-4 inline-flex rounded-xl bg-white/20 p-3 backdrop-blur-md">
+            <Icon size={24} className="text-white" />
+          </div>
+          <h3 className="mb-1.5 text-lg font-bold">{title}</h3>
+          <p className="text-xs font-medium text-blue-100/90">{description}</p>
         </div>
       </Link>
     )
@@ -204,40 +197,22 @@ const QuickActionCard = ({
   return (
     <Link
       to={to}
-      className="group rounded-2xl border border-gray-100 bg-white p-5 transition-all hover:border-blue-200 hover:shadow-md"
+      className="group rounded-[1.25rem] border border-slate-200/60 bg-white p-6 transition-all hover:border-blue-200 hover:shadow-md hover:shadow-blue-900/5 hover:-translate-y-1"
     >
-      <Icon
-        className={`mb-3 transition-transform group-hover:scale-110 ${iconClass}`}
-        size={24}
-      />
-
-      <h3 className="mb-1 font-bold text-gray-900">
-        {title}
-      </h3>
-
-      <p className="text-xs text-gray-500">
-        {description}
-      </p>
+      <div className={`mb-4 inline-flex rounded-xl p-3 transition-transform duration-300 group-hover:scale-110 ${bgClass || 'bg-slate-50'}`}>
+        <Icon className={iconClass || 'text-slate-500'} size={24} />
+      </div>
+      <h3 className="mb-1.5 text-base font-bold text-slate-900 group-hover:text-blue-700 transition-colors">{title}</h3>
+      <p className="text-xs font-medium text-slate-500">{description}</p>
     </Link>
   )
 }
 
 const InfoRow = ({ label, value, highlight = false, border = true }) => {
   return (
-    <div
-      className={`flex items-center justify-between gap-4 text-sm ${
-        border ? 'border-b border-gray-50 pb-4' : ''
-      }`}
-    >
-      <span className="text-gray-500">
-        {label}
-      </span>
-
-      <span
-        className={`text-right font-bold ${
-          highlight ? 'text-blue-600' : 'text-gray-900'
-        }`}
-      >
+    <div className={`flex items-center justify-between gap-4 text-sm ${border ? 'border-b border-dashed border-slate-200 pb-3' : ''}`}>
+      <span className="font-medium text-slate-500">{label}</span>
+      <span className={`text-right ${highlight ? 'font-black text-blue-600' : 'font-bold text-slate-800'}`}>
         {value}
       </span>
     </div>
@@ -248,46 +223,38 @@ const BookingCard = ({ booking }) => {
   if (!booking) {
     return (
       <EmptyCard
-        title="Chưa có đặt chỗ đang hoạt động"
-        description="Bạn có thể tạo đặt chỗ mới để giữ vị trí trước khi đến bãi."
-        actionText="Đặt chỗ mới"
+        title="Chưa có đặt chỗ"
+        description="Giữ vị trí đẹp cho chuyến đi sắp tới của bạn ngay hôm nay."
+        actionText="Tạo đặt chỗ"
         actionTo="/driver/booking"
+        icon={CalendarCheck2}
       />
     )
   }
 
-  const slotText = `${booking.FloorName || '--'} / Khu ${
-    booking.ZoneName || '--'
-  } / Slot ${booking.SlotCode || '--'}`
+  const slotText = `${booking.FloorName || '--'} / Khu ${booking.ZoneName || '--'} / Slot ${booking.SlotCode || '--'}`
 
   return (
-    <div className="flex h-full min-h-[430px] flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-      <div className="mb-8 flex items-start justify-between">
+    <div className="relative flex h-full min-h-[400px] flex-col rounded-[1.5rem] border border-slate-200/60 bg-white p-6 shadow-sm overflow-hidden hover:border-blue-200 transition-colors">
+      {/* Decorative top border */}
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 to-indigo-500" />
+
+      <div className="mb-6 flex items-start justify-between">
         <div>
-          <p className="mb-1 text-xs font-medium text-gray-500">
-            Mã đặt chỗ
-          </p>
-
-          <h3 className="text-2xl font-black text-blue-600">
-            {booking.BookingCode}
-          </h3>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Mã đặt chỗ</p>
+          <h3 className="text-2xl font-black tracking-tight text-blue-600">{booking.BookingCode}</h3>
         </div>
-
-        <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/60 bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-600">
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
           Đang hoạt động
         </span>
       </div>
 
-      <div className="flex-1 space-y-4">
-        <InfoRow label="Thời gian bắt đầu" value={formatDateTime(booking.StartTime)} />
-        <InfoRow label="Thời gian kết thúc" value={formatDateTime(booking.EndTime)} />
-        <InfoRow label="Loại phương tiện" value={booking.VehicleName || '--'} />
-        <InfoRow
-          label="Vị trí chỉ định"
-          value={slotText}
-          highlight
-          border={false}
-        />
+      <div className="flex-1 space-y-4 rounded-xl bg-slate-50/50 p-5 border border-slate-100">
+        <InfoRow label="Bắt đầu" value={formatDateTime(booking.StartTime)} />
+        <InfoRow label="Kết thúc" value={formatDateTime(booking.EndTime)} />
+        <InfoRow label="Loại xe" value={booking.VehicleName || '--'} />
+        <InfoRow label="Vị trí chỉ định" value={slotText} highlight border={false} />
       </div>
 
       <Link
@@ -303,10 +270,9 @@ const BookingCard = ({ booking }) => {
           zone: booking.ZoneName,
           selectedSlot: booking.SlotCode
         }}
-        className="mt-auto flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-gray-50 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-100"
+        className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
       >
-        Xem chi tiết đặt chỗ
-        <ChevronRight size={16} />
+        Xem mã QR <ChevronRight size={16} />
       </Link>
     </div>
   )
@@ -316,114 +282,86 @@ const ActiveSessionCard = ({ session }) => {
   if (!session) {
     return (
       <EmptyCard
-        title="Chưa có phiên gửi xe hiện tại"
-        description="Phiên gửi xe sẽ xuất hiện sau khi Staff check-in xe vào bãi."
-        actionText="Xem phiên gửi xe"
+        title="Chưa có phiên gửi xe"
+        description="Phiên gửi xe sẽ tự động xuất hiện khi bạn check-in vào bãi đỗ."
+        actionText="Xem lịch sử"
         actionTo="/driver/session"
+        icon={Activity}
       />
     )
   }
 
-  const slotText = `${session.FloorName || '--'} / Khu ${
-    session.ZoneName || '--'
-  } / Slot ${session.SlotCode || '--'}`
+  const slotText = `${session.FloorName || '--'} / Khu ${session.ZoneName || '--'} / Slot ${session.SlotCode || '--'}`
 
   return (
-    <div className="relative flex h-full min-h-[430px] flex-col overflow-hidden rounded-2xl border border-blue-200 bg-white p-6 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
-      <div className="absolute bottom-0 left-0 top-0 w-1.5 bg-blue-500" />
+    <div className="relative flex h-full min-h-[400px] flex-col overflow-hidden rounded-[1.5rem] border border-blue-200 bg-gradient-to-b from-white to-blue-50/30 p-6 shadow-md shadow-blue-900/5">
+      {/* Ticket cutouts */}
+      <div className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#f8fafc] border-r border-blue-200" />
+      <div className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#f8fafc] border-l border-blue-200" />
 
-      <div className="mb-8 flex items-start justify-between">
+      <div className="mb-6 flex items-start justify-between">
         <div>
-          <p className="mb-1 text-xs font-medium text-gray-500">
-            Biển số đang gửi
-          </p>
-
-          <h3 className="text-2xl font-black text-gray-900">
-            {session.PlateNumber || '--'}
-          </h3>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Biển số đang gửi</p>
+          <h3 className="text-2xl font-black text-slate-900">{session.PlateNumber || '--'}</h3>
         </div>
-
         <div className="text-right">
-          <p className="mb-1 text-xs font-medium text-gray-500">
-            Loại phiên
-          </p>
-
-          <span className="text-sm font-bold text-gray-900">
-            {session.BookingCode ? 'Đặt chỗ trước' : 'Vãng lai'}
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Loại phiên</p>
+          <span className="inline-block rounded-lg bg-indigo-50 px-2 py-1 text-xs font-bold text-indigo-700 border border-indigo-100">
+            {session.BookingCode ? 'Đặt trước' : 'Vãng lai'}
           </span>
         </div>
       </div>
 
-      <div className="flex-1 space-y-4 text-sm">
+      <div className="flex-1 space-y-3 border-y border-dashed border-blue-200 py-5">
         <InfoRow label="Mã phiên" value={session.SessionCode || `SESS-${session.SessionID}`} />
-        <InfoRow label="Mã đặt chỗ liên kết" value={session.BookingCode || 'Không có'} />
-        <InfoRow label="Thời gian vào" value={formatDateTime(session.EntryTime)} />
-
-        <InfoRow
-          label="Vị trí hiện tại"
-          value={slotText}
-          highlight
-        />
-
-        <div className="flex items-center justify-between gap-4 border-t border-gray-100 pt-4">
-          <span className="text-gray-500">
-            Phí ước tính
-          </span>
-
-          <span className="text-right text-xl font-black text-blue-600">
-            {formatCurrency(session.Amount)}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-gray-500">
-            Trạng thái thanh toán
-          </span>
-
-          <span className="text-right font-bold text-gray-900">
-            {session.PaymentStatus || 'Pending'}
-          </span>
-        </div>
+        <InfoRow label="Liên kết đặt chỗ" value={session.BookingCode || 'Không'} />
+        <InfoRow label="Giờ vào" value={formatDateTime(session.EntryTime)} />
+        <InfoRow label="Vị trí hiện tại" value={slotText} highlight border={false} />
       </div>
 
-      <div className="mt-auto grid grid-cols-2 gap-3 border-t border-gray-100 pt-5">
-        <Link
-          to="/driver/report"
-          className="flex h-14 items-center justify-center rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50"
-        >
-          Báo sự cố
-        </Link>
+      <div className="mt-5">
+        <div className="flex items-end justify-between mb-5">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">Tạm tính</p>
+            <span className="text-xl font-black text-blue-600">{formatCurrency(session.Amount)}</span>
+          </div>
+          <div className="text-right">
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">
+              Chưa thanh toán
+            </span>
+          </div>
+        </div>
 
-        <Link
-          to="/driver/session"
-          className="flex h-14 items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors hover:bg-blue-700"
-        >
-          Chi tiết phiên
-          <ExternalLink size={16} />
-        </Link>
+        <div className="grid grid-cols-[1fr_2fr] gap-3">
+          <Link
+            to="/driver/report"
+            className="flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-300 active:scale-95"
+          >
+            Sự cố?
+          </Link>
+          <Link
+            to="/driver/session"
+            className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 active:scale-95"
+          >
+            Thanh toán ngay <ExternalLink size={16} />
+          </Link>
+        </div>
       </div>
     </div>
   )
 }
 
-const EmptyCard = ({ title, description, actionText, actionTo }) => {
+const EmptyCard = ({ title, description, actionText, actionTo, icon: Icon }) => {
   return (
-    <div className="flex h-full min-h-[430px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center shadow-sm">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-blue-500">
-        <Info size={26} />
+    <div className="flex h-full min-h-[400px] flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 text-center transition-colors hover:border-blue-300 hover:bg-blue-50/30 group">
+      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-100 text-slate-400 group-hover:text-blue-500 group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
+        <Icon size={32} />
       </div>
-
-      <h3 className="text-base font-bold text-gray-900">
-        {title}
-      </h3>
-
-      <p className="mt-2 max-w-xs text-sm text-gray-500">
-        {description}
-      </p>
-
+      <h3 className="text-lg font-bold text-slate-900 mb-2">{title}</h3>
+      <p className="max-w-[250px] text-sm font-medium text-slate-500 mb-6">{description}</p>
       <Link
         to={actionTo}
-        className="mt-5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-200 hover:bg-blue-700"
+        className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-slate-800 hover:-translate-y-0.5 active:scale-95"
       >
         {actionText}
       </Link>
@@ -433,28 +371,24 @@ const EmptyCard = ({ title, description, actionText, actionTo }) => {
 
 const DriverHome = () => {
   const { user } = useAuth()
-
   const [homeData, setHomeData] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [isLoaded, setIsLoaded] = useState(false)
 
   const fetchHomeData = async () => {
     try {
       setIsLoading(true)
       setErrorMessage('')
-
       const response = await authorizeAxios.get('/driver/home')
       setHomeData(response.data?.data || null)
     } catch (error) {
       console.error('Get driver home failed:', error)
-
-      const message =
-        error.response?.data?.message ||
-        'Không thể tải dữ liệu trang chủ. Vui lòng thử lại.'
-
+      const message = error.response?.data?.message || 'Không thể tải dữ liệu trang chủ. Vui lòng thử lại.'
       setErrorMessage(message)
     } finally {
       setIsLoading(false)
+      setTimeout(() => setIsLoaded(true), 100)
     }
   }
 
@@ -465,154 +399,134 @@ const DriverHome = () => {
   const slotSummary = homeData?.slotSummary || []
   const bookingSummary = homeData?.bookingSummary || {}
 
-  const displayName =
-    homeData?.user?.FullName ||
-    user?.fullName ||
-    user?.FullName ||
-    'Driver'
+  const displayName = homeData?.user?.FullName || user?.fullName || user?.FullName || 'Driver'
 
   const updatedAt = useMemo(() => {
     return formatDateTime(homeData?.serverTime || new Date())
   }, [homeData?.serverTime])
 
-  if (isLoading) {
+  if (isLoading && !homeData) {
     return (
-      <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-sm">
-        <p className="font-bold text-gray-700">
-          Đang tải dữ liệu trang chủ...
-        </p>
+      <div className="flex h-[60vh] flex-col items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600 mb-4" />
+        <p className="font-bold text-slate-500">Đang đồng bộ dữ liệu...</p>
       </div>
     )
   }
 
   if (errorMessage) {
     return (
-      <div className="rounded-2xl border border-red-100 bg-red-50 p-10 text-center shadow-sm">
-        <p className="font-bold text-red-600">
-          {errorMessage}
-        </p>
-
+      <div className="flex flex-col items-center justify-center rounded-[2rem] border border-red-100 bg-red-50 p-12 text-center shadow-sm">
+        <div className="h-16 w-16 rounded-full bg-red-100 text-red-500 flex items-center justify-center mb-4">
+          <AlertCircle size={32} />
+        </div>
+        <p className="font-bold text-red-700 text-lg mb-2">Đã có lỗi xảy ra</p>
+        <p className="font-medium text-red-600/80 mb-6">{errorMessage}</p>
         <button
           type="button"
           onClick={fetchHomeData}
-          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
+          className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white hover:bg-red-700 active:scale-95 transition-all"
         >
-          <RefreshCcw size={16} />
-          Thử lại
+          <RefreshCcw size={16} /> Thử lại
         </button>
       </div>
     )
   }
 
   return (
-    <div className="animate-in space-y-8 fade-in duration-500">
-      <section>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Xin chào, {displayName}!
-            </h1>
+    <div className={`space-y-8 pb-12 transition-all duration-700 ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
 
-            <p className="mt-1 text-sm text-gray-500">
-              Chào mừng bạn quay trở lại. Đây là tình trạng bãi xe hiện tại.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={fetchHomeData}
-            className="flex w-fit items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-          >
-            <RefreshCcw size={16} />
-            Làm mới
-          </button>
+      {/* Header Area */}
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-blue-500">Trang chủ</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Xin chào, {displayName}! 👋</h1>
+          <p className="mt-1.5 text-sm font-medium text-slate-500">
+            Chào mừng bạn quay trở lại. Dưới đây là tổng quan tình trạng bãi xe.
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={fetchHomeData}
+          className="flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-blue-600 active:scale-95"
+        >
+          <RefreshCcw size={16} className={isLoading ? 'animate-spin text-blue-600' : ''} />
+          {isLoading ? 'Đang tải...' : 'Làm mới'}
+        </button>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <SummaryMiniCard
-          label="Tổng booking"
-          value={bookingSummary.TotalBookings || 0}
-        />
-
-        <SummaryMiniCard
-          label="Đang hoạt động"
-          value={bookingSummary.ActiveBookings || 0}
-        />
-
-        <SummaryMiniCard
-          label="Đã sử dụng"
-          value={bookingSummary.CompletedBookings || 0}
-        />
-
+      {/* Summary Stats */}
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <SummaryMiniCard label="Tổng booking" value={bookingSummary.TotalBookings || 0} icon={FileText} color="blue" />
+        <SummaryMiniCard label="Đang hoạt động" value={bookingSummary.ActiveBookings || 0} icon={TrendingUp} color="emerald" />
+        <SummaryMiniCard label="Đã hoàn thành" value={bookingSummary.CompletedBookings || 0} icon={CheckCircle2} color="indigo" />
         <SummaryMiniCard
           label="Đã hủy / hết hạn"
-          value={
-            Number(bookingSummary.CancelledBookings || 0) +
-            Number(bookingSummary.ExpiredBookings || 0)
-          }
+          value={Number(bookingSummary.CancelledBookings || 0) + Number(bookingSummary.ExpiredBookings || 0)}
+          icon={XCircle}
+          color="rose"
         />
       </section>
 
-      <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      {/* Live Capacity */}
+      <section className="rounded-[1.5rem] border border-slate-200/60 bg-white p-7 shadow-sm">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="flex items-center gap-2.5 text-lg font-bold text-slate-900">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
+              <Activity size={18} />
+            </div>
+            Trạng thái Sức chứa (Live)
+          </h2>
+          <div className="hidden sm:flex items-center gap-2 text-[11px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            Cập nhật lúc {updatedAt}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {slotSummary.length > 0 ? (
             slotSummary.map((vehicle) => (
-              <VehicleStatusCard
-                key={vehicle.VehicleTypeID}
-                vehicle={vehicle}
-              />
+              <VehicleStatusCard key={vehicle.VehicleTypeID} vehicle={vehicle} />
             ))
           ) : (
-            <div className="col-span-full text-center text-sm text-gray-500">
-              Chưa có dữ liệu vị trí đỗ.
+            <div className="col-span-full py-8 text-center text-sm font-medium text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              Chưa có dữ liệu vị trí đỗ được cập nhật.
             </div>
           )}
         </div>
-
-        <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
-          <Clock size={14} />
-
-          <span>
-            Dữ liệu được cập nhật gần nhất lúc{' '}
-            <span className="font-medium">{updatedAt}</span>
-          </span>
-        </div>
       </section>
 
+      {/* Quick Actions */}
       <section>
-        <SectionHeader title="Thao tác nhanh" />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <SectionHeader title="Tiện ích nhanh" icon={CalendarDays} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {QUICK_ACTIONS.map((action) => (
-            <QuickActionCard
-              key={action.title}
-              {...action}
-            />
+            <QuickActionCard key={action.title} {...action} />
           ))}
         </div>
       </section>
 
-      <section className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2">
+      {/* Active Workflows */}
+      <section className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
         <div className="flex flex-col">
           <SectionHeader
-            icon={CalendarDays}
-            title="Đặt chỗ hiện tại"
-            actionText="Xem tất cả"
+            icon={CalendarCheck2}
+            title="Phiếu Đặt chỗ hiện tại"
+            actionText="Xem lịch sử"
             actionTo="/driver/history"
           />
-
           <BookingCard booking={homeData?.currentBooking} />
         </div>
-
         <div className="flex flex-col">
           <SectionHeader
             icon={Clock}
-            title="Phiên gửi xe đang hoạt động"
-            actionText="Xem chi tiết"
+            title="Phiếu Gửi xe đang hoạt động"
+            actionText="Chi tiết phiên"
             actionTo="/driver/session"
           />
-
           <ActiveSessionCard session={homeData?.currentSession} />
         </div>
       </section>
@@ -620,14 +534,25 @@ const DriverHome = () => {
   )
 }
 
-const SummaryMiniCard = ({ label, value }) => {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-      <p className="text-xs font-bold uppercase tracking-wider text-gray-400">
-        {label}
-      </p>
+const SummaryMiniCard = ({ label, value, icon: Icon, color }) => {
+  const colorMap = {
+    blue: 'bg-blue-50 text-blue-600',
+    emerald: 'bg-emerald-50 text-emerald-600',
+    indigo: 'bg-indigo-50 text-indigo-600',
+    rose: 'bg-rose-50 text-rose-600'
+  }
 
-      <p className="mt-2 text-3xl font-black text-gray-900">
+  return (
+    <div className="group flex flex-col justify-between rounded-[1.25rem] border border-slate-200/60 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:border-slate-300">
+      <div className="flex items-start justify-between mb-4">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 w-2/3 leading-relaxed">
+          {label}
+        </p>
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-110 ${colorMap[color]}`}>
+          <Icon size={20} />
+        </div>
+      </div>
+      <p className="text-3xl font-black text-slate-900 tracking-tight">
         {value}
       </p>
     </div>

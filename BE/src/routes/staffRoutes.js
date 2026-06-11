@@ -1,3 +1,4 @@
+// src/routes/staffRoutes.js
 import express from 'express'
 import * as staffController from '../controllers/staffController.js'
 import { isAuthorized, isStaffOrManager } from '../middlewares/authMiddleware.js'
@@ -13,6 +14,9 @@ router.get('/dashboard', staffController.getDashboard)
 // Parking map / slots
 router.get('/parking-map', staffController.getParkingMap)
 router.patch('/slots/:slotId/status', staffController.updateSlotStatus)
+
+// Vehicle types (cho dropdown walk-in)
+router.get('/vehicle-types', staffController.getVehicleTypes)
 
 // Walk-in check-in
 router.post('/check-in/walk-in', staffController.checkInWalkIn)
@@ -32,8 +36,13 @@ router.post('/sessions/:sessionId/confirm-surcharge', staffController.confirmSur
 // Incidents
 router.post('/incidents', staffController.createIncident)
 router.get('/incidents', staffController.getIncidents)
-
+router.get('/incidents/:incidentId', staffController.getIncidentById)
+router.patch('/incidents/:incidentId/status', staffController.updateIncidentStatus)
 // Profile
 router.get('/profile', staffController.getProfile)
+router.get('/slots/:slotCode', staffController.getSlotDetail)
 
+//Payment confirmation
+router.get('/sessions/pending-payments', staffController.getPendingPayments)
+router.get('/drivers/:driverId/payment-history', staffController.getPaymentHistory)
 export default router

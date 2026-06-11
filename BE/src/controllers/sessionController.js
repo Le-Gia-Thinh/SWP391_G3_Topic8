@@ -24,15 +24,9 @@ function getUserIdFromToken(req) {
 
 export async function getSessions(req, res, next) {
   try {
-    const data = await sessionService.getSessions(req);
-
-    return res.json({
-      success: true,
-      data,
-    });
-  } catch (err) {
-    next(err);
-  }
+    const data = await sessionService.getSessions();
+    res.status(StatusCodes.OK).json({ success: true, data });
+  } catch (err) { next(err); }
 }
 
 export async function checkInVehicle(req, res, next) {

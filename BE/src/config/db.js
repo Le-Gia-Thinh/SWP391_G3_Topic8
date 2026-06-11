@@ -37,10 +37,6 @@ const poolConnect = pool
   .connect()
   .then(() => {
     console.log("✅ SQL Server connected");
-    console.log("📌 Database:", process.env.DB_DATABASE);
-    console.log("📌 Server:", process.env.DB_SERVER);
-    console.log("📌 Port:", Number(process.env.DB_PORT) || 1433);
-    console.log("📌 useUTC:", config.options.useUTC);
   })
   .catch((err) => {
     console.error("❌ SQL Server connection failed:", err);

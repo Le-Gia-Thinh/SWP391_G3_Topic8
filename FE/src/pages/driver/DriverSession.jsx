@@ -10,9 +10,13 @@ import {
   Loader2,
   MapPin,
   RefreshCcw,
-  ShieldCheck
+  ShieldCheck,
+  Map
 } from 'lucide-react'
 import driverApi from '../../apis/driverApi'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Modal from '../../components/ui/Modal'
 
 const parseBackendDate = (value) => {
   if (!value) return null
@@ -493,6 +497,7 @@ const DriverSession = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [mapModal, setMapModal] = useState({ isOpen: false })
 
   const fetchCurrentSessions = async () => {
     try {
@@ -553,8 +558,8 @@ const DriverSession = () => {
     })
   }
 
-  const handleViewMap = (sessionId) => {
-    console.log('View parking map for session:', sessionId)
+  const handleViewMap = () => {
+    setMapModal({ isOpen: true })
   }
 
   if (isLoading) {
@@ -602,7 +607,7 @@ const DriverSession = () => {
           </h1>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-sm">
+        <Card className="p-10 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-blue-600">
             <Info size={26} />
           </div>
@@ -615,14 +620,13 @@ const DriverSession = () => {
             Phiên đỗ hiện tại chỉ xuất hiện sau khi nhân viên check-in xe của bạn vào bãi.
           </p>
 
-          <button
-            type="button"
+          <Button
             onClick={() => navigate('/driver/booking')}
-            className="mt-5 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-200 hover:bg-blue-700"
+            className="mt-5"
           >
             Đặt chỗ mới
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     )
   }
@@ -721,6 +725,22 @@ const DriverSession = () => {
           )}
         </main>
       </div>
+
+      <Modal
+        isOpen={mapModal.isOpen}
+        onClose={() => setMapModal({ isOpen: false })}
+        title="Sơ đồ vị trí đỗ xe"
+        maxWidth="max-w-2xl"
+        footer={<Button onClick={() => setMapModal({ isOpen: false })}>Đóng</Button>}
+      >
+        <div className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <Map className="w-24 h-24 text-gray-300 mb-4" />
+          <h3 className="text-lg font-bold text-gray-700">Sơ đồ tĩnh đang phát triển</h3>
+          <p className="text-sm text-gray-500 text-center mt-2 max-w-sm">
+            Tính năng xem sơ đồ định tuyến động cho người lái đang được cập nhật. Vui lòng hỏi nhân viên để được hướng dẫn đến vị trí đỗ <span className="font-bold text-blue-600">{selectedSession?.SlotCode}</span>.
+          </p>
+        </div>
+      </Modal>
     </div>
   )
 }

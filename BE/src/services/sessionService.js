@@ -15,12 +15,12 @@ async function getDefaultFee(transaction, vehicleTypeId) {
   const result = await new sql.Request(transaction)
     .input("VehicleTypeID", sql.Int, vehicleTypeId)
     .query(`
-      SELECT TOP 1 Fee
-      FROM PricingPolicies
-      WHERE VehicleTypeID = @VehicleTypeID
-        AND IsActive = 1
-      ORDER BY MinHours ASC, MaxHours ASC
-    `);
+          SELECT TOP 1 Fee
+          FROM PricingPolicies
+          WHERE VehicleTypeID = @VehicleTypeID
+            AND IsActive = 1
+          ORDER BY MinHours ASC, MaxHours ASC
+        `);
 
   return result.recordset[0]?.Fee || 0;
 }
@@ -29,13 +29,13 @@ async function getCheckoutFee(transaction, sessionId) {
   const result = await new sql.Request(transaction)
     .input("SessionID", sql.Int, sessionId)
     .query(`
-      SELECT 
-        s.EntryTime,
-        s.VehicleTypeID
-      FROM ParkingSessions s
-      WHERE s.SessionID = @SessionID
-        AND s.SessionStatus = 'Active'
-    `);
+          SELECT 
+            s.EntryTime,
+            s.VehicleTypeID
+          FROM ParkingSessions s
+          WHERE s.SessionID = @SessionID
+            AND s.SessionStatus = 'Active'
+        `);
 
   const session = result.recordset[0];
 
@@ -58,16 +58,16 @@ async function getCheckoutFee(transaction, sessionId) {
     .input("VehicleTypeID", sql.Int, session.VehicleTypeID)
     .input("DurationHours", sql.Decimal(10, 2), durationHours)
     .query(`
-      SELECT TOP 1 Fee
-      FROM PricingPolicies
-      WHERE VehicleTypeID = @VehicleTypeID
-        AND IsActive = 1
-        AND (
-          @DurationHours BETWEEN MinHours AND MaxHours
-          OR (IsOvernight = 1 AND @DurationHours > 8)
-        )
-      ORDER BY IsOvernight DESC, MaxHours ASC
-    `);
+          SELECT TOP 1 Fee
+          FROM PricingPolicies
+          WHERE VehicleTypeID = @VehicleTypeID
+            AND IsActive = 1
+            AND (
+              @DurationHours BETWEEN MinHours AND MaxHours
+              OR (IsOvernight = 1 AND @DurationHours > 8)
+            )
+          ORDER BY IsOvernight DESC, MaxHours ASC
+        `);
 
   return {
     fee: feeResult.recordset[0]?.Fee || 0,
@@ -75,76 +75,33 @@ async function getCheckoutFee(transaction, sessionId) {
   };
 }
 
+
 export async function getSessions() {
   const pool = await getPool();
 
   const result = await pool.request().query(`
-    SELECT
-      s.SessionID,
-      CONCAT(
-        'SESS-',
-        FORMAT(s.EntryTime, 'yyyyMMdd'),
-        '-',
-        RIGHT('0000' + CAST(s.SessionID AS VARCHAR(10)), 4)
-      ) AS SessionCode,
-
-      s.DriverID,
-      u.FullName AS DriverName,
-      u.Email AS DriverEmail,
-      u.PhoneNumber,
-
-      s.PlateNumber,
-      s.VehicleTypeID,
-      vt.VehicleCode,
-      vt.VehicleName,
-
-      s.SlotID,
-      ps.SlotCode,
-      ps.SlotStatus,
-
-      z.ZoneName,
-      f.FloorName,
-      b.BuildingID,
-      b.BuildingName,
-      b.Address,
-
-      s.EntryTime,
-      s.ExitTime,
-      s.SessionStatus,
-
-      p.PaymentID,
-      p.Amount,
-      p.PaymentMethod,
-      p.PaymentTime,
-      p.PaymentStatus,
-
-      booking.ReservationID,
-      CASE 
-        WHEN booking.ReservationID IS NOT NULL
-        THEN CONCAT('BK-', RIGHT('0000' + CAST(booking.ReservationID AS VARCHAR(10)), 4))
-        ELSE NULL
-      END AS BookingCode
-
-    FROM ParkingSessions s
-    JOIN Users u ON s.DriverID = u.UserID
-    JOIN VehicleTypes vt ON s.VehicleTypeID = vt.VehicleTypeID
-    JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
-    JOIN Zones z ON ps.ZoneID = z.ZoneID
-    JOIN Floors f ON z.FloorID = f.FloorID
-    JOIN Buildings b ON f.BuildingID = b.BuildingID
-    LEFT JOIN Payments p ON p.SessionID = s.SessionID
-
-    OUTER APPLY (
-      SELECT TOP 1 r.ReservationID
-      FROM Reservations r
-      WHERE r.DriverID = s.DriverID
-        AND r.SlotID = s.SlotID
-        AND r.ReservationStatus IN ('Reserved', 'Completed')
-      ORDER BY ABS(DATEDIFF(MINUTE, r.StartTime, s.EntryTime))
-    ) booking
-
-    ORDER BY s.SessionID DESC
-  `);
+        SELECT s.SessionID,
+              CONCAT('SESS-', FORMAT(s.EntryTime,'yyyyMMdd'), '-', RIGHT('0000'+CAST(s.SessionID AS VARCHAR(10)),4)) AS SessionCode,
+              s.DriverID, u.FullName AS DriverName, s.PlateNumber,
+              s.VehicleTypeID, vt.VehicleCode, vt.VehicleName,
+              s.SlotID, ps.SlotCode, ps.SlotStatus,
+              z.ZoneName, f.FloorName, b.BuildingName, b.Address,
+              s.EntryTime, s.ExitTime, s.SessionStatus,
+              booking.ReservationID,
+              CASE WHEN booking.ReservationID IS NOT NULL THEN CONCAT('BK-', RIGHT('0000'+CAST(booking.ReservationID AS VARCHAR(10)),4)) ELSE NULL END AS BookingCode
+        FROM ParkingSessions s
+        JOIN Users u ON s.DriverID = u.UserID
+        JOIN VehicleTypes vt ON s.VehicleTypeID = vt.VehicleTypeID
+        JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+        JOIN Zones z ON ps.ZoneID = z.ZoneID
+        JOIN Floors f ON z.FloorID = f.FloorID
+        JOIN Buildings b ON f.BuildingID = b.BuildingID
+        LEFT JOIN Reservations booking
+              ON booking.SlotID = s.SlotID
+              AND booking.DriverID = s.DriverID
+              AND booking.ReservationStatus IN ('Reserved','Completed')
+        ORDER BY s.EntryTime DESC
+      `);
 
   return result.recordset;
 }
@@ -179,24 +136,24 @@ export async function checkInVehicle(req) {
       const reservationResult = await new sql.Request(transaction)
         .input("ReservationID", sql.Int, finalReservationId)
         .query(`
-          SELECT TOP 1
-            r.ReservationID,
-            r.DriverID,
-            r.VehicleTypeID,
-            r.SlotID,
-            r.ReservationStatus,
-            r.StartTime,
-            r.EndTime,
-            u.FullName AS DriverName,
-            vt.VehicleName,
-            ps.SlotCode,
-            ps.SlotStatus
-          FROM Reservations r
-          JOIN Users u ON r.DriverID = u.UserID
-          JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
-          LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID
-          WHERE r.ReservationID = @ReservationID
-        `);
+              SELECT TOP 1
+                r.ReservationID,
+                r.DriverID,
+                r.VehicleTypeID,
+                r.SlotID,
+                r.ReservationStatus,
+                r.StartTime,
+                r.EndTime,
+                u.FullName AS DriverName,
+                vt.VehicleName,
+                ps.SlotCode,
+                ps.SlotStatus
+              FROM Reservations r
+              JOIN Users u ON r.DriverID = u.UserID
+              JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
+              LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID
+              WHERE r.ReservationID = @ReservationID
+            `);
 
       const reservation = reservationResult.recordset[0];
 
@@ -227,12 +184,12 @@ export async function checkInVehicle(req) {
     const activeDriverResult = await new sql.Request(transaction)
       .input("DriverID", sql.Int, finalDriverId)
       .query(`
-        SELECT TOP 1 SessionID
-        FROM ParkingSessions
-        WHERE DriverID = @DriverID
-          AND SessionStatus = 'Active'
-          AND ExitTime IS NULL
-      `);
+            SELECT TOP 1 SessionID
+            FROM ParkingSessions
+            WHERE DriverID = @DriverID
+              AND SessionStatus = 'Active'
+              AND ExitTime IS NULL
+          `);
 
     if (activeDriverResult.recordset.length > 0) {
       throw createHttpError(
@@ -244,12 +201,12 @@ export async function checkInVehicle(req) {
     const activeSlotResult = await new sql.Request(transaction)
       .input("SlotID", sql.Int, finalSlotId)
       .query(`
-        SELECT TOP 1 SessionID
-        FROM ParkingSessions
-        WHERE SlotID = @SlotID
-          AND SessionStatus = 'Active'
-          AND ExitTime IS NULL
-      `);
+            SELECT TOP 1 SessionID
+            FROM ParkingSessions
+            WHERE SlotID = @SlotID
+              AND SessionStatus = 'Active'
+              AND ExitTime IS NULL
+          `);
 
     if (activeSlotResult.recordset.length > 0) {
       throw createHttpError(
@@ -261,14 +218,14 @@ export async function checkInVehicle(req) {
     const slotResult = await new sql.Request(transaction)
       .input("SlotID", sql.Int, finalSlotId)
       .query(`
-        SELECT 
-          ps.SlotID,
-          ps.SlotCode,
-          ps.SlotStatus,
-          ps.VehicleTypeID
-        FROM ParkingSlots ps
-        WHERE ps.SlotID = @SlotID
-      `);
+            SELECT 
+              ps.SlotID,
+              ps.SlotCode,
+              ps.SlotStatus,
+              ps.VehicleTypeID
+            FROM ParkingSlots ps
+            WHERE ps.SlotID = @SlotID
+          `);
 
     const slot = slotResult.recordset[0];
 
@@ -296,31 +253,31 @@ export async function checkInVehicle(req) {
       .input("PlateNumber", sql.NVarChar(20), finalPlateNumber)
       .input("VehicleTypeID", sql.Int, finalVehicleTypeId)
       .query(`
-        INSERT INTO ParkingSessions (
-          SlotID,
-          DriverID,
-          PlateNumber,
-          VehicleTypeID,
-          EntryTime,
-          SessionStatus
-        )
-        OUTPUT
-          INSERTED.SessionID,
-          INSERTED.SlotID,
-          INSERTED.DriverID,
-          INSERTED.PlateNumber,
-          INSERTED.VehicleTypeID,
-          INSERTED.EntryTime,
-          INSERTED.SessionStatus
-        VALUES (
-          @SlotID,
-          @DriverID,
-          UPPER(@PlateNumber),
-          @VehicleTypeID,
-          GETDATE(),
-          'Active'
-        )
-      `);
+            INSERT INTO ParkingSessions (
+              SlotID,
+              DriverID,
+              PlateNumber,
+              VehicleTypeID,
+              EntryTime,
+              SessionStatus
+            )
+            OUTPUT
+              INSERTED.SessionID,
+              INSERTED.SlotID,
+              INSERTED.DriverID,
+              INSERTED.PlateNumber,
+              INSERTED.VehicleTypeID,
+              INSERTED.EntryTime,
+              INSERTED.SessionStatus
+            VALUES (
+              @SlotID,
+              @DriverID,
+              UPPER(@PlateNumber),
+              @VehicleTypeID,
+              GETDATE(),
+              'Active'
+            )
+          `);
 
     const session = insertSessionResult.recordset[0];
 
@@ -330,37 +287,37 @@ export async function checkInVehicle(req) {
       .input("SessionID", sql.Int, session.SessionID)
       .input("Amount", sql.Decimal(10, 2), defaultFee)
       .query(`
-        INSERT INTO Payments (
-          SessionID,
-          Amount,
-          PaymentMethod,
-          PaymentStatus
-        )
-        VALUES (
-          @SessionID,
-          @Amount,
-          'Pending',
-          'Pending'
-        )
-      `);
+            INSERT INTO Payments (
+              SessionID,
+              Amount,
+              PaymentMethod,
+              PaymentStatus
+            )
+            VALUES (
+              @SessionID,
+              @Amount,
+              'Pending',
+              'Pending'
+            )
+          `);
 
     if (finalReservationId) {
       await new sql.Request(transaction)
         .input("ReservationID", sql.Int, finalReservationId)
         .query(`
-          UPDATE Reservations
-          SET ReservationStatus = 'Completed'
-          WHERE ReservationID = @ReservationID
-        `);
+              UPDATE Reservations
+              SET ReservationStatus = 'Completed'
+              WHERE ReservationID = @ReservationID
+            `);
     }
 
     await new sql.Request(transaction)
       .input("SlotID", sql.Int, finalSlotId)
       .query(`
-        UPDATE ParkingSlots
-        SET SlotStatus = 'Occupied'
-        WHERE SlotID = @SlotID
-      `);
+            UPDATE ParkingSlots
+            SET SlotStatus = 'Occupied'
+            WHERE SlotID = @SlotID
+          `);
 
     await transaction.commit();
 
@@ -373,7 +330,7 @@ export async function checkInVehicle(req) {
   } catch (err) {
     try {
       await transaction.rollback();
-    } catch {}
+    } catch { }
 
     throw err;
   }
@@ -395,15 +352,15 @@ export async function checkOutVehicle(req) {
     const sessionResult = await new sql.Request(transaction)
       .input("SessionID", sql.Int, sessionId)
       .query(`
-        SELECT TOP 1
-          SessionID,
-          SlotID,
-          EntryTime,
-          VehicleTypeID,
-          SessionStatus
-        FROM ParkingSessions
-        WHERE SessionID = @SessionID
-      `);
+            SELECT TOP 1
+              SessionID,
+              SlotID,
+              EntryTime,
+              VehicleTypeID,
+              SessionStatus
+            FROM ParkingSessions
+            WHERE SessionID = @SessionID
+          `);
 
     const session = sessionResult.recordset[0];
 
@@ -423,43 +380,43 @@ export async function checkOutVehicle(req) {
     await new sql.Request(transaction)
       .input("SessionID", sql.Int, sessionId)
       .query(`
-        UPDATE ParkingSessions
-        SET ExitTime = GETDATE(),
-            SessionStatus = 'Completed'
-        WHERE SessionID = @SessionID
-      `);
+            UPDATE ParkingSessions
+            SET ExitTime = GETDATE(),
+                SessionStatus = 'Completed'
+            WHERE SessionID = @SessionID
+          `);
 
     await new sql.Request(transaction)
       .input("SessionID", sql.Int, sessionId)
       .input("Amount", sql.Decimal(10, 2), fee)
       .input("PaymentMethod", sql.NVarChar(50), paymentMethod || "Cash")
       .query(`
-        UPDATE Payments
-        SET Amount = @Amount,
-            PaymentMethod = @PaymentMethod,
-            PaymentTime = GETDATE(),
-            PaymentStatus = 'Completed'
-        WHERE SessionID = @SessionID
-      `);
+            UPDATE Payments
+            SET Amount = @Amount,
+                PaymentMethod = @PaymentMethod,
+                PaymentTime = GETDATE(),
+                PaymentStatus = 'Completed'
+            WHERE SessionID = @SessionID
+          `);
 
     await new sql.Request(transaction)
       .input("SlotID", sql.Int, session.SlotID)
       .query(`
-        UPDATE ParkingSlots
-        SET SlotStatus =
-          CASE
-            WHEN EXISTS (
-              SELECT 1
-              FROM Reservations r
-              WHERE r.SlotID = @SlotID
-                AND r.ReservationStatus = 'Reserved'
-                AND r.EndTime >= GETDATE()
-            )
-            THEN 'Reserved'
-            ELSE 'Available'
-          END
-        WHERE SlotID = @SlotID
-      `);
+            UPDATE ParkingSlots
+            SET SlotStatus =
+              CASE
+                WHEN EXISTS (
+                  SELECT 1
+                  FROM Reservations r
+                  WHERE r.SlotID = @SlotID
+                    AND r.ReservationStatus = 'Reserved'
+                    AND r.EndTime >= GETDATE()
+                )
+                THEN 'Reserved'
+                ELSE 'Available'
+              END
+            WHERE SlotID = @SlotID
+          `);
 
     await transaction.commit();
 
@@ -470,7 +427,7 @@ export async function checkOutVehicle(req) {
   } catch (err) {
     try {
       await transaction.rollback();
-    } catch {}
+    } catch { }
 
     throw err;
   }
@@ -491,76 +448,76 @@ export async function getCurrentDriverSession(req) {
   const result = await pool.request()
     .input("DriverID", sql.Int, driverId)
     .query(`
-      SELECT TOP 1
-        s.SessionID,
-        CONCAT(
-          'SESS-',
-          FORMAT(s.EntryTime, 'yyyyMMdd'),
-          '-',
-          RIGHT('0000' + CAST(s.SessionID AS VARCHAR(10)), 4)
-        ) AS SessionCode,
+          SELECT TOP 1
+            s.SessionID,
+            CONCAT(
+              'SESS-',
+              FORMAT(s.EntryTime, 'yyyyMMdd'),
+              '-',
+              RIGHT('0000' + CAST(s.SessionID AS VARCHAR(10)), 4)
+            ) AS SessionCode,
 
-        s.DriverID,
-        u.FullName AS DriverName,
+            s.DriverID,
+            u.FullName AS DriverName,
 
-        s.PlateNumber,
-        s.VehicleTypeID,
-        vt.VehicleCode,
-        vt.VehicleName,
+            s.PlateNumber,
+            s.VehicleTypeID,
+            vt.VehicleCode,
+            vt.VehicleName,
 
-        s.EntryTime,
-        s.ExitTime,
-        s.SessionStatus,
+            s.EntryTime,
+            s.ExitTime,
+            s.SessionStatus,
 
-        ps.SlotID,
-        ps.SlotCode,
-        ps.SlotStatus,
+            ps.SlotID,
+            ps.SlotCode,
+            ps.SlotStatus,
 
-        z.ZoneName,
-        f.FloorName,
-        b.BuildingID,
-        b.BuildingName,
-        b.Address,
+            z.ZoneName,
+            f.FloorName,
+            b.BuildingID,
+            b.BuildingName,
+            b.Address,
 
-        p.PaymentID,
-        p.Amount,
-        p.PaymentStatus,
-        p.PaymentMethod,
-        p.PaymentTime,
+            p.PaymentID,
+            p.Amount,
+            p.PaymentStatus,
+            p.PaymentMethod,
+            p.PaymentTime,
 
-        booking.ReservationID,
-        CASE 
-          WHEN booking.ReservationID IS NOT NULL
-          THEN CONCAT('BK-', RIGHT('0000' + CAST(booking.ReservationID AS VARCHAR(10)), 4))
-          ELSE NULL
-        END AS BookingCode,
-        booking.StartTime AS ReservationStartTime,
-        booking.EndTime AS ReservationEndTime
+            booking.ReservationID,
+            CASE 
+              WHEN booking.ReservationID IS NOT NULL
+              THEN CONCAT('BK-', RIGHT('0000' + CAST(booking.ReservationID AS VARCHAR(10)), 4))
+              ELSE NULL
+            END AS BookingCode,
+            booking.StartTime AS ReservationStartTime,
+            booking.EndTime AS ReservationEndTime
 
-      FROM ParkingSessions s
-      JOIN Users u ON s.DriverID = u.UserID
-      JOIN VehicleTypes vt ON s.VehicleTypeID = vt.VehicleTypeID
-      JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
-      JOIN Zones z ON ps.ZoneID = z.ZoneID
-      JOIN Floors f ON z.FloorID = f.FloorID
-      JOIN Buildings b ON f.BuildingID = b.BuildingID
-      LEFT JOIN Payments p ON p.SessionID = s.SessionID
+          FROM ParkingSessions s
+          JOIN Users u ON s.DriverID = u.UserID
+          JOIN VehicleTypes vt ON s.VehicleTypeID = vt.VehicleTypeID
+          JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+          JOIN Zones z ON ps.ZoneID = z.ZoneID
+          JOIN Floors f ON z.FloorID = f.FloorID
+          JOIN Buildings b ON f.BuildingID = b.BuildingID
+          LEFT JOIN Payments p ON p.SessionID = s.SessionID
 
-      OUTER APPLY (
-        SELECT TOP 1 r.ReservationID, r.StartTime, r.EndTime
-        FROM Reservations r
-        WHERE r.DriverID = s.DriverID
-          AND r.SlotID = s.SlotID
-          AND r.ReservationStatus IN ('Reserved', 'Completed')
-        ORDER BY ABS(DATEDIFF(MINUTE, r.StartTime, s.EntryTime))
-      ) booking
+          OUTER APPLY (
+            SELECT TOP 1 r.ReservationID, r.StartTime, r.EndTime
+            FROM Reservations r
+            WHERE r.DriverID = s.DriverID
+              AND r.SlotID = s.SlotID
+              AND r.ReservationStatus IN ('Reserved', 'Completed')
+            ORDER BY ABS(DATEDIFF(MINUTE, r.StartTime, s.EntryTime))
+          ) booking
 
-      WHERE s.DriverID = @DriverID
-        AND s.SessionStatus = 'Active'
-        AND s.ExitTime IS NULL
+          WHERE s.DriverID = @DriverID
+            AND s.SessionStatus = 'Active'
+            AND s.ExitTime IS NULL
 
-      ORDER BY s.EntryTime DESC
-    `);
+          ORDER BY s.EntryTime DESC
+        `);
 
   const session = result.recordset[0];
 
