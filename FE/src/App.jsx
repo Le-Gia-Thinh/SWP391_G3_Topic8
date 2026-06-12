@@ -2,7 +2,7 @@ import React, { Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { GuestRoute, ProtectedRoute, RoleRoute } from './components/ProtectedRoute'
 import {
-  LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut
+  LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut, Bell, Car, Star
 } from 'lucide-react'
 
 // Import Layouts
@@ -50,6 +50,13 @@ const DriverPayment = React.lazy(() => import('./pages/driver/DriverPayment'))
 const DriverReport = React.lazy(() => import('./pages/driver/DriverReport'))
 const DriverPaymentResult = React.lazy(() => import('./pages/driver/DriverPaymentResult'))
 const DriverHelp = React.lazy(() => import('./pages/driver/DriverHelp'))
+const DriverSettings = React.lazy(() => import('./pages/driver/DriverSettings'))
+const DriverSupport = React.lazy(() => import('./pages/driver/DriverSupport'))
+const DriverTerms = React.lazy(() => import('./pages/driver/DriverTerms'))
+const DriverPrivacy = React.lazy(() => import('./pages/driver/DriverPrivacy'))
+const DriverNotifications = React.lazy(() => import('./pages/driver/DriverNotifications'))
+const DriverVehicles = React.lazy(() => import('./pages/driver/DriverVehicles'))
+const DriverFeedback = React.lazy(() => import('./pages/driver/DriverFeedback'))
 
 import './index.css'
 
@@ -88,9 +95,15 @@ const driverLinks = [
   { path: '/driver/history', label: 'Lịch sử', icon: FileText },
   { path: '/driver/payment', label: 'Thanh toán', icon: Wallet },
   { isDivider: true },
+  { labelOnly: 'Quản lý' },
+  { path: '/driver/vehicles', label: 'Phương tiện', icon: Car },
+  { path: '/driver/notifications', label: 'Thông báo', icon: Bell },
+  { path: '/driver/feedback', label: 'Đánh giá', icon: Star },
+  { isDivider: true },
   { labelOnly: 'Hỗ trợ' },
   { path: '/driver/report', label: 'Báo cáo sự cố', icon: AlertTriangle },
-  { path: '/driver/help', label: 'Trung tâm trợ giúp', icon: HelpCircle }
+  { path: '/driver/help', label: 'Trung tâm trợ giúp', icon: HelpCircle },
+  { path: '/driver/settings', label: 'Cài đặt', icon: Settings }
 ]
 
 const LoadingFallback = () => (
@@ -206,11 +219,14 @@ const App = () => {
             <Route path="report" element={<DriverReport />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="payment-result" element={<DriverPaymentResult />} />
-            <Route path="settings" element={<UserProfile />} />
+            <Route path="settings" element={<DriverSettings />} />
             <Route path="help" element={<DriverHelp />} />
-            <Route path="terms" element={<DriverHelp />} />
-            <Route path="privacy" element={<DriverHelp />} />
-            <Route path="support" element={<DriverHelp />} />
+            <Route path="terms" element={<DriverTerms />} />
+            <Route path="privacy" element={<DriverPrivacy />} />
+            <Route path="support" element={<DriverSupport />} />
+            <Route path="notifications" element={<DriverNotifications />} />
+            <Route path="vehicles" element={<DriverVehicles />} />
+            <Route path="feedback" element={<DriverFeedback />} />
           </Route>
         </Route>
 

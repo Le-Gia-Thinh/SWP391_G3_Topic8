@@ -25,7 +25,7 @@ function getUserIdFromToken(req) {
 export async function getSessions(req, res, next) {
   try {
     const data = await sessionService.getSessions();
-    res.status(StatusCodes.OK).json({ success: true, data });
+    res.status(200).json({ success: true, data });
   } catch (err) { next(err); }
 }
 

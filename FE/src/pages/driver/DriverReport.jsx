@@ -557,13 +557,22 @@ const DriverReport = () => {
               </p>
             </div>
 
+            {selectedRelated?.kind === 'none' && (
+              <div className="mt-4 flex gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-800">
+                <span className="mt-0.5 shrink-0">⚠️</span>
+                <p className="text-xs font-semibold leading-relaxed">
+                  Bạn cần có ít nhất một phương tiện đang đỗ (phiên hoạt động) hoặc một đặt chỗ để có thể gửi báo cáo sự cố.
+                </p>
+              </div>
+            )}
+
             <div className="mt-6 space-y-3">
               <Button
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || selectedRelated?.kind === 'none'}
                 className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors ${
-                  submitting
-                    ? 'cursor-not-allowed bg-blue-400'
+                  submitting || selectedRelated?.kind === 'none'
+                    ? 'cursor-not-allowed bg-blue-400 opacity-70'
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >

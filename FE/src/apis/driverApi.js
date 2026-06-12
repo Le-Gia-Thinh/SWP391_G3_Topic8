@@ -129,6 +129,73 @@ export const driverApi = {
       params: buildQuery(params)
     })
     return unwrap(res)
+  },
+
+  // ── Notifications ─────────────────────────────────────────
+  getNotifications: async (params = {}) => {
+    const res = await authorizeAxios.get('/driver/notifications', {
+      params: buildQuery(params)
+    })
+    return unwrap(res)
+  },
+
+  getUnreadCount: async () => {
+    const res = await authorizeAxios.get('/driver/notifications/unread-count')
+    return unwrap(res)
+  },
+
+  markNotificationRead: async (notificationId) => {
+    const res = await authorizeAxios.patch(`/driver/notifications/${notificationId}/read`)
+    return unwrap(res)
+  },
+
+  markAllNotificationsRead: async () => {
+    const res = await authorizeAxios.patch('/driver/notifications/read-all')
+    return unwrap(res)
+  },
+
+  // ── Vehicles ──────────────────────────────────────────────
+  getVehicles: async () => {
+    const res = await authorizeAxios.get('/driver/vehicles')
+    return unwrap(res)
+  },
+
+  addVehicle: async (payload) => {
+    const res = await authorizeAxios.post('/driver/vehicles', payload)
+    return unwrap(res)
+  },
+
+  updateVehicle: async (vehicleId, payload) => {
+    const res = await authorizeAxios.patch(`/driver/vehicles/${vehicleId}`, payload)
+    return unwrap(res)
+  },
+
+  deleteVehicle: async (vehicleId) => {
+    const res = await authorizeAxios.delete(`/driver/vehicles/${vehicleId}`)
+    return unwrap(res)
+  },
+
+  setDefaultVehicle: async (vehicleId) => {
+    const res = await authorizeAxios.patch(`/driver/vehicles/${vehicleId}/default`)
+    return unwrap(res)
+  },
+
+  // ── Ratings / Feedback ────────────────────────────────────
+  getDriverRatings: async (params = {}) => {
+    const res = await authorizeAxios.get('/driver/ratings', {
+      params: buildQuery(params)
+    })
+    return unwrap(res)
+  },
+
+  createRating: async (payload) => {
+    const res = await authorizeAxios.post('/driver/ratings', payload)
+    return unwrap(res)
+  },
+
+  getUnratedSessions: async () => {
+    const res = await authorizeAxios.get('/driver/completed-sessions')
+    return unwrap(res)
   }
 }
 

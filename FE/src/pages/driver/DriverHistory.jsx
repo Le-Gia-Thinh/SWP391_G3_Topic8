@@ -72,10 +72,37 @@ const getIsoDate = (value) => {
 const fmt = (n) =>
   n != null ? new Intl.NumberFormat('vi-VN').format(Number(n)) + ' VNĐ' : '--'
 
+const getDisplayStatus = (item) => {
+  const status = item.ReservationStatus || ''
+  switch (status) {
+    case 'Pending': return { statusLabel: 'Chờ thanh toán', statusValue: 'Pending' }
+    case 'Prepaid': return { statusLabel: 'Đã trả trước', statusValue: 'Prepaid' }
+    case 'Reserved': return { statusLabel: 'Đã đặt', statusValue: 'active' }
+    case 'Completed': return { statusLabel: 'Đã sử dụng', statusValue: 'used' }
+    case 'Cancelled': return { statusLabel: 'Đã hủy', statusValue: 'cancelled' }
+    default: return { statusLabel: status || 'Không xác định', statusValue: 'default' }
+  }
+}
+
+const splitDateTimeText = (datetimeStr) => {
+  if (!datetimeStr) return { time: '--:--', date: '--/--/----', isoDate: '' }
+  try {
+    const d = new Date(datetimeStr)
+    if (isNaN(d.getTime())) return { time: '--:--', date: '--/--/----', isoDate: '' }
+    return {
+      time: d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      date: d.toLocaleDateString('vi-VN'),
+      isoDate: d.toISOString().slice(0, 10)
+    }
+  } catch {
+    return { time: '--:--', date: '--/--/----', isoDate: '' }
+  }
+}
+
 const mapReservationToBooking = (item) => {
   const displayStatus = getDisplayStatus(item)
-  const start = splitDateTimeText(item.StartTimeText)
-  const end = splitDateTimeText(item.EndTimeText)
+  const start = splitDateTimeText(item.StartTime || item.StartTimeText)
+  const end = splitDateTimeText(item.EndTime || item.EndTimeText)
 
   return {
     id: item.BookingCode || `BK-${String(item.ReservationID).padStart(4, '0')}`,
@@ -93,9 +120,9 @@ const mapReservationToBooking = (item) => {
     endTime: end.time,
     endDate: end.date,
 
-    rawStartText: item.StartTimeText,
-    rawEndText: item.EndTimeText,
-    isoStartDate: start.isoDate,
+    rawStartText: item.StartTime || item.StartTimeText,
+    rawEndText: item.EndTime || item.EndTimeText,
+    rawStartDate: start.isoDate,
 
     status: displayStatus.statusLabel,
     statusValue: displayStatus.statusValue,
@@ -132,21 +159,7 @@ const DriverHistory = () => {
       const response = await authorizeAxios.get('/reservations')
       const data = response.data?.data || []
 
-      // Inject some dummy data if the API returns very few results to show off the scrolling
       let mockData = data.map(mapReservationToBooking)
-      if (mockData.length > 0 && mockData.length < 10) {
-        for (let i = 0; i < 5; i++) {
-          mockData.push({
-            ...mockData[0],
-            id: `BK-MOCK-${Math.floor(Math.random() * 10000)}`,
-            statusValue: 'expired',
-            status: 'Hết hạn',
-            startTime: '10:00',
-            startDate: '01/01/2026'
-          })
-        }
-      }
-
       setBookings(mockData)
     } catch (error) {
       console.error('Get reservations failed:', error)
@@ -165,18 +178,6 @@ const DriverHistory = () => {
         params: { limit: 50, offset: 0 }
       })
       let data = response.data?.data || []
-
-      // Inject some dummy data to show off scrolling
-      if (data.length > 0 && data.length < 10) {
-        for (let i = 0; i < 5; i++) {
-          data.push({
-            ...data[0],
-            PaymentID: `PAY-MOCK-${Math.floor(Math.random() * 10000)}`,
-            Amount: Math.floor(Math.random() * 50000) + 10000,
-            PaymentStatus: 'Completed'
-          })
-        }
-      }
       setPayments(data)
     } catch (error) {
       console.error('Get payments failed:', error)
@@ -371,8 +372,15 @@ const DriverHistory = () => {
                             <span className="inline-block rounded bg-slate-100 px-2 py-1 text-sm border border-slate-200">{booking.plate}</span>
                           </td>
                           <td className="px-5 py-4">
-                            <div className="font-bold text-slate-900">{booking.startTime}</div>
-                            <div className="text-[12px] font-medium text-slate-500">{booking.startDate}</div>
+                            <div className="flex items-center gap-2.5">
+                              <div className="rounded-lg bg-blue-50/80 p-2 text-blue-600 border border-blue-100">
+                                <Calendar size={14} className="stroke-[2.5]" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-900">{booking.startTime}</span>
+                                <span className="text-[11px] font-semibold text-slate-500">{booking.startDate}</span>
+                              </div>
+                            </div>
                           </td>
                           <td className="px-5 py-4">
                             <Badge variant={STATUS_BADGE_VARIANTS[booking.statusValue] || 'default'}>
@@ -434,13 +442,20 @@ const DriverHistory = () => {
                     ) : (
                       payments.map((payment) => (
                         <tr key={payment.PaymentID} className="transition-colors hover:bg-slate-50/80">
-                          <td className="px-5 py-4 font-black text-slate-800">#{payment.PaymentID?.slice(-6) || 'N/A'}</td>
+                          <td className="px-5 py-4 font-black text-slate-800">#{String(payment.PaymentID || '').slice(-6) || 'N/A'}</td>
                           <td className="px-5 py-4 font-bold text-slate-800">
                             <span className="inline-block rounded bg-slate-100 px-2 py-1 text-sm border border-slate-200">{payment.PlateNumber}</span>
                           </td>
                           <td className="px-5 py-4">
-                            <div className="font-bold text-slate-900">{formatTime(payment.PaymentTime)}</div>
-                            <div className="text-[12px] font-medium text-slate-500">{formatDate(payment.PaymentTime)}</div>
+                            <div className="flex items-center gap-2.5">
+                              <div className="rounded-lg bg-blue-50/80 p-2 text-blue-600 border border-blue-100">
+                                <Calendar size={14} className="stroke-[2.5]" />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-900">{formatTime(payment.PaymentTime)}</span>
+                                <span className="text-[11px] font-semibold text-slate-500">{formatDate(payment.PaymentTime)}</span>
+                              </div>
+                            </div>
                           </td>
                           <td className="px-5 py-4 font-black text-blue-600">{fmt(payment.Amount)}</td>
                           <td className="px-5 py-4 font-bold text-slate-700">{payment.PaymentMethod || '--'}</td>

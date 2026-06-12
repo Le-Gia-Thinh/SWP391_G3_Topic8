@@ -6,6 +6,9 @@ import * as sessionController from "../controllers/sessionController.js";
 import * as reservationController from "../controllers/reservationController.js";
 import * as reportController from "../controllers/reportController.js";
 import * as driverController from "../controllers/driverController.js";
+import * as notificationController from "../controllers/notificationController.js";
+import * as vehicleController from "../controllers/vehicleController.js";
+import * as feedbackController from "../controllers/feedbackController.js";
 
 import paymentRoutes from "./paymentRoutes.js";
 import staffRoutes from "./staffRoutes.js";
@@ -126,6 +129,93 @@ router.post(
   isAuthorized,
   isDriver,
   driverController.createDriverReport
+);
+
+// Driver Notifications
+router.get(
+  "/driver/notifications",
+  isAuthorized,
+  isDriver,
+  notificationController.getNotifications
+);
+
+router.get(
+  "/driver/notifications/unread-count",
+  isAuthorized,
+  isDriver,
+  notificationController.getUnreadCount
+);
+
+router.patch(
+  "/driver/notifications/read-all",
+  isAuthorized,
+  isDriver,
+  notificationController.markAllAsRead
+);
+
+router.patch(
+  "/driver/notifications/:id/read",
+  isAuthorized,
+  isDriver,
+  notificationController.markAsRead
+);
+
+// Driver Vehicles
+router.get(
+  "/driver/vehicles",
+  isAuthorized,
+  isDriver,
+  vehicleController.getDriverVehicles
+);
+
+router.post(
+  "/driver/vehicles",
+  isAuthorized,
+  isDriver,
+  vehicleController.addDriverVehicle
+);
+
+router.patch(
+  "/driver/vehicles/:id",
+  isAuthorized,
+  isDriver,
+  vehicleController.updateDriverVehicle
+);
+
+router.delete(
+  "/driver/vehicles/:id",
+  isAuthorized,
+  isDriver,
+  vehicleController.deleteDriverVehicle
+);
+
+router.patch(
+  "/driver/vehicles/:id/default",
+  isAuthorized,
+  isDriver,
+  vehicleController.setDefaultVehicle
+);
+
+// Driver Ratings
+router.get(
+  "/driver/ratings",
+  isAuthorized,
+  isDriver,
+  feedbackController.getDriverRatings
+);
+
+router.post(
+  "/driver/ratings",
+  isAuthorized,
+  isDriver,
+  feedbackController.createServiceRating
+);
+
+router.get(
+  "/driver/completed-sessions",
+  isAuthorized,
+  isDriver,
+  feedbackController.getUnratedSessions
 );
 
 // Sessions

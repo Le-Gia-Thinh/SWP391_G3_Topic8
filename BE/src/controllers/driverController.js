@@ -799,7 +799,6 @@ export async function createDriverReport(req, res, next) {
             CreatedAt,
             UpdatedAt
           )
-          OUTPUT inserted.*
           VALUES (
             @SessionID,
             @DriverID,
@@ -809,7 +808,8 @@ export async function createDriverReport(req, res, next) {
             @Description,
             GETDATE(),
             GETDATE()
-          )
+          );
+          SELECT SCOPE_IDENTITY() AS IncidentID;
         `);
 
       const incident = incidentResult.recordset[0];
