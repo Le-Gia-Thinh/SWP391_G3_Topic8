@@ -1,6 +1,6 @@
 import React from 'react'
 import { Menu, Search, Bell } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
 
@@ -13,6 +13,7 @@ const getInitials = (name) => {
 
 const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }) => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const userName = user?.fullName || user?.name || 'Người dùng'
 
   const handleSearch = (e) => {
@@ -22,7 +23,11 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
   }
 
   const handleNotification = () => {
-    toast.info('Bạn hiện không có thông báo mới nào')
+    if (user?.roleName?.toLowerCase() === 'driver' || user?.RoleName?.toLowerCase() === 'driver') {
+      navigate('/driver/notifications')
+    } else {
+      toast.info('Bạn hiện không có thông báo mới nào')
+    }
   }
 
   return (
