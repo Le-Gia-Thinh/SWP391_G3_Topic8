@@ -44,8 +44,11 @@ const staffApi = {
     return res.data
   },
 
-  checkInBooking: async (reservationId) => {
-    const res = await authorizedAxiosInstance.post(`${STAFF_BASE}/bookings/${reservationId}/check-in`)
+  checkInBooking: async (reservationId, plateNumber) => {
+    const res = await authorizedAxiosInstance.post(
+      `${STAFF_BASE}/bookings/${reservationId}/check-in`,
+      { plateNumber }
+    )
     return res.data
   },
 

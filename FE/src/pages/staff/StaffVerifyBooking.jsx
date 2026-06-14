@@ -43,7 +43,7 @@ const BookingRow = ({ booking, onSelect, isSelected }) => {
       className={`w-full text-left p-4 rounded-xl border transition-all hover:shadow-md ${isSelected
         ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-100 shadow-md'
         : 'border-gray-200 bg-white hover:border-blue-300'
-      }`}
+        }`}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 min-w-0">
@@ -91,10 +91,23 @@ const BookingRow = ({ booking, onSelect, isSelected }) => {
 // ── Detail Panel ──────────────────────────────────────────────
 const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
   const navigate = useNavigate()
+  const [plateNumber, setPlateNumber] = useState('') // ✅ thêm state
+  const [plateError, setPlateError] = useState('')
+
   const tr = getTimeRemaining(booking.EndTime)
   const isValid = booking.ReservationStatus === 'Reserved'
   const isExpired = tr?.type === 'error'
   const cfg = STATUS_CONFIG[booking.ReservationStatus] || STATUS_CONFIG.Cancelled
+
+  // ✅ Validate + gọi onCheckIn với plateNumber
+  const handleSubmit = () => {
+    if (!plateNumber.trim()) {
+      setPlateError('Vui lòng nhập biển số xe thực tế')
+      return
+    }
+    setPlateError('')
+    onCheckIn(booking, plateNumber.trim().toUpperCase())
+  }
 
   const validations = [
     {
@@ -130,8 +143,10 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
     <div className="flex flex-col gap-5">
 
       {/* Header card */}
-      <div className={`rounded-xl p-5 border ${isExpired || !isValid ? 'bg-red-50 border-red-200' : 'bg-blue-600 border-blue-500'
-      }`}>
+      <div className={`rounded-xl p-5 border ${isExpired || !isValid
+        ? 'bg-red-50 border-red-200'
+        : 'bg-blue-600 border-blue-500'
+        }`}>
         <div className="flex items-start justify-between mb-3">
           <div>
             <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${isExpired || !isValid ? 'text-red-400' : 'text-blue-200'}`}>
@@ -153,7 +168,6 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
       {/* Info grid */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
         <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Thông tin chi tiết</p>
-
         {[
           { icon: User, label: 'Tài xế', value: booking.DriverName },
           { icon: Phone, label: 'SĐT', value: booking.PhoneNumber || '—' },
@@ -185,7 +199,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded shrink-0 ${item.status === 'ok' ? 'text-green-600 bg-green-50' :
                 item.status === 'warning' ? 'text-yellow-600 bg-yellow-50' :
                   'text-red-600 bg-red-50'
-              }`}>
+                }`}>
                 {item.status === 'ok' ? '✓ Hợp lệ' : item.status === 'warning' ? '⚠ Cảnh báo' : '✗ Không hợp lệ'}
               </span>
             </div>
@@ -193,11 +207,33 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
         </div>
       </div>
 
+      {/* ✅ Input biển số thực tế */}
+      {isValid && !isExpired && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+            Biển số xe thực tế *
+          </p>
+          <input
+            type="text"
+            value={plateNumber}
+            onChange={e => {
+              setPlateNumber(e.target.value.toUpperCase())
+              setPlateError('')
+            }}
+            placeholder="VD: 51F-123.45"
+            className={`w-full px-3 py-2.5 border rounded-lg text-sm font-bold uppercase focus:ring-2 focus:ring-blue-500 outline-none ${plateError ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
+          />
+          {plateError && (
+            <p className="text-xs text-red-500 mt-1.5 font-medium">{plateError}</p>
+          )}
+        </div>
+      )}
+
       {/* Actions */}
       {isValid && !isExpired ? (
         <div className="space-y-2.5">
           <button
-            onClick={() => onCheckIn(booking)}
+            onClick={handleSubmit}  // ✅ gọi handleSubmit thay vì onCheckIn trực tiếp
             disabled={checking}
             className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl shadow-md shadow-blue-200 transition-colors flex items-center justify-center gap-2"
           >
@@ -310,17 +346,24 @@ const StaffVerifyBooking = () => {
     finally { setSearching(false) }
   }
 
-  const handleCheckIn = async (booking) => {
+  const handleCheckIn = async (booking, plateNumber) => {  // ✅ nhận thêm plateNumber
     setChecking(true)
     try {
-      await staffApi.checkInBooking(booking.ReservationID)
+      await staffApi.checkInBooking(booking.ReservationID, plateNumber)  // ✅ truyền xuống
       toast.success(`Check-in ${booking.BookingCode} thành công!`)
-      navigate('/staff/checkin-success', { state: { actionType: 'booking-checkin' } })
+      navigate('/staff/checkin-success', {
+        state: {
+          actionType: 'booking-checkin',
+          sessionCode: null,
+          session: null
+        }
+      })
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Check-in thất bại')
-    } finally { setChecking(false) }
+    } finally {
+      setChecking(false)
+    }
   }
-
   const currentList = tab === 'pending' ? pendingList : historyList
 
   return (
@@ -370,7 +413,7 @@ const StaffVerifyBooking = () => {
       <div className="flex gap-5 flex-1 min-h-0">
 
         {/* Left: Tabs + List */}
-        <div className="flex flex-col w-[440px] shrink-0 min-h-0">
+        <div className="flex flex-col w-110 shrink-0 min-h-0">
 
           {/* Tabs */}
           <div className="flex bg-white rounded-xl border border-gray-200 shadow-sm p-1 gap-1 mb-4">

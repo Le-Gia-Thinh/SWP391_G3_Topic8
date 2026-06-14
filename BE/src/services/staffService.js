@@ -83,18 +83,18 @@ function parseAttachments(raw) {
 }
 async function getDefaultDriverId(pool) {
     const result = await pool.request().query(`
-        SELECT TOP 1 UserID
-        FROM Users u
-        JOIN Roles r ON u.RoleID = r.RoleID
-        WHERE r.RoleName = 'Driver'
-        AND u.IsActive = 1
-        ORDER BY u.UserID
+        SELECT UserID FROM Users
+        WHERE Email = 'walkin.guest@system.local'
+          AND IsActive = 1
     `)
 
     const user = result.recordset[0]
 
     if (!user) {
-        throw notFound('Không tìm thấy tài khoản Driver mặc định.', 'DEFAULT_DRIVER_NOT_FOUND')
+        throw notFound(
+            'Không tìm thấy tài khoản Khách Vãng Lai.',
+            'WALKIN_GUEST_NOT_FOUND'
+        )
     }
 
     return user.UserID
@@ -367,7 +367,7 @@ export async function getBookingDetail(reservationId) {
     return booking
 }
 
-export async function checkInBooking(reservationId) {
+export async function checkInBooking(reservationId, plateNumber) {
     const id = parseReservationId(reservationId)
 
     if (!id) {
@@ -383,13 +383,11 @@ export async function checkInBooking(reservationId) {
         const bookingResult = await new sql.Request(transaction)
             .input('reservationId', sql.Int, id)
             .query(`
-            SELECT
-            r.*,
-            sl.SlotStatus
-            FROM Reservations r WITH (UPDLOCK, ROWLOCK)
-            LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
-            WHERE r.ReservationID = @reservationId
-        `)
+                SELECT r.*, sl.SlotStatus
+                FROM Reservations r WITH (UPDLOCK, ROWLOCK)
+                LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
+                WHERE r.ReservationID = @reservationId
+            `)
 
         const booking = bookingResult.recordset[0]
 
@@ -405,11 +403,10 @@ export async function checkInBooking(reservationId) {
             await new sql.Request(transaction)
                 .input('reservationId', sql.Int, id)
                 .query(`
-            UPDATE Reservations
-            SET ReservationStatus = 'Expired'
-            WHERE ReservationID = @reservationId
-            `)
-
+                    UPDATE Reservations
+                    SET ReservationStatus = 'Expired'
+                    WHERE ReservationID = @reservationId
+                `)
             throw conflict('Booking đã hết hạn.', 'BOOKING_EXPIRED')
         }
 
@@ -421,62 +418,45 @@ export async function checkInBooking(reservationId) {
             throw conflict('Slot của booking hiện không khả dụng.', 'BOOKING_SLOT_NOT_AVAILABLE')
         }
 
-        const plateNumber = `BOOKING-${id}`
+        // ✅ Dùng biển số thực tế nếu có, fallback về BOOKING-{id}
+        const finalPlate = plateNumber?.trim().toUpperCase() || `BOOKING-${id}`
 
         const insertSessionResult = await new sql.Request(transaction)
             .input('slotId', sql.Int, booking.SlotID)
             .input('driverId', sql.Int, booking.DriverID)
-            .input('plateNumber', sql.NVarChar(20), plateNumber)
+            .input('plateNumber', sql.NVarChar(20), finalPlate)
             .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
             .query(`
-            INSERT INTO ParkingSessions (
-            SlotID,
-            DriverID,
-            PlateNumber,
-            VehicleTypeID,
-            EntryTime,
-            SessionStatus
-            )
-            OUTPUT INSERTED.*
-            VALUES (
-            @slotId,
-            @driverId,
-            @plateNumber,
-            @vehicleTypeId,
-            GETDATE(),
-            'Active'
-            )
-        `)
+                INSERT INTO ParkingSessions (
+                    SlotID, DriverID, PlateNumber,
+                    VehicleTypeID, EntryTime, SessionStatus
+                )
+                OUTPUT INSERTED.*
+                VALUES (
+                    @slotId, @driverId, @plateNumber,
+                    @vehicleTypeId, GETDATE(), 'Active'
+                )
+            `)
 
         const session = insertSessionResult.recordset[0]
 
         await new sql.Request(transaction)
             .input('reservationId', sql.Int, id)
             .query(`
-            UPDATE Reservations
-            SET ReservationStatus = 'Completed'
-            WHERE ReservationID = @reservationId
-        `)
+                UPDATE Reservations
+                SET ReservationStatus = 'Completed'
+                WHERE ReservationID = @reservationId
+            `)
 
         await new sql.Request(transaction)
             .input('sessionId', sql.Int, session.SessionID)
             .query(`
-            IF NOT EXISTS (SELECT 1 FROM Payments WHERE SessionID = @sessionId)
-            BEGIN
-            INSERT INTO Payments (
-                SessionID,
-                Amount,
-                PaymentMethod,
-                PaymentStatus
-            )
-            VALUES (
-                @sessionId,
-                0,
-                'Pending',
-                'Pending'
-            )
-            END
-        `)
+                IF NOT EXISTS (SELECT 1 FROM Payments WHERE SessionID = @sessionId)
+                BEGIN
+                    INSERT INTO Payments (SessionID, Amount, PaymentMethod, PaymentStatus)
+                    VALUES (@sessionId, 0, 'Pending', 'Pending')
+                END
+            `)
 
         await transaction.commit()
 

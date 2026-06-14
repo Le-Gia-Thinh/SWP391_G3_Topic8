@@ -1,8 +1,7 @@
 // src/pages/Staff/StaffCheckIn.jsx
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  Info, Search, CheckCircle2, AlertCircle, MapPin, Plus,
-  ChevronRight, FileText, Calendar, Loader2, RefreshCcw, Car
+  Info, Search, CheckCircle2, MapPin, FileText, Calendar, Loader2, RefreshCcw
 } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -17,39 +16,80 @@ const SLOT_STATUS_STYLE = {
   Blocked: 'bg-gray-800 border-gray-800 text-white cursor-not-allowed'
 }
 
-const formatVND = (v) => Number(v || 0).toLocaleString('vi-VN')
+// ── Biển số helpers ───────────────────────────────────────────
+// Định dạng chuẩn VN: 2 số tỉnh + 1 chữ series + 4-5 số
+//   - 5 số → DDL-DDD.DD  (ví dụ 51F-123.45)
+//   - 4 số → DDL-DDDD    (ví dụ 51F-1234)
+// Tự động chèn dấu - và . khi người dùng gõ.
+const formatPlate = (raw) => {
+  const clean = (raw || '').toUpperCase().replace(/[^0-9A-Z]/g, '')
+  if (!clean) return ''
+
+  // Phần 1: 2 số tỉnh
+  const prov = clean.slice(0, 2).replace(/[^0-9]/g, '')
+  let result = prov
+  if (prov.length < 2) return result
+
+  // Phần 2: chữ series (1-2 ký tự chữ)
+  let i = 2
+  let series = ''
+  while (i < clean.length && /[A-Z]/.test(clean[i]) && series.length < 2) {
+    series += clean[i]
+    i++
+  }
+  result += series
+  if (!series) return result // chưa gõ chữ series → dừng (buộc nhập đúng)
+
+  // Phần 3: phần số → thêm dấu - và .
+  const nums = clean.slice(i).replace(/[^0-9]/g, '').slice(0, 5) // tối đa 5 số
+  if (nums.length === 0) return result
+  result += '-'
+  if (nums.length <= 3) {
+    result += nums
+  } else {
+    // tách 2 số cuối bằng dấu chấm
+    result += nums.slice(0, nums.length - 2) + '.' + nums.slice(nums.length - 2)
+  }
+  return result
+}
+
+// Kiểm tra biển số đã đầy đủ & hợp lệ chưa
+// Khớp y hệt plateNumberRegex bên BE (authValidation.js):
+//   59A-12345 / 59A12345 / 59A-123.45 / 59AB-12345 / 51F-99999 ...
+const PLATE_REGEX = /^(\d{2}[A-Z]{1,2}-?\d{3}\.?\d{2}|\d{2}[A-Z]{1,2}-?\d{4,5})$/i
+const isValidPlate = (plate) => PLATE_REGEX.test(plate)
 
 // ── Walk-in content ───────────────────────────────────────────
 const WalkInContent = () => {
   const navigate = useNavigate()
 
-  // Form state
   const [plateNumber, setPlateNumber] = useState('')
+  const [plateError, setPlateError] = useState('')
   const [vehicleTypeId, setVehicleTypeId] = useState('')
   const [selectedSlotId, setSelectedSlotId] = useState(null)
   const [note, setNote] = useState('')
-
-  // Data
   const [vehicleTypes, setVehicleTypes] = useState([])
   const [slots, setSlots] = useState([])
   const [suggestedSlot, setSuggestedSlot] = useState(null)
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [mapParams, setMapParams] = useState({})
 
-  // Load vehicle types
+  // Load vehicle types — chỉ chạy 1 lần
   useEffect(() => {
+    let cancelled = false
     staffApi.getVehicleTypes()
       .then(res => {
+        if (cancelled) return
         if (res.success) {
           setVehicleTypes(res.data)
           if (res.data.length > 0) setVehicleTypeId(String(res.data[0].VehicleTypeID))
         }
       })
-      .catch(() => toast.error('Không tải được loại phương tiện'))
+      .catch(() => { if (!cancelled) toast.error('Không tải được loại phương tiện') })
+    return () => { cancelled = true }
   }, [])
 
-  // Load parking map when vehicleTypeId changes
+  // Load parking map khi vehicleTypeId thay đổi
   const loadSlots = useCallback(async () => {
     if (!vehicleTypeId) return
     setLoading(true)
@@ -57,10 +97,9 @@ const WalkInContent = () => {
       const res = await staffApi.getParkingMap({ vehicleTypeId, status: 'all' })
       if (res.success) {
         setSlots(res.data)
-        // Suggest first available slot
         const first = res.data.find(s => s.SlotStatus === 'Available')
         setSuggestedSlot(first || null)
-        if (first && !selectedSlotId) setSelectedSlotId(first.SlotID)
+        setSelectedSlotId(prev => prev ?? (first?.SlotID || null))
       }
     } catch {
       toast.error('Không tải được sơ đồ bãi đỗ')
@@ -69,10 +108,47 @@ const WalkInContent = () => {
     }
   }, [vehicleTypeId])
 
-  useEffect(() => { loadSlots() }, [loadSlots])
+  // Auto-fetch slots khi đổi loại xe (inline để tránh lỗi React 18)
+  useEffect(() => {
+    if (!vehicleTypeId) return
+    let cancelled = false
+    const run = async () => {
+      setLoading(true)
+      try {
+        const res = await staffApi.getParkingMap({ vehicleTypeId, status: 'all' })
+        if (cancelled) return
+        if (res.success) {
+          setSlots(res.data)
+          const first = res.data.find(s => s.SlotStatus === 'Available')
+          setSuggestedSlot(first || null)
+          setSelectedSlotId(prev => prev ?? (first?.SlotID || null))
+        }
+      } catch {
+        if (!cancelled) toast.error('Không tải được sơ đồ bãi đỗ')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [vehicleTypeId])
+
+  // Xử lý nhập biển số — tự động format
+  const handlePlateChange = (e) => {
+    const formatted = formatPlate(e.target.value)
+    setPlateNumber(formatted)
+    if (plateError) setPlateError('')
+  }
 
   const handleSubmit = async () => {
-    if (!plateNumber.trim()) return toast.error('Vui lòng nhập biển số xe')
+    if (!plateNumber.trim()) {
+      setPlateError('Vui lòng nhập biển số xe')
+      return toast.error('Vui lòng nhập biển số xe')
+    }
+    if (!isValidPlate(plateNumber)) {
+      setPlateError('Biển số chưa đúng định dạng. Ví dụ: 51F-123.45')
+      return toast.error('Biển số chưa đúng định dạng (VD: 51F-123.45)')
+    }
     if (!vehicleTypeId) return toast.error('Vui lòng chọn loại phương tiện')
     if (!selectedSlotId) return toast.error('Vui lòng chọn ô đỗ xe')
 
@@ -101,7 +177,6 @@ const WalkInContent = () => {
     }
   }
 
-  // Group slots by zone for display
   const slotGroups = slots.reduce((acc, s) => {
     const key = `${s.BuildingName} · ${s.FloorName} · ${s.ZoneName}`
     if (!acc[key]) acc[key] = []
@@ -110,12 +185,13 @@ const WalkInContent = () => {
   }, {})
 
   const availableCount = slots.filter(s => s.SlotStatus === 'Available').length
+  const plateValid = isValidPlate(plateNumber)
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-24 animate-in fade-in">
       <div className="flex gap-6 flex-1 flex-col xl:flex-row">
         {/* Form */}
-        <div className="flex-[2] bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
+        <div className="flex-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
           <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
             <Info size={20} className="text-blue-500" /> Thông tin xe vào bãi
           </h3>
@@ -123,17 +199,35 @@ const WalkInContent = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Biển số xe <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Biển số xe <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 value={plateNumber}
-                onChange={e => setPlateNumber(e.target.value.toUpperCase())}
+                onChange={handlePlateChange}
                 placeholder="51F-123.45"
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-all text-sm font-bold uppercase"
+                maxLength={12}
+                className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 transition-all text-sm font-bold uppercase tracking-wider ${plateError
+                  ? 'border-red-400 bg-red-50 focus:ring-red-400'
+                  : plateValid
+                    ? 'border-green-400 bg-green-50 focus:ring-green-400'
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
               />
+              {plateError ? (
+                <p className="text-xs text-red-500 mt-1.5 font-medium">{plateError}</p>
+              ) : (
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Định dạng: 2 số tỉnh + chữ + số. VD: <span className="font-semibold text-gray-600">51F-123.45</span>
+                  {plateValid && <span className="text-green-600 ml-2">✓ Hợp lệ</span>}
+                </p>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Loại phương tiện <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Loại phương tiện <span className="text-red-500">*</span>
+              </label>
               <select
                 value={vehicleTypeId}
                 onChange={e => setVehicleTypeId(e.target.value)}
@@ -162,14 +256,18 @@ const WalkInContent = () => {
           {/* Slot grid */}
           <div className="mt-auto">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-bold text-gray-700">Chọn ô đỗ <span className="text-green-600">({availableCount} trống)</span></h4>
+              <h4 className="text-sm font-bold text-gray-700">
+                Chọn ô đỗ <span className="text-green-600">({availableCount} trống)</span>
+              </h4>
               <button onClick={loadSlots} disabled={loading} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
                 <RefreshCcw size={12} className={loading ? 'animate-spin' : ''} /> Làm mới
               </button>
             </div>
 
             {loading ? (
-              <div className="flex justify-center py-8"><Loader2 className="animate-spin text-blue-500" size={24} /></div>
+              <div className="flex justify-center py-8">
+                <Loader2 className="animate-spin text-blue-500" size={24} />
+              </div>
             ) : (
               Object.entries(slotGroups).map(([groupName, groupSlots]) => (
                 <div key={groupName} className="mb-4">
@@ -255,7 +353,10 @@ const WalkInContent = () => {
                 <CheckCircle2 size={18} /> Sử dụng vị trí này
               </button>
             )}
-            <button onClick={loadSlots} className="w-full py-3 bg-transparent border border-blue-300 hover:bg-blue-100 text-blue-700 rounded-xl font-bold transition-all">
+            <button
+              onClick={loadSlots}
+              className="w-full py-3 bg-transparent border border-blue-300 hover:bg-blue-100 text-blue-700 rounded-xl font-bold transition-all"
+            >
               Làm mới sơ đồ
             </button>
           </div>
@@ -279,14 +380,14 @@ const WalkInContent = () => {
           </div>
           <div className="flex items-center gap-4">
             <button
-              onClick={() => { setPlateNumber(''); setSelectedSlotId(suggestedSlot?.SlotID || null) }}
+              onClick={() => { setPlateNumber(''); setPlateError(''); setSelectedSlotId(suggestedSlot?.SlotID || null) }}
               className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-colors"
             >
               Hủy
             </button>
             <button
               onClick={handleSubmit}
-              disabled={submitting || !plateNumber || !selectedSlotId}
+              disabled={submitting || !plateValid || !selectedSlotId}
               className="px-8 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {submitting && <Loader2 size={16} className="animate-spin" />}
@@ -306,23 +407,32 @@ const BookingContent = () => {
   const [keyword, setKeyword] = useState('')
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(false)
+  const [searchTrigger, setSearchTrigger] = useState(0)
 
-  const loadBookings = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = {}
-      if (activeTab !== 'all') params.status = activeTab
-      if (keyword.trim()) params.keyword = keyword.trim()
-      const res = await staffApi.getBookingQueue(params)
-      if (res.success) setBookings(res.data)
-    } catch {
-      toast.error('Không tải được danh sách booking')
-    } finally {
-      setLoading(false)
+  const keywordRef = useRef(keyword)
+  useEffect(() => { keywordRef.current = keyword }, [keyword])
+
+  useEffect(() => {
+    let cancelled = false
+    const fetch = async () => {
+      setLoading(true)
+      try {
+        const params = {}
+        if (activeTab !== 'all') params.status = activeTab
+        if (keywordRef.current.trim()) params.keyword = keywordRef.current.trim()
+        const res = await staffApi.getBookingQueue(params)
+        if (!cancelled && res.success) setBookings(res.data)
+      } catch {
+        if (!cancelled) toast.error('Không tải được danh sách booking')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }, [activeTab, keyword])
+    fetch()
+    return () => { cancelled = true }
+  }, [activeTab, searchTrigger])
 
-  useEffect(() => { loadBookings() }, [loadBookings])
+  const handleSearch = () => setSearchTrigger(t => t + 1)
 
   const tabs = [
     { name: 'Reserved', label: 'Đang chờ' },
@@ -340,7 +450,6 @@ const BookingContent = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 animate-in fade-in space-y-6">
-      {/* Search */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-xl font-bold text-gray-800 mb-2">Tìm kiếm nhanh lượt đặt</h2>
         <p className="text-sm text-gray-500 mb-4">Nhập biển số hoặc mã đặt chỗ để check-in nhanh.</p>
@@ -351,25 +460,29 @@ const BookingContent = () => {
               type="text"
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && loadBookings()}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
               placeholder="Biển số hoặc BK-XXXX"
               className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-all font-medium"
             />
           </div>
-          <button onClick={loadBookings} disabled={loading} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition-colors disabled:opacity-50">
+          <button
+            onClick={handleSearch}
+            disabled={loading}
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition-colors disabled:opacity-50"
+          >
             Tìm kiếm
           </button>
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex gap-2 overflow-x-auto pb-2 border-b border-gray-100 mb-4">
           {tabs.map(tab => (
             <button
               key={tab.name}
               onClick={() => setActiveTab(tab.name)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${activeTab === tab.name ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${activeTab === tab.name ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
             >
               {tab.label}
             </button>
@@ -377,9 +490,7 @@ const BookingContent = () => {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="animate-spin text-blue-500" size={24} />
-          </div>
+          <div className="flex justify-center py-10"><Loader2 className="animate-spin text-blue-500" size={24} /></div>
         ) : bookings.length === 0 ? (
           <div className="text-center py-10 text-gray-400">
             <Calendar size={40} className="mx-auto mb-3 opacity-30" />
@@ -448,7 +559,9 @@ const BookingContent = () => {
 // ── Main wrapper ──────────────────────────────────────────────
 const StaffCheckIn = () => {
   const [searchParams] = useSearchParams()
-  const [activeType, setActiveType] = useState(searchParams.get('tab') === 'booking' ? 'booking' : 'walkin')
+  const [activeType, setActiveType] = useState(
+    searchParams.get('tab') === 'booking' ? 'booking' : 'walkin'
+  )
 
   return (
     <div className="flex flex-col h-full bg-gray-50 pb-8">
@@ -465,13 +578,15 @@ const StaffCheckIn = () => {
       <div className="flex gap-4 border-b border-gray-200 mb-6">
         <button
           onClick={() => setActiveType('walkin')}
-          className={`pb-4 px-2 font-bold text-sm flex items-center gap-2 border-b-2 transition-colors ${activeType === 'walkin' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          className={`pb-4 px-2 font-bold text-sm flex items-center gap-2 border-b-2 transition-colors ${activeType === 'walkin' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
         >
           <FileText size={18} /> Khách vãng lai (Walk-in)
         </button>
         <button
           onClick={() => setActiveType('booking')}
-          className={`pb-4 px-2 font-bold text-sm flex items-center gap-2 border-b-2 transition-colors ${activeType === 'booking' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+          className={`pb-4 px-2 font-bold text-sm flex items-center gap-2 border-b-2 transition-colors ${activeType === 'booking' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
         >
           <Calendar size={18} /> Khách đặt trước (Booking)
         </button>

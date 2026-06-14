@@ -2,6 +2,12 @@
 import express from 'express'
 import * as staffController from '../controllers/staffController.js'
 import { isAuthorized, isStaffOrManager } from '../middlewares/authMiddleware.js'
+import {
+    validateStaffWalkIn,
+    validateStaffBookingCheckIn,
+    validateStaffCheckOut,
+    validateConfirmSurcharge
+} from '../utilities/authValidation.js'
 
 const router = express.Router()
 
@@ -45,4 +51,9 @@ router.get('/slots/:slotCode', staffController.getSlotDetail)
 //Payment confirmation
 router.get('/sessions/pending-payments', staffController.getPendingPayments)
 router.get('/drivers/:driverId/payment-history', staffController.getPaymentHistory)
+
+router.post('/checkin/walkin', isAuthorized, validateStaffWalkIn, staffController.checkInWalkIn)
+router.post('/checkin/booking/:reservationId', isAuthorized, validateStaffBookingCheckIn, staffController.checkInBooking)
+router.post('/checkout/:sessionId', isAuthorized, validateStaffCheckOut, staffController.checkOutSession)
+router.post('/sessions/:sessionId/surcharge', isAuthorized, validateConfirmSurcharge, staffController.confirmSurcharge)
 export default router

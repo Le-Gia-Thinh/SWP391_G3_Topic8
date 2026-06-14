@@ -39,7 +39,7 @@ const StaffParkingMap = React.lazy(() => import('./pages/staff/StaffParkingMap')
 const StaffSearchSession = React.lazy(() => import('./pages/staff/StaffSearchSession'))
 const StaffSupport = React.lazy(() => import('./pages/staff/StaffSupport'))
 const StaffUserGuide = React.lazy(() => import('./pages/staff/StaffUserGuide'))
-
+const StaffPaymentHistory = React.lazy(() => import('./pages/staff/StaffPaymentHistory'))
 // Driver Pages (Lazy)
 const DriverHome = React.lazy(() => import('./pages/driver/DriverHome'))
 const DriverBooking = React.lazy(() => import('./pages/driver/DriverBooking'))
@@ -50,7 +50,6 @@ const DriverPayment = React.lazy(() => import('./pages/driver/DriverPayment'))
 const DriverReport = React.lazy(() => import('./pages/driver/DriverReport'))
 const DriverPaymentResult = React.lazy(() => import('./pages/driver/DriverPaymentResult'))
 const DriverHelp = React.lazy(() => import('./pages/driver/DriverHelp'))
-const DriverSettings = React.lazy(() => import('./pages/driver/DriverSettings'))
 const DriverSupport = React.lazy(() => import('./pages/driver/DriverSupport'))
 const DriverTerms = React.lazy(() => import('./pages/driver/DriverTerms'))
 const DriverPrivacy = React.lazy(() => import('./pages/driver/DriverPrivacy'))
@@ -67,7 +66,7 @@ const managerLinks = [
   { isDivider: true },
   { labelOnly: 'Cấu hình' },
   { path: '/manager/pricing', label: 'Bảng giá', icon: Wallet },
-  { path: '/manager/config', label: 'Cấu hình bãi đỗ', icon: Settings },
+
   { path: '/manager/incidents', label: 'Sự cố', icon: AlertTriangle }
 ]
 
@@ -103,7 +102,6 @@ const driverLinks = [
   { labelOnly: 'Hỗ trợ' },
   { path: '/driver/report', label: 'Báo cáo sự cố', icon: AlertTriangle },
   { path: '/driver/help', label: 'Trung tâm trợ giúp', icon: HelpCircle },
-  { path: '/driver/settings', label: 'Cài đặt', icon: Settings }
 ]
 
 const LoadingFallback = () => (
@@ -179,13 +177,11 @@ const App = () => {
 
             {/* Checkout */}
             <Route path="checkout" element={<StaffVehicleCheckOut />} />
-            <Route path="/staff/checkout/:sessionId" element={<StaffPaymentConfirm />} />
+            <Route path="checkout/:sessionId" element={<StaffPaymentConfirm />} />
+            <Route path="payment-confirm" element={<StaffPaymentHistory />} />
             {/* Create Incident */}
             <Route path="create-incident" element={<StaffCreateIncident />} />
 
-            {/* Payment */}
-            <Route path="payment-confirm" element={<StaffPaymentConfirm />} />
-            <Route path="/staff/checkout/:sessionId" element={<StaffPaymentConfirm />} />
 
             {/* Parking Map */}
             <Route path="parking-map" element={<StaffParkingMap />} />
@@ -196,7 +192,6 @@ const App = () => {
 
             {/* Profile / Settings */}
             <Route path="profile" element={<UserProfile />} />
-            <Route path="settings" element={<UserProfile />} />
             <Route path="security" element={<UserProfile />} />
 
             {/* Support / User Guide */}
@@ -219,7 +214,6 @@ const App = () => {
             <Route path="report" element={<DriverReport />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="payment-result" element={<DriverPaymentResult />} />
-            <Route path="settings" element={<DriverSettings />} />
             <Route path="help" element={<DriverHelp />} />
             <Route path="terms" element={<DriverTerms />} />
             <Route path="privacy" element={<DriverPrivacy />} />

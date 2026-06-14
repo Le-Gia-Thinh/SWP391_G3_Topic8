@@ -300,3 +300,96 @@ export function validateCheckOut(req, res, next) {
 
   next();
 }
+export function validateStaffWalkIn(req, res, next) {
+  const errors = []
+
+  const vehicleTypeId = Number(req.body.vehicleTypeId)
+  const slotId = Number(req.body.slotId)
+  const plateNumber = trim(req.body.plateNumber).toUpperCase()
+
+  if (!plateNumber) {
+    errors.push("plateNumber là bắt buộc")
+  } else if (!plateNumberRegex.test(plateNumber)) {
+    errors.push("plateNumber không đúng định dạng. Ví dụ: 59A-12345 hoặc 59A-123.45")
+  }
+
+  if (!Number.isInteger(vehicleTypeId) || vehicleTypeId <= 0) {
+    errors.push("vehicleTypeId không hợp lệ")
+  }
+
+  if (!Number.isInteger(slotId) || slotId <= 0) {
+    errors.push("slotId không hợp lệ")
+  }
+
+  // driverId là TÙY CHỌN — nếu staff không gửi, BE tự dùng guest driver
+  if (req.body.driverId !== undefined && req.body.driverId !== null) {
+    const driverId = Number(req.body.driverId)
+    if (!Number.isInteger(driverId) || driverId <= 0) {
+      errors.push("driverId không hợp lệ")
+    } else {
+      req.body.driverId = driverId
+    }
+  }
+
+  if (errors.length > 0) return sendValidationError(res, errors)
+
+  req.body.vehicleTypeId = vehicleTypeId
+  req.body.slotId = slotId
+  req.body.plateNumber = plateNumber
+  next()
+}
+
+// ── Check-in booking: chỉ validate plateNumber (reservationId ở params) ──
+export function validateStaffBookingCheckIn(req, res, next) {
+  const errors = []
+  const plateNumber = trim(req.body.plateNumber).toUpperCase()
+
+  if (plateNumber && !plateNumberRegex.test(plateNumber)) {
+    errors.push("plateNumber không đúng định dạng. Ví dụ: 59A-12345 hoặc 59A-123.45")
+  }
+
+  if (errors.length > 0) return sendValidationError(res, errors)
+
+  if (plateNumber) req.body.plateNumber = plateNumber
+  next()
+}
+
+// ── Checkout của Staff: sessionId nằm ở params, chỉ validate paymentMethod ──
+export function validateStaffCheckOut(req, res, next) {
+  const errors = []
+
+  const sessionId = Number(req.params.sessionId)   // ✅ đọc từ PARAMS
+  const paymentMethod = trim(req.body.paymentMethod)
+  const allowedPaymentMethods = ["Cash", "Card", "Banking", "Momo", "VNPay", "ZaloPay"]
+
+  if (!Number.isInteger(sessionId) || sessionId <= 0) {
+    errors.push("sessionId không hợp lệ")
+  }
+
+  if (!paymentMethod) {
+    errors.push("paymentMethod là bắt buộc")
+  } else if (!allowedPaymentMethods.includes(paymentMethod)) {
+    errors.push(`paymentMethod chỉ được là: ${allowedPaymentMethods.join(", ")}`)
+  }
+
+  if (errors.length > 0) return sendValidationError(res, errors)
+
+  req.body.paymentMethod = paymentMethod
+  next()
+}
+
+// ── Thu phụ trội: paymentMethod chỉ Cash | Banking ──
+export function validateConfirmSurcharge(req, res, next) {
+  const sessionId = Number(req.params.sessionId)
+  const paymentMethod = trim(req.body.paymentMethod)
+
+  const errors = []
+  if (!Number.isInteger(sessionId) || sessionId <= 0) errors.push("sessionId không hợp lệ")
+  if (!["Cash", "Banking"].includes(paymentMethod)) {
+    errors.push("paymentMethod chỉ được là: Cash hoặc Banking")
+  }
+
+  if (errors.length > 0) return sendValidationError(res, errors)
+  req.body.paymentMethod = paymentMethod
+  next()
+}
