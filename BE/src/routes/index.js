@@ -68,6 +68,7 @@ router.post("/auth/facebook", validateSocialLogin, authController.facebookLogin)
 
 // Auth protected
 router.get("/auth/me", isAuthorized, authController.getMe);
+router.post("/auth/change-password", isAuthorized, authController.changePassword);
 
 // Common
 router.get("/roles", isAuthorized, commonController.getRoles);

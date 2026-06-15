@@ -55,6 +55,8 @@ function formatUser(u) {
         roleName: u.RoleName,
         avatarUrl: u.AvatarUrl || null,
         isEmailVerified: !!u.IsEmailVerified,
+        dateOfBirth: u.DateOfBirth ? new Date(u.DateOfBirth).toISOString().split('T')[0] : null,
+        hasPassword: u.HasPassword !== undefined ? !!u.HasPassword : (u.PasswordHash != null || !!u.HasLocalAuth),
     };
 }
 
@@ -344,7 +346,8 @@ export async function getMeService(userId) {
                    u.RoleID, r.RoleName, u.AvatarUrl,
                    u.IsEmailVerified,
                    u.DateOfBirth, u.HireDate, u.IsActive,
-                   u.CreatedAt, u.UpdatedAt
+                   u.CreatedAt, u.UpdatedAt,
+                   CAST(CASE WHEN u.PasswordHash IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS HasPassword
             FROM Users u
             JOIN Roles r ON u.RoleID = r.RoleID
             WHERE u.UserID = @UserID AND u.IsActive = 1
@@ -443,4 +446,52 @@ export async function checkEmailVerifyStatusService(email) {
     return {
         isEmailVerified: !!result.recordset[0].IsEmailVerified
     };
+}
+
+export async function changePasswordService(userId, oldPassword, newPassword) {
+    const pool = await getPool();
+
+    // 1. Get current password hash
+    const result = await pool.request()
+        .input("UserID", sql.Int, userId)
+        .query("SELECT PasswordHash FROM Users WHERE UserID = @UserID AND IsActive = 1");
+
+    if (result.recordset.length === 0) {
+        const err = new Error("Không tìm thấy user");
+        err.statusCode = 404; throw err;
+    }
+
+    const { PasswordHash } = result.recordset[0];
+
+    // 2. If user has no password (social login), allow setting without oldPassword
+    if (PasswordHash) {
+        // Compare old password
+        if (!oldPassword) {
+            const err = new Error("Vui lòng cung cấp mật khẩu cũ");
+            err.statusCode = 400; throw err;
+        }
+        const isMatch = await bcryptjs.compare(oldPassword, PasswordHash);
+        if (!isMatch) {
+            const err = new Error("Mật khẩu hiện tại không đúng");
+            err.statusCode = 400; throw err;
+        }
+    }
+
+    // 3. Update new password
+    const hashedPassword = await bcryptjs.hash(newPassword, BCRYPT_ROUNDS);
+    await pool.request()
+        .input("UserID", sql.Int, userId)
+        .input("PasswordHash", sql.NVarChar(256), hashedPassword)
+        .query(`
+            UPDATE Users
+            SET PasswordHash = @PasswordHash,
+                UpdatedAt = GETDATE()
+            WHERE UserID = @UserID;
+            
+            IF NOT EXISTS (SELECT 1 FROM UserAuthProviders WHERE UserID = @UserID AND ProviderName = 'local')
+            BEGIN
+                INSERT INTO UserAuthProviders (UserID, ProviderName, ProviderUserID)
+                VALUES (@UserID, 'local', CAST(@UserID AS NVARCHAR(200)));
+            END
+        `);
 }

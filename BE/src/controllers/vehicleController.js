@@ -328,24 +328,32 @@ export async function setDefaultVehicle(req, res, next) {
       });
     }
 
-    // Unset all defaults, then set this one
-    await pool
-      .request()
-      .input("DriverID", sql.Int, driverId)
-      .query(`
-        UPDATE DriverVehicles SET IsDefault = 0
-        WHERE DriverID = @DriverID AND IsActive = 1
-      `);
+    // Unset all defaults, then set this one — wrapped in a transaction
+    const transaction = new sql.Transaction(pool);
+    try {
+      await transaction.begin();
 
-    await pool
-      .request()
-      .input("VehicleID", sql.Int, vehicleId)
-      .input("DriverID", sql.Int, driverId)
-      .query(`
-        UPDATE DriverVehicles
-        SET IsDefault = 1, UpdatedAt = GETDATE()
-        WHERE VehicleID = @VehicleID AND DriverID = @DriverID
-      `);
+      await new sql.Request(transaction)
+        .input("DriverID", sql.Int, driverId)
+        .query(`
+          UPDATE DriverVehicles SET IsDefault = 0
+          WHERE DriverID = @DriverID AND IsActive = 1
+        `);
+
+      await new sql.Request(transaction)
+        .input("VehicleID", sql.Int, vehicleId)
+        .input("DriverID", sql.Int, driverId)
+        .query(`
+          UPDATE DriverVehicles
+          SET IsDefault = 1, UpdatedAt = GETDATE()
+          WHERE VehicleID = @VehicleID AND DriverID = @DriverID
+        `);
+
+      await transaction.commit();
+    } catch (txErr) {
+      await transaction.rollback();
+      throw txErr;
+    }
 
     return res.json({
       success: true,
