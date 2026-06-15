@@ -1,5 +1,5 @@
 // src/pages/manager/ManagerDashboard.jsx
-import { ArrowUpRight, Download, Filter, TrendingUp, CarFront, RefreshCcw } from 'lucide-react'
+import { ArrowUpRight, Download, CarFront, RefreshCcw } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
 import { useState, useEffect } from 'react'
@@ -35,7 +35,7 @@ const ManagerDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+      <div className="flex min-h-100 items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
       </div>
     )
@@ -51,7 +51,7 @@ const ManagerDashboard = () => {
     { title: 'Vị trí trống', value: kpis.available, delta: null, color: 'from-emerald-500 to-teal-600', shadow: 'shadow-teal-500/20' },
     { title: 'Đang đỗ', value: kpis.occupied, delta: null, color: 'from-orange-500 to-amber-600', shadow: 'shadow-orange-500/20' },
     { title: 'Đặt trước', value: kpis.reserved, delta: null, color: 'from-violet-500 to-fuchsia-600', shadow: 'shadow-fuchsia-500/20' },
-    { title: 'Bảo trì', value: kpis.maintenance, delta: null, color: 'from-rose-500 to-pink-600', shadow: 'shadow-rose-500/20' },
+    { title: 'Bảo trì', value: kpis.maintenance, delta: null, color: 'from-rose-500 to-pink-600', shadow: 'shadow-rose-500/20' }
   ]
 
   // Build revenue chart data – last 7 days
@@ -68,10 +68,10 @@ const ManagerDashboard = () => {
   // Vehicle breakdown total
   const totalVehicles = vehicleBreakdown.reduce((s, v) => s + v.Count, 0) || 1
   const vehicleColors = [
-    'bg-gradient-to-r from-sky-400 to-blue-500',
-    'bg-gradient-to-r from-emerald-400 to-teal-500',
-    'bg-gradient-to-r from-orange-400 to-amber-500',
-    'bg-gradient-to-r from-slate-400 to-slate-500',
+    'bg-linear-to-r from-sky-400 to-blue-500',
+    'bg-linear-to-r from-emerald-400 to-teal-500',
+    'bg-linear-to-r from-orange-400 to-amber-500',
+    'bg-linear-to-r from-slate-400 to-slate-500'
   ]
 
   // Revenue today formatted
@@ -97,7 +97,7 @@ const ManagerDashboard = () => {
           </button>
           <button
             onClick={handleExport}
-            className="group relative inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:shadow-blue-500/50 hover:-translate-y-0.5 active:scale-95"
+            className="group relative inline-flex items-center gap-2 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:shadow-blue-500/50 hover:-translate-y-0.5 active:scale-95"
           >
             <Download size={18} /> Xuất báo cáo
           </button>
@@ -105,7 +105,7 @@ const ManagerDashboard = () => {
       </div>
 
       {/* Doanh thu hôm nay banner */}
-      <div className="rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white shadow-lg shadow-blue-500/20">
+      <div className="rounded-3xl bg-linear-to-r from-blue-600 to-indigo-600 p-6 text-white shadow-lg shadow-blue-500/20">
         <p className="text-sm font-semibold text-blue-100 mb-1">Doanh thu hôm nay</p>
         <p className="text-4xl font-black tracking-tight">{revenueFormatted}</p>
         <p className="text-sm text-blue-200 mt-1">
@@ -124,7 +124,7 @@ const ManagerDashboard = () => {
           >
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">{item.title}</p>
             <p className="text-3xl font-black text-slate-800 tracking-tight">{item.value}</p>
-            <div className={`mt-2 inline-flex rounded-lg bg-gradient-to-br ${item.color} px-2.5 py-1 text-xs font-bold text-white`}>
+            <div className={`mt-2 inline-flex rounded-lg bg-linear-to-br ${item.color} px-2.5 py-1 text-xs font-bold text-white`}>
               {item.title === 'Đang đỗ' && kpis.totalSlots > 0
                 ? `${Math.round((item.value / kpis.totalSlots) * 100)}%`
                 : '—'
@@ -152,12 +152,12 @@ const ManagerDashboard = () => {
             {floorOccupancy.slice(0, 5).map((floor, idx) => (
               <div key={floor.FloorID || idx} className="group">
                 <div className="flex items-center justify-between text-sm font-semibold text-slate-600 mb-2">
-                  <span className="truncate max-w-[150px]" title={floor.FloorName}>{floor.FloorName}</span>
+                  <span className="truncate max-w-37.5" title={floor.FloorName}>{floor.FloorName}</span>
                   <span className="text-slate-900 ml-2">{floor.OccupancyPct}%</span>
                 </div>
                 <div className="h-3 rounded-full bg-slate-100 overflow-hidden shadow-inner">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-blue-600 to-sky-400 transition-all duration-1000 ease-out"
+                    className="h-full rounded-full bg-linear-to-r from-blue-600 to-sky-400 transition-all duration-1000 ease-out"
                     style={{ width: mounted ? `${floor.OccupancyPct}%` : '0%' }}
                   />
                 </div>
@@ -178,7 +178,7 @@ const ManagerDashboard = () => {
             </div>
           </div>
 
-          <div className="flex-1 min-h-[220px] flex items-end justify-between gap-2 sm:gap-4 mt-auto">
+          <div className="flex-1 min-h-55 flex items-end justify-between gap-2 sm:gap-4 mt-auto">
             {last7.map((item) => {
               const pct = Math.round((item.value / maxRevenue) * 100)
               return (
@@ -187,9 +187,9 @@ const ManagerDashboard = () => {
                     {(item.value / 1000).toFixed(0)}K VNĐ
                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                   </div>
-                  <div className="relative h-[180px] w-full max-w-[48px] rounded-t-xl bg-slate-50 overflow-hidden shadow-inner border border-slate-100">
+                  <div className="relative h-180px w-full max-w-12 rounded-t-xl bg-slate-50 overflow-hidden shadow-inner border border-slate-100">
                     <div
-                      className="absolute bottom-0 w-full rounded-t-xl bg-gradient-to-t from-blue-600 to-sky-400 transition-all duration-1000 ease-out"
+                      className="absolute bottom-0 w-full rounded-t-xl bg-linear-to-t from-blue-600 to-sky-400 transition-all duration-1000 ease-out"
                       style={{ height: mounted ? `${Math.max(pct, 2)}%` : '0%' }}
                     />
                   </div>
@@ -302,9 +302,9 @@ const ManagerDashboard = () => {
                   <td className="px-5 py-4">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border
                       ${row.PaymentStatus === 'Completed' || row.PaymentStatus === 'Prepaid'
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                        : 'bg-orange-50 text-orange-600 border-orange-100'
-                      }`}>
+                  ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                  : 'bg-orange-50 text-orange-600 border-orange-100'
+                }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${row.PaymentStatus === 'Completed' || row.PaymentStatus === 'Prepaid' ? 'bg-emerald-500' : 'bg-orange-500'}`} />
                       {row.PaymentStatus}
                     </span>

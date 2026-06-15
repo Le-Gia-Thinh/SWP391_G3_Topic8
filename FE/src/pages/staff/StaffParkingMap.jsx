@@ -53,9 +53,8 @@ const StaffParkingMap = () => {
         const built = buildZones(flatSlots)
         setZones(built)
         setActiveZone(prev => built.find(z => z.id === prev) ? prev : (built[0]?.id ?? null))
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          console.error('Fetch parking map error:', err)
           setZones([])
         }
       } finally {
@@ -98,8 +97,7 @@ const StaffParkingMap = () => {
           paymentMethod: slotData.paymentMethod, reservationStatus: slotData.reservationStatus
         }
       })
-    } catch (err) {
-      console.error('Fetch slot details error:', err)
+    } catch {
       setSelectedSlot({ id: slotCode, status: getStatus(slotCode), zone: zone?.label, details: null, error: 'Lỗi tải dữ liệu' })
     }
   }

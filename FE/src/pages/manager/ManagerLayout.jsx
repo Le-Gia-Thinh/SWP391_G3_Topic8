@@ -6,11 +6,9 @@ import {
   DollarSign,
   AlertCircle,
   FileText,
-  Settings,
   LogOut,
   Bell,
   ChevronDown,
-  User,
   Search,
   Calendar,
   Car,
@@ -89,8 +87,8 @@ const ManagerLayout = () => {
   const locationRef = useRef(null)
   const notificationRef = useRef(null)
 
-  const [selectedLocation, setSelectedLocation] = useState(LOCATIONS[0])
-  const [isLocationOpen, setIsLocationOpen] = useState(false)
+  const [selectedLocation] = useState(LOCATIONS[0])
+  const [setIsLocationOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -113,11 +111,6 @@ const ManagerLayout = () => {
     navigate('/login', { replace: true })
   }
 
-  const handleSelectLocation = (value) => {
-    setSelectedLocation(value)
-    setIsLocationOpen(false)
-  }
-
   const handleMarkAllRead = () => {
     setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })))
   }
@@ -138,7 +131,7 @@ const ManagerLayout = () => {
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  })
 
   return (
     <div className="flex min-h-screen bg-[#f7f9fb] text-gray-900">
@@ -333,7 +326,7 @@ const ManagerLayout = () => {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">
-          <div className="mx-auto w-full max-w-[1300px]">
+          <div className="mx-auto w-full max-w-325">
             <Outlet />
           </div>
         </main>

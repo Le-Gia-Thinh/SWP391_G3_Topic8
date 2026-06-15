@@ -26,7 +26,8 @@ const ManagerConfig = React.lazy(() => import('./pages/manager/ManagerConfig'))
 const ManagerPricing = React.lazy(() => import('./pages/manager/ManagerPricing'))
 const ManagerIncidents = React.lazy(() => import('./pages/manager/ManagerIncidents'))
 const ManagerReports = React.lazy(() => import('./pages/manager/ManagerReports'))
-
+const ManagerVehicleTypes = React.lazy(() => import('./pages/manager/ManagerVehicleTypes'))
+const ManagerUnpaid = React.lazy(() => import('./pages/manager/ManagerUnpaid'))
 // Staff Pages (Lazy)
 const StaffDashboardScreen = React.lazy(() => import('./pages/staff/StaffDashboardScreen'))
 const StaffCheckIn = React.lazy(() => import('./pages/staff/StaffCheckIn'))
@@ -65,10 +66,15 @@ const managerLinks = [
   { path: '/manager/reports', label: 'Báo cáo', icon: FileText },
   { isDivider: true },
   { labelOnly: 'Cấu hình' },
+  { path: '/manager/config', label: 'Cấu hình bãi đỗ', icon: Settings },
+  { path: '/manager/vehicle-types', label: 'Loại phương tiện', icon: Car },
   { path: '/manager/pricing', label: 'Bảng giá', icon: Wallet },
-
-  { path: '/manager/incidents', label: 'Sự cố', icon: AlertTriangle }
+  { isDivider: true },
+  { labelOnly: 'Giám sát' },
+  { path: '/manager/incidents', label: 'Sự cố', icon: AlertTriangle },
+  { path: '/manager/unpaid', label: 'Xe chưa thanh toán', icon: Wallet }
 ]
+
 
 const staffLinks = [
   { path: '/staff/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
@@ -151,6 +157,8 @@ const App = () => {
             <Route path="incidents" element={<ManagerIncidents />} />
             <Route path="reports" element={<ManagerReports />} />
             <Route path="profile" element={<UserProfile />} />
+            <Route path="vehicle-types" element={<ManagerVehicleTypes />} />
+            <Route path="unpaid" element={<ManagerUnpaid />} />
           </Route>
         </Route>
 

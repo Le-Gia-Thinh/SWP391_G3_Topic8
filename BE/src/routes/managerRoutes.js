@@ -30,6 +30,9 @@ router.get("/pricing", mc.getPricingPolicies);
 router.post("/pricing", mc.createPricingPolicy);
 router.patch("/pricing/:id", mc.updatePricingPolicy);
 
+// Vehicle Types (readonly – dùng cho form pricing)
+router.get("/vehicle-types", mc.getVehicleTypes);
+
 // Incidents
 router.get("/incidents", mc.getIncidents);
 router.get("/incidents/:id", mc.getIncidentById);
@@ -39,6 +42,16 @@ router.patch("/incidents/:id/status", mc.updateIncidentStatus);
 router.get("/reports/revenue", mc.getRevenueReport);
 router.get("/reports/occupancy", mc.getOccupancyReport);
 router.get("/reports/sessions", mc.getSessionsReport);
+router.get("/reports/peak-hours", mc.getPeakHoursReport);
+router.get("/reports/vehicle-flow", mc.getVehicleFlowReport);
+
+router.get("/vehicle-types/all", mc.getAllVehicleTypes);   // gồm cả Inactive + thống kê
+router.post("/vehicle-types", mc.createVehicleType);
+router.patch("/vehicle-types/:id", mc.updateVehicleType);
+router.patch("/vehicle-types/:id/toggle", mc.toggleVehicleType);
+
+// Unpaid
+router.get("/unpaid", mc.getUnpaidSessions);
 
 // Staff list
 router.get("/staff", mc.getStaffList);

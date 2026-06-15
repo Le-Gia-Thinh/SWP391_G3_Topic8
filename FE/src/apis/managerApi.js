@@ -1,7 +1,8 @@
 // src/apis/managerApi.js
 import authorizeAxios from '../utils/authorizeAxios'
 
-const BASE = '/api/manager'
+// LƯU Ý: authorizeAxios đã có baseURL kết thúc bằng /api → ở đây KHÔNG thêm /api.
+const BASE = '/manager'
 
 // ── Dashboard ─────────────────────────────────────────────────
 export const getDashboardAPI = () =>
@@ -52,6 +53,27 @@ export const createPricingPolicyAPI = (data) =>
 export const updatePricingPolicyAPI = (id, data) =>
   authorizeAxios.patch(`${BASE}/pricing/${id}`, data)
 
+export const deactivatePricingPolicyAPI = (id) =>
+  authorizeAxios.patch(`${BASE}/pricing/${id}`, { isActive: 0 })
+
+// ── Vehicle Types ─────────────────────────────────────────────
+// Dropdown form: chỉ Active
+export const getVehicleTypesAPI = () =>
+  authorizeAxios.get(`${BASE}/vehicle-types`)
+
+// Trang quản lý: tất cả (kèm Inactive + thống kê)
+export const getAllVehicleTypesAPI = () =>
+  authorizeAxios.get(`${BASE}/vehicle-types/all`)
+
+export const createVehicleTypeAPI = (data) =>
+  authorizeAxios.post(`${BASE}/vehicle-types`, data)
+
+export const updateVehicleTypeAPI = (id, data) =>
+  authorizeAxios.patch(`${BASE}/vehicle-types/${id}`, data)
+
+export const toggleVehicleTypeAPI = (id, isActive) =>
+  authorizeAxios.patch(`${BASE}/vehicle-types/${id}/toggle`, { isActive })
+
 // ── Incidents ─────────────────────────────────────────────────
 export const getIncidentsAPI = (params = {}) =>
   authorizeAxios.get(`${BASE}/incidents`, { params })
@@ -71,6 +93,16 @@ export const getOccupancyReportAPI = () =>
 
 export const getSessionsReportAPI = (params = {}) =>
   authorizeAxios.get(`${BASE}/reports/sessions`, { params })
+
+export const getPeakHoursReportAPI = (params = {}) =>
+  authorizeAxios.get(`${BASE}/reports/peak-hours`, { params })
+
+export const getVehicleFlowReportAPI = (params = {}) =>
+  authorizeAxios.get(`${BASE}/reports/vehicle-flow`, { params })
+
+// ── Unpaid ────────────────────────────────────────────────────
+export const getUnpaidSessionsAPI = (params = {}) =>
+  authorizeAxios.get(`${BASE}/unpaid`, { params })
 
 // ── Staff ─────────────────────────────────────────────────────
 export const getStaffListAPI = () =>

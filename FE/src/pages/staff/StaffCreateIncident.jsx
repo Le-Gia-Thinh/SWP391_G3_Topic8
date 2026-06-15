@@ -43,6 +43,42 @@ const UPDATE_STATUSES = ['Open', 'InProgress', 'Resolved']
 const MAX_IMAGES = 15
 const MAX_FILE_MB = 5
 
+// ─── Biển số & mã phiên helpers ───────────────────────────────────────────────
+// Biển số: gõ 51a12345 → 51A-123.45 (hoa + tự '-' + tự '.')
+const formatPlate = (raw) => {
+  const clean = (raw || '').toUpperCase().replace(/[^0-9A-Z]/g, '')
+  if (!clean) return ''
+  const prov = clean.slice(0, 2).replace(/[^0-9]/g, '')
+  let result = prov
+  if (prov.length < 2) return result
+  let i = 2, series = ''
+  while (i < clean.length && /[A-Z]/.test(clean[i]) && series.length < 2) { series += clean[i]; i++ }
+  result += series
+  if (!series) return result
+  const nums = clean.slice(i).replace(/[^0-9]/g, '').slice(0, 5)
+  if (!nums.length) return result
+  result += '-'
+  result += nums.length <= 3 ? nums : nums.slice(0, nums.length - 2) + '.' + nums.slice(nums.length - 2)
+  return result
+}
+const PLATE_REGEX = /^(\d{2}[A-Z]{1,2}-?\d{3}\.?\d{2}|\d{2}[A-Z]{1,2}-?\d{4,5})$/i
+const isValidPlate = (p) => PLATE_REGEX.test(p)
+
+// Mã phiên: gõ ss123 / SS123 / 123 → SS-00123 (hoa + tự 'SS-' + đệm 0)
+const formatSessionCode = (raw) => {
+  const digits = (raw || '').replace(/[^0-9]/g, '')
+  if (!digits) return ''
+  return `SS-${digits.slice(0, 5)}`
+}
+const padSessionCode = (raw) => {
+  const digits = (raw || '').replace(/[^0-9]/g, '')
+  return digits ? `SS-${digits.padStart(5, '0')}` : ''
+}
+const sessionCodeToId = (code) => {
+  const digits = (code || '').replace(/[^0-9]/g, '')
+  return digits ? parseInt(digits, 10) : null
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtDate(iso) {
   if (!iso) return '—'
@@ -212,18 +248,18 @@ function AttachmentGrid({ images = [], editable = false, onChange }) {
 function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
   const [form, setForm] = useState({
     incidentType: '', priority: 'Normal', description: '', plateNumber: '',
-    sessionCode: sessionId ? `SS-${String(sessionId).padStart(5, '0')}` : ''
+    sessionCode: sessionId ? `SS-${String(sessionId).padStart(5, '0')}` : '',
+    _driverName: '', _sessionId: sessionId || undefined, _linkedSession: null
   })
   const [errors, setErrors] = useState({})
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
 
-  // Danh sách phiên đang đỗ cho ô tìm kiếm nhanh
   const [sessionOptions, setSessionOptions] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [lookupLoading, setLookupLoading] = useState(false)
 
-  // Tải danh sách phiên Active 1 lần khi mở form (bỏ qua nếu đã gắn sẵn sessionId)
+  // Tải danh sách phiên Active 1 lần (bỏ qua nếu đã gắn sẵn sessionId)
   useEffect(() => {
     if (sessionId) return
     let cancelled = false
@@ -249,7 +285,7 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
     setErrors(err => ({ ...err, [field]: '' }))
   }
 
-  // Gắn 1 phiên (object đầy đủ) vào form + lưu để hiện thẻ xác nhận
+  // Gắn 1 phiên (object đầy đủ) → tự điền + lưu để hiện thẻ xác nhận
   const linkSession = (s) => {
     if (!s) return
     setForm(f => ({
@@ -262,7 +298,7 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
     }))
   }
 
-  // Chọn 1 phiên từ dropdown → tự điền hết
+  // Chọn phiên từ dropdown
   const handlePickSession = (session) => {
     if (!session) {
       setForm(f => ({ ...f, sessionCode: '', plateNumber: '', _driverName: '', _sessionId: undefined, _linkedSession: null }))
@@ -271,38 +307,64 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
     linkSession(session)
   }
 
-  // Gõ tay MÃ PHIÊN rồi rời ô → tự tra ra biển số + tài xế
-  const handleSessionLookup = async (val) => {
-    const code = (val || '').trim().toUpperCase()
-    if (!code || sessionId) return
-    const sid = code.startsWith('SS-') ? parseInt(code.replace('SS-', ''), 10) : parseInt(code, 10)
-    if (!sid || isNaN(sid)) return
+  // Gõ MÃ PHIÊN: tự format khi gõ (SS-xxxxx)
+  const handleSessionChange = (e) => {
+    setForm(f => ({ ...f, sessionCode: formatSessionCode(e.target.value), _linkedSession: null }))
+    setErrors(err => ({ ...err, sessionCode: '' }))
+  }
+
+  // Rời ô mã phiên → đệm 0 + tra ra biển số & tài xế
+  const handleSessionLookup = async () => {
+    if (sessionId) return
+    const padded = padSessionCode(form.sessionCode)
+    if (!padded) return
+    setForm(f => ({ ...f, sessionCode: padded }))
+    const sid = sessionCodeToId(padded)
+    if (!sid) return
     setLookupLoading(true)
     try {
       const res = await staffApi.getCheckoutPreview(sid)
       const s = res?.data?.session || res?.session || res?.data
       if (s && (s.PlateNumber || s.SessionCode)) {
         linkSession({ ...s, SessionID: s.SessionID || sid })
+      } else {
+        toast.warning(`Không tìm thấy phiên ${padded}`)
       }
     } catch {
-      /* bỏ qua */
+      toast.warning(`Không tìm thấy phiên ${padded}`)
     } finally {
       setLookupLoading(false)
     }
   }
 
-  // Gõ tay BIỂN SỐ rồi rời ô → tự tra ra mã phiên + tài xế
-  const handlePlateLookup = async (val) => {
-    const plate = (val || '').trim().toUpperCase()
-    if (plate.length < 3 || sessionId) return
+  // Gõ BIỂN SỐ: tự format khi gõ (51A-123.45)
+  const handlePlateChange = (e) => {
+    setForm(f => ({ ...f, plateNumber: formatPlate(e.target.value), _linkedSession: null }))
+    setErrors(err => ({ ...err, plateNumber: '' }))
+  }
+
+  // Rời ô biển số → tra ra mã phiên & tài xế
+  const handlePlateLookup = async () => {
+    if (sessionId) return
+    const plate = (form.plateNumber || '').trim().toUpperCase()
+    if (plate.length < 3) return
+    if (!isValidPlate(plate)) {
+      toast.warning('Biển số chưa đúng định dạng (VD: 51F-123.45)')
+      return
+    }
     setLookupLoading(true)
     try {
       const res = await staffApi.searchSessions({ keyword: plate, status: 'Active' })
-      const sessions = res?.data ?? res ?? []
-      const list = Array.isArray(sessions) ? sessions : []
-      if (list.length > 0) linkSession(list[0])
+      const raw = res?.data ?? res ?? []
+      const list = Array.isArray(raw) ? raw : []
+      const match = list.find(s => (s.PlateNumber || '').toUpperCase() === plate) || list[0]
+      if (match) {
+        linkSession(match)
+      } else {
+        toast.warning(`Không tìm thấy phiên đang đỗ với biển số ${plate}`)
+      }
     } catch {
-      /* bỏ qua */
+      toast.warning(`Không tìm thấy phiên với biển số ${plate}`)
     } finally {
       setLookupLoading(false)
     }
@@ -312,6 +374,7 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
     const e = {}
     if (!form.incidentType) e.incidentType = 'Vui lòng chọn loại sự cố'
     if (form.description.trim().length < 20) e.description = `Cần thêm ${20 - form.description.trim().length} ký tự nữa`
+    if (form.plateNumber && !isValidPlate(form.plateNumber)) e.plateNumber = 'Biển số chưa đúng định dạng (VD: 51F-123.45)'
     return e
   }
 
@@ -328,7 +391,7 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
         description: form.description.trim(), attachments: images
       })
       toast.success('✅ Báo cáo sự cố thành công!')
-      setForm({ incidentType: '', priority: 'Normal', description: '', plateNumber: '', sessionCode: '' })
+      setForm({ incidentType: '', priority: 'Normal', description: '', plateNumber: '', sessionCode: '', _driverName: '', _sessionId: undefined, _linkedSession: null })
       setImages([])
       onSuccess?.()
     } catch (err) {
@@ -347,7 +410,7 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
             <Typography variant="subtitle2" fontWeight={700} color="text.secondary">Thông tin liên kết (tuỳ chọn)</Typography>
           </Stack>
 
-          {/* 🔍 Ô tìm nhanh phiên đang đỗ — gõ biển số / mã / tài xế rồi chọn */}
+          {/* 🔍 Dropdown tìm nhanh phiên đang đỗ */}
           {!sessionId && (
             <Autocomplete
               options={sessionOptions}
@@ -397,32 +460,33 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
             />
           )}
 
-          {/* Hai ô chi tiết — tự điền khi chọn ở trên, vẫn gõ tay tra chéo được */}
+          {/* Hai ô gõ tay — tự format + tra chéo 2 chiều */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               label="Mã phiên (SessionID)"
               value={form.sessionCode}
-              onChange={set('sessionCode')}
-              onBlur={e => handleSessionLookup(e.target.value)}
+              onChange={handleSessionChange}
+              onBlur={handleSessionLookup}
               size="small" fullWidth placeholder="SS-00001"
               InputProps={{
                 readOnly: !!sessionId,
                 endAdornment: lookupLoading ? <CircularProgress size={14} /> : null
               }}
-              helperText={sessionId ? 'Liên kết từ phiên hiện tại' : 'Gõ mã → tự ra biển số & tài xế'}
+              helperText={sessionId ? 'Liên kết từ phiên hiện tại' : 'Gõ số → tự thành SS-00xxx, rồi tự ra biển số'}
             />
             <TextField
               label="Biển số xe"
               value={form.plateNumber}
-              onChange={set('plateNumber')}
-              onBlur={e => handlePlateLookup(e.target.value)}
-              size="small" fullWidth placeholder="51A-12345"
-              inputProps={{ style: { textTransform: 'uppercase' } }}
-              helperText={sessionId ? '' : 'Gõ biển số → tự ra mã phiên & tài xế'}
+              onChange={handlePlateChange}
+              onBlur={handlePlateLookup}
+              size="small" fullWidth placeholder="51F-123.45"
+              inputProps={{ maxLength: 12, style: { textTransform: 'uppercase' } }}
+              error={!!errors.plateNumber}
+              helperText={errors.plateNumber || (sessionId ? '' : 'Gõ → tự thành 51F-123.45, rồi tự ra mã phiên')}
             />
           </Stack>
 
-          {/* ✅ Thẻ xác nhận phiên đã liên kết — staff đối chiếu trước khi gửi */}
+          {/* ✅ Thẻ xác nhận phiên đã liên kết */}
           {form._linkedSession && (
             <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 2, bgcolor: '#f0f9ff', borderColor: '#bae6fd', mt: 1.5 }}>
               <Stack direction="row" alignItems="center" spacing={1} mb={1.25}>
@@ -438,7 +502,7 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
                   { icon: AlertTriangle, label: 'Mã phiên', value: form._linkedSession.SessionCode || form.sessionCode || '—' },
                   { icon: MapPin, label: 'Vị trí đỗ', value: [form._linkedSession.ZoneName, form._linkedSession.FloorName, form._linkedSession.SlotCode].filter(Boolean).join(' · ') || form._linkedSession.SlotCode || '—' },
                   { icon: Car, label: 'Loại xe', value: form._linkedSession.VehicleName || '—' },
-                  { icon: ClockIcon, label: 'Vào lúc', value: form._linkedSession.EntryTime ? fmtDate(form._linkedSession.EntryTime) : '—' },
+                  { icon: ClockIcon, label: 'Vào lúc', value: form._linkedSession.EntryTime ? fmtDate(form._linkedSession.EntryTime) : '—' }
                 ].map(({ icon: Icon, label, value, strong }) => (
                   <Stack key={label} direction="row" spacing={1} alignItems="flex-start">
                     <Icon size={13} color="#0284c7" style={{ marginTop: 3, flexShrink: 0 }} />
@@ -518,7 +582,6 @@ function IncidentDetailModal({ incidentId, open, onClose, onUpdated }) {
   useEffect(() => {
     if (!open || !incidentId) return
     let cancelled = false
-
     const run = async () => {
       setLoading(true)
       try {
@@ -536,7 +599,6 @@ function IncidentDetailModal({ incidentId, open, onClose, onUpdated }) {
         if (!cancelled) setLoading(false)
       }
     }
-
     run()
     return () => { cancelled = true }
   }, [open, incidentId])
@@ -853,7 +915,7 @@ function IncidentHistory({ refreshTrigger }) {
 }
 
 // ─── Page chính ───────────────────────────────────────────────────────────────
-export default function StaffIncidentPage({ sessionId, driverId }) {
+export default function StaffCreateIncident({ sessionId, driverId }) {
   const navigate = useNavigate()
   const [tab, setTab] = useState(0)
   const [refreshKey, setRefreshKey] = useState(0)

@@ -12,7 +12,8 @@ import * as feedbackController from "../controllers/feedbackController.js";
 
 import paymentRoutes from "./paymentRoutes.js";
 import staffRoutes from "./staffRoutes.js";
-
+import managerRoutes from './managerRoutes.js'
+import commonRoutes from './commonRoutes.js'
 import {
   isAuthorized,
   isManager,
@@ -290,5 +291,6 @@ router.use("/", paymentRoutes);
 
 // Staff routes
 router.use("/staff", staffRoutes);
-
+router.use('/manager', managerRoutes);
+router.use('/common', commonRoutes)
 export default router;

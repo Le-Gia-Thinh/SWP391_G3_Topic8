@@ -3,10 +3,10 @@ import { Search, XCircle, Car, Clock, MapPin, CheckCircle2, AlertTriangle, Calen
 import staffApi from '../../apis/staffApi'
 
 const STATUS_CONFIG = {
-  active: { label: 'Đang đỗ', icon: <Clock size={14} />, color: 'bg-green-50 text-green-700 border-green-200' },
+  active:    { label: 'Đang đỗ', icon: <Clock size={14} />, color: 'bg-green-50 text-green-700 border-green-200' },
   completed: { label: 'Đã hoàn thành', icon: <CheckCircle2 size={14} />, color: 'bg-gray-100 text-gray-600 border-gray-200' },
-  reserved: { label: 'Đã đặt', icon: <Calendar size={14} />, color: 'bg-orange-50 text-orange-700 border-orange-200' },
-  incident: { label: 'Sự cố', icon: <AlertTriangle size={14} />, color: 'bg-red-50 text-red-600 border-red-200' }
+  reserved:  { label: 'Đã đặt', icon: <Calendar size={14} />, color: 'bg-orange-50 text-orange-700 border-orange-200' },
+  incident:  { label: 'Sự cố', icon: <AlertTriangle size={14} />, color: 'bg-red-50 text-red-600 border-red-200' }
 }
 
 const STATUS_MAP = { active: 'Active', completed: 'Completed', reserved: 'Reserved', all: undefined }
@@ -72,8 +72,8 @@ const StaffSearchSession = () => {
           const raw = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []
           setSessions(raw.map(normalizeRow))
         }
-      } catch (err) {
-        if (!cancelled) console.error('searchSessions error:', err)
+      } catch {
+        /* bỏ qua */
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -113,7 +113,7 @@ const StaffSearchSession = () => {
         <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2 pl-2 whitespace-nowrap">
           <Search size={20} className="text-blue-600" /> Tra cứu
         </h1>
-        <div className="flex-1 min-w-50 relative">
+        <div className="flex-1 min-w-55 relative">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           <input type="text" value={query} onChange={e => setQuery(e.target.value)}
             placeholder="Biển số, mã phiên, mã booking, tài xế..."
