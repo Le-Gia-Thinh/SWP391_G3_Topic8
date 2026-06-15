@@ -107,7 +107,7 @@ const driverLinks = [
   { isDivider: true },
   { labelOnly: 'Hỗ trợ' },
   { path: '/driver/report', label: 'Báo cáo sự cố', icon: AlertTriangle },
-  { path: '/driver/help', label: 'Trung tâm trợ giúp', icon: HelpCircle },
+  { path: '/driver/help', label: 'Trung tâm trợ giúp', icon: HelpCircle }
 ]
 
 const LoadingFallback = () => (

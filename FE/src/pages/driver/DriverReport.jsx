@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
 import driverApi from '../../apis/driverApi'
+<<<<<<< HEAD
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
+=======
+>>>>>>> BE
 
 const ISSUE_TYPES = [
   { id: 'not_found', label: 'Không tìm thấy đặt chỗ', severity: 'Trung bình' },
@@ -493,7 +496,11 @@ const DriverReport = () => {
         </div>
 
         <div className="space-y-6">
+<<<<<<< HEAD
           <Card>
+=======
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+>>>>>>> BE
             <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-4">
               <h2 className="text-lg font-bold text-blue-700">
                 Tóm tắt báo cáo
@@ -569,7 +576,11 @@ const DriverReport = () => {
             <div className="mt-6 space-y-3">
               <Button
                 onClick={handleSubmit}
+<<<<<<< HEAD
                 disabled={submitting || selectedRelated?.kind === 'none'}
+=======
+                disabled={submitting}
+>>>>>>> BE
                 className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors ${
                   submitting || selectedRelated?.kind === 'none'
                     ? 'cursor-not-allowed bg-blue-400 opacity-70'
@@ -578,7 +589,11 @@ const DriverReport = () => {
               >
                 <span>➤</span>
                 {submitting ? 'Đang gửi...' : 'Gửi báo cáo ngay'}
+<<<<<<< HEAD
               </Button>
+=======
+              </button>
+>>>>>>> BE
 
               <Button
                 onClick={handleCancel}
@@ -629,7 +644,11 @@ const DriverReport = () => {
             )}
           </div>
 
+<<<<<<< HEAD
           <Card className="bg-gray-50/80 p-5">
+=======
+          <div className="rounded-2xl border border-gray-100 bg-gray-50/80 p-5">
+>>>>>>> BE
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
               Hỗ trợ kỹ thuật
             </h3>
