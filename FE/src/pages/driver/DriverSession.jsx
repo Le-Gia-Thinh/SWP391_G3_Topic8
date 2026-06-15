@@ -10,7 +10,6 @@ import {
   Loader2,
   MapPin,
   RefreshCcw,
-<<<<<<< HEAD
   ShieldCheck,
   Map
 } from 'lucide-react'
@@ -18,11 +17,6 @@ import driverApi from '../../apis/driverApi'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
-=======
-  ShieldCheck
-} from 'lucide-react'
-import driverApi from '../../apis/driverApi'
->>>>>>> BE
 
 const parseBackendDate = (value) => {
   if (!value) return null
@@ -564,13 +558,8 @@ const DriverSession = () => {
     })
   }
 
-<<<<<<< HEAD
   const handleViewMap = () => {
     setMapModal({ isOpen: true })
-=======
-  const handleViewMap = (sessionId) => {
-    console.log('View parking map for session:', sessionId)
->>>>>>> BE
   }
 
   if (isLoading) {

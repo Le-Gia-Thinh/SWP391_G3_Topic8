@@ -1,6 +1,7 @@
 // src/routes/staffRoutes.js
 import express from 'express'
 import * as staffController from '../controllers/staffController.js'
+import * as supportController from '../controllers/supportController.js'
 import { isAuthorized, isStaffOrManager } from '../middlewares/authMiddleware.js'
 import {
     validateStaffWalkIn,
@@ -47,6 +48,12 @@ router.patch('/incidents/:incidentId/status', staffController.updateIncidentStat
 // Profile
 router.get('/profile', staffController.getProfile)
 router.get('/slots/:slotCode', staffController.getSlotDetail)
+
+// Support Tickets
+router.get('/support/tickets', supportController.getStaffTickets)
+router.get('/support/tickets/:id', supportController.getTicketDetails)
+router.post('/support/tickets/:id/replies', supportController.replyTicket)
+router.patch('/support/tickets/:id/status', supportController.updateTicketStatus)
 
 //Payment confirmation
 router.get('/sessions/pending-payments', staffController.getPendingPayments)

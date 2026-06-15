@@ -38,7 +38,8 @@ const StaffVehicleCheckOut = React.lazy(() => import('./pages/staff/StaffVehicle
 const StaffPaymentConfirm = React.lazy(() => import('./pages/staff/StaffPaymentConfirm'))
 const StaffParkingMap = React.lazy(() => import('./pages/staff/StaffParkingMap'))
 const StaffSearchSession = React.lazy(() => import('./pages/staff/StaffSearchSession'))
-const StaffSupport = React.lazy(() => import('./pages/staff/StaffSupport'))
+const StaffSupportManager = React.lazy(() => import('./pages/staff/StaffSupportManager'))
+const StaffTicketDetail = React.lazy(() => import('./pages/staff/StaffTicketDetail'))
 const StaffUserGuide = React.lazy(() => import('./pages/staff/StaffUserGuide'))
 const StaffPaymentHistory = React.lazy(() => import('./pages/staff/StaffPaymentHistory'))
 // Driver Pages (Lazy)
@@ -52,6 +53,7 @@ const DriverReport = React.lazy(() => import('./pages/driver/DriverReport'))
 const DriverPaymentResult = React.lazy(() => import('./pages/driver/DriverPaymentResult'))
 const DriverHelp = React.lazy(() => import('./pages/driver/DriverHelp'))
 const DriverSupport = React.lazy(() => import('./pages/driver/DriverSupport'))
+const DriverTicketDetail = React.lazy(() => import('./pages/driver/DriverTicketDetail'))
 const DriverTerms = React.lazy(() => import('./pages/driver/DriverTerms'))
 const DriverPrivacy = React.lazy(() => import('./pages/driver/DriverPrivacy'))
 const DriverNotifications = React.lazy(() => import('./pages/driver/DriverNotifications'))
@@ -203,7 +205,8 @@ const App = () => {
             <Route path="security" element={<UserProfile />} />
 
             {/* Support / User Guide */}
-            <Route path="support" element={<StaffSupport />} />
+            <Route path="support" element={<StaffSupportManager />} />
+            <Route path="support/:id" element={<StaffTicketDetail />} />
             <Route path="user-guide" element={<StaffUserGuide />} />
           </Route>
         </Route>
@@ -226,6 +229,7 @@ const App = () => {
             <Route path="terms" element={<DriverTerms />} />
             <Route path="privacy" element={<DriverPrivacy />} />
             <Route path="support" element={<DriverSupport />} />
+            <Route path="support/:id" element={<DriverTicketDetail />} />
             <Route path="notifications" element={<DriverNotifications />} />
             <Route path="vehicles" element={<DriverVehicles />} />
             <Route path="feedback" element={<DriverFeedback />} />

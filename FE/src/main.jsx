@@ -8,6 +8,7 @@ import { ThemeProvider, CssBaseline } from '@mui/material'
 import { createTheme } from '@mui/material/styles'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider } from './contexts/AuthContext'
+import { AppThemeProvider } from './contexts/AppThemeContext'
 import App from './App'
 
 const theme = createTheme({
@@ -24,7 +25,9 @@ createRoot(document.getElementById('root')).render(
         <CssBaseline />
         <BrowserRouter>
           <AuthProvider>
-            <App />
+            <AppThemeProvider>
+              <App />
+            </AppThemeProvider>
             <ToastContainer
               position="top-right"
               autoClose={3000}

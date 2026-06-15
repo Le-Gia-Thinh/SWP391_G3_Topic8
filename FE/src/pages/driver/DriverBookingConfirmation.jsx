@@ -25,10 +25,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 
-const PARKING_INFO = {
-  name: 'District 1 Parking Tower',
-  address: '123 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh'
-}
+
 
 const VEHICLE_LABELS = {
   CAR: 'Ô tô',
@@ -143,13 +140,13 @@ function mapReservationToBooking(reservation, stateBooking) {
       source.BuildingName ||
       source.buildingName ||
       stateBooking?.parkingName ||
-      PARKING_INFO.name,
+      '--',
 
     address:
       source.Address ||
       source.address ||
       stateBooking?.address ||
-      PARKING_INFO.address,
+      '--',
 
     licensePlate:
       source.PlateNumber ||

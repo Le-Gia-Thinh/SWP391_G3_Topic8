@@ -9,6 +9,7 @@ import * as driverController from "../controllers/driverController.js";
 import * as notificationController from "../controllers/notificationController.js";
 import * as vehicleController from "../controllers/vehicleController.js";
 import * as feedbackController from "../controllers/feedbackController.js";
+import * as supportController from "../controllers/supportController.js";
 
 import paymentRoutes from "./paymentRoutes.js";
 import staffRoutes from "./staffRoutes.js";
@@ -75,6 +76,7 @@ router.get("/roles", isAuthorized, commonController.getRoles);
 router.get("/vehicle-types", isAuthorized, commonController.getVehicleTypes);
 router.get("/buildings", isAuthorized, commonController.getBuildings);
 router.get("/slots", isAuthorized, commonController.getSlots);
+router.get("/pricing", isAuthorized, commonController.getPricing);
 
 // Driver
 router.get(
@@ -285,6 +287,32 @@ router.get(
   isAuthorized,
   isManager,
   reportController.dashboard
+);
+
+// Driver Support Tickets
+router.post(
+  "/driver/support/tickets",
+  isAuthorized,
+  isDriver,
+  supportController.createTicket
+);
+router.get(
+  "/driver/support/tickets",
+  isAuthorized,
+  isDriver,
+  supportController.getDriverTickets
+);
+router.get(
+  "/driver/support/tickets/:id",
+  isAuthorized,
+  isDriver,
+  supportController.getTicketDetails
+);
+router.post(
+  "/driver/support/tickets/:id/replies",
+  isAuthorized,
+  isDriver,
+  supportController.replyTicket
 );
 
 // Payment routes
