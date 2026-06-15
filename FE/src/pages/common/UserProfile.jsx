@@ -8,7 +8,9 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import authorizeAxios from '../../utils/authorizeAxios'
 import driverApi from '../../apis/driverApi'
+import { changePasswordAPI } from '../../apis/authApi'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 const Toggle = ({ checked, onChange, label, desc }) => (
   <div className="flex items-center justify-between py-3.5 border-b border-gray-50 last:border-0">
@@ -190,32 +192,67 @@ const SettingsContent = ({ saved, handleSave }) => {
 }
 
 const SecurityContent = () => {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const navigate = useNavigate()
   const [showOld, setShowOld] = useState(false); const [showNew, setShowNew] = useState(false)
   const [oldPw, setOldPw] = useState(''); const [newPw, setNewPw] = useState('')
-  const [saved, setSaved] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleChangePassword = (e) => { e.preventDefault(); setSaved(true); setTimeout(() => setSaved(false), 3000); setOldPw(''); setNewPw('') }
+  const hasPassword = user?.hasPassword;
+
+  const handleChangePassword = async (e) => { 
+    e.preventDefault(); 
+    if ((hasPassword && !oldPw) || !newPw) return;
+    try {
+      setIsSubmitting(true);
+      const res = await changePasswordAPI({ oldPassword: oldPw, newPassword: newPw });
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Cập nhật mật khẩu thành công');
+        setOldPw(''); 
+        setNewPw('');
+        // Option: we could manually update user.HasPassword here but a reload or re-login is fine
+      } else {
+        toast.error(res.data?.message || 'Có lỗi xảy ra');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
   const handleLogoutAll = async () => { await logout(); navigate('/login') }
 
   return (
     <div className="flex gap-6 flex-col lg:flex-row animate-in fade-in">
       <div className="flex-1 space-y-5">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h3 className="text-base font-bold text-gray-800 mb-5 flex items-center gap-2"><Lock size={18} className="text-blue-500" /> Đổi mật khẩu</h3>
-          {saved && <div className="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-3 rounded-xl mb-4 font-semibold text-sm"><CheckCircle2 size={18}/> Đổi mật khẩu thành công</div>}
+          <h3 className="text-base font-bold text-gray-800 mb-5 flex items-center gap-2">
+            <Lock size={18} className="text-blue-500" /> 
+            {hasPassword ? 'Đổi mật khẩu' : 'Tạo mật khẩu'}
+          </h3>
           <form onSubmit={handleChangePassword} className="space-y-4">
-            {[{ label: 'Mật khẩu hiện tại', val: oldPw, setVal: setOldPw, show: showOld, setShow: setShowOld }, { label: 'Mật khẩu mới', val: newPw, setVal: setNewPw, show: showNew, setShow: setShowNew }].map(({ label, val, setVal, show, setShow }) => (
-              <div key={label}>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
+            
+            {hasPassword && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Mật khẩu hiện tại</label>
                 <div className="relative">
-                  <input type={show ? 'text' : 'password'} value={val} onChange={e => setVal(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-xl" />
-                  <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{show ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  <input type={showOld ? 'text' : 'password'} value={oldPw} onChange={e => setOldPw(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-xl" />
+                  <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showOld ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
               </div>
-            ))}
-            <button type="submit" disabled={!oldPw || !newPw} className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-bold rounded-xl">Cập nhật</button>
+            )}
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Mật khẩu mới</label>
+              <div className="relative">
+                <input type={showNew ? 'text' : 'password'} value={newPw} onChange={e => setNewPw(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-xl" />
+                <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showNew ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+              </div>
+            </div>
+            
+            <button type="submit" disabled={(hasPassword && !oldPw) || !newPw || isSubmitting} className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-bold rounded-xl flex justify-center items-center gap-2">
+              {isSubmitting ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Cập nhật'}
+            </button>
           </form>
         </div>
       </div>
