@@ -53,13 +53,18 @@ export async function getNotifications(req, res, next) {
       OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
     `);
 
-    const countResult = await pool
+    const countRequest = pool
       .request()
-      .input("DriverID", sql.Int, driverId)
-      .query(`
+      .input("DriverID", sql.Int, driverId);
+
+    if (typeFilter && typeFilter !== "all") {
+      countRequest.input("TypeFilter", sql.NVarChar(50), typeFilter);
+    }
+
+    const countResult = await countRequest.query(`
         SELECT COUNT(*) AS Total
-        FROM Notifications
-        WHERE UserID = @DriverID
+        FROM Notifications n
+        ${whereClause}
       `);
 
     return res.json({

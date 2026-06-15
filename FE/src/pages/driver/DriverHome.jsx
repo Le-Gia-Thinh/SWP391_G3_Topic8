@@ -372,7 +372,7 @@ const EmptyCard = ({ title, description, actionText, actionTo, icon: Icon }) => 
 const DriverHome = () => {
   const { user } = useAuth()
   const [homeData, setHomeData] = useState(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoaded, setIsLoaded] = useState(false)
 
