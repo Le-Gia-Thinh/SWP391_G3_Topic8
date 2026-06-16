@@ -1,50 +1,71 @@
+USE ParkingManagementDB;
+GO
+
+-- =====================================================
+-- BƯỚC 1: Migration - thêm cột Attachments vào Incidents
+-- =====================================================
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID('Incidents') AND name = 'Attachments'
+)
+BEGIN
+    ALTER TABLE Incidents
+    ADD Attachments NVARCHAR(MAX) NULL;
+    PRINT 'Da them cot Attachments vao bang Incidents.';
+END
+ELSE
+BEGIN
+    PRINT 'Cot Attachments da ton tai.';
+END
+GO
+
+-- =====================================================
+-- BƯỚC 2: Stored Procedure - sp_SyncParkingSlotStatuses
+-- =====================================================
 CREATE OR ALTER PROCEDURE sp_SyncParkingSlotStatuses
 AS
 BEGIN
-  SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-  -- 1. Chuyển booking quá hạn sang Expired
-  UPDATE Reservations
-  SET ReservationStatus = 'Expired'
-  WHERE ReservationStatus = 'Reserved'
-    AND EndTime < GETDATE();
+    -- 1. Chuyển booking quá hạn sang Expired
+    UPDATE Reservations
+    SET ReservationStatus = 'Expired'
+    WHERE ReservationStatus = 'Reserved'
+      AND EndTime < GETDATE();
 
-  -- 2. Đồng bộ lại trạng thái slot
-  UPDATE ps
-  SET ps.SlotStatus =
-    CASE
-      WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
+    -- 2. Đồng bộ lại trạng thái slot
+    UPDATE ps
+    SET ps.SlotStatus =
+        CASE
+            WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
 
-      WHEN EXISTS (
-        SELECT 1
-        FROM ParkingSessions s
-        WHERE s.SlotID = ps.SlotID
-          AND s.SessionStatus = 'Active'
-          AND s.ExitTime IS NULL
-      ) THEN 'Occupied'
+            WHEN EXISTS (
+                SELECT 1
+                FROM ParkingSessions s
+                WHERE s.SlotID = ps.SlotID
+                  AND s.SessionStatus = 'Active'
+                  AND s.ExitTime IS NULL
+            ) THEN 'Occupied'
 
-      WHEN EXISTS (
-        SELECT 1
-        FROM Reservations r
-        WHERE r.SlotID = ps.SlotID
-          AND r.ReservationStatus = 'Reserved'
-          AND r.EndTime >= GETDATE()
-      ) THEN 'Reserved'
+            WHEN EXISTS (
+                SELECT 1
+                FROM Reservations r
+                WHERE r.SlotID = ps.SlotID
+                  AND r.ReservationStatus = 'Reserved'
+                  AND r.EndTime >= GETDATE()
+            ) THEN 'Reserved'
 
-      ELSE 'Available'
-    END
-  FROM ParkingSlots ps
-  WHERE ps.SlotStatus IN ('Available', 'Occupied', 'Reserved');
-END;
+            ELSE 'Available'
+        END
+    FROM ParkingSlots ps
+    WHERE ps.SlotStatus IN ('Available', 'Occupied', 'Reserved');
+END
 GO
 
 -- =====================================================
--- Stored Procedure: sp_GetParkingMap
+-- BƯỚC 3: Stored Procedure - sp_GetParkingMap
 -- =====================================================
-IF OBJECT_ID('sp_GetParkingMap', 'P') IS NOT NULL DROP PROCEDURE sp_GetParkingMap;
-GO
-
-CREATE PROCEDURE sp_GetParkingMap
+CREATE OR ALTER PROCEDURE sp_GetParkingMap
     @buildingId    INT           = NULL,
     @floorId       INT           = NULL,
     @vehicleTypeId INT           = NULL,
@@ -111,24 +132,26 @@ BEGIN
         rsv.StartTime,
         rsv.EndTime,
         rsv.ReservationStatus,
-        driver.FullName  AS DriverName,
-        driver.Email     AS DriverEmail,
-        driver.PhoneNumber AS DriverPhone,
+        driver.FullName      AS DriverName,
+        driver.Email         AS DriverEmail,
+        driver.PhoneNumber   AS DriverPhone,
         CASE
-            WHEN ps.SlotStatus IN ('Maintenance','Blocked') THEN ps.SlotStatus
+            WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
             WHEN EXISTS (
-                SELECT 1 FROM ParkingSessions s WHERE s.SlotID = ps.SlotID AND s.SessionStatus = 'Active'
+                SELECT 1 FROM ParkingSessions s
+                WHERE s.SlotID = ps.SlotID AND s.SessionStatus = 'Active'
             ) THEN 'Occupied'
             WHEN EXISTS (
-                SELECT 1 FROM Reservations r 
-                WHERE r.SlotID = ps.SlotID AND r.ReservationStatus IN ('Reserved','Completed')
+                SELECT 1 FROM Reservations r
+                WHERE r.SlotID = ps.SlotID
+                  AND r.ReservationStatus IN ('Reserved', 'Completed')
             ) THEN 'Reserved'
             ELSE 'Available'
         END AS SlotStatus
     FROM ParkingSlots ps
     JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
-    JOIN Zones z ON ps.ZoneID = z.ZoneID
-    JOIN Floors f ON z.FloorID = f.FloorID
+    JOIN Zones z          ON ps.ZoneID = z.ZoneID
+    JOIN Floors f         ON z.FloorID = f.FloorID
     LEFT JOIN (
         SELECT TOP 1 WITH TIES
             SlotID, SessionID, PlateNumber, EntryTime, SessionStatus
@@ -139,18 +162,25 @@ BEGIN
     LEFT JOIN (
         SELECT *
         FROM Reservations r
-        WHERE r.ReservationStatus IN ('Reserved','Completed')
+        WHERE r.ReservationStatus IN ('Reserved', 'Completed')
     ) rsv ON rsv.SlotID = ps.SlotID
     LEFT JOIN Users driver ON driver.UserID = rsv.DriverID
     WHERE f.IsActive = 1
-      AND (@buildingId IS NULL OR f.BuildingID = @buildingId)
-      AND (@floorId IS NULL OR z.FloorID = @floorId)
+      AND (@buildingId    IS NULL OR f.BuildingID     = @buildingId)
+      AND (@floorId       IS NULL OR z.FloorID        = @floorId)
       AND (@vehicleTypeId IS NULL OR ps.VehicleTypeID = @vehicleTypeId)
       AND (@status IS NULL OR
            CASE
-               WHEN ps.SlotStatus IN ('Maintenance','Blocked') THEN ps.SlotStatus
-               WHEN EXISTS (SELECT 1 FROM ParkingSessions s WHERE s.SlotID = ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied'
-               WHEN EXISTS (SELECT 1 FROM Reservations r WHERE r.SlotID = ps.SlotID AND r.ReservationStatus IN ('Reserved','Completed')) THEN 'Reserved'
+               WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
+               WHEN EXISTS (
+                   SELECT 1 FROM ParkingSessions s
+                   WHERE s.SlotID = ps.SlotID AND s.SessionStatus = 'Active'
+               ) THEN 'Occupied'
+               WHEN EXISTS (
+                   SELECT 1 FROM Reservations r
+                   WHERE r.SlotID = ps.SlotID
+                     AND r.ReservationStatus IN ('Reserved', 'Completed')
+               ) THEN 'Reserved'
                ELSE 'Available'
            END = @status
       )
@@ -158,58 +188,4 @@ BEGIN
 END
 GO
 
--- Migration: thêm cột Attachments vào Incidents
-IF NOT EXISTS (
-    SELECT 1 FROM sys.columns
-    WHERE object_id = OBJECT_ID('Incidents') AND name = 'Attachments'
-)
-BEGIN
-    ALTER TABLE Incidents
-    ADD Attachments NVARCHAR(MAX) NULL;
-    PRINT 'Đã thêm cột Attachments vào bảng Incidents.'
-END
-ELSE
-BEGIN
-    PRINT 'Cột Attachments đã tồn tại.'
-END
-GO
-
--- =====================================================
--- Stored Procedure: sp_SyncParkingSlotStatuses
--- =====================================================
-CREATE OR ALTER PROCEDURE sp_SyncParkingSlotStatuses
-AS
-BEGIN
-  SET NOCOUNT ON;
-
-  -- 1. Chuyển booking quá hạn sang Expired
-  UPDATE Reservations
-  SET ReservationStatus = 'Expired'
-  WHERE ReservationStatus = 'Reserved'
-    AND EndTime < GETDATE();
-
-  -- 2. Đồng bộ lại trạng thái slot
-  UPDATE ps
-  SET ps.SlotStatus =
-    CASE
-      WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN ps.SlotStatus
-      WHEN EXISTS (
-        SELECT 1
-        FROM ParkingSessions s
-        WHERE s.SlotID = ps.SlotID
-          AND s.SessionStatus = 'Active'
-          AND s.ExitTime IS NULL
-      ) THEN 'Occupied'
-      WHEN EXISTS (
-        SELECT 1
-        FROM Reservations r
-        WHERE r.SlotID = ps.SlotID
-          AND r.ReservationStatus = 'Reserved'
-          AND r.EndTime >= GETDATE()
-      ) THEN 'Reserved'
-      ELSE 'Available'
-    END
-  FROM ParkingSlots ps
-  WHERE ps.SlotStatus IN ('Available', 'Occupied', 'Reserved');
-END
 GO

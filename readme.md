@@ -12,6 +12,7 @@ Trong FE : khởi tạo yarn + vite : yarn create vite ==> đặt tên ==> chọ
                     yarn add @react-oauth/google
                     yarn add @mui/icons-material
                     yarn add qrcode
+                    yarn add dayjs
 Trong BE :
                     Chạy lệnh yarn install trước 
                     chạy lệnh trong sql
