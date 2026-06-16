@@ -36,6 +36,12 @@ export const driverApi = {
     return unwrap(res)
   },
 
+  getPricing: async (vehicleTypeId) => {
+    const params = vehicleTypeId ? { vehicleTypeId } : {}
+    const res = await authorizeAxios.get('/pricing', { params })
+    return unwrap(res)
+  },
+
   getAvailableSlots: async (params = {}) => {
     const res = await authorizeAxios.get('/reservations/available-slots', {
       params: buildQuery(params)
@@ -195,6 +201,27 @@ export const driverApi = {
 
   getUnratedSessions: async () => {
     const res = await authorizeAxios.get('/driver/completed-sessions')
+    return unwrap(res)
+  },
+
+  // ── Support Tickets ───────────────────────────────────────
+  createTicket: async (payload) => {
+    const res = await authorizeAxios.post('/driver/support/tickets', payload)
+    return unwrap(res)
+  },
+
+  getTickets: async () => {
+    const res = await authorizeAxios.get('/driver/support/tickets')
+    return unwrap(res)
+  },
+
+  getTicketDetails: async (ticketId) => {
+    const res = await authorizeAxios.get(`/driver/support/tickets/${ticketId}`)
+    return unwrap(res)
+  },
+
+  replyTicket: async (ticketId, payload) => {
+    const res = await authorizeAxios.post(`/driver/support/tickets/${ticketId}/replies`, payload)
     return unwrap(res)
   }
 }

@@ -74,7 +74,13 @@ const DriverHelp = () => {
                   </div>
                   <h3 className="font-bold text-gray-900 mb-1">Chat trực tuyến</h3>
                   <p className="text-xs text-gray-500 mb-3">Trò chuyện với nhân viên</p>
-                  <button className="rounded-xl bg-emerald-600 text-white px-4 py-2 text-xs font-bold shadow-sm shadow-emerald-200 hover:bg-emerald-700 transition">Bắt đầu chat</button>
+                  <button                      onClick={() => {
+                        window.location.href = '/driver/support'
+                      }}
+                      className="rounded-xl bg-emerald-600 text-white px-6 py-2 text-sm font-bold shadow-sm shadow-emerald-200 hover:bg-emerald-700 transition dark:shadow-none"
+                    >
+                      Bắt đầu gửi yêu cầu
+                  </button>
                 </div>
               </section>
 

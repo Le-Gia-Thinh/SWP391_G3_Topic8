@@ -106,6 +106,27 @@ const staffApi = {
   getStaffProfile: async () => {
     const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/profile`)
     return res.data
+  },
+
+  // ── Support Tickets ──────────────────────────────────────────
+  getTickets: async (params = {}) => {
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/support/tickets`, { params })
+    return res.data
+  },
+
+  getTicketDetails: async (ticketId) => {
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/support/tickets/${ticketId}`)
+    return res.data
+  },
+
+  replyTicket: async (ticketId, payload) => {
+    const res = await authorizedAxiosInstance.post(`${STAFF_BASE}/support/tickets/${ticketId}/replies`, payload)
+    return res.data
+  },
+
+  updateTicketStatus: async (ticketId, status) => {
+    const res = await authorizedAxiosInstance.patch(`${STAFF_BASE}/support/tickets/${ticketId}/status`, { status })
+    return res.data
   }
 }
 

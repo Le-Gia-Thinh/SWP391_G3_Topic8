@@ -75,3 +75,13 @@ export async function getSlots(req, res, next) {
     return res.json({ success: true, ...result });
   } catch (err) { next(err); }
 }
+
+// ── GET /api/pricing?vehicleTypeId= ─────────────────────────────
+// Bảng giá công khai cho Driver xem khi đặt chỗ
+export async function getPricing(req, res, next) {
+  try {
+    const vehicleTypeId = req.query.vehicleTypeId ? Number(req.query.vehicleTypeId) : undefined;
+    const data = await managerService.getPricingPolicies({ vehicleTypeId, isActive: true });
+    return res.json({ success: true, data });
+  } catch (err) { next(err); }
+}
