@@ -154,12 +154,12 @@ export const replyTicket = async (ticketId, senderId, content) => {
       notifReq.input('DriverID', driverId);
       notifReq.input('Title', 'Có phản hồi mới từ hỗ trợ');
       notifReq.input('Message', `Nhân viên đã trả lời yêu cầu hỗ trợ: ${subject}`);
-      notifReq.input('Type', 'System');
+      notifReq.input('Type', 'system');
       notifReq.input('RefID', ticketId);
 
       await notifReq.query(`
         INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType)
-        VALUES (@DriverID, @Title, @Message, @Type, @RefID, 'Ticket')
+        VALUES (@DriverID, @Title, @Message, @Type, @RefID, NULL)
       `);
     }
 
@@ -193,12 +193,12 @@ export const updateTicketStatus = async (ticketId, status) => {
     notifReq.input('DriverID', DriverID);
     notifReq.input('Title', 'Cập nhật yêu cầu hỗ trợ');
     notifReq.input('Message', `Yêu cầu hỗ trợ "${Subject}" đã được chuyển sang trạng thái: ${status === 'Closed' ? 'Đã đóng' : 'Đã giải quyết'}`);
-    notifReq.input('Type', 'System');
+    notifReq.input('Type', 'system');
     notifReq.input('RefID', ticketId);
 
     await notifReq.query(`
       INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType)
-      VALUES (@DriverID, @Title, @Message, @Type, @RefID, 'Ticket')
+      VALUES (@DriverID, @Title, @Message, @Type, @RefID, NULL)
     `);
   }
   
