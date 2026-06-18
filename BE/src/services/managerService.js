@@ -963,8 +963,6 @@ export async function createVehicleType(data) {
   if (!name) { const e = new Error('Thiếu tên loại xe (VehicleName).'); e.statusCode = 400; throw e; }
 
   const pool = await getPool();
-
-  // Check trùng mã
   const dup = await pool.request()
     .input('Code', sql.NVarChar(20), code)
     .query(`SELECT VehicleTypeID FROM VehicleTypes WHERE VehicleCode = @Code`);
@@ -977,10 +975,21 @@ export async function createVehicleType(data) {
     .input('VehicleName', sql.NVarChar(50), name)
     .input('Description', sql.NVarChar(200), data.description || null)
     .query(`
+      DECLARE @Inserted TABLE (
+        VehicleTypeID INT, VehicleCode NVARCHAR(20),
+        VehicleName NVARCHAR(50), Description NVARCHAR(200), IsActive BIT
+      );
+
       INSERT INTO VehicleTypes (VehicleCode, VehicleName, Description, IsActive)
-      OUTPUT inserted.*
-      VALUES (@VehicleCode, @VehicleName, @Description, 1)
+      OUTPUT inserted.VehicleTypeID, inserted.VehicleCode, inserted.VehicleName,
+             inserted.Description, inserted.IsActive
+      INTO @Inserted
+      VALUES (@VehicleCode, @VehicleName, @Description, 1);
+
+      SELECT VehicleTypeID, VehicleCode, VehicleName, Description, IsActive
+      FROM @Inserted;
     `);
+
   return result.recordset[0];
 }
 
