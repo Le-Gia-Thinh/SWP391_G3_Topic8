@@ -5,6 +5,7 @@ const AuthContext = createContext(null)
 
 function getRedirectPath(roleName) {
   switch (roleName) {
+  case 'Admin': return '/admin'
   case 'Manager': return '/manager'
   case 'Staff': return '/staff/dashboard'
   case 'Driver': return '/driver'
