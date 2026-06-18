@@ -584,7 +584,7 @@ const DriverBookingConfirmation = () => {
 
             <Link
               to="/driver/booking"
-              className="flex-1 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 py-2.5 text-center text-sm font-bold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:bg-slate-900/50 sm:flex-none"
+              className="flex-1 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 py-2.5 text-center text-sm font-bold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800 sm:flex-none"
             >
               Đặt thêm chỗ mới
             </Link>

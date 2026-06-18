@@ -108,7 +108,7 @@ const DriverLayout = () => {
       <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 px-4 md:px-8">
         {/* Logo + Location */}
         <div className="flex items-center gap-3">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:bg-slate-900/50">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800">
             <Menu size={24} />
           </button>
           <Link to="/driver/home" onClick={closeAllDropdowns} className="flex items-center gap-3">
@@ -125,7 +125,7 @@ const DriverLayout = () => {
             {isLocationOpen && (
               <div className="absolute left-0 mt-2 w-64 rounded-2xl border bg-white dark:bg-slate-800 shadow-xl">
                 {LOCATIONS.map(loc => (
-                  <button key={loc} onClick={() => handleSelectLocation(loc)} className={`w-full px-3 py-2 text-left ${selectedLocation===loc?'bg-blue-50 dark:bg-blue-900/20 font-bold text-blue-600 dark:text-blue-400':'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-slate-900/50'}`}>
+                  <button key={loc} onClick={() => handleSelectLocation(loc)} className={`w-full px-3 py-2 text-left ${selectedLocation===loc?'bg-blue-50 dark:bg-blue-900/20 font-bold text-blue-600 dark:text-blue-400':'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}>
                     {loc}
                   </button>
                 ))}

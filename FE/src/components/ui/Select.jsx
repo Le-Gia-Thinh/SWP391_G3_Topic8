@@ -56,7 +56,7 @@ const CustomSelect = ({ value, onChange, options = [], className = '', placehold
               className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
                 value === option.value
                   ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:bg-slate-900/50 hover:text-blue-600 dark:text-blue-400'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:text-blue-400'
               }`}
             >
               {option.label}

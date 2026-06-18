@@ -178,7 +178,7 @@ const DriverVehicles = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={fetchData}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 shadow-sm transition hover:bg-gray-50 dark:bg-slate-900/50"
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 shadow-sm transition hover:bg-gray-50 dark:hover:bg-slate-800"
           >
             <RefreshCw size={16} />
             Làm mới
@@ -259,7 +259,7 @@ const DriverVehicles = () => {
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 transition hover:bg-gray-50 dark:bg-slate-900/50"
+                className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 transition hover:bg-gray-50 dark:hover:bg-slate-800"
               >
                 Hủy
               </button>
@@ -359,7 +359,7 @@ const DriverVehicles = () => {
                     )}
                     <button
                       onClick={() => openEditForm(vehicle)}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 transition hover:bg-gray-50 dark:bg-slate-900/50 hover:text-blue-600 dark:text-blue-400"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 transition hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:text-blue-400"
                     >
                       <Pencil size={14} />
                     </button>
@@ -380,7 +380,7 @@ const DriverVehicles = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setDeleteConfirm(null)}
-                          className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-slate-900/50"
+                          className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800"
                         >
                           Hủy
                         </button>

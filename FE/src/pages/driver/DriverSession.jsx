@@ -153,7 +153,7 @@ const LocationCard = ({ label, value, active = false }) => {
       className={`rounded-xl border p-4 text-center transition-colors ${
         active
           ? 'border-blue-100 bg-blue-50/50'
-          : 'border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 hover:border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:bg-slate-900/50'
+          : 'border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 hover:border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800'
       }`}
     >
       <div
@@ -187,7 +187,7 @@ const SessionListItem = ({ session, active, onClick, currentTime }) => {
       className={`w-full rounded-xl border p-4 text-left transition-all ${
         active
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm'
-          : 'border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 hover:border-blue-100 hover:bg-gray-50 dark:bg-slate-900/50'
+          : 'border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 hover:border-blue-100 hover:bg-gray-50 dark:hover:bg-slate-800'
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -466,7 +466,7 @@ const SessionDetail = ({
               <button
                 type="button"
                 onClick={() => onGoReport(session.SessionID)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-3 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-slate-900/50"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-3 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800"
               >
                 <AlertTriangle size={18} className="text-orange-500" />
                 Báo cáo sự cố
@@ -654,7 +654,7 @@ const DriverSession = () => {
           <button
             type="button"
             onClick={fetchCurrentSessions}
-            className="flex w-fit items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-slate-900/50"
+            className="flex w-fit items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800"
           >
             <RefreshCcw size={16} />
             Làm mới

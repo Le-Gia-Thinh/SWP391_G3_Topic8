@@ -134,7 +134,7 @@ const DriverSupport = () => {
               <Link
                 key={ticket.TicketID}
                 to={`/driver/support/${ticket.TicketID}`}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 transition hover:bg-gray-50 dark:bg-slate-900/50 dark:hover:bg-gray-800 group"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 transition hover:bg-gray-50 dark:hover:bg-slate-800 dark:hover:bg-gray-800 group"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-3">

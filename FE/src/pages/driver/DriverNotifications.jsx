@@ -136,7 +136,7 @@ const DriverNotifications = () => {
         {unreadCount > 0 && (
           <button
             onClick={handleMarkAllRead}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 shadow-sm transition hover:bg-gray-50 dark:bg-slate-900/50"
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 shadow-sm transition hover:bg-gray-50 dark:hover:bg-slate-800"
           >
             <CheckCheck size={16} />
             Đánh dấu tất cả đã đọc

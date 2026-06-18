@@ -1105,7 +1105,7 @@ const DriverBooking = () => {
             <button
               type="button"
               onClick={() => navigate('/driver/home')}
-              className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-3.5 font-bold text-gray-600 dark:text-gray-400 transition-all hover:bg-gray-50 dark:bg-slate-900/50"
+              className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-3.5 font-bold text-gray-600 dark:text-gray-400 transition-all hover:bg-gray-50 dark:hover:bg-slate-800"
             >
               Hủy bỏ
             </button>

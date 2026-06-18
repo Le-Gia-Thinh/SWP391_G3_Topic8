@@ -1,5 +1,5 @@
 // src/pages/manager/ManagerDashboard.jsx
-import { ArrowUpRight, Download, CarFront, RefreshCcw } from 'lucide-react'
+import { ArrowUpRight, Download, CarFront, RefreshCcw, Sparkles } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
 import { useState, useEffect } from 'react'
@@ -83,9 +83,9 @@ const ManagerDashboard = () => {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Manager Dashboard</h1>
-          <p className="mt-2 text-sm text-slate-500 font-medium">
-            Xin chào <span className="text-blue-600 font-bold">{displayName}</span>,
-            đây là tổng quan hoạt động của bãi đỗ.
+          <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
+            <Sparkles size={16} className="text-amber-500 animate-pulse" />
+            Xin chào <span className="font-black text-blue-600">{displayName}</span>, đây là tổng quan hoạt động của bãi đỗ.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
