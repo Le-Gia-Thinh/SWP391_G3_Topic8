@@ -247,8 +247,8 @@ CREATE TABLE Payments (
     PaymentTime   DATETIME NULL,
     PaymentStatus NVARCHAR(20) DEFAULT 'Pending',
     FOREIGN KEY (SessionID) REFERENCES ParkingSessions(SessionID),
-    CHECK (Amount >= 0),
-    CHECK (PaymentStatus IN ('Pending','Completed','Failed'))
+    CONSTRAINT CK_Payments_Amount CHECK (Amount >= 0),
+    CONSTRAINT CK_Payments_Status CHECK (PaymentStatus IN ('Pending','Prepaid','Completed','Failed','Cancelled'))
 );
 GO
 

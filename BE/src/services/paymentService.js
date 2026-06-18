@@ -269,7 +269,118 @@ export async function createPaymentService(sessionId, driverId) {
         },
     }
 }
+export async function createPaymentServiceByStaff(sessionId) {
+    const pool = await getPool()
 
+    const { recordset } = await pool.request()
+        .input('SessionID', sql.Int, sessionId)
+        .query(`
+      SELECT
+        ps.SessionID, ps.PlateNumber, ps.EntryTime,
+        ps.VehicleTypeID, ps.SessionStatus,
+        p.PaymentStatus, p.PrepaidAmount,
+        vt.VehicleName, sl.SlotCode,
+        b.BuildingName, f.FloorName, z.ZoneName,
+        u.FullName AS DriverName, u.Email AS DriverEmail
+      FROM ParkingSessions ps
+      JOIN Payments     p  ON ps.SessionID     = p.SessionID
+      JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
+      JOIN ParkingSlots sl ON ps.SlotID        = sl.SlotID
+      JOIN Zones        z  ON sl.ZoneID        = z.ZoneID
+      JOIN Floors       f  ON z.FloorID        = f.FloorID
+      JOIN Buildings    b  ON f.BuildingID     = b.BuildingID
+      JOIN Users        u  ON ps.DriverID      = u.UserID
+      WHERE ps.SessionID = @SessionID
+        AND ps.SessionStatus = 'Active'
+    `)
+
+    const session = recordset[0]
+    if (!session) {
+        const err = new Error('Không tìm thấy phiên đỗ xe đang hoạt động')
+        err.statusCode = 404; throw err
+    }
+    if (session.PaymentStatus === 'Completed') {
+        const err = new Error('Phiên này đã được thanh toán đầy đủ rồi')
+        err.statusCode = 400; throw err
+    }
+
+    const { fee: amount, durationH } = await calcFee(pool, session.VehicleTypeID, session.EntryTime)
+    const pricingTable = await getPricingTable(pool, session.VehicleTypeID)
+
+    const orderCode = makeOrderCode(sessionId)
+    const description = `PARK${sessionId}T${Date.now() % 10000}`
+
+    const FE = process.env.FE_ORIGIN || 'http://localhost:5173'
+    const returnUrl = `${FE}/driver/payment-result?sessionId=${sessionId}&status=success`
+    const cancelUrl = `${FE}/driver/payment-result?sessionId=${sessionId}&status=cancel`
+    const expiredAt = Math.floor((Date.now() + 15 * 60 * 1000) / 1000)
+
+    const payload = {
+        orderCode, amount, description,
+        buyerName: session.DriverName || 'Driver',
+        buyerEmail: session.DriverEmail || undefined,
+        items: [{ name: `Phi gui xe - Slot ${session.SlotCode}`, quantity: 1, price: amount }],
+        cancelUrl, returnUrl, expiredAt,
+        signature: makeSignature({ amount, cancelUrl, description, orderCode, returnUrl }),
+    }
+
+    let pd
+    try {
+        const res = await axios.post(`${PAYOS_BASE_URL}/v2/payment-requests`, payload, {
+            headers: {
+                'x-client-id': PAYOS_CLIENT_ID,
+                'x-api-key': PAYOS_API_KEY,
+                'Content-Type': 'application/json',
+            },
+            timeout: 15_000,
+        })
+        if (res.data.code !== '00') {
+            const err = new Error(`PayOS lỗi: ${res.data.desc || res.data.code}`)
+            err.statusCode = 400; throw err
+        }
+        pd = res.data.data
+    } catch (e) {
+        if (e.statusCode) throw e
+        const msg = e.response?.data?.desc || e.message
+        throw Object.assign(new Error(`Lỗi kết nối PayOS: ${msg}`), { statusCode: 502 })
+    }
+
+    await pool.request()
+        .input('SessionID', sql.Int, sessionId)
+        .input('OrderCode', sql.BigInt, orderCode)
+        .input('Amount', sql.Decimal(10, 2), amount)
+        .input('SnapshotH', sql.Decimal(10, 2), durationH)
+        .input('QrCode', sql.NVarChar(sql.MAX), pd.qrCode || null)
+        .input('CheckoutUrl', sql.NVarChar(500), pd.checkoutUrl || null)
+        .execute('sp_CreatePrepayment')
+
+    const expiredMs = expiredAt * 1000
+    pendingOrders.set(orderCode, {
+        sessionId, amount, description,
+        qrCode: pd.qrCode, checkoutUrl: pd.checkoutUrl,
+        accountNumber: pd.accountNumber, accountName: pd.accountName,
+        bankBin: pd.bin, status: 'PENDING', expiredAt: expiredMs,
+    })
+
+    return {
+        orderCode, amount, description,
+        qrCode: pd.qrCode, checkoutUrl: pd.checkoutUrl,
+        accountNumber: pd.accountNumber, accountName: pd.accountName,
+        bankBin: pd.bin, currency: 'VND',
+        expiredAt: new Date(expiredMs).toISOString(),
+        status: 'PENDING', pricingTable, durationH,
+        sessionInfo: {
+            sessionId: session.SessionID,
+            plateNumber: session.PlateNumber,
+            vehicleName: session.VehicleName,
+            slotCode: session.SlotCode,
+            buildingName: session.BuildingName,
+            floorName: session.FloorName,
+            zoneName: session.ZoneName,
+            entryTime: session.EntryTime,
+        },
+    }
+}
 // =================================================================
 // SERVICE 3: Poll trạng thái (FE gọi mỗi 3s)
 // =================================================================
