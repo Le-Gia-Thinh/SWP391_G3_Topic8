@@ -14,10 +14,10 @@ import { toast } from 'react-toastify'
 import driverApi from '../../apis/driverApi'
 
 const TYPE_CONFIG = {
-  booking: { icon: CalendarDays, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-100', label: 'Đặt chỗ' },
-  session: { icon: Clock, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Phiên gửi' },
-  payment: { icon: Wallet, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Thanh toán' },
-  incident: { icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', label: 'Sự cố' },
+  booking: { icon: CalendarDays, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-100 dark:border-blue-800', label: 'Đặt chỗ' },
+  session: { icon: Clock, color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-900/20', border: 'border-indigo-100 dark:border-indigo-800', label: 'Phiên gửi' },
+  payment: { icon: Wallet, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-100 dark:border-emerald-800', label: 'Thanh toán' },
+  incident: { icon: AlertTriangle, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-100 dark:border-rose-800', label: 'Sự cố' },
   system: { icon: Info, color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-50 dark:bg-slate-900/50', border: 'border-gray-100 dark:border-slate-700/50', label: 'Hệ thống' }
 }
 
@@ -152,8 +152,8 @@ const DriverNotifications = () => {
             onClick={() => setActiveFilter(tab.key)}
             className={`rounded-xl px-4 py-2 text-sm font-bold transition-all ${
               activeFilter === tab.key
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-slate-700 hover:bg-blue-50 dark:bg-blue-900/20 hover:text-blue-600 dark:text-blue-400'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none'
+                : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400'
             }`}
           >
             {tab.label}
@@ -190,7 +190,7 @@ const DriverNotifications = () => {
               >
                 {/* Icon */}
                 <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                  notif.IsRead ? 'bg-gray-100 text-gray-400' : `bg-white dark:bg-slate-800 ${config.color} shadow-sm`
+                  notif.IsRead ? 'bg-gray-100 dark:bg-slate-700/50 text-gray-400' : `bg-white dark:bg-slate-800 ${config.color} shadow-sm`
                 }`}>
                   <Icon size={20} />
                 </div>
@@ -218,7 +218,7 @@ const DriverNotifications = () => {
                     {notif.Message}
                   </p>
                   <span className={`mt-2 inline-block rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                    notif.IsRead ? 'bg-gray-100 text-gray-500 dark:text-gray-400' : `${config.bg} ${config.color}`
+                    notif.IsRead ? 'bg-gray-100 dark:bg-slate-700/50 text-gray-500 dark:text-gray-400' : `${config.bg} ${config.color}`
                   }`}>
                     {config.label}
                   </span>
