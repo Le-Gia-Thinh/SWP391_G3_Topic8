@@ -133,10 +133,10 @@ const DriverBooking = () => {
   const durations = useMemo(() => {
     if (!activeVehicleTypeId) return []
     return pricingPolicies
-      .filter(p => p.VehicleTypeID === activeVehicleTypeId && !p.IsOvernight)
+      .filter(p => p.VehicleTypeID === activeVehicleTypeId && !p.IsOvernight && [1, 4, 8].includes(p.MaxHours))
       .map(p => ({
         value: `${p.MaxHours}h`,
-        label: p.MaxHours === 24 ? 'Cả ngày' : `${p.MaxHours} Giờ`,
+        label: `${p.MaxHours} Giờ`,
         price: p.Fee
       }))
   }, [pricingPolicies, activeVehicleTypeId])
