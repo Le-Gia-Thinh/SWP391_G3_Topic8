@@ -79,3 +79,47 @@ BEGIN
     PRINT 'Mock data for SupportTickets already exists';
 END
 GO
+
+-- 4. Bổ sung cột IsDefault cho bảng DriverVehicles
+IF COL_LENGTH('DriverVehicles', 'IsDefault') IS NULL
+BEGIN
+    ALTER TABLE DriverVehicles 
+    ADD IsDefault BIT NOT NULL DEFAULT 0;
+    
+    PRINT 'Added column IsDefault to DriverVehicles';
+END
+ELSE
+BEGIN
+    PRINT 'Column IsDefault already exists in DriverVehicles';
+END
+GO
+
+-- 5. Bổ sung cột Attachments cho bảng Incidents
+IF COL_LENGTH('Incidents', 'Attachments') IS NULL
+BEGIN
+    ALTER TABLE Incidents 
+    ADD Attachments NVARCHAR(MAX) NULL;
+    
+    PRINT 'Added column Attachments to Incidents';
+END
+ELSE
+BEGIN
+    PRINT 'Column Attachments already exists in Incidents';
+END
+GO
+
+-- 6. Sửa DriverID thành cho phép NULL ở bảng ParkingSessions (Hỗ trợ khách vãng lai)
+IF COLUMNPROPERTY(OBJECT_ID('ParkingSessions'), 'DriverID', 'AllowsNull') = 0
+BEGIN
+    ALTER TABLE ParkingSessions ALTER COLUMN DriverID INT NULL;
+    PRINT 'Altered DriverID in ParkingSessions to allow NULL';
+END
+GO
+
+-- 7. Sửa DriverID thành cho phép NULL ở bảng Incidents (Hỗ trợ sự cố của khách vãng lai)
+IF COLUMNPROPERTY(OBJECT_ID('Incidents'), 'DriverID', 'AllowsNull') = 0
+BEGIN
+    ALTER TABLE Incidents ALTER COLUMN DriverID INT NULL;
+    PRINT 'Altered DriverID in Incidents to allow NULL';
+END
+GO
