@@ -111,6 +111,11 @@ const DriverReport = () => {
     }
 
     context.reservations.forEach((reservation) => {
+      const status = getValue(reservation, 'ReservationStatus', 'reservationStatus')
+      
+      // Keep only active reservations as requested by user
+      if (status !== 'Active') return
+
       const reservationId = getValue(reservation, 'ReservationID', 'reservationId')
 
       if (!reservationId) return
