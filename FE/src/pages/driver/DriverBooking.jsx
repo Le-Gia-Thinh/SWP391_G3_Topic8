@@ -866,19 +866,34 @@ const DriverBooking = () => {
 
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Thời lượng
+                  Thời lượng: <span className="text-blue-600 dark:text-blue-400">{durations.find(d => d.value === duration)?.label || ''}</span>
                 </label>
-                <select
-                  value={duration}
-                  onChange={(event) => setDuration(event.target.value)}
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500"
-                >
-                  {durations.map((item) => (
-                    <option key={item.value} value={item.value} className="bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="pt-2 pb-1">
+                  <input
+                    type="range"
+                    min="0"
+                    max={Math.max(0, durations.length - 1)}
+                    step="1"
+                    value={Math.max(0, durations.findIndex(d => d.value === duration))}
+                    onChange={(event) => {
+                      const idx = parseInt(event.target.value, 10);
+                      if (durations[idx]) setDuration(durations[idx].value);
+                    }}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-blue-600"
+                  />
+                  <div className="flex justify-between text-[10px] text-gray-500 font-medium mt-2 px-1">
+                    {durations.map((item, idx) => (
+                      <span 
+                        key={item.value} 
+                        className={durations.findIndex(d => d.value === duration) === idx ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}
+                        onClick={() => setDuration(item.value)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {item.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
