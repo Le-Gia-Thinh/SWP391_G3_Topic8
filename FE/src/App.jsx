@@ -78,7 +78,8 @@ const managerLinks = [
   { isDivider: true },
   { labelOnly: 'Giám sát' },
   { path: '/manager/incidents', label: 'Sự cố', icon: AlertTriangle },
-  { path: '/manager/unpaid', label: 'Xe chưa thanh toán', icon: Wallet }
+  { path: '/manager/unpaid', label: 'Xe chưa thanh toán', icon: Wallet },
+  { path: '/manager/feedback', label: 'Đánh giá từ User', icon: Star }
 ]
 
 
@@ -167,6 +168,7 @@ const App = () => {
             <Route path="profile" element={<UserProfile />} />
             <Route path="vehicle-types" element={<ManagerVehicleTypes />} />
             <Route path="unpaid" element={<ManagerUnpaid />} />
+            <Route path="feedback" element={<StaffFeedback />} />
           </Route>
         </Route>
 
