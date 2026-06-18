@@ -324,8 +324,8 @@ const DriverReport = () => {
                     onClick={() => setSelectedIssue(issue.id)}
                     className={`rounded-xl border p-3 text-sm font-semibold transition-colors ${
                       active
-                        ? 'border-blue-500 bg-blue-50/50 text-blue-700 dark:text-blue-400'
-                        : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-slate-900/50'
+                        ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300'
+                        : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     {issue.label}
@@ -401,7 +401,7 @@ const DriverReport = () => {
                 <button
                   type="button"
                   onClick={loadReportContext}
-                  className="w-fit rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-1.5 text-sm font-semibold text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:bg-slate-900/50"
+                  className="w-fit rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-1.5 text-sm font-semibold text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800"
                 >
                   Làm mới
                 </button>
