@@ -115,3 +115,48 @@ export async function trackSession(plateNumber, sessionCode) {
     }
   };
 }
+
+/**
+ * Lấy dữ liệu thống kê cho trang chủ (Public)
+ */
+export async function getHomeStats() {
+  const pool = await getPool();
+  
+  // 1. Thống kê chung
+  const statsQuery = await pool.request().query(`
+    SELECT
+      (SELECT COUNT(*) FROM ParkingSlots) AS TotalSlots,
+      (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Occupied') AS OccupiedSlots,
+      (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Available') AS AvailableSlots,
+      (SELECT COUNT(*) FROM ParkingSessions WHERE CAST(EntryTime AS DATE) = CAST(GETDATE() AS DATE)) AS TodaySessions
+  `);
+  const s = statsQuery.recordset[0];
+  
+  // 2. Thống kê theo loại xe
+  const vehiclesQuery = await pool.request().query(`
+    SELECT 
+      vt.VehicleCode, 
+      vt.VehicleName,
+      COUNT(sl.SlotID) AS TotalSlots,
+      SUM(CASE WHEN sl.SlotStatus = 'Available' THEN 1 ELSE 0 END) AS AvailableSlots
+    FROM VehicleTypes vt
+    LEFT JOIN ParkingSlots sl ON vt.VehicleTypeID = sl.VehicleTypeID
+    GROUP BY vt.VehicleCode, vt.VehicleName
+  `);
+  
+  return {
+    overview: {
+      totalCapacity: s.TotalSlots || 0,
+      occupied: s.OccupiedSlots || 0,
+      available: s.AvailableSlots || 0,
+      todayCheckIns: s.TodaySessions || 0
+    },
+    vehicles: vehiclesQuery.recordset.map(v => ({
+      code: v.VehicleCode,
+      name: v.VehicleName,
+      total: v.TotalSlots || 0,
+      available: v.AvailableSlots || 0,
+      occupancyRate: v.TotalSlots > 0 ? Math.round(((v.TotalSlots - v.AvailableSlots) / v.TotalSlots) * 100) : 0
+    }))
+  };
+}

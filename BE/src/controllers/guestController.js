@@ -37,3 +37,16 @@ export const trackSession = async (req, res) => {
     });
   }
 };
+
+export const getHomeStats = async (req, res) => {
+  try {
+    const stats = await guestService.getHomeStats();
+    res.status(200).json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error getting home stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy dữ liệu thống kê'
+    });
+  }
+};

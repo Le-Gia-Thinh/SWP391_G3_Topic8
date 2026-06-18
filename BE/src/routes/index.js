@@ -45,6 +45,7 @@ router.get("/health", (req, res) =>
 
 // Guest public (không cần đăng nhập)
 router.get("/guest/track-session", guestController.trackSession);
+router.get("/guest/home-stats", guestController.getHomeStats);
 
 // Auth public
 router.post("/auth/register", validateRegister, authController.register);

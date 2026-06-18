@@ -6,6 +6,10 @@ const guestApi = {
       params: { plateNumber, sessionCode }
     })
     return res.data
+  },
+  getHomeStats: async () => {
+    const res = await authorizedAxiosInstance.get('/guest/home-stats')
+    return res.data
   }
 }
 
