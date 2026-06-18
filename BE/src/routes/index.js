@@ -10,6 +10,7 @@ import * as notificationController from "../controllers/notificationController.j
 import * as vehicleController from "../controllers/vehicleController.js";
 import * as feedbackController from "../controllers/feedbackController.js";
 import * as supportController from "../controllers/supportController.js";
+import * as guestController from "../controllers/guestController.js";
 
 import paymentRoutes from "./paymentRoutes.js";
 import staffRoutes from "./staffRoutes.js";
@@ -41,6 +42,9 @@ router.get("/health", (req, res) =>
     message: "API is working",
   })
 );
+
+// Guest public (không cần đăng nhập)
+router.get("/guest/track-session", guestController.trackSession);
 
 // Auth public
 router.post("/auth/register", validateRegister, authController.register);

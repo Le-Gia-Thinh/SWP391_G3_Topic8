@@ -60,6 +60,9 @@ const DriverNotifications = React.lazy(() => import('./pages/driver/DriverNotifi
 const DriverVehicles = React.lazy(() => import('./pages/driver/DriverVehicles'))
 const DriverFeedback = React.lazy(() => import('./pages/driver/DriverFeedback'))
 
+// Guest Pages (Lazy)
+const GuestTracking = React.lazy(() => import('./pages/guest/GuestTracking'))
+
 import './index.css'
 
 const managerLinks = [
@@ -125,6 +128,7 @@ const App = () => {
         {/* Public */}
         <Route path="/" element={<Home />} />
         <Route path="/403" element={<Forbidden />} />
+        <Route path="/guest/tracking" element={<GuestTracking />} />
 
         {/* Verify email routes */}
         <Route path="/verify-email/pending" element={<VerifyEmailPending />} />
