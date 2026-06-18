@@ -127,7 +127,7 @@ const AdminLogin = () => {
   return (
     <Box sx={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      minHeight: '100vh', bgcolor: 'grey.100', p: 2
+      minHeight: '100vh', width: '100%', bgcolor: 'grey.100', p: 2
     }}>
       <Card sx={{
         width: '100%', maxWidth: 420, p: 4,
@@ -144,7 +144,7 @@ const AdminLogin = () => {
         <Box
           component="form"
           onSubmit={handleSubmit(onSubmit)}
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}
+          sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, width: '100%' }}
         >
           <TextField
             label="Email" placeholder="admin@parking.com"
