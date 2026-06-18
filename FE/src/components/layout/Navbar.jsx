@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Menu, Search, Bell, Moon, Sun } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppTheme } from '../../contexts/AppThemeContext'
 import { toast } from 'react-toastify'
+import driverApi from '../../apis/driverApi'
 
 const getInitials = (name) => {
   if (!name) return 'U'
@@ -17,6 +18,19 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
   const { theme, toggleTheme } = useAppTheme()
   const navigate = useNavigate()
   const userName = user?.fullName || user?.name || 'Người dùng'
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    const isDriver = user?.roleName?.toLowerCase() === 'driver' || user?.RoleName?.toLowerCase() === 'driver'
+    if (isDriver) {
+      driverApi.getUnreadCount()
+        .then(res => {
+          const count = res?.unreadCount ?? res?.count ?? (typeof res === 'number' ? res : 0)
+          setUnreadCount(count)
+        })
+        .catch(() => {})
+    }
+  }, [user])
 
   const handleSearch = (e) => {
     if (e.key === 'Enter') {
@@ -71,7 +85,9 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
           className="relative rounded-full p-2 text-gray-500 dark:text-gray-400 transition hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           <Bell size={20} />
-          <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-gray-900 bg-red-500"></span>
+          {unreadCount > 0 && (
+            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-gray-900 bg-red-500"></span>
+          )}
         </button>
 
         <div className="h-8 w-px bg-gray-200 dark:bg-gray-700"></div>
