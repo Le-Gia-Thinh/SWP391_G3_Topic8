@@ -132,13 +132,25 @@ const DriverBooking = () => {
 
   const durations = useMemo(() => {
     if (!activeVehicleTypeId) return []
-    return pricingPolicies
+    
+    const relevantPolicies = pricingPolicies
       .filter(p => p.VehicleTypeID === activeVehicleTypeId && !p.IsOvernight && p.MaxHours !== 999)
-      .map(p => ({
-        value: `${p.MaxHours}h`,
-        label: p.MaxHours === 24 ? 'Cả ngày' : `${p.MaxHours} Giờ`,
-        price: p.Fee
-      }))
+      .sort((a, b) => a.MaxHours - b.MaxHours);
+
+    if (relevantPolicies.length === 0) return [];
+
+    const generated = [];
+    for (let i = 1; i <= 8; i++) {
+      let policy = relevantPolicies.find(p => p.MaxHours >= i);
+      if (!policy) policy = relevantPolicies[relevantPolicies.length - 1];
+
+      generated.push({
+        value: `${i}h`,
+        label: `${i}h`,
+        price: policy.Fee
+      });
+    }
+    return generated;
   }, [pricingPolicies, activeVehicleTypeId])
 
   useEffect(() => {
@@ -866,7 +878,7 @@ const DriverBooking = () => {
 
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Thời lượng: <span className="text-blue-600 dark:text-blue-400">{durations.find(d => d.value === duration)?.label || ''}</span>
+                  Thời lượng: <span className="text-blue-600 dark:text-blue-400">{duration.replace('h', ' Giờ')}</span>
                 </label>
                 <div className="pt-2 pb-1">
                   <input
