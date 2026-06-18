@@ -8,7 +8,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import staffApi from '../../apis/staffApi'
-import authorizedAxiosInstance from '../../utils/authorizeAxios'
 import ScrollToTopButton from '../common/ScrollToTopButton'
 
 const formatVND = (v) => Number(v || 0).toLocaleString('vi-VN') + ' ₫'
@@ -31,24 +30,24 @@ const QrModal = ({ qrData, onPaid, onCancel }) => {
   const [status, setStatus] = useState('PENDING')
   const [copied, setCopied] = useState(false)
   const [remaining, setRemaining] = useState(null)
+  const [zoom, setZoom] = useState(false)
   const pollRef = useRef(null)
 
-  // Dùng ref để đọc onPaid mới nhất không cần deps
   const onPaidRef = useRef(onPaid)
   useEffect(() => { onPaidRef.current = onPaid }, [onPaid])
 
   const orderCodeRef = useRef(qrData?.orderCode)
   useEffect(() => { orderCodeRef.current = qrData?.orderCode }, [qrData?.orderCode])
 
-  // ✅ Poll effect — deps rỗng, đọc qua ref
+  // ✅ Poll status — dùng STAFF endpoint, deps rỗng, đọc qua ref
   useEffect(() => {
     let cancelled = false
 
     const poll = async () => {
       if (!orderCodeRef.current) return
       try {
-        const res = await authorizedAxiosInstance.get(`/driver/payment/status/${orderCodeRef.current}`)
-        const s = res.data?.data?.status
+        const res = await staffApi.getPaymentStatus(orderCodeRef.current)
+        const s = res?.data?.status
         if (cancelled) return
         if (s === 'PAID') {
           clearInterval(pollRef.current)
@@ -68,7 +67,7 @@ const QrModal = ({ qrData, onPaid, onCancel }) => {
     }
   }, [])
 
-  // ✅ Countdown timer
+  // ✅ Countdown
   useEffect(() => {
     const expiredAt = qrData?.expiredAt ? new Date(qrData.expiredAt) : null
     if (!expiredAt) {
@@ -92,9 +91,21 @@ const QrModal = ({ qrData, onPaid, onCancel }) => {
 
   const remMin = remaining !== null ? Math.floor(remaining / 60) : null
   const remSec = remaining !== null ? remaining % 60 : null
+  const qrImgUrl = qrData?.qrCode
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qrData.qrCode)}`
+    : null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      {/* Lớp phóng to QR */}
+      {zoom && qrImgUrl && (
+        <div className="fixed inset-0 z-60 flex flex-col items-center justify-center bg-black/80 p-6"
+          onClick={() => setZoom(false)}>
+          <img src={qrImgUrl} alt="QR phóng to" className="w-[80vmin] h-[80vmin] max-w-[420px] max-h-[420px] bg-white p-4 rounded-2xl" />
+          <p className="text-white/80 text-sm mt-4">Khách quét mã · Bấm bất kỳ đâu để đóng</p>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className={`p-5 text-center relative ${status === 'PAID' ? 'bg-green-500' : status === 'CANCELLED' ? 'bg-red-500' : 'bg-blue-600'}`}>
           <button onClick={onCancel} className="absolute right-4 top-4 text-white/70 hover:text-white">
@@ -128,11 +139,12 @@ const QrModal = ({ qrData, onPaid, onCancel }) => {
           )}
           {status === 'PENDING' && (
             <>
-              {qrData?.qrCode && (
-                <div className="flex justify-center mb-4">
-                  <div className="p-3 bg-white border-2 border-gray-200 rounded-xl">
+              {qrImgUrl && (
+                <div className="flex flex-col items-center mb-4">
+                  <button onClick={() => setZoom(true)} className="p-3 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-400 transition-colors">
                     <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData.qrCode)}`} alt="QR Code" className="w-48 h-48" />
-                  </div>
+                  </button>
+                  <p className="text-xs text-gray-400 mt-2">Bấm vào QR để phóng to cho khách quét</p>
                 </div>
               )}
               <div className="bg-gray-50 rounded-xl p-4 space-y-2.5 mb-4 text-sm">
@@ -169,7 +181,7 @@ const QrModal = ({ qrData, onPaid, onCancel }) => {
               </div>
               {qrData?.checkoutUrl && (
                 <a href={qrData.checkoutUrl} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 py-2.5 border border-blue-300 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-50 mb-3">
-                  <ExternalLink size={14} /> Mở ứng dụng ngân hàng
+                  <ExternalLink size={14} /> Mở trang PayOS
                 </a>
               )}
               <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
@@ -196,8 +208,9 @@ const StaffPaymentConfirm = () => {
   const [processing, setProcessing] = useState(false)
   const [qrData, setQrData] = useState(null)
   const [showQr, setShowQr] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  // ✅ inline effect + cancelled flag
+  // ✅ Load preview (re-run khi bấm "Kiểm tra lại")
   useEffect(() => {
     if (!paramId) {
       setTimeout(() => setLoading(false), 0)
@@ -219,7 +232,7 @@ const StaffPaymentConfirm = () => {
     }
     run()
     return () => { cancelled = true }
-  }, [paramId, navigate])
+  }, [paramId, navigate, refreshKey])
 
   const handleCashCheckout = async () => {
     if (!confirmedPlate) return toast.warning('Vui lòng xác nhận biển số trước')
@@ -235,12 +248,13 @@ const StaffPaymentConfirm = () => {
     }
   }
 
+  // ✅ Tạo QR — dùng STAFF endpoint (không còn /driver/payment/create)
   const handleCreateQr = async () => {
     if (!confirmedPlate) return toast.warning('Vui lòng xác nhận biển số trước')
     setProcessing(true)
     try {
-      const res = await authorizedAxiosInstance.post('/driver/payment/create', { sessionId: Number(paramId) })
-      const data = res.data?.data
+      const res = await staffApi.createPayment(paramId)
+      const data = res?.data
       if (!data?.qrCode && !data?.checkoutUrl) throw new Error('Không nhận được QR từ server')
       setQrData(data)
       setShowQr(true)
@@ -262,14 +276,31 @@ const StaffPaymentConfirm = () => {
     }
   }
 
-  const handleCancelQr = async () => {
+  // Hủy QR: không có route staff cancel → chỉ đóng modal (đơn PayOS sẽ tự hết hạn 15')
+  const handleCancelQr = () => {
     setShowQr(false)
-    if (qrData?.orderCode) {
-      try {
-        await authorizedAxiosInstance.post('/driver/payment/cancel', { orderCode: qrData.orderCode, reason: 'Nhân viên hủy' })
-      } catch { /* best-effort */ }
-    }
     setQrData(null)
+  }
+
+  // ✅ Kiểm tra lại trạng thái thanh toán (khách tự quét QR ở app driver)
+  const [rechecking, setRechecking] = useState(false)
+  const handleRecheck = async () => {
+    setRechecking(true)
+    try {
+      const res = await staffApi.getCheckoutPreview(paramId)
+      const data = res?.data ?? res
+      setSessionData(data)
+      const st = data?.session?.PaymentStatus
+      if (st === 'Prepaid' || st === 'Completed') {
+        toast.success('Khách đã thanh toán! Bấm "Xác nhận xe ra".')
+      } else {
+        toast.info('Chưa thấy thanh toán. Yêu cầu khách quét QR hoặc thu tiền mặt.')
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Không kiểm tra được')
+    } finally {
+      setRechecking(false)
+    }
   }
 
   if (loading) return (
@@ -289,6 +320,7 @@ const StaffPaymentConfirm = () => {
   const surcharge = Number(surchargeAmount)
   const prepaid = Number(prepaidAmount)
   const amountDue = Math.max(0, totalFee - prepaid)
+  const isPaid = session.PaymentStatus === 'Prepaid' || session.PaymentStatus === 'Completed'
 
   return (
     <div className="flex flex-col min-h-full bg-gray-50 pb-24">
@@ -361,7 +393,7 @@ const StaffPaymentConfirm = () => {
                 <span className="font-black text-blue-700 text-xl">{formatVND(prepaid > 0 ? amountDue + surcharge : totalFee)}</span>
               </div>
             </div>
-            {prepaid > 0 && (
+            {isPaid && (
               <div className="mt-4 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5 flex items-center gap-2 text-sm text-green-700">
                 <CheckCircle2 size={15} className="shrink-0" />
                 Khách đã thanh toán trước qua QR: {formatVND(prepaid)}
@@ -383,54 +415,88 @@ const StaffPaymentConfirm = () => {
 
         {/* Right */}
         <div className="flex-1 space-y-5 pb-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-base font-bold text-gray-800 mb-4">Phương thức thanh toán</h3>
-            <div className="space-y-3">
-              <label className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === 'cash' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'}`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'cash' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}><Banknote size={20} /></div>
-                <div className="flex-1">
-                  <p className={`text-sm font-bold ${paymentMethod === 'cash' ? 'text-blue-900' : 'text-gray-700'}`}>Tiền mặt</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Thu tiền trực tiếp, xác nhận ngay</p>
-                </div>
-                <input type="radio" name="method" checked={paymentMethod === 'cash'} onChange={() => setMethod('cash')} className="w-4 h-4 text-blue-600" />
-              </label>
-              <label className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === 'qr' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'}`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'qr' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}><QrCode size={20} /></div>
-                <div className="flex-1">
-                  <p className={`text-sm font-bold ${paymentMethod === 'qr' ? 'text-blue-900' : 'text-gray-700'}`}>QR / Banking</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Tạo mã QR, chờ xác nhận từ ngân hàng</p>
-                </div>
-                <input type="radio" name="method" checked={paymentMethod === 'qr'} onChange={() => setMethod('qr')} className="w-4 h-4 text-blue-600" />
-              </label>
-            </div>
-          </div>
-
-          <div className="bg-blue-600 rounded-xl p-5 text-white">
-            <p className="text-xs font-bold text-blue-200 uppercase tracking-wider mb-1">Cần thu</p>
-            <p className="text-3xl font-black mb-1">{formatVND(prepaid > 0 ? amountDue + surcharge : totalFee)}</p>
-            <p className="text-xs text-blue-200">{paymentMethod === 'cash' ? 'Thu tiền mặt trực tiếp' : 'Tạo QR để khách chuyển khoản'}</p>
-          </div>
-
-          {paymentMethod === 'cash' ? (
-            <button onClick={handleCashCheckout} disabled={processing || !confirmedPlate}
-              className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${confirmedPlate && !processing ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
-              {processing ? <><Loader2 size={18} className="animate-spin" /> Đang xử lý...</> : <><Banknote size={18} /> Xác nhận Thu tiền mặt</>}
-            </button>
+          {/* Nếu khách đã trả trước → ưu tiên nút xác nhận xe ra */}
+          {isPaid ? (
+            <>
+              <div className="bg-green-600 rounded-xl p-5 text-white">
+                <p className="text-xs font-bold text-green-100 uppercase tracking-wider mb-1">Khách đã thanh toán</p>
+                <p className="text-3xl font-black mb-1">{formatVND(prepaid)}</p>
+                <p className="text-xs text-green-100">
+                  {surcharge > 0 ? `Còn phụ trội cần thu: ${formatVND(surcharge)}` : 'Đủ phí · Sẵn sàng cho xe ra'}
+                </p>
+              </div>
+              <button onClick={handleQrPaid} disabled={processing || !confirmedPlate}
+                className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${confirmedPlate && !processing ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                {processing ? <><Loader2 size={18} className="animate-spin" /> Đang xử lý...</> : <><CheckCircle2 size={18} /> Xác nhận xe ra</>}
+              </button>
+              {surcharge > 0 && (
+                <p className="text-xs text-center text-orange-600 font-medium">
+                  ⚠ Còn phụ trội {formatVND(surcharge)} — thu thêm tại tab "Chờ thu phụ trội"
+                </p>
+              )}
+            </>
           ) : (
-            <button onClick={handleCreateQr} disabled={processing || !confirmedPlate}
-              className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${confirmedPlate && !processing ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
-              {processing ? <><Loader2 size={18} className="animate-spin" /> Đang tạo QR...</> : <><QrCode size={18} /> Tạo mã QR thanh toán</>}
-            </button>
-          )}
+            <>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-base font-bold text-gray-800 mb-4">Phương thức thanh toán</h3>
+                <div className="space-y-3">
+                  <label className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === 'cash' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'cash' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}><Banknote size={20} /></div>
+                    <div className="flex-1">
+                      <p className={`text-sm font-bold ${paymentMethod === 'cash' ? 'text-blue-900' : 'text-gray-700'}`}>Tiền mặt</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Thu tiền trực tiếp, xác nhận ngay</p>
+                    </div>
+                    <input type="radio" name="method" checked={paymentMethod === 'cash'} onChange={() => setMethod('cash')} className="w-4 h-4 text-blue-600" />
+                  </label>
+                  <label className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === 'qr' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'qr' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}><QrCode size={20} /></div>
+                    <div className="flex-1">
+                      <p className={`text-sm font-bold ${paymentMethod === 'qr' ? 'text-blue-900' : 'text-gray-700'}`}>QR / Banking</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Tạo mã QR cho khách quét tại quầy</p>
+                    </div>
+                    <input type="radio" name="method" checked={paymentMethod === 'qr'} onChange={() => setMethod('qr')} className="w-4 h-4 text-blue-600" />
+                  </label>
+                </div>
+              </div>
 
-          {!confirmedPlate && <p className="text-xs text-center text-orange-500 font-medium">⚠ Vui lòng xác nhận biển số trước khi thanh toán</p>}
+              <div className="bg-blue-600 rounded-xl p-5 text-white">
+                <p className="text-xs font-bold text-blue-200 uppercase tracking-wider mb-1">Cần thu</p>
+                <p className="text-3xl font-black mb-1">{formatVND(prepaid > 0 ? amountDue + surcharge : totalFee)}</p>
+                <p className="text-xs text-blue-200">{paymentMethod === 'cash' ? 'Thu tiền mặt trực tiếp' : 'Tạo QR để khách chuyển khoản'}</p>
+              </div>
+
+              {/* Nút kiểm tra: khách đã tự quét QR ở app driver → bấm để cập nhật */}
+              <button onClick={handleRecheck} disabled={rechecking}
+                className="w-full py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 border-2 border-blue-400 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-all">
+                {rechecking
+                  ? <><Loader2 size={18} className="animate-spin" /> Đang kiểm tra...</>
+                  : <><RefreshCcw size={18} /> Kiểm tra khách đã thanh toán chưa</>}
+              </button>
+
+              {paymentMethod === 'cash' ? (
+                <button onClick={handleCashCheckout} disabled={processing || !confirmedPlate}
+                  className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${confirmedPlate && !processing ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                  {processing ? <><Loader2 size={18} className="animate-spin" /> Đang xử lý...</> : <><Banknote size={18} /> Xác nhận Thu tiền mặt</>}
+                </button>
+              ) : (
+                <button onClick={handleCreateQr} disabled={processing || !confirmedPlate}
+                  className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${confirmedPlate && !processing ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                  {processing ? <><Loader2 size={18} className="animate-spin" /> Đang tạo QR...</> : <><QrCode size={18} /> Tạo mã QR thanh toán</>}
+                </button>
+              )}
+
+              {!confirmedPlate && <p className="text-xs text-center text-orange-500 font-medium">⚠ Vui lòng xác nhận biển số trước khi thanh toán</p>}
+            </>
+          )}
 
           <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-xs text-gray-500 space-y-2">
             <p className="font-bold text-gray-700 text-sm mb-2">Lưu ý</p>
-            {paymentMethod === 'cash' ? (
+            {isPaid ? (
+              <><p>• Khách đã trả trước qua QR. Bấm "Xác nhận xe ra" để hoàn tất.</p><p>• Nếu có phụ trội, thu thêm ở tab "Chờ thu phụ trội".</p></>
+            ) : paymentMethod === 'cash' ? (
               <><p>• Thu đúng số tiền hiển thị, xác nhận ngay sau khi thu.</p><p>• Không cần chờ hệ thống — xe ra ngay sau khi xác nhận.</p></>
             ) : (
-              <><p>• Hệ thống tự động kiểm tra mỗi 3 giây sau khi QR hiển thị.</p><p>• Sau khi ngân hàng xác nhận, checkout sẽ tự hoàn tất.</p><p>• QR có hiệu lực 15 phút. Hết hạn cần tạo lại.</p></>
+              <><p>• Tạo QR cho khách quét tại quầy (khách walk-in không có app).</p><p>• Hệ thống tự kiểm tra mỗi 3 giây, checkout tự hoàn tất khi đã trả.</p><p>• QR có hiệu lực 15 phút. Hết hạn cần tạo lại.</p><p>• Khách có app tự quét ở mục Thanh toán → bấm "Kiểm tra lại".</p></>
             )}
           </div>
         </div>

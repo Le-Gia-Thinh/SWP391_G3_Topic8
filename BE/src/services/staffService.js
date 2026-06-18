@@ -430,12 +430,12 @@ export async function checkInBooking(reservationId, plateNumber) {
                 INSERT INTO ParkingSessions (
                     SlotID, DriverID, PlateNumber,
                     VehicleTypeID, EntryTime, SessionStatus
-                )
-                OUTPUT INSERTED.*
+                )               
                 VALUES (
                     @slotId, @driverId, @plateNumber,
                     @vehicleTypeId, GETDATE(), 'Active'
-                )
+                );
+                      SELECT * FROM ParkingSessions WHERE SessionID = SCOPE_IDENTITY();
             `)
 
         const session = insertSessionResult.recordset[0]

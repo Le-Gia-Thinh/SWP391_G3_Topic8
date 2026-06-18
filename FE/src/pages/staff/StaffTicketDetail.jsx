@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send, User, ShieldCheck, CheckCircle, XCircle } from 'lucide-react'
 import staffApi from '../../apis/staffApi'
@@ -22,7 +22,6 @@ const STATUS_LABELS = {
 const StaffTicketDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  
   const [ticket, setTicket] = useState(null)
   const [loading, setLoading] = useState(true)
   const [replyContent, setReplyContent] = useState('')
@@ -198,8 +197,8 @@ const StaffTicketDetail = () => {
               rows={1}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleReply(e);
+                  e.preventDefault()
+                  handleReply(e)
                 }
               }}
             />

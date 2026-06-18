@@ -3,6 +3,7 @@ import express from 'express'
 import * as staffController from '../controllers/staffController.js'
 import * as supportController from '../controllers/supportController.js'
 import * as staffFeedbackController from '../controllers/staffFeedbackController.js'
+import * as paymentController from '../controllers/paymentController.js'
 import { isAuthorized, isStaffOrManager } from '../middlewares/authMiddleware.js'
 import {
     validateStaffWalkIn,
@@ -67,4 +68,9 @@ router.post('/checkin/walkin', isAuthorized, validateStaffWalkIn, staffControlle
 router.post('/checkin/booking/:reservationId', isAuthorized, validateStaffBookingCheckIn, staffController.checkInBooking)
 router.post('/checkout/:sessionId', isAuthorized, validateStaffCheckOut, staffController.checkOutSession)
 router.post('/sessions/:sessionId/surcharge', isAuthorized, validateConfirmSurcharge, staffController.confirmSurcharge)
+
+
+router.post('/payment/create', paymentController.createPaymentForStaff)
+router.get('/payment/status/:orderCode', paymentController.getPaymentStatus)
+
 export default router

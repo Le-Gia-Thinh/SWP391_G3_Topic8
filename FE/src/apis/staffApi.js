@@ -82,6 +82,18 @@ const staffApi = {
     return res.data
   },
 
+  // ── Payment (staff tạo QR cho khách walk-in) ────────────────
+  createPayment: async (sessionId) => {
+    const res = await authorizedAxiosInstance.post(`${STAFF_BASE}/payment/create`, {
+      sessionId: Number(sessionId)
+    })
+    return res.data
+  },
+
+  getPaymentStatus: async (orderCode) => {
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/payment/status/${orderCode}`)
+    return res.data
+  },
   // ── Incidents ────────────────────────────────────────────────
   createIncident: async (body) => {
     const res = await authorizedAxiosInstance.post(`${STAFF_BASE}/incidents`, body)

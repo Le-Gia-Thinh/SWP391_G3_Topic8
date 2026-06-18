@@ -2,6 +2,7 @@
 import { StatusCodes } from 'http-status-codes'
 import {
     createPaymentService,
+    createPaymentServiceByStaff,
     getPaymentStatusService,
     handleWebhookService,
     cancelPaymentService,
@@ -149,4 +150,14 @@ export const getSessionPaymentInfo = async (req, res) => {
             message: e.message
         })
     }
+}
+export async function createPaymentForStaff(req, res, next) {
+    try {
+        const sessionId = parseInt(req.body.sessionId)
+        if (!sessionId || isNaN(sessionId))
+            return res.status(400).json({ success: false, message: 'sessionId không hợp lệ' })
+
+        const data = await createPaymentServiceByStaff(sessionId)
+        return res.status(200).json({ success: true, message: 'Tạo link thanh toán thành công', data })
+    } catch (err) { next(err) }
 }
