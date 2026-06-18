@@ -11,6 +11,8 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { getDriverReportContext } from '../../apis/driverApi'
+import { formatPlateNumber } from '../../utils/formatters'
 import authorizeAxios from '../../utils/authorizeAxios'
 
 
@@ -795,7 +797,7 @@ const DriverBooking = () => {
                 <input
                   type="text"
                   value={licensePlate}
-                  onChange={(event) => setLicensePlate(event.target.value)}
+                  onChange={(event) => setLicensePlate(formatPlateNumber(event.target.value))}
                   placeholder="VD: 51K-123.45"
                   disabled={selectedVehicleId !== 'manual'}
                   className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm uppercase outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
@@ -814,7 +816,7 @@ const DriverBooking = () => {
                   className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {vehicleTypesList.map((item) => (
-                    <option key={item.VehicleCode} value={item.VehicleCode}>
+                    <option key={item.VehicleCode} value={item.VehicleCode} className="bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
                       {item.VehicleName}
                     </option>
                   ))}
@@ -873,7 +875,7 @@ const DriverBooking = () => {
                   className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                 >
                   {durations.map((item) => (
-                    <option key={item.value} value={item.value}>
+                    <option key={item.value} value={item.value} className="bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
                       {item.label}
                     </option>
                   ))}
