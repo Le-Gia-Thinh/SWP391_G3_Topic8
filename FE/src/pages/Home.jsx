@@ -148,6 +148,23 @@ const Home = () => {
                 >
                   Xem Quy Trình
                 </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/guest/tracking')}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    borderRadius: '0.5rem',
+                    px: 4,
+                    py: 1.5,
+                    color: '#059669',
+                    bgcolor: '#ecfdf5',
+                    borderColor: '#a7f3d0',
+                    '&:hover': { bgcolor: '#d1fae5', borderColor: '#6ee7b7' }
+                  }}
+                >
+                  🔍 Tra cứu phiên gửi xe
+                </Button>
               </>
             )}
           </Box>
