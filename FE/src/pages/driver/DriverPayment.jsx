@@ -701,7 +701,7 @@ const DriverPayment = () => {
             <Button
               fullWidth variant="outlined"
               startIcon={<HistoryIcon />}
-              onClick={() => navigate('/driver/payment-history')}
+              onClick={() => navigate('/driver/history')}
               sx={{ py: 1.25, borderRadius: 2 }}
             >
               Xem lịch sử giao dịch

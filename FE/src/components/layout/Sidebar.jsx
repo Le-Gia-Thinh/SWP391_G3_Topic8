@@ -26,21 +26,21 @@ const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex shrink-0 flex-col border-r border-gray-200 bg-white transition-all duration-300 ease-in-out overflow-hidden lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex shrink-0 flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out overflow-hidden lg:static lg:translate-x-0 ${
           isOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full lg:w-20'
         }`}
       >
-        <div className={`flex h-20 items-center border-b border-gray-100 ${isOpen ? 'justify-between px-6' : 'lg:justify-center px-6 lg:px-0'}`}>
+        <div className={`flex h-20 items-center border-b border-gray-100 dark:border-gray-800 ${isOpen ? 'justify-between px-6' : 'lg:justify-center px-6 lg:px-0'}`}>
           <Link to={links[0]?.path || '/'} onClick={() => setIsOpen(false)} className={`flex items-center hover:opacity-80 transition-opacity whitespace-nowrap overflow-hidden ${isOpen ? 'gap-3' : 'lg:gap-0'}`}>
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-lg font-black text-white shadow-lg shadow-blue-200">
               P
             </div>
             <div className={`transition-all duration-300 ${isOpen ? 'opacity-100 w-48' : 'lg:opacity-0 lg:w-0'}`}>
-              <span className="text-xl font-black tracking-tight text-gray-900">
-                Smart<span className="text-blue-600">Park</span>
+              <span className="text-xl font-black tracking-tight text-gray-900 dark:text-white">
+                Smart<span className="text-blue-600 dark:text-blue-500">Park</span>
               </span>
               {roleName && (
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   {roleName} Portal
                 </span>
               )}
@@ -58,12 +58,12 @@ const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
           <nav className="space-y-1">
             {links.map((link, index) => {
               if (link.isDivider) {
-                return <div key={`div-${index}`} className="my-4 border-t border-gray-100" />
+                return <div key={`div-${index}`} className="my-4 border-t border-gray-100 dark:border-gray-800" />
               }
 
               if (link.labelOnly) {
                 return (
-                  <h3 key={`lbl-${index}`} className={`px-3 text-xs font-bold uppercase tracking-wider text-gray-400 transition-all duration-300 whitespace-nowrap overflow-hidden ${isOpen ? 'mb-2 opacity-100 h-auto' : 'lg:opacity-0 lg:h-0 m-0'}`}>
+                  <h3 key={`lbl-${index}`} className={`px-3 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 transition-all duration-300 whitespace-nowrap overflow-hidden ${isOpen ? 'mb-2 opacity-100 h-auto' : 'lg:opacity-0 lg:h-0 m-0'}`}>
                     {link.labelOnly}
                   </h3>
                 )

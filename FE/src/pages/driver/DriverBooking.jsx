@@ -13,19 +13,8 @@ import {
 import { useNavigate } from 'react-router-dom'
 import authorizeAxios from '../../utils/authorizeAxios'
 
-const VEHICLE_TYPES = [
-  { value: 'CAR', label: 'Ô tô' },
-  { value: 'MOTO', label: 'Xe máy' },
-  { value: 'TRUCK', label: 'Xe tải' }
-]
 
-const DURATIONS = [
-  { value: '4h', label: '4 Giờ', price: 60000 },
-  { value: '8h', label: '8 Giờ', price: 100000 },
-  { value: '24h', label: 'Cả ngày', price: 180000 }
-]
-
-const DEFAULT_BUILDINGS = [{ value: '1', label: 'Toa A' }]
+const DEFAULT_BUILDINGS = []
 
 const padNumber = (value) => String(value).padStart(2, '0')
 
@@ -114,13 +103,15 @@ const DriverBooking = () => {
   const [availableSlots, setAvailableSlots] = useState([])
   const [selectedSlotId, setSelectedSlotId] = useState(null)
 
-  const [licensePlate, setLicensePlate] = useState('51K-123.45')
+  const [licensePlate, setLicensePlate] = useState('')
   const [vehicleType, setVehicleType] = useState('CAR')
+  const [vehicles, setVehicles] = useState([])
+  const [selectedVehicleId, setSelectedVehicleId] = useState('manual')
   const [bookingDate, setBookingDate] = useState(getTodayDateValue())
   const [startTime, setStartTime] = useState(getMinimumStartTimeValue())
   const [isStartTimeTouched, setIsStartTimeTouched] = useState(false)
   const [duration, setDuration] = useState('4h')
-  const [buildingId, setBuildingId] = useState('1')
+  const [buildingId, setBuildingId] = useState('')
   const [floorId, setFloorId] = useState('')
   const [zoneId, setZoneId] = useState('')
   const [autoSelect, setAutoSelect] = useState(true)
@@ -128,8 +119,34 @@ const DriverBooking = () => {
   const [isLoadingSlots, setIsLoadingSlots] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [slotFilter, setSlotFilter] = useState('all')
 
-  const selectedDuration = DURATIONS.find((item) => item.value === duration)
+  const [vehicleTypesList, setVehicleTypesList] = useState([])
+  const [pricingPolicies, setPricingPolicies] = useState([])
+
+  const activeVehicleTypeId = useMemo(() => {
+    const found = vehicleTypesList.find(v => v.VehicleCode === vehicleType)
+    return found ? found.VehicleTypeID : null
+  }, [vehicleTypesList, vehicleType])
+
+  const durations = useMemo(() => {
+    if (!activeVehicleTypeId) return []
+    return pricingPolicies
+      .filter(p => p.VehicleTypeID === activeVehicleTypeId && !p.IsOvernight)
+      .map(p => ({
+        value: `${p.MaxHours}h`,
+        label: p.MaxHours === 24 ? 'Cả ngày' : `${p.MaxHours} Giờ`,
+        price: p.Fee
+      }))
+  }, [pricingPolicies, activeVehicleTypeId])
+
+  useEffect(() => {
+    if (durations.length > 0 && !durations.some(d => d.value === duration)) {
+      setDuration(durations[0].value)
+    }
+  }, [durations, duration])
+
+  const selectedDuration = durations.find((item) => item.value === duration) || durations[0]
   const temporaryPrice = selectedDuration?.price || 0
 
   const isBookingTimeValid = isStartTimeValid(bookingDate, startTime)
@@ -194,6 +211,14 @@ const DriverBooking = () => {
     return availableSlots.find((slot) => slot.SlotID === selectedSlotId) || null
   }, [availableSlots, selectedSlotId])
 
+  const finalDisplaySlots = useMemo(() => {
+    if (slotFilter === 'all') return displaySlots
+    if (slotFilter === 'available') return displaySlots.filter(s => s.uiStatus === 'available' || s.uiStatus === 'selected')
+    if (slotFilter === 'occupied') return displaySlots.filter(s => s.uiStatus === 'occupied')
+    if (slotFilter === 'selected') return displaySlots.filter(s => s.uiStatus === 'selected')
+    return displaySlots
+  }, [displaySlots, slotFilter])
+
   const fetchBuildings = async () => {
     try {
       const response = await authorizeAxios.get('/buildings')
@@ -217,6 +242,45 @@ const DriverBooking = () => {
       }
     } catch (error) {
       console.error('Get buildings failed:', error)
+    }
+  }
+
+  const fetchVehicles = async () => {
+    try {
+      const response = await authorizeAxios.get('/driver/vehicles')
+      const data = response.data?.data || response.data || []
+      const vehicleList = Array.isArray(data) ? data : (data.vehicles || [])
+      setVehicles(vehicleList)
+
+      const defaultVehicle = vehicleList.find(v => v.IsDefault) || vehicleList[0]
+      if (defaultVehicle) {
+        setSelectedVehicleId(String(defaultVehicle.VehicleID))
+        setLicensePlate(defaultVehicle.PlateNumber)
+        setVehicleType(defaultVehicle.VehicleTypeID === 1 ? 'MOTO' : defaultVehicle.VehicleTypeID === 2 ? 'CAR' : 'TRUCK')
+      } else {
+        setSelectedVehicleId('manual')
+      }
+    } catch (error) {
+      console.error('Fetch vehicles failed:', error)
+      setSelectedVehicleId('manual')
+    }
+  }
+
+  const fetchVehicleTypesList = async () => {
+    try {
+      const response = await authorizeAxios.get('/vehicle-types')
+      setVehicleTypesList(response.data?.data || [])
+    } catch (error) {
+      console.error('Fetch vehicle types failed:', error)
+    }
+  }
+
+  const fetchPricingPolicies = async () => {
+    try {
+      const response = await authorizeAxios.get('/pricing')
+      setPricingPolicies(response.data?.data || [])
+    } catch (error) {
+      console.error('Fetch pricing policies failed:', error)
     }
   }
 
@@ -318,6 +382,7 @@ const DriverBooking = () => {
 
   useEffect(() => {
     void Promise.resolve().then(fetchBuildings)
+    void Promise.resolve().then(fetchVehicles)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -325,6 +390,13 @@ const DriverBooking = () => {
     void Promise.resolve().then(fetchAvailableSlots)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildingId, vehicleType, bookingDate, startTime, duration])
+
+  useEffect(() => {
+    fetchBuildings()
+    fetchVehicles()
+    fetchVehicleTypesList()
+    fetchPricingPolicies()
+  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -507,6 +579,20 @@ const DriverBooking = () => {
     setSelectedSlotId(nearestAvailable?.SlotID || null)
   }
 
+  const handleChangeSelectedVehicle = (event) => {
+    const val = event.target.value
+    setSelectedVehicleId(val)
+    if (val === 'manual') {
+      setLicensePlate('')
+    } else {
+      const vehicle = vehicles.find(v => String(v.VehicleID) === val)
+      if (vehicle) {
+        setLicensePlate(vehicle.PlateNumber)
+        setVehicleType(vehicle.VehicleTypeID === 1 ? 'MOTO' : vehicle.VehicleTypeID === 2 ? 'CAR' : 'TRUCK')
+      }
+    }
+  }
+
   const handleAutoSelectChange = (event) => {
     const checked = event.target.checked
     setAutoSelect(checked)
@@ -634,8 +720,8 @@ const DriverBooking = () => {
   }
 
   const buildingLabel = getOptionLabel(buildingOptions, buildingId)
-  const vehicleLabel = getOptionLabel(VEHICLE_TYPES, vehicleType)
-  const durationLabel = getOptionLabel(DURATIONS, duration)
+  const vehicleLabel = vehicleTypesList.find(v => v.VehicleCode === vehicleType)?.VehicleName || vehicleType
+  const durationLabel = getOptionLabel(durations, duration)
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-6xl animate-in fade-in duration-500">
@@ -666,7 +752,7 @@ const DriverBooking = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700">
                   Tòa nhà
@@ -686,6 +772,24 @@ const DriverBooking = () => {
 
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                  Chọn xe
+                </label>
+                <select
+                  value={selectedVehicleId}
+                  onChange={handleChangeSelectedVehicle}
+                  className="w-full rounded-xl border border-gray-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                >
+                  {vehicles.map((v) => (
+                    <option key={v.VehicleID} value={v.VehicleID}>
+                      {v.PlateNumber} ({v.VehicleTypeID === 1 ? 'Xe máy' : v.VehicleTypeID === 2 ? 'Ô tô' : 'Xe tải'})
+                    </option>
+                  ))}
+                  <option value="manual">[Nhập thủ công]</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-gray-700">
                   Biển số xe
                 </label>
                 <input
@@ -693,7 +797,8 @@ const DriverBooking = () => {
                   value={licensePlate}
                   onChange={(event) => setLicensePlate(event.target.value)}
                   placeholder="VD: 51K-123.45"
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm uppercase outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                  disabled={selectedVehicleId !== 'manual'}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm uppercase outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
                   required
                 />
               </div>
@@ -705,11 +810,12 @@ const DriverBooking = () => {
                 <select
                   value={vehicleType}
                   onChange={handleChangeVehicleType}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                  disabled={selectedVehicleId !== 'manual'}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {VEHICLE_TYPES.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
+                  {vehicleTypesList.map((item) => (
+                    <option key={item.VehicleCode} value={item.VehicleCode}>
+                      {item.VehicleName}
                     </option>
                   ))}
                 </select>
@@ -766,7 +872,7 @@ const DriverBooking = () => {
                   onChange={(event) => setDuration(event.target.value)}
                   className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
                 >
-                  {DURATIONS.map((item) => (
+                  {durations.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
                     </option>
@@ -788,20 +894,41 @@ const DriverBooking = () => {
               </div>
 
               <div className="flex flex-wrap items-center gap-4 text-xs font-medium">
-                <div className="flex items-center gap-1.5">
-                  <div className="h-3 w-3 rounded-sm border border-gray-200 bg-white" />
-                  Trống
-                </div>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="slotFilter"
+                    value="all"
+                    checked={slotFilter === 'all'}
+                    onChange={() => setSlotFilter('all')}
+                    className="h-3 w-3 text-blue-600 focus:ring-blue-500"
+                  />
+                  Tất cả
+                </label>
 
-                <div className="flex items-center gap-1.5">
-                  <div className="h-3 w-3 rounded-sm border border-gray-300 bg-gray-100" />
-                  Đã đỗ / Đã giữ
-                </div>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="slotFilter"
+                    value="available"
+                    checked={slotFilter === 'available'}
+                    onChange={() => setSlotFilter('available')}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                  />
+                  Trống (Viền xanh)
+                </label>
 
-                <div className="flex items-center gap-1.5">
-                  <div className="h-3 w-3 rounded-sm border border-blue-500 bg-blue-50" />
-                  Đang chọn
-                </div>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="slotFilter"
+                    value="occupied"
+                    checked={slotFilter === 'occupied'}
+                    onChange={() => setSlotFilter('occupied')}
+                    className="h-4 w-4 text-gray-600 focus:ring-gray-500"
+                  />
+                  Đã đỗ / Đã giữ (Màu xám)
+                </label>
               </div>
             </div>
 
@@ -856,13 +983,13 @@ const DriverBooking = () => {
                 <div className="py-8 text-center text-sm font-semibold text-gray-500">
                   Đang tải vị trí từ database...
                 </div>
-              ) : displaySlots.length === 0 ? (
+              ) : finalDisplaySlots.length === 0 ? (
                 <div className="py-8 text-center text-sm font-semibold text-gray-500">
-                  Không có vị trí phù hợp trong thời gian này.
+                  Không có vị trí phù hợp với bộ lọc hiện tại.
                 </div>
               ) : (
                 <div className="grid grid-cols-5 gap-3 md:grid-cols-10">
-                  {displaySlots.map((slot) => (
+                  {finalDisplaySlots.map((slot) => (
                     <button
                       key={slot.SlotID}
                       type="button"

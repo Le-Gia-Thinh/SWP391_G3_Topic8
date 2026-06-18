@@ -15,7 +15,8 @@ import {
   Activity,
   CheckCircle2,
   XCircle,
-  TrendingUp
+  TrendingUp,
+  MessageSquare
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -52,6 +53,14 @@ const QUICK_ACTIONS = [
     Icon: AlertCircle,
     iconClass: 'text-rose-500',
     bgClass: 'bg-rose-50'
+  },
+  {
+    title: 'Hỗ trợ kỹ thuật',
+    description: 'Chat với nhân viên',
+    to: '/driver/support',
+    Icon: MessageSquare,
+    iconClass: 'text-emerald-500',
+    bgClass: 'bg-emerald-50'
   }
 ]
 
@@ -372,7 +381,7 @@ const EmptyCard = ({ title, description, actionText, actionTo, icon: Icon }) => 
 const DriverHome = () => {
   const { user } = useAuth()
   const [homeData, setHomeData] = useState(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoaded, setIsLoaded] = useState(false)
 
@@ -502,7 +511,7 @@ const DriverHome = () => {
       {/* Quick Actions */}
       <section>
         <SectionHeader title="Tiện ích nhanh" icon={CalendarDays} />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {QUICK_ACTIONS.map((action) => (
             <QuickActionCard key={action.title} {...action} />
           ))}

@@ -235,6 +235,35 @@ export async function resetPassword(req, res, next) {
   } catch (err) { next(err); }
 }
 
+// POST /api/auth/change-password
+export async function changePassword(req, res, next) {
+  try {
+    const userId = req.jwtDecoded?.userId || req.user?.UserID;
+    if (!userId) {
+      return res.status(StatusCodes.UNAUTHORIZED).json({
+        success: false,
+        message: "Chưa đăng nhập",
+        code: "NO_USER_CONTEXT",
+      });
+    }
+
+    const { oldPassword, newPassword } = req.body;
+    if (!newPassword) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "Vui lòng cung cấp mật khẩu mới",
+      });
+    }
+
+    await authService.changePasswordService(userId, oldPassword, newPassword);
+    
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Đổi mật khẩu thành công",
+    });
+  } catch (err) { next(err); }
+}
+
 // GET /api/auth/me
 export async function getMe(req, res, next) {
   try {

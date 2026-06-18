@@ -1,4 +1,3 @@
-import React from 'react'
 import { Headphones, AlertTriangle, BookOpen, ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -46,11 +45,15 @@ const StaffSupport = () => {
         <div className="space-y-4">
           <div className="bg-white p-4 rounded-xl border border-gray-100">
             <p className="font-semibold text-gray-800 text-sm mb-1">Q: Khách hàng làm mất thẻ xe thì phải làm sao?</p>
-            <p className="text-sm text-gray-600">A: Yêu cầu khách xuất trình giấy tờ xe (Cà vẹt, CCCD). Sử dụng chức năng "Tra cứu phiên" để tìm lại phiên gửi bằng biển số. Thu phí phạt mất thẻ và tiến hành Check-out thu công.</p>
+            <p className="text-sm text-gray-600">
+              {'A: Yêu cầu khách xuất trình giấy tờ xe (Cà vẹt, CCCD). Sử dụng chức năng "Tra cứu phiên" để tìm lại phiên gửi bằng biển số. Thu phí phạt mất thẻ và tiến hành Check-out thủ công.'}
+            </p>
           </div>
           <div className="bg-white p-4 rounded-xl border border-gray-100">
             <p className="font-semibold text-gray-800 text-sm mb-1">Q: Xe có mã booking nhưng hệ thống báo lỗi không nhận diện được biển số?</p>
-            <p className="text-sm text-gray-600">A: Chuyển sang "Tiếp nhận xe đặt trước" và dùng máy quét mã QR thủ công, hoặc nhập mã Booking ID trực tiếp để xác thực và mở cổng.</p>
+            <p className="text-sm text-gray-600">
+              {'A: Chuyển sang "Tiếp nhận xe đặt trước" và dùng máy quét mã QR thủ công, hoặc nhập mã Booking ID trực tiếp để xác thực và mở cổng.'}
+            </p>
           </div>
         </div>
       </div>

@@ -44,14 +44,21 @@ const staffApi = {
     return res.data
   },
 
-  checkInBooking: async (reservationId) => {
-    const res = await authorizedAxiosInstance.post(`${STAFF_BASE}/bookings/${reservationId}/check-in`)
+  checkInBooking: async (reservationId, plateNumber) => {
+    const res = await authorizedAxiosInstance.post(
+      `${STAFF_BASE}/bookings/${reservationId}/check-in`,
+      { plateNumber }
+    )
     return res.data
   },
 
   // ── Sessions / checkout ──────────────────────────────────────
   searchSessions: async (params = {}) => {
-    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/sessions`, { params })
+    // Lọc bỏ undefined để URL không có key thừa
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+    )
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/sessions`, { params: cleanParams })
     return res.data
   },
 
@@ -75,9 +82,21 @@ const staffApi = {
     return res.data
   },
 
+  // ── Payment (staff tạo QR cho khách walk-in) ────────────────
+  createPayment: async (sessionId) => {
+    const res = await authorizedAxiosInstance.post(`${STAFF_BASE}/payment/create`, {
+      sessionId: Number(sessionId)
+    })
+    return res.data
+  },
+
+  getPaymentStatus: async (orderCode) => {
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/payment/status/${orderCode}`)
+    return res.data
+  },
   // ── Incidents ────────────────────────────────────────────────
-  createIncident: async (payload) => {
-    const res = await authorizedAxiosInstance.post(`${STAFF_BASE}/incidents`, payload)
+  createIncident: async (body) => {
+    const res = await authorizedAxiosInstance.post(`${STAFF_BASE}/incidents`, body)
     return res.data
   },
 
@@ -86,9 +105,44 @@ const staffApi = {
     return res.data
   },
 
+  getIncidentById: async (incidentId) => {
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/incidents/${incidentId}`)
+    return res.data
+  },
+
+  updateIncidentStatus: async (incidentId, body) => {
+    const res = await authorizedAxiosInstance.patch(`${STAFF_BASE}/incidents/${incidentId}/status`, body)
+    return res.data
+  },
   // ── Profile ──────────────────────────────────────────────────
   getStaffProfile: async () => {
     const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/profile`)
+    return res.data
+  },
+
+  // ── Support Tickets ──────────────────────────────────────────
+  getTickets: async (params = {}) => {
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/support/tickets`, { params })
+    return res.data
+  },
+
+  getTicketDetails: async (ticketId) => {
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/support/tickets/${ticketId}`)
+    return res.data
+  },
+
+  replyTicket: async (ticketId, payload) => {
+    const res = await authorizedAxiosInstance.post(`${STAFF_BASE}/support/tickets/${ticketId}/replies`, payload)
+    return res.data
+  },
+
+  updateTicketStatus: async (ticketId, status) => {
+    const res = await authorizedAxiosInstance.patch(`${STAFF_BASE}/support/tickets/${ticketId}/status`, { status })
+    return res.data
+  },
+
+  getFeedbackSummary: async () => {
+    const res = await authorizedAxiosInstance.get('/staff/feedbacks')
     return res.data
   }
 }

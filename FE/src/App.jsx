@@ -2,7 +2,7 @@ import React, { Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { GuestRoute, ProtectedRoute, RoleRoute } from './components/ProtectedRoute'
 import {
-  LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut
+  LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut, Bell, Car, Star
 } from 'lucide-react'
 
 // Import Layouts
@@ -26,7 +26,8 @@ const ManagerConfig = React.lazy(() => import('./pages/manager/ManagerConfig'))
 const ManagerPricing = React.lazy(() => import('./pages/manager/ManagerPricing'))
 const ManagerIncidents = React.lazy(() => import('./pages/manager/ManagerIncidents'))
 const ManagerReports = React.lazy(() => import('./pages/manager/ManagerReports'))
-
+const ManagerVehicleTypes = React.lazy(() => import('./pages/manager/ManagerVehicleTypes'))
+const ManagerUnpaid = React.lazy(() => import('./pages/manager/ManagerUnpaid'))
 // Staff Pages (Lazy)
 const StaffDashboardScreen = React.lazy(() => import('./pages/staff/StaffDashboardScreen'))
 const StaffCheckIn = React.lazy(() => import('./pages/staff/StaffCheckIn'))
@@ -37,9 +38,11 @@ const StaffVehicleCheckOut = React.lazy(() => import('./pages/staff/StaffVehicle
 const StaffPaymentConfirm = React.lazy(() => import('./pages/staff/StaffPaymentConfirm'))
 const StaffParkingMap = React.lazy(() => import('./pages/staff/StaffParkingMap'))
 const StaffSearchSession = React.lazy(() => import('./pages/staff/StaffSearchSession'))
-const StaffSupport = React.lazy(() => import('./pages/staff/StaffSupport'))
+const StaffSupportManager = React.lazy(() => import('./pages/staff/StaffSupportManager'))
+const StaffTicketDetail = React.lazy(() => import('./pages/staff/StaffTicketDetail'))
 const StaffUserGuide = React.lazy(() => import('./pages/staff/StaffUserGuide'))
-
+const StaffPaymentHistory = React.lazy(() => import('./pages/staff/StaffPaymentHistory'))
+const StaffFeedback = React.lazy(() => import('./pages/staff/StaffFeedback'))
 // Driver Pages (Lazy)
 const DriverHome = React.lazy(() => import('./pages/driver/DriverHome'))
 const DriverBooking = React.lazy(() => import('./pages/driver/DriverBooking'))
@@ -50,6 +53,16 @@ const DriverPayment = React.lazy(() => import('./pages/driver/DriverPayment'))
 const DriverReport = React.lazy(() => import('./pages/driver/DriverReport'))
 const DriverPaymentResult = React.lazy(() => import('./pages/driver/DriverPaymentResult'))
 const DriverHelp = React.lazy(() => import('./pages/driver/DriverHelp'))
+const DriverSupport = React.lazy(() => import('./pages/driver/DriverSupport'))
+const DriverTicketDetail = React.lazy(() => import('./pages/driver/DriverTicketDetail'))
+const DriverTerms = React.lazy(() => import('./pages/driver/DriverTerms'))
+const DriverPrivacy = React.lazy(() => import('./pages/driver/DriverPrivacy'))
+const DriverNotifications = React.lazy(() => import('./pages/driver/DriverNotifications'))
+const DriverVehicles = React.lazy(() => import('./pages/driver/DriverVehicles'))
+const DriverFeedback = React.lazy(() => import('./pages/driver/DriverFeedback'))
+
+// Guest Pages (Lazy)
+const GuestTracking = React.lazy(() => import('./pages/guest/GuestTracking'))
 
 import './index.css'
 
@@ -59,10 +72,16 @@ const managerLinks = [
   { path: '/manager/reports', label: 'Báo cáo', icon: FileText },
   { isDivider: true },
   { labelOnly: 'Cấu hình' },
-  { path: '/manager/pricing', label: 'Bảng giá', icon: Wallet },
   { path: '/manager/config', label: 'Cấu hình bãi đỗ', icon: Settings },
-  { path: '/manager/incidents', label: 'Sự cố', icon: AlertTriangle }
+  { path: '/manager/vehicle-types', label: 'Loại phương tiện', icon: Car },
+  { path: '/manager/pricing', label: 'Bảng giá', icon: Wallet },
+  { isDivider: true },
+  { labelOnly: 'Giám sát' },
+  { path: '/manager/incidents', label: 'Sự cố', icon: AlertTriangle },
+  { path: '/manager/unpaid', label: 'Xe chưa thanh toán', icon: Wallet },
+  { path: '/manager/feedback', label: 'Đánh giá từ User', icon: Star }
 ]
+
 
 const staffLinks = [
   { path: '/staff/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
@@ -73,10 +92,14 @@ const staffLinks = [
   { path: '/staff/checkout', label: 'Check-out (Ra)', icon: LogOut },
   { path: '/staff/search-session', label: 'Tìm kiếm phiên', icon: Search },
   { path: '/staff/verify-booking', label: 'Xác thực Booking', icon: ShieldCheck },
+  { path: '/staff/payment-confirm', label: 'Xác nhận thanh toán', icon: Wallet },
+
   { isDivider: true },
   { labelOnly: 'Khác' },
   { path: '/staff/create-incident', label: 'Báo cáo sự cố', icon: AlertTriangle },
-  { path: '/staff/user-guide', label: 'Hướng dẫn sử dụng', icon: BookOpen }
+  { path: '/staff/user-guide', label: 'Hướng dẫn sử dụng', icon: BookOpen },
+  { path: '/staff/support', label: 'Hỗ trợ kỹ thuật', icon: HelpCircle },
+  { path: '/staff/feedback', label: 'Đánh giá từ User', icon: Star }
 ]
 
 const driverLinks = [
@@ -84,6 +107,11 @@ const driverLinks = [
   { path: '/driver/session', label: 'Phiên đỗ xe', icon: Clock },
   { path: '/driver/history', label: 'Lịch sử', icon: FileText },
   { path: '/driver/payment', label: 'Thanh toán', icon: Wallet },
+  { isDivider: true },
+  { labelOnly: 'Quản lý' },
+  { path: '/driver/vehicles', label: 'Phương tiện', icon: Car },
+  { path: '/driver/notifications', label: 'Thông báo', icon: Bell },
+  { path: '/driver/feedback', label: 'Đánh giá', icon: Star },
   { isDivider: true },
   { labelOnly: 'Hỗ trợ' },
   { path: '/driver/report', label: 'Báo cáo sự cố', icon: AlertTriangle },
@@ -103,6 +131,7 @@ const App = () => {
         {/* Public */}
         <Route path="/" element={<Home />} />
         <Route path="/403" element={<Forbidden />} />
+        <Route path="/guest/tracking" element={<GuestTracking />} />
 
         {/* Verify email routes */}
         <Route path="/verify-email/pending" element={<VerifyEmailPending />} />
@@ -137,6 +166,9 @@ const App = () => {
             <Route path="incidents" element={<ManagerIncidents />} />
             <Route path="reports" element={<ManagerReports />} />
             <Route path="profile" element={<UserProfile />} />
+            <Route path="vehicle-types" element={<ManagerVehicleTypes />} />
+            <Route path="unpaid" element={<ManagerUnpaid />} />
+            <Route path="feedback" element={<StaffFeedback />} />
           </Route>
         </Route>
 
@@ -153,6 +185,7 @@ const App = () => {
             <Route path="checkin-booking" element={<StaffCheckIn />} />
 
             {/* Verify Booking với reservationId */}
+            <Route path="verify-booking" element={<StaffVerifyBooking />} />
             <Route path="verify-booking/:reservationId" element={<StaffVerifyBooking />} />
 
             {/* Action Success */}
@@ -162,27 +195,28 @@ const App = () => {
 
             {/* Checkout */}
             <Route path="checkout" element={<StaffVehicleCheckOut />} />
-
+            <Route path="checkout/:sessionId" element={<StaffPaymentConfirm />} />
+            <Route path="payment-confirm" element={<StaffPaymentHistory />} />
             {/* Create Incident */}
             <Route path="create-incident" element={<StaffCreateIncident />} />
 
-            {/* Payment */}
-            <Route path="payment/:sessionId" element={<StaffPaymentConfirm />} />
 
             {/* Parking Map */}
             <Route path="parking-map" element={<StaffParkingMap />} />
+
 
             {/* Search Session */}
             <Route path="search-session" element={<StaffSearchSession />} />
 
             {/* Profile / Settings */}
             <Route path="profile" element={<UserProfile />} />
-            <Route path="settings" element={<UserProfile />} />
             <Route path="security" element={<UserProfile />} />
 
-            {/* Support / User Guide */}
-            <Route path="support" element={<StaffSupport />} />
+            {/* Support / User Guide / Feedback */}
+            <Route path="support" element={<StaffSupportManager />} />
+            <Route path="support/:id" element={<StaffTicketDetail />} />
             <Route path="user-guide" element={<StaffUserGuide />} />
+            <Route path="feedback" element={<StaffFeedback />} />
           </Route>
         </Route>
 
@@ -200,11 +234,14 @@ const App = () => {
             <Route path="report" element={<DriverReport />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="payment-result" element={<DriverPaymentResult />} />
-            <Route path="settings" element={<UserProfile />} />
             <Route path="help" element={<DriverHelp />} />
-            <Route path="terms" element={<DriverHelp />} />
-            <Route path="privacy" element={<DriverHelp />} />
-            <Route path="support" element={<DriverHelp />} />
+            <Route path="terms" element={<DriverTerms />} />
+            <Route path="privacy" element={<DriverPrivacy />} />
+            <Route path="support" element={<DriverSupport />} />
+            <Route path="support/:id" element={<DriverTicketDetail />} />
+            <Route path="notifications" element={<DriverNotifications />} />
+            <Route path="vehicles" element={<DriverVehicles />} />
+            <Route path="feedback" element={<DriverFeedback />} />
           </Route>
         </Route>
 

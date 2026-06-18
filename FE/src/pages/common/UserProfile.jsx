@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import {
   User, Mail, Phone, MapPin, Calendar, Edit3, Camera, Shield,
-  CheckCircle2, ChevronRight, Settings, Bell, Monitor, Globe, Moon,
-  Sun, Eye, EyeOff, Smartphone, Save, AlertTriangle, LogOut, Lock, Building, Car
+  CheckCircle2, ChevronRight, Settings, Bell, Monitor, Moon,
+  Sun, Eye, EyeOff, Save, AlertTriangle, LogOut, Lock, Building, Car,
+  Activity, CreditCard
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import authorizeAxios from '../../utils/authorizeAxios'
+import driverApi from '../../apis/driverApi'
+import { changePasswordAPI } from '../../apis/authApi'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 const Toggle = ({ checked, onChange, label, desc }) => (
   <div className="flex items-center justify-between py-3.5 border-b border-gray-50 last:border-0">
@@ -29,26 +33,19 @@ const PROFILE_TABS = [
   { id: 'security', label: 'Bảo mật tài khoản', icon: Shield }
 ]
 
-const ProfileContent = ({ user, editing }) => {
+const ProfileContent = ({ user, editing, formData, onChange, recentActivity, recentPayments }) => {
   const isDriver = user?.roleName?.toLowerCase() === 'driver' || user?.RoleName?.toLowerCase() === 'driver'
   const isManager = user?.roleName?.toLowerCase() === 'manager' || user?.RoleName?.toLowerCase() === 'manager'
   const isStaff = user?.roleName?.toLowerCase() === 'staff' || user?.RoleName?.toLowerCase() === 'staff'
 
-  const infoFields = [
-    { icon: <User size={16} className="text-blue-500" />, label: 'Họ và tên', value: user?.fullName || user?.FullName || 'Chưa cập nhật' },
-    { icon: <Mail size={16} className="text-purple-500" />, label: 'Email', value: user?.email || user?.Email || 'Chưa cập nhật' },
-    { icon: <Phone size={16} className="text-green-500" />, label: 'Số điện thoại', value: user?.phone || user?.PhoneNumber || 'Chưa cập nhật' },
-    { icon: <Shield size={16} className="text-indigo-500" />, label: 'Vai trò', value: user?.roleName || user?.RoleName || 'Thành viên' }
-  ]
+  const fmtDate = (d) => {
+    if (!d) return '--/--/----'
+    return new Date(d).toLocaleDateString('vi-VN')
+  }
 
-  if (isStaff) {
-    infoFields.push({ icon: <MapPin size={16} className="text-red-500" />, label: 'Cổng phụ trách', value: 'Gate 01' })
-  }
-  if (isManager) {
-    infoFields.push({ icon: <Building size={16} className="text-orange-500" />, label: 'Chi nhánh', value: 'SmartPark District 1' })
-  }
-  if (isDriver) {
-    infoFields.push({ icon: <Car size={16} className="text-yellow-500" />, label: 'Giấy phép lái xe', value: user?.driverLicense || 'Chưa cập nhật' })
+  const fmtTime = (d) => {
+    if (!d) return '--:--'
+    return new Date(d).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
   }
 
   return (
@@ -57,13 +54,13 @@ const ProfileContent = ({ user, editing }) => {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center text-center">
           <div className="relative mb-4">
             <div className="flex h-24 w-24 items-center justify-center rounded-full bg-blue-100 text-3xl font-bold text-blue-600">
-              {(user?.fullName || user?.FullName || 'U').charAt(0)}
+              {(formData?.fullName || user?.fullName || user?.FullName || 'U').charAt(0)}
             </div>
             <button className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white border-2 border-white hover:bg-blue-700 transition-colors">
               <Camera size={14} />
             </button>
           </div>
-          <p className="text-lg font-black text-gray-900">{user?.fullName || user?.FullName || 'Người dùng'}</p>
+          <p className="text-lg font-black text-gray-900">{formData?.fullName || user?.fullName || user?.FullName || 'Người dùng'}</p>
           <p className="text-sm text-gray-500">{user?.email || user?.Email}</p>
           <span className="mt-2 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-200 uppercase">
             {user?.roleName || user?.RoleName || 'Thành viên'}
@@ -71,22 +68,86 @@ const ProfileContent = ({ user, editing }) => {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col gap-4">
+      <div className="flex-1 flex flex-col gap-6">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h3 className="text-base font-bold text-gray-800 mb-5">Thông tin cá nhân</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {infoFields.map(({ icon, label, value }) => (
-              <div key={label} className="space-y-1">
-                <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1.5">{icon} {label}</label>
-                {editing ? (
-                  <input defaultValue={value} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 text-sm font-medium" />
-                ) : (
-                  <p className="text-sm font-semibold text-gray-800 px-3 py-2 bg-gray-50 rounded-lg">{value}</p>
-                )}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1.5"><User size={16} className="text-blue-500" /> Họ và tên</label>
+              {editing ? <input value={formData?.fullName || ''} onChange={onChange('fullName')} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 text-sm font-medium" /> : <p className="text-sm font-semibold text-gray-800 px-3 py-2 bg-gray-50 rounded-lg">{formData?.fullName || 'Chưa cập nhật'}</p>}
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1.5"><Mail size={16} className="text-purple-500" /> Email</label>
+              <p className="text-sm font-semibold text-gray-800 px-3 py-2 bg-gray-50 rounded-lg">{user?.email || user?.Email || 'Chưa cập nhật'}</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1.5"><Phone size={16} className="text-green-500" /> Số điện thoại</label>
+              {editing ? <input value={formData?.phoneNumber || ''} onChange={onChange('phoneNumber')} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 text-sm font-medium" /> : <p className="text-sm font-semibold text-gray-800 px-3 py-2 bg-gray-50 rounded-lg">{formData?.phoneNumber || 'Chưa cập nhật'}</p>}
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1.5"><Calendar size={16} className="text-orange-500" /> Ngày sinh</label>
+              {editing ? <input type="date" value={formData?.dateOfBirth || ''} onChange={onChange('dateOfBirth')} className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 text-sm font-medium" /> : <p className="text-sm font-semibold text-gray-800 px-3 py-2 bg-gray-50 rounded-lg">{formData?.dateOfBirth ? fmtDate(formData?.dateOfBirth) : 'Chưa cập nhật'}</p>}
+            </div>
+            {isStaff && (
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1.5"><MapPin size={16} className="text-red-500" /> Cổng phụ trách</label>
+                <p className="text-sm font-semibold text-gray-800 px-3 py-2 bg-gray-50 rounded-lg">Gate 01</p>
               </div>
-            ))}
+            )}
+            {isManager && (
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1.5"><Building size={16} className="text-orange-500" /> Chi nhánh</label>
+                <p className="text-sm font-semibold text-gray-800 px-3 py-2 bg-gray-50 rounded-lg">SmartPark District 1</p>
+              </div>
+            )}
           </div>
         </div>
+
+        {isDriver && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-800 flex items-center gap-2"><Activity size={18} className="text-blue-500" /> Hoạt động gần đây</h3>
+              </div>
+              <div className="space-y-3">
+                {recentActivity?.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">Chưa có hoạt động nào</p>
+                ) : (
+                  recentActivity?.map((act, i) => (
+                    <div key={act.ReservationID || i} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 border border-gray-100">
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">{act.PlateNumber || 'N/A'}</p>
+                        <p className="text-xs text-gray-500">{fmtDate(act.StartTime)} {fmtTime(act.StartTime)}</p>
+                      </div>
+                      <span className="text-[10px] uppercase tracking-wider font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">{act.ReservationStatus || 'N/A'}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-800 flex items-center gap-2"><CreditCard size={18} className="text-emerald-500" /> Lịch sử thanh toán</h3>
+              </div>
+              <div className="space-y-3">
+                {recentPayments?.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">Chưa có thanh toán nào</p>
+                ) : (
+                  recentPayments?.map((pay, i) => (
+                    <div key={pay.PaymentID || i} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 border border-gray-100">
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">{new Intl.NumberFormat('vi-VN').format(pay.Amount || 0)} VNĐ</p>
+                        <p className="text-xs text-gray-500">{fmtDate(pay.PaymentTime)} {fmtTime(pay.PaymentTime)}</p>
+                      </div>
+                      <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">{pay.PaymentStatus || 'N/A'}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -131,32 +192,67 @@ const SettingsContent = ({ saved, handleSave }) => {
 }
 
 const SecurityContent = () => {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const navigate = useNavigate()
   const [showOld, setShowOld] = useState(false); const [showNew, setShowNew] = useState(false)
   const [oldPw, setOldPw] = useState(''); const [newPw, setNewPw] = useState('')
-  const [saved, setSaved] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleChangePassword = (e) => { e.preventDefault(); setSaved(true); setTimeout(() => setSaved(false), 3000); setOldPw(''); setNewPw('') }
+  const hasPassword = user?.hasPassword;
+
+  const handleChangePassword = async (e) => { 
+    e.preventDefault(); 
+    if ((hasPassword && !oldPw) || !newPw) return;
+    try {
+      setIsSubmitting(true);
+      const res = await changePasswordAPI({ oldPassword: oldPw, newPassword: newPw });
+      if (res.data?.success) {
+        toast.success(res.data.message || 'Cập nhật mật khẩu thành công');
+        setOldPw(''); 
+        setNewPw('');
+        // Option: we could manually update user.HasPassword here but a reload or re-login is fine
+      } else {
+        toast.error(res.data?.message || 'Có lỗi xảy ra');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
   const handleLogoutAll = async () => { await logout(); navigate('/login') }
 
   return (
     <div className="flex gap-6 flex-col lg:flex-row animate-in fade-in">
       <div className="flex-1 space-y-5">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h3 className="text-base font-bold text-gray-800 mb-5 flex items-center gap-2"><Lock size={18} className="text-blue-500" /> Đổi mật khẩu</h3>
-          {saved && <div className="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-3 rounded-xl mb-4 font-semibold text-sm"><CheckCircle2 size={18}/> Đổi mật khẩu thành công</div>}
+          <h3 className="text-base font-bold text-gray-800 mb-5 flex items-center gap-2">
+            <Lock size={18} className="text-blue-500" /> 
+            {hasPassword ? 'Đổi mật khẩu' : 'Tạo mật khẩu'}
+          </h3>
           <form onSubmit={handleChangePassword} className="space-y-4">
-            {[{ label: 'Mật khẩu hiện tại', val: oldPw, setVal: setOldPw, show: showOld, setShow: setShowOld }, { label: 'Mật khẩu mới', val: newPw, setVal: setNewPw, show: showNew, setShow: setShowNew }].map(({ label, val, setVal, show, setShow }) => (
-              <div key={label}>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
+            
+            {hasPassword && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Mật khẩu hiện tại</label>
                 <div className="relative">
-                  <input type={show ? 'text' : 'password'} value={val} onChange={e => setVal(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-xl" />
-                  <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{show ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                  <input type={showOld ? 'text' : 'password'} value={oldPw} onChange={e => setOldPw(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-xl" />
+                  <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showOld ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 </div>
               </div>
-            ))}
-            <button type="submit" disabled={!oldPw || !newPw} className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-bold rounded-xl">Cập nhật</button>
+            )}
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Mật khẩu mới</label>
+              <div className="relative">
+                <input type={showNew ? 'text' : 'password'} value={newPw} onChange={e => setNewPw(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-xl" />
+                <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showNew ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+              </div>
+            </div>
+            
+            <button type="submit" disabled={(hasPassword && !oldPw) || !newPw || isSubmitting} className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-bold rounded-xl flex justify-center items-center gap-2">
+              {isSubmitting ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Cập nhật'}
+            </button>
           </form>
         </div>
       </div>
@@ -179,23 +275,79 @@ const UserProfile = () => {
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  const [formData, setFormData] = useState({
+    fullName: user?.fullName || user?.FullName || '',
+    phoneNumber: user?.phone || user?.PhoneNumber || '',
+    dateOfBirth: user?.dateOfBirth || user?.DateOfBirth || ''
+  })
+  
+  const [recentActivity, setRecentActivity] = useState([])
+  const [recentPayments, setRecentPayments] = useState([])
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  const isDriver = user?.roleName?.toLowerCase() === 'driver' || user?.RoleName?.toLowerCase() === 'driver'
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const response = await authorizeAxios.get('/auth/me')
         const currentUser = response.data?.data?.user || response.data?.data || response.data?.user || response.data
-        if (currentUser) setProfileData(currentUser)
+        if (currentUser) {
+          setProfileData(currentUser)
+          setFormData({
+            fullName: currentUser.fullName || currentUser.FullName || '',
+            phoneNumber: currentUser.phone || currentUser.PhoneNumber || '',
+            dateOfBirth: currentUser.dateOfBirth || currentUser.DateOfBirth || ''
+          })
+        }
       } catch (error) {
         console.error('Get profile failed:', error)
         setProfileData(user)
       }
     }
-    if (!profileData) fetchProfile()
+    if (!profileData || !formData.fullName) fetchProfile()
   }, [user])
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  useEffect(() => {
+    if (!isDriver) return
+    const fetchHistory = async () => {
+      try {
+        const [actRes, payRes] = await Promise.allSettled([
+          driverApi.getReservations({ limit: 5 }),
+          driverApi.getPaymentHistory({ limit: 5 })
+        ])
+        if (actRes.status === 'fulfilled') setRecentActivity(actRes.value?.data?.slice(0, 5) || [])
+        if (payRes.status === 'fulfilled') setRecentPayments(payRes.value?.data?.slice(0, 5) || [])
+      } catch (e) { console.error('Load history error', e) }
+    }
+    fetchHistory()
+  }, [isDriver])
+
+  const handleInputChange = (field) => (e) => setFormData(p => ({ ...p, [field]: e.target.value }))
+
+  const handleSave = async () => {
+    if (activeTab === 'profile' && isDriver) {
+      setIsUpdating(true)
+      try {
+        await driverApi.updateProfile({
+          fullName: formData.fullName,
+          phoneNumber: formData.phoneNumber,
+          dateOfBirth: formData.dateOfBirth
+        })
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2000)
+        setEditing(false)
+      } catch (error) {
+        console.error('Update profile error:', error)
+        alert('Cập nhật hồ sơ thất bại. ' + (error.response?.data?.message || ''))
+      } finally {
+        setIsUpdating(false)
+      }
+    } else {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+      setEditing(false)
+    }
   }
 
   return (
@@ -212,14 +364,15 @@ const UserProfile = () => {
 
         {activeTab === 'profile' && (
           <button
+            disabled={isUpdating}
             onClick={() => {
-              if (editing) { handleSave(); setEditing(false) }
+              if (editing) { handleSave(); }
               else setEditing(true)
             }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md text-sm transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md text-sm transition-colors disabled:opacity-70"
           >
-            {editing ? <Save size={15} /> : <Edit3 size={15} />}
-            {editing ? 'Lưu hồ sơ' : 'Chỉnh sửa'}
+            {editing ? (isUpdating ? <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Save size={15} />) : <Edit3 size={15} />}
+            {editing ? (isUpdating ? 'Đang lưu...' : (saved ? 'Đã lưu' : 'Lưu hồ sơ')) : 'Chỉnh sửa'}
           </button>
         )}
       </header>
@@ -245,7 +398,7 @@ const UserProfile = () => {
           </nav>
         </aside>
         <main className="flex-1 min-h-[500px]">
-          {activeTab === 'profile' && <ProfileContent user={profileData} editing={editing} />}
+          {activeTab === 'profile' && <ProfileContent user={profileData} editing={editing} formData={formData} onChange={handleInputChange} recentActivity={recentActivity} recentPayments={recentPayments} />}
           {activeTab === 'settings' && <SettingsContent saved={saved} handleSave={handleSave} />}
           {activeTab === 'security' && <SecurityContent />}
         </main>

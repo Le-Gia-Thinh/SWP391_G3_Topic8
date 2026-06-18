@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Car, Grid, LogOut, CreditCard, Clock, ChevronRight,
   Search, AlertTriangle, Map, ArrowRightLeft, RefreshCcw, Loader2
@@ -53,26 +53,25 @@ export default function StaffDashboardScreen() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState({ stats: {}, recentCheckIns: [], alerts: [] })
   const [quickSearch, setQuickSearch] = useState('')
-
-  const loadDashboard = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await staffApi.getDashboard()
-      if (res.success) setData(res.data)
-    } catch {
-      toast.error('Không thể tải dữ liệu dashboard')
-    } finally {
-      setLoading(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      setLoading(true)
+      try {
+        const res = await staffApi.getDashboard()
+        if (!cancelled && res.success) setData(res.data)
+      } catch {
+        if (!cancelled) toast.error('Không thể tải dữ liệu dashboard')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }, [])
+    run()
+    return () => { cancelled = true }
+  }, [refreshTrigger])
 
-  useEffect(() => { loadDashboard() }, [loadDashboard])
-
-  const handleQuickSearch = e => {
-    if (e.key === 'Enter' && quickSearch.trim()) {
-      navigate(`/staff/search-session?keyword=${encodeURIComponent(quickSearch.trim())}`)
-    }
-  }
+  const handleRefresh = () => setRefreshTrigger(t => t + 1)
 
   const { stats, recentCheckIns, alerts } = data
 
@@ -88,8 +87,11 @@ export default function StaffDashboardScreen() {
               <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                 <Grid size={20} className="text-blue-500" /> Tóm tắt vận hành
               </h3>
-              <button onClick={loadDashboard} disabled={loading}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
                 <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} /> Làm mới
               </button>
             </div>
@@ -200,7 +202,14 @@ export default function StaffDashboardScreen() {
           <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
             <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2 uppercase"><Search size={16} /> Tra cứu nhanh biển số</h3>
             <div className="relative">
-              <input type="text" value={quickSearch} onChange={(e) => setQuickSearch(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/staff/search-session?keyword=${encodeURIComponent(quickSearch.trim())}`) }} placeholder="Nhập biển số xe, Enter để tìm..." className="w-full py-2.5 pl-4 pr-10 rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium" />
+              <input
+                type="text"
+                value={quickSearch}
+                onChange={e => setQuickSearch(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') navigate(`/staff/search-session?keyword=${encodeURIComponent(quickSearch.trim())}`) }}
+                placeholder="Nhập biển số xe, Enter để tìm..."
+                className="w-full py-2.5 pl-4 pr-10 rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+              />
               <Search size={18} className="absolute right-3 top-2.5 text-blue-400" />
             </div>
             <p className="text-xs text-blue-600 mt-2">Nhấn Enter để tìm kiếm</p>

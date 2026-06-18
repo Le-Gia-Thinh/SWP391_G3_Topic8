@@ -1,8 +1,6 @@
 // src/pages/Staff/StaffActionSuccess.jsx
-import React from 'react'
 import {
-  CheckCircle2, ChevronRight, Car, MapPin, ArrowRight,
-  Clock, ShieldCheck, Edit3, Home, Printer, AlertTriangle,
+  CheckCircle2, ChevronRight, MapPin, ArrowRight, ShieldCheck, Home, Printer, AlertTriangle,
   FileText, Info
 } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -15,7 +13,6 @@ const StaffActionSuccess = () => {
   const location = useLocation()
 
   const actionType = location.state?.actionType || 'walkin-checkin'
-  const sessionId = location.state?.sessionId
   const sessionCode = location.state?.sessionCode
   const session = location.state?.session
   const checkoutData = location.state?.checkoutData // từ StaffPaymentConfirm
@@ -47,7 +44,7 @@ const StaffActionSuccess = () => {
 
       <div className="flex gap-6 flex-1 flex-col xl:flex-row">
         {/* Left */}
-        <div className="flex-[2] space-y-6">
+        <div className="flex-2 space-y-6">
           {/* Status banner */}
           <div className="bg-white rounded-xl shadow-sm border border-green-200 p-6 flex items-start gap-4">
             <div className="p-3 bg-green-100 rounded-full text-green-600 mt-1 shrink-0">
@@ -174,7 +171,7 @@ const StaffActionSuccess = () => {
               <h3 className="text-4xl font-black text-blue-600 mb-2">{sessionCode || '—'}</h3>
               <span className="bg-green-50 text-green-600 text-xs font-bold px-3 py-1 rounded-full border border-green-200 mb-6">ĐANG HOẠT ĐỘNG</span>
               <div className="flex gap-3 w-full">
-                <button onClick={() => navigate('/staff/dashboard')} className="flex-[2] py-3 bg-blue-600 text-white font-bold rounded-xl shadow-md hover:bg-blue-700 flex justify-center items-center gap-2">
+                <button onClick={() => navigate('/staff/dashboard')} className="flex-2 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-md hover:bg-blue-700 flex justify-center items-center gap-2">
                   Về Dashboard <Home size={18} />
                 </button>
               </div>

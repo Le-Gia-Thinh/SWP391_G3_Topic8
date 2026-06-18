@@ -27,3 +27,5 @@ export const facebookLoginAPI = (token) => {
 export const checkEmailVerifiedAPI = (email) => {
   return authorizeAxios.post('/auth/check-email-verified', { email })
 }
+
+export const changePasswordAPI = (data) => authorizeAxios.post('/auth/change-password', data)

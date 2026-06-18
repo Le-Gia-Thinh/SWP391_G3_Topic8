@@ -1,4 +1,3 @@
-import React from 'react'
 import { BookOpen, ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 

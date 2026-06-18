@@ -1,5 +1,7 @@
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import guestApi from '../apis/guestApi'
 import {
   Box,
   Container,
@@ -19,17 +21,17 @@ import {
 } from '@mui/material'
 import { Users, Car, Bike, ShieldCheck, CheckCircle2 } from 'lucide-react'
 
-const stats = [
+const defaultStats = [
   { label: 'Tổng Sức Chứa', value: '1,200', unit: 'Chỗ trống', icon: <Users className="w-5 h-5 text-gray-400" /> },
   { label: 'Đang Có Xe', value: '485', unit: 'Chỗ trống', icon: <Car className="w-5 h-5 text-gray-400" /> },
   { label: 'Đang Trống', value: '612', unit: 'Chỗ trống', icon: <Car className="w-5 h-5 text-green-500" /> },
-  { label: 'Doanh Thu (ước tính)', value: '105', unit: 'Triệu VNĐ', icon: <Users className="w-5 h-5 text-gray-400" /> }
+  { label: 'Lượt xe hôm nay', value: '105', unit: 'Lượt', icon: <CheckCircle2 className="w-5 h-5 text-gray-400" /> }
 ]
 
-const vehicles = [
-  { title: 'Xe Máy', desc: '315 chỗ trống / tầng', icon: <Bike className="w-6 h-6" />, progress: 75 },
-  { title: 'Ô Tô', desc: '120 chỗ trống / tầng', icon: <Car className="w-6 h-6" />, progress: 50 },
-  { title: 'Xe Đạp', desc: '20 chỗ trống / tầng', icon: <Bike className="w-6 h-6" />, progress: 25 }
+const defaultVehicles = [
+  { title: 'Xe Máy', desc: 'Đang tải...', icon: <Bike className="w-6 h-6" />, progress: 0 },
+  { title: 'Ô Tô', desc: 'Đang tải...', icon: <Car className="w-6 h-6" />, progress: 0 },
+  { title: 'Xe Đạp', desc: 'Đang tải...', icon: <Bike className="w-6 h-6" />, progress: 0 }
 ]
 
 const pricingRows = [
@@ -55,6 +57,46 @@ const guidelines = [
 const Home = () => {
   const navigate = useNavigate()
   const { isAuthenticated, user, getRedirectPath, loading } = useAuth()
+  
+  const [statsData, setStatsData] = useState(defaultStats)
+  const [vehiclesData, setVehiclesData] = useState(defaultVehicles)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await guestApi.getHomeStats()
+        if (res.success && res.data) {
+          const { overview, vehicles } = res.data
+          
+          setStatsData([
+            { label: 'Tổng Sức Chứa', value: overview.totalCapacity.toLocaleString(), unit: 'Chỗ trống', icon: <Users className="w-5 h-5 text-gray-400" /> },
+            { label: 'Đang Có Xe', value: overview.occupied.toLocaleString(), unit: 'Chỗ', icon: <Car className="w-5 h-5 text-gray-400" /> },
+            { label: 'Đang Trống', value: overview.available.toLocaleString(), unit: 'Chỗ', icon: <Car className="w-5 h-5 text-green-500" /> },
+            { label: 'Lượt xe hôm nay', value: overview.todayCheckIns.toLocaleString(), unit: 'Lượt', icon: <CheckCircle2 className="w-5 h-5 text-gray-400" /> }
+          ])
+
+          if (vehicles && vehicles.length > 0) {
+            setVehiclesData(vehicles.map(v => {
+              let icon = <Car className="w-6 h-6" />
+              if (v.code === 'MOTORBIKE') icon = <Bike className="w-6 h-6" />
+              if (v.code === 'BICYCLE') icon = <Bike className="w-6 h-6" />
+              
+              return {
+                title: v.name,
+                desc: `${v.available} chỗ trống / ${v.total}`,
+                icon,
+                progress: v.occupancyRate
+              }
+            }))
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching home stats:', err)
+      }
+    }
+    fetchStats()
+  }, [])
+
   return (
     <Box className="flex flex-col gap-24 py-16">
       {/* Hero Section */}
@@ -148,6 +190,23 @@ const Home = () => {
                 >
                   Xem Quy Trình
                 </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/guest/tracking')}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    borderRadius: '0.5rem',
+                    px: 4,
+                    py: 1.5,
+                    color: '#059669',
+                    bgcolor: '#ecfdf5',
+                    borderColor: '#a7f3d0',
+                    '&:hover': { bgcolor: '#d1fae5', borderColor: '#6ee7b7' }
+                  }}
+                >
+                  🔍 Tra cứu phiên gửi xe
+                </Button>
               </>
             )}
           </Box>
@@ -188,12 +247,11 @@ const Home = () => {
             </Box>
           </Box>
 
-          <Box className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {stats.map((stat, idx) => (
+          <Box className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {statsData.map((stat, idx) => (
               <Card
                 key={idx}
-                elevation={0}
-                className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow"
+                className="p-6 text-left border-none shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <Box className="flex justify-between items-start mb-6">
                   <Box className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
@@ -229,12 +287,11 @@ const Home = () => {
             </Box>
           </Box>
 
-          <Box className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {vehicles.map((vehicle, idx) => (
+          <Box className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {vehiclesData.map((vehicle, idx) => (
               <Card
                 key={idx}
-                elevation={0}
-                className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group hover:border-blue-200 transition-colors"
+                className="p-8 text-left border-none shadow-xl hover:-translate-y-2 transition-all duration-300 rounded-2xl bg-white"
               >
                 <Chip
                   label="Cho Phép"
