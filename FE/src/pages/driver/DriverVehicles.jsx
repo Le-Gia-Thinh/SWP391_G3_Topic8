@@ -18,8 +18,8 @@ import { toast } from 'react-toastify'
 import driverApi from '../../apis/driverApi'
 
 const VEHICLE_ICONS = {
-  MOTO: { Icon: Bike, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-  CAR: { Icon: CarFront, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+  MOTO: { Icon: Bike, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200' },
+  CAR: { Icon: CarFront, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200' },
   TRUCK: { Icon: Truck, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' }
 }
 
@@ -159,8 +159,8 @@ const DriverVehicles = () => {
   if (loading) {
     return (
       <div className="flex min-h-[500px] items-center justify-center">
-        <div className="flex items-center gap-3 rounded-2xl bg-white px-6 py-4 text-sm font-semibold text-gray-600 shadow-sm">
-          <Loader2 size={20} className="animate-spin text-blue-600" />
+        <div className="flex items-center gap-3 rounded-2xl bg-white dark:bg-slate-800 px-6 py-4 text-sm font-semibold text-gray-600 dark:text-gray-400 shadow-sm">
+          <Loader2 size={20} className="animate-spin text-blue-600 dark:text-blue-400" />
           Đang tải phương tiện...
         </div>
       </div>
@@ -172,13 +172,13 @@ const DriverVehicles = () => {
       {/* Header */}
       <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quản lý phương tiện</h1>
-          <p className="mt-1 text-sm text-gray-500">Đăng ký và quản lý xe của bạn để đặt chỗ nhanh hơn.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Quản lý phương tiện</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Đăng ký và quản lý xe của bạn để đặt chỗ nhanh hơn.</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={fetchData}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-600 shadow-sm transition hover:bg-gray-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 shadow-sm transition hover:bg-gray-50 dark:bg-slate-900/50"
           >
             <RefreshCw size={16} />
             Làm mới
@@ -197,32 +197,32 @@ const DriverVehicles = () => {
       {showForm && (
         <section className="rounded-2xl border border-blue-100 bg-blue-50/30 p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
               {editingVehicle ? 'Cập nhật phương tiện' : 'Thêm phương tiện mới'}
             </h2>
-            <button onClick={resetForm} className="rounded-lg p-1.5 text-gray-400 hover:bg-white hover:text-gray-600 transition">
+            <button onClick={resetForm} className="rounded-lg p-1.5 text-gray-400 hover:bg-white dark:bg-slate-800 hover:text-gray-600 dark:text-gray-400 transition">
               <X size={20} />
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Biển số xe *</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Biển số xe *</label>
               <input
                 type="text"
                 value={form.plateNumber}
                 onChange={(e) => setForm((prev) => ({ ...prev, plateNumber: e.target.value.toUpperCase() }))}
                 placeholder="VD: 29A-12345"
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 transition focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-medium text-gray-900 dark:text-white transition focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Loại xe *</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Loại xe *</label>
               <select
                 value={form.vehicleTypeId}
                 onChange={(e) => setForm((prev) => ({ ...prev, vehicleTypeId: e.target.value }))}
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 transition focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-medium text-gray-900 dark:text-white transition focus:border-blue-500 focus:outline-none"
               >
                 <option value="">-- Chọn loại xe --</option>
                 {(Array.isArray(vehicleTypes) ? vehicleTypes : []).map((vt) => (
@@ -234,24 +234,24 @@ const DriverVehicles = () => {
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Hãng xe</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Hãng xe</label>
               <input
                 type="text"
                 value={form.vehicleBrand}
                 onChange={(e) => setForm((prev) => ({ ...prev, vehicleBrand: e.target.value }))}
                 placeholder="VD: Honda, Toyota, Kia..."
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 transition focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-medium text-gray-900 dark:text-white transition focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Màu sắc</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Màu sắc</label>
               <input
                 type="text"
                 value={form.vehicleColor}
                 onChange={(e) => setForm((prev) => ({ ...prev, vehicleColor: e.target.value }))}
                 placeholder="VD: Đỏ, Trắng, Đen..."
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 transition focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-medium text-gray-900 dark:text-white transition focus:border-blue-500 focus:outline-none"
               />
             </div>
 
@@ -259,7 +259,7 @@ const DriverVehicles = () => {
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-600 transition hover:bg-gray-50"
+                className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 transition hover:bg-gray-50 dark:bg-slate-900/50"
               >
                 Hủy
               </button>
@@ -279,12 +279,12 @@ const DriverVehicles = () => {
       {/* Vehicle List */}
       <section>
         {vehicles.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 py-16 text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-gray-300 shadow-sm border border-gray-100">
+          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 bg-gray-50/50 py-16 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 text-gray-300 shadow-sm border border-gray-100 dark:border-slate-700/50">
               <Car size={32} />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-1">Chưa có phương tiện</h3>
-            <p className="text-sm text-gray-500 max-w-xs mb-6">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Chưa có phương tiện</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mb-6">
               Đăng ký phương tiện để tự động điền biển số khi đặt chỗ.
             </p>
             <button
@@ -304,8 +304,8 @@ const DriverVehicles = () => {
               return (
                 <div
                   key={vehicle.VehicleID}
-                  className={`relative rounded-2xl border bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 ${
-                    vehicle.IsDefault ? `${style.border} ring-2 ring-blue-100` : 'border-gray-100'
+                  className={`relative rounded-2xl border bg-white dark:bg-slate-800 p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 ${
+                    vehicle.IsDefault ? `${style.border} ring-2 ring-blue-100` : 'border-gray-100 dark:border-slate-700/50'
                   }`}
                 >
                   {/* Default Badge */}
@@ -322,28 +322,28 @@ const DriverVehicles = () => {
                       <VIcon size={28} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-xl font-black text-gray-900 tracking-tight">{vehicle.PlateNumber}</h3>
-                      <p className="text-sm font-medium text-gray-500">{vehicle.VehicleName}</p>
+                      <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">{vehicle.PlateNumber}</h3>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{vehicle.VehicleName}</p>
                     </div>
                   </div>
 
                   {/* Details */}
-                  <div className="space-y-2 rounded-xl bg-gray-50 p-3 text-sm mb-4">
+                  <div className="space-y-2 rounded-xl bg-gray-50 dark:bg-slate-900/50 p-3 text-sm mb-4">
                     {vehicle.VehicleBrand && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Hãng xe</span>
-                        <span className="font-bold text-gray-800">{vehicle.VehicleBrand}</span>
+                        <span className="text-gray-500 dark:text-gray-400">Hãng xe</span>
+                        <span className="font-bold text-gray-800 dark:text-gray-200">{vehicle.VehicleBrand}</span>
                       </div>
                     )}
                     {vehicle.VehicleColor && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Màu sắc</span>
-                        <span className="font-bold text-gray-800">{vehicle.VehicleColor}</span>
+                        <span className="text-gray-500 dark:text-gray-400">Màu sắc</span>
+                        <span className="font-bold text-gray-800 dark:text-gray-200">{vehicle.VehicleColor}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Ngày thêm</span>
-                      <span className="font-bold text-gray-800">{formatDate(vehicle.CreatedAt)}</span>
+                      <span className="text-gray-500 dark:text-gray-400">Ngày thêm</span>
+                      <span className="font-bold text-gray-800 dark:text-gray-200">{formatDate(vehicle.CreatedAt)}</span>
                     </div>
                   </div>
 
@@ -352,20 +352,20 @@ const DriverVehicles = () => {
                     {!vehicle.IsDefault && (
                       <button
                         onClick={() => handleSetDefault(vehicle.VehicleID)}
-                        className="flex-1 rounded-xl border border-blue-200 bg-blue-50 py-2 text-xs font-bold text-blue-600 transition hover:bg-blue-100"
+                        className="flex-1 rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-900/20 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 transition hover:bg-blue-100"
                       >
                         Đặt mặc định
                       </button>
                     )}
                     <button
                       onClick={() => openEditForm(vehicle)}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 transition hover:bg-gray-50 hover:text-blue-600"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 transition hover:bg-gray-50 dark:bg-slate-900/50 hover:text-blue-600 dark:text-blue-400"
                     >
                       <Pencil size={14} />
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(vehicle.VehicleID)}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 transition hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 transition hover:bg-red-50 dark:bg-red-900/20 hover:text-red-600 hover:border-red-200"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -373,14 +373,14 @@ const DriverVehicles = () => {
 
                   {/* Delete Confirmation */}
                   {deleteConfirm === vehicle.VehicleID && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-white/95 backdrop-blur-sm p-6">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-white dark:bg-slate-800/95 backdrop-blur-sm p-6">
                       <AlertCircle size={32} className="text-red-500 mb-2" />
-                      <p className="text-sm font-bold text-gray-900 mb-1">Xóa phương tiện?</p>
-                      <p className="text-xs text-gray-500 mb-4 text-center">Xe {vehicle.PlateNumber} sẽ bị xóa khỏi danh sách.</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Xóa phương tiện?</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 text-center">Xe {vehicle.PlateNumber} sẽ bị xóa khỏi danh sách.</p>
                       <div className="flex gap-2">
                         <button
                           onClick={() => setDeleteConfirm(null)}
-                          className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50"
+                          className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:bg-slate-900/50"
                         >
                           Hủy
                         </button>

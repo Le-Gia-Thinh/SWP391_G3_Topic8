@@ -726,27 +726,27 @@ const DriverBooking = () => {
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-6xl animate-in fade-in duration-500">
       <div className="mb-6">
-        <h1 className="mb-2 text-2xl font-bold text-gray-900">
+        <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
           Đặt chỗ đỗ xe mới
         </h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Chọn thời gian theo giờ Việt Nam, vị trí trống sẽ được tải trực tiếp từ database.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
                 <Clock size={20} />
               </div>
 
               <div>
-                <h2 className="text-base font-bold text-gray-900">
+                <h2 className="text-base font-bold text-gray-900 dark:text-white">
                   Thông tin đặt chỗ
                 </h2>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Giờ bắt đầu sẽ tự động bám theo thời gian hiện tại + 15 phút nếu bạn chưa chọn giờ xa hơn.
                 </p>
               </div>
@@ -754,13 +754,13 @@ const DriverBooking = () => {
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
                   Tòa nhà
                 </label>
                 <select
                   value={buildingId}
                   onChange={handleChangeBuilding}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                 >
                   {buildingOptions.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -771,13 +771,13 @@ const DriverBooking = () => {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
                   Chọn xe
                 </label>
                 <select
                   value={selectedVehicleId}
                   onChange={handleChangeSelectedVehicle}
-                  className="w-full rounded-xl border border-gray-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm font-semibold text-blue-700 dark:text-blue-400 outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                 >
                   {vehicles.map((v) => (
                     <option key={v.VehicleID} value={v.VehicleID}>
@@ -789,7 +789,7 @@ const DriverBooking = () => {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
                   Biển số xe
                 </label>
                 <input
@@ -798,20 +798,20 @@ const DriverBooking = () => {
                   onChange={(event) => setLicensePlate(event.target.value)}
                   placeholder="VD: 51K-123.45"
                   disabled={selectedVehicleId !== 'manual'}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm uppercase outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm uppercase outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
                   required
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
                   Loại phương tiện
                 </label>
                 <select
                   value={vehicleType}
                   onChange={handleChangeVehicleType}
                   disabled={selectedVehicleId !== 'manual'}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {vehicleTypesList.map((item) => (
                     <option key={item.VehicleCode} value={item.VehicleCode}>
@@ -822,7 +822,7 @@ const DriverBooking = () => {
               </div>
             </div>
 
-            <div className="mt-5 flex items-start gap-1 text-xs text-gray-500">
+            <div className="mt-5 flex items-start gap-1 text-xs text-gray-500 dark:text-gray-400">
               <Info size={14} className="mt-0.5 shrink-0 text-blue-500" />
               <span>
                 Nếu bạn để giờ bắt đầu ở mốc sớm nhất, hệ thống sẽ tự tăng theo thời gian thực để luôn hợp lệ.
@@ -831,7 +831,7 @@ const DriverBooking = () => {
 
             <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3">
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
                   Ngày đỗ
                 </label>
                 <div className="relative">
@@ -841,14 +841,14 @@ const DriverBooking = () => {
                     value={bookingDate}
                     min={getTodayDateValue()}
                     onChange={handleChangeDate}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
                   Giờ bắt đầu
                 </label>
                 <div className="relative">
@@ -857,20 +857,20 @@ const DriverBooking = () => {
                     type="time"
                     value={startTime}
                     onChange={handleChangeStartTime}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700">
+                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
                   Thời lượng
                 </label>
                 <select
                   value={duration}
                   onChange={(event) => setDuration(event.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                 >
                   {durations.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -882,13 +882,13 @@ const DriverBooking = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-6 shadow-sm">
             <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <h2 className="text-base font-bold text-gray-900">
+                <h2 className="text-base font-bold text-gray-900 dark:text-white">
                   Sơ đồ vị trí trống
                 </h2>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {buildingLabel} - {selectedSlot?.FloorName || '--'} - {selectedSlot?.ZoneName || '--'}
                 </p>
               </div>
@@ -901,7 +901,7 @@ const DriverBooking = () => {
                     value="all"
                     checked={slotFilter === 'all'}
                     onChange={() => setSlotFilter('all')}
-                    className="h-3 w-3 text-blue-600 focus:ring-blue-500"
+                    className="h-3 w-3 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
                   />
                   Tất cả
                 </label>
@@ -913,7 +913,7 @@ const DriverBooking = () => {
                     value="available"
                     checked={slotFilter === 'available'}
                     onChange={() => setSlotFilter('available')}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
                   />
                   Trống (Viền xanh)
                 </label>
@@ -925,7 +925,7 @@ const DriverBooking = () => {
                     value="occupied"
                     checked={slotFilter === 'occupied'}
                     onChange={() => setSlotFilter('occupied')}
-                    className="h-4 w-4 text-gray-600 focus:ring-gray-500"
+                    className="h-4 w-4 text-gray-600 dark:text-gray-400 focus:ring-gray-500"
                   />
                   Đã đỗ / Đã giữ (Màu xám)
                 </label>
@@ -936,7 +936,7 @@ const DriverBooking = () => {
               <select
                 value={floorId}
                 onChange={handleChangeFloor}
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:w-48"
+                className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:w-48"
                 disabled={floorOptions.length === 0}
               >
                 {floorOptions.length === 0 ? (
@@ -953,7 +953,7 @@ const DriverBooking = () => {
               <select
                 value={zoneId}
                 onChange={handleChangeZone}
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:w-64"
+                className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 sm:w-64"
                 disabled={zoneOptions.length === 0}
               >
                 {zoneOptions.length === 0 ? (
@@ -967,7 +967,7 @@ const DriverBooking = () => {
                 )}
               </select>
 
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 sm:ml-auto">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400 sm:ml-auto">
                 <input
                   type="checkbox"
                   checked={autoSelect}
@@ -978,13 +978,13 @@ const DriverBooking = () => {
               </label>
             </div>
 
-            <div className="rounded-xl border border-gray-100 bg-gray-50 p-6">
+            <div className="rounded-xl border border-gray-100 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-900/50 p-6">
               {isLoadingSlots ? (
-                <div className="py-8 text-center text-sm font-semibold text-gray-500">
+                <div className="py-8 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">
                   Đang tải vị trí từ database...
                 </div>
               ) : finalDisplaySlots.length === 0 ? (
-                <div className="py-8 text-center text-sm font-semibold text-gray-500">
+                <div className="py-8 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">
                   Không có vị trí phù hợp với bộ lọc hiện tại.
                 </div>
               ) : (
@@ -996,10 +996,10 @@ const DriverBooking = () => {
                       disabled={slot.uiStatus === 'occupied'}
                       onClick={() => handleSelectSlot(slot)}
                       className={`flex h-12 items-center justify-center rounded-lg border text-xs font-bold outline-none transition-all ${slot.uiStatus === 'occupied'
-                        ? 'cursor-not-allowed border-gray-300 bg-gray-100 font-black text-gray-700 opacity-80'
+                        ? 'cursor-not-allowed border-gray-300 bg-gray-100 font-black text-gray-700 dark:text-gray-300 opacity-80'
                         : slot.uiStatus === 'selected'
-                          ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-sm ring-2 ring-blue-100'
-                          : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:text-blue-500'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm ring-2 ring-blue-100'
+                          : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:text-blue-500'
                       }`}
                     >
                       {slot.SlotCode}
@@ -1010,31 +1010,31 @@ const DriverBooking = () => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-900/50 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:text-blue-400">
                 <Building size={24} />
               </div>
 
               <div>
-                <h3 className="text-sm font-bold text-gray-900">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">
                   {buildingLabel}
                 </h3>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {selectedSlot?.Address || 'Địa chỉ bãi xe'}
                 </p>
               </div>
             </div>
 
-            <div className="w-fit rounded-lg border border-blue-100 bg-white px-4 py-2 text-xs font-bold text-blue-600 shadow-sm">
+            <div className="w-fit rounded-lg border border-blue-100 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 shadow-sm">
               Slot: {selectedSlot?.SlotCode || '--'}
             </div>
           </div>
         </div>
 
         <div>
-          <div className="sticky top-6 rounded-2xl border-2 border-blue-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-gray-900">
+          <div className="sticky top-6 rounded-2xl border-2 border-blue-100 bg-white dark:bg-slate-800 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+            <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-white">
               <CreditCard className="text-blue-500" size={20} />
               Tóm tắt đặt chỗ
             </h2>
@@ -1047,24 +1047,24 @@ const DriverBooking = () => {
               <SummaryRow label="Thời lượng" value={durationLabel} />
 
               <div className="flex items-center justify-between pb-2 text-sm">
-                <span className="flex items-center gap-2 text-gray-500">
+                <span className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                   <MapPin size={16} />
                   Vị trí đỗ
                 </span>
 
-                <span className="rounded-md bg-blue-50 px-2 py-1 font-bold text-blue-600">
+                <span className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-2 py-1 font-bold text-blue-600 dark:text-blue-400">
                   {selectedSlot?.FloorName || '--'} - {selectedSlot?.ZoneName || '--'} - {selectedSlot?.SlotCode || '--'}
                 </span>
               </div>
             </div>
 
-            <div className="mb-6 rounded-xl border border-gray-100 bg-gray-50 p-4">
+            <div className="mb-6 rounded-xl border border-gray-100 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-900/50 p-4">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-sm font-bold text-gray-700">
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
                   Giá tạm tính
                 </span>
 
-                <span className="text-xl font-black text-gray-900">
+                <span className="text-xl font-black text-gray-900 dark:text-white">
                   {formatCurrency(temporaryPrice)} VND
                 </span>
               </div>
@@ -1088,7 +1088,7 @@ const DriverBooking = () => {
             </div>
 
             {errorMessage && (
-              <div className="mb-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+              <div className="mb-3 rounded-xl border border-red-100 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm font-medium text-red-600">
                 {errorMessage}
               </div>
             )}
@@ -1105,7 +1105,7 @@ const DriverBooking = () => {
             <button
               type="button"
               onClick={() => navigate('/driver/home')}
-              className="w-full rounded-xl border border-gray-200 bg-white py-3.5 font-bold text-gray-600 transition-all hover:bg-gray-50"
+              className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-3.5 font-bold text-gray-600 dark:text-gray-400 transition-all hover:bg-gray-50 dark:bg-slate-900/50"
             >
               Hủy bỏ
             </button>
@@ -1119,12 +1119,12 @@ const DriverBooking = () => {
 const SummaryRow = ({ icon, label, value }) => {
   return (
     <div className="flex items-center justify-between border-b border-gray-50 pb-3 text-sm">
-      <span className="flex items-center gap-2 text-gray-500">
+      <span className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
         {icon}
         {label}
       </span>
 
-      <span className="font-bold text-gray-900">{value}</span>
+      <span className="font-bold text-gray-900 dark:text-white">{value}</span>
     </div>
   )
 }

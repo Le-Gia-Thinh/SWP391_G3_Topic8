@@ -248,10 +248,10 @@ const DriverHistory = () => {
 
   return (
     <div className="animate-in fade-in duration-500 space-y-6 pb-12">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between bg-white p-5 rounded-[1.5rem] shadow-sm border border-slate-200/60">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between bg-white dark:bg-slate-800 p-5 rounded-[1.5rem] shadow-sm border border-slate-200 dark:border-slate-700/60">
         <div>
           <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-blue-500">Quản lý cá nhân</p>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             Lịch sử hoạt động
           </h1>
           <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
@@ -268,17 +268,17 @@ const DriverHistory = () => {
         </Link>
       </div>
 
-      <div className="rounded-[1.5rem] bg-white shadow-sm border border-slate-200/60 p-6 hover:border-blue-200 transition-colors">
-        <div className="flex border-b border-slate-200 mb-6">
+      <div className="rounded-[1.5rem] bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700/60 p-6 hover:border-blue-200 transition-colors">
+        <div className="flex border-b border-slate-200 dark:border-slate-700 mb-6">
           <button
             onClick={() => setActiveTab('booking')}
-            className={`flex items-center gap-2 px-6 py-4 font-bold text-sm border-b-2 transition-all ${activeTab === 'booking' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+            className={`flex items-center gap-2 px-6 py-4 font-bold text-sm border-b-2 transition-all ${activeTab === 'booking' ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-900/50'}`}
           >
             <Car size={18} /> Lịch sử đặt chỗ
           </button>
           <button
             onClick={() => setActiveTab('payment')}
-            className={`flex items-center gap-2 px-6 py-4 font-bold text-sm border-b-2 transition-all ${activeTab === 'payment' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+            className={`flex items-center gap-2 px-6 py-4 font-bold text-sm border-b-2 transition-all ${activeTab === 'payment' ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-900/50'}`}
           >
             <CreditCard size={18} /> Lịch sử thanh toán
           </button>
@@ -286,9 +286,9 @@ const DriverHistory = () => {
 
         {activeTab === 'booking' && (
           <div className="space-y-6 animate-in fade-in">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4 lg:grid-cols-5 bg-slate-50 p-4 rounded-xl border border-slate-100">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4 lg:grid-cols-5 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50">
               <div className="lg:col-span-2">
-                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Tìm kiếm</label>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tìm kiếm</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
@@ -296,16 +296,16 @@ const DriverHistory = () => {
                     placeholder="Mã đặt chỗ, biển số..."
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-2.5 pl-9 pr-4 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Trạng thái</label>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Trạng thái</label>
                 <select
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 cursor-pointer"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 cursor-pointer"
                 >
                   {STATUS_OPTIONS.map((option) => (
                     <option key={option.value || 'all-status'} value={option.value}>
@@ -315,11 +315,11 @@ const DriverHistory = () => {
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Loại xe</label>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Loại xe</label>
                 <select
                   value={vehicleFilter}
                   onChange={(event) => setVehicleFilter(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 cursor-pointer"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100 cursor-pointer"
                 >
                   {VEHICLE_OPTIONS.map((option) => (
                     <option key={option.value || 'all-vehicle'} value={option.value}>
@@ -331,56 +331,56 @@ const DriverHistory = () => {
               <div className="flex items-end">
                 <button
                   onClick={handleResetFilters}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 transition-all hover:bg-slate-100 active:scale-95"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 transition-all hover:bg-slate-100 active:scale-95"
                 >
                   <RefreshCcw size={16} /> Làm mới
                 </button>
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white relative">
+            <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 relative">
               <div className="overflow-x-auto overflow-y-auto max-h-[320px]">
-                <table className="min-w-full text-left text-sm text-slate-600">
-                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                <table className="min-w-full text-left text-sm text-slate-600 dark:text-slate-400">
+                  <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shadow-sm">
                     <tr>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500">Mã đặt chỗ</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500">Tòa nhà</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500">Biển số</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500">Thời gian đặt</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500">Trạng thái</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 text-right">Thao tác</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Mã đặt chỗ</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tòa nhà</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Biển số</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Thời gian đặt</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Trạng thái</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {isLoading ? (
                       <tr>
-                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 font-bold bg-slate-50/50">
+                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50">
                           <div className="flex flex-col items-center gap-3">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"></div>
+                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-blue-600"></div>
                             <span>Đang tải dữ liệu...</span>
                           </div>
                         </td>
                       </tr>
                     ) : filteredBookings.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 font-bold bg-slate-50/50">Không có dữ liệu</td>
+                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50">Không có dữ liệu</td>
                       </tr>
                     ) : (
                       filteredBookings.map((booking) => (
                         <tr key={booking.id} className="transition-colors hover:bg-slate-50/80 group">
-                          <td className="px-5 py-4 font-black text-blue-600">{booking.id}</td>
-                          <td className="px-5 py-4 font-bold text-slate-800">{booking.building}</td>
-                          <td className="px-5 py-4 font-bold text-slate-800">
-                            <span className="inline-block rounded bg-slate-100 px-2 py-1 text-sm border border-slate-200">{booking.plate}</span>
+                          <td className="px-5 py-4 font-black text-blue-600 dark:text-blue-400">{booking.id}</td>
+                          <td className="px-5 py-4 font-bold text-slate-800 dark:text-slate-200">{booking.building}</td>
+                          <td className="px-5 py-4 font-bold text-slate-800 dark:text-slate-200">
+                            <span className="inline-block rounded bg-slate-100 px-2 py-1 text-sm border border-slate-200 dark:border-slate-700">{booking.plate}</span>
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2.5">
-                              <div className="rounded-lg bg-blue-50/80 p-2 text-blue-600 border border-blue-100">
+                              <div className="rounded-lg bg-blue-50/80 p-2 text-blue-600 dark:text-blue-400 border border-blue-100">
                                 <Calendar size={14} className="stroke-[2.5]" />
                               </div>
                               <div className="flex flex-col">
-                                <span className="font-bold text-slate-900">{booking.startTime}</span>
-                                <span className="text-[11px] font-semibold text-slate-500">{booking.startDate}</span>
+                                <span className="font-bold text-slate-900 dark:text-white">{booking.startTime}</span>
+                                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{booking.startDate}</span>
                               </div>
                             </div>
                           </td>
@@ -395,7 +395,7 @@ const DriverHistory = () => {
                                 <button
                                   disabled={isCancelling}
                                   onClick={() => handleCancelBooking(booking)}
-                                  className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 border border-red-100 hover:bg-red-100 transition-colors disabled:opacity-50"
+                                  className="rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-1.5 text-xs font-bold text-red-600 border border-red-100 hover:bg-red-100 transition-colors disabled:opacity-50"
                                 >
                                   Hủy bỏ
                                 </button>
@@ -414,53 +414,53 @@ const DriverHistory = () => {
 
         {activeTab === 'payment' && (
           <div className="space-y-6 animate-in fade-in">
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white relative">
+            <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 relative">
               <div className="overflow-x-auto overflow-y-auto max-h-[320px]">
-                <table className="min-w-full text-left text-sm text-slate-600">
-                  <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                <table className="min-w-full text-left text-sm text-slate-600 dark:text-slate-400">
+                  <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shadow-sm">
                     <tr>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500">Mã GD</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500">Biển số</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500">Thời gian</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500">Số tiền</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500">Phương thức</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500">Trạng thái</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Mã GD</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Biển số</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Thời gian</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Số tiền</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Phương thức</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Trạng thái</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {isLoading ? (
                       <tr>
-                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 font-bold bg-slate-50/50">
+                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50">
                           <div className="flex flex-col items-center gap-3">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"></div>
+                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-blue-600"></div>
                             <span>Đang tải dữ liệu...</span>
                           </div>
                         </td>
                       </tr>
                     ) : payments.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 font-bold bg-slate-50/50">Không có giao dịch nào</td>
+                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50">Không có giao dịch nào</td>
                       </tr>
                     ) : (
                       payments.map((payment) => (
                         <tr key={payment.PaymentID} className="transition-colors hover:bg-slate-50/80">
-                          <td className="px-5 py-4 font-black text-slate-800">#{String(payment.PaymentID || '').slice(-6) || 'N/A'}</td>
-                          <td className="px-5 py-4 font-bold text-slate-800">
-                            <span className="inline-block rounded bg-slate-100 px-2 py-1 text-sm border border-slate-200">{payment.PlateNumber}</span>
+                          <td className="px-5 py-4 font-black text-slate-800 dark:text-slate-200">#{String(payment.PaymentID || '').slice(-6) || 'N/A'}</td>
+                          <td className="px-5 py-4 font-bold text-slate-800 dark:text-slate-200">
+                            <span className="inline-block rounded bg-slate-100 px-2 py-1 text-sm border border-slate-200 dark:border-slate-700">{payment.PlateNumber}</span>
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2.5">
-                              <div className="rounded-lg bg-blue-50/80 p-2 text-blue-600 border border-blue-100">
+                              <div className="rounded-lg bg-blue-50/80 p-2 text-blue-600 dark:text-blue-400 border border-blue-100">
                                 <Calendar size={14} className="stroke-[2.5]" />
                               </div>
                               <div className="flex flex-col">
-                                <span className="font-bold text-slate-900">{formatTime(payment.PaymentTime)}</span>
-                                <span className="text-[11px] font-semibold text-slate-500">{formatDate(payment.PaymentTime)}</span>
+                                <span className="font-bold text-slate-900 dark:text-white">{formatTime(payment.PaymentTime)}</span>
+                                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{formatDate(payment.PaymentTime)}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="px-5 py-4 font-black text-blue-600">{fmt(payment.Amount)}</td>
-                          <td className="px-5 py-4 font-bold text-slate-700">{payment.PaymentMethod || '--'}</td>
+                          <td className="px-5 py-4 font-black text-blue-600 dark:text-blue-400">{fmt(payment.Amount)}</td>
+                          <td className="px-5 py-4 font-bold text-slate-700 dark:text-slate-300">{payment.PaymentMethod || '--'}</td>
                           <td className="px-5 py-4">
                             <Badge variant={STATUS_BADGE_VARIANTS[payment.PaymentStatus] || 'default'}>
                               {payment.PaymentStatus}
@@ -489,8 +489,8 @@ const DriverHistory = () => {
           </>
         }
       >
-        <p className="text-slate-600">Bạn có chắc chắn muốn hủy đặt chỗ <span className="font-bold text-slate-900">{confirmModal.booking?.id}</span> không?</p>
-        <p className="text-sm text-slate-500 mt-2">Lưu ý: Thao tác này không thể hoàn tác.</p>
+        <p className="text-slate-600 dark:text-slate-400">Bạn có chắc chắn muốn hủy đặt chỗ <span className="font-bold text-slate-900 dark:text-white">{confirmModal.booking?.id}</span> không?</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Lưu ý: Thao tác này không thể hoàn tác.</p>
       </Modal>
 
       <Modal
@@ -499,7 +499,7 @@ const DriverHistory = () => {
         title="Thông báo"
         footer={<Button variant="primary" onClick={() => setAlertModal({ isOpen: false, message: '' })}>Đóng</Button>}
       >
-        <p className="text-slate-700 font-medium">{alertModal.message}</p>
+        <p className="text-slate-700 dark:text-slate-300 font-medium">{alertModal.message}</p>
       </Modal>
     </div>
   )

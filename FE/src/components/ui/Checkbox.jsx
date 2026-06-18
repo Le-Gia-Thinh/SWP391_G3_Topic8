@@ -9,7 +9,7 @@ import { Check } from 'lucide-react'
  * @param {string} className - class bổ sung
  * @param {string} labelClassName - class bổ sung cho text label
  */
-const CustomCheckbox = ({ checked, onChange, label, className = '', labelClassName = 'text-sm font-medium text-gray-700' }) => {
+const CustomCheckbox = ({ checked, onChange, label, className = '', labelClassName = 'text-sm font-medium text-gray-700 dark:text-gray-300' }) => {
   return (
     <div
       role="checkbox"
@@ -21,7 +21,7 @@ const CustomCheckbox = ({ checked, onChange, label, className = '', labelClassNa
         className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-colors border-2 ${
           checked
             ? 'bg-blue-600 border-blue-600'
-            : 'bg-white border-gray-300 hover:border-blue-400'
+            : 'bg-white dark:bg-slate-800 border-gray-300 hover:border-blue-400'
         }`}
       >
         {checked && <Check size={13} className="text-white" strokeWidth={3} />}

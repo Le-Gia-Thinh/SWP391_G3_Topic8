@@ -16,7 +16,8 @@ import {
   CheckCircle2,
   XCircle,
   TrendingUp,
-  MessageSquare
+  MessageSquare,
+  Sparkles
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -36,7 +37,7 @@ const QUICK_ACTIONS = [
     to: '/driver/session',
     Icon: Clock,
     iconClass: 'text-blue-500',
-    bgClass: 'bg-blue-50'
+    bgClass: 'bg-blue-50 dark:bg-blue-900/20'
   },
   {
     title: 'Lịch sử đặt chỗ',
@@ -70,15 +71,15 @@ const COLOR_CLASSES = {
     bg: 'bg-gradient-to-br from-amber-50 to-white',
     iconBg: 'bg-amber-100/80',
     iconText: 'text-amber-600',
-    progress: 'bg-amber-500',
+    progress: 'bg-amber-50 dark:bg-amber-900/200',
     progressBg: 'bg-amber-100'
   },
   blue: {
     border: 'border-blue-200/60',
     bg: 'bg-gradient-to-br from-blue-50 to-white',
     iconBg: 'bg-blue-100/80',
-    iconText: 'text-blue-600',
-    progress: 'bg-blue-500',
+    iconText: 'text-blue-600 dark:text-blue-400',
+    progress: 'bg-blue-50 dark:bg-blue-900/200',
     progressBg: 'bg-blue-100'
   },
   green: {
@@ -122,9 +123,9 @@ const getVehicleIconAndColor = (vehicleCode, vehicleName) => {
 const SectionHeader = ({ icon: Icon, title, actionText, actionTo }) => {
   return (
     <div className="mb-5 flex items-center justify-between">
-      <h2 className="flex items-center gap-2.5 text-lg font-bold text-slate-900">
+      <h2 className="flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white">
         {Icon && (
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
             <Icon size={18} />
           </div>
         )}
@@ -133,7 +134,7 @@ const SectionHeader = ({ icon: Icon, title, actionText, actionTo }) => {
       {actionText && actionTo && (
         <Link
           to={actionTo}
-          className="group flex items-center gap-1 text-sm font-bold text-blue-600 transition-colors hover:text-blue-700"
+          className="group flex items-center gap-1 text-sm font-bold text-blue-600 dark:text-blue-400 transition-colors hover:text-blue-700 dark:text-blue-400"
         >
           {actionText}
           <ChevronRight size={16} className="transition-transform group-hover:translate-x-1" />
@@ -158,18 +159,18 @@ const VehicleStatusCard = ({ vehicle }) => {
           <Icon size={24} />
         </div>
         <div className="text-right">
-          <p className="mb-0.5 text-[11px] font-bold tracking-wider text-slate-500 uppercase">
+          <p className="mb-0.5 text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase">
             {vehicle.VehicleName || 'Phương tiện'}
           </p>
           <div className="flex items-baseline justify-end gap-1">
-            <span className="text-2xl font-black text-slate-900">{available}</span>
+            <span className="text-2xl font-black text-slate-900 dark:text-white">{available}</span>
             <span className="text-xs font-bold text-slate-400">/ {total} trống</span>
           </div>
         </div>
       </div>
 
       <div className="mt-5">
-        <div className="flex justify-between text-[11px] font-bold text-slate-500 mb-1.5">
+        <div className="flex justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5">
           <span>Tỷ lệ lấp đầy</span>
           <span>{percentage.toFixed(1)}%</span>
         </div>
@@ -191,9 +192,9 @@ const QuickActionCard = ({ to, title, description, Icon, variant, iconClass, bgC
         to={to}
         className="group relative overflow-hidden rounded-[1.25rem] bg-gradient-to-br from-blue-600 to-blue-700 p-6 text-white shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-600/30"
       >
-        <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/10 blur-2xl transition-transform duration-500 group-hover:scale-150" />
+        <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white dark:bg-slate-800/10 blur-2xl transition-transform duration-500 group-hover:scale-150" />
         <div className="relative z-10">
-          <div className="mb-4 inline-flex rounded-xl bg-white/20 p-3 backdrop-blur-md">
+          <div className="mb-4 inline-flex rounded-xl bg-white dark:bg-slate-800/20 p-3 backdrop-blur-md">
             <Icon size={24} className="text-white" />
           </div>
           <h3 className="mb-1.5 text-lg font-bold">{title}</h3>
@@ -206,22 +207,22 @@ const QuickActionCard = ({ to, title, description, Icon, variant, iconClass, bgC
   return (
     <Link
       to={to}
-      className="group rounded-[1.25rem] border border-slate-200/60 bg-white p-6 transition-all hover:border-blue-200 hover:shadow-md hover:shadow-blue-900/5 hover:-translate-y-1"
+      className="group rounded-[1.25rem] border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-6 transition-all hover:border-blue-200 hover:shadow-md hover:shadow-blue-900/5 hover:-translate-y-1"
     >
-      <div className={`mb-4 inline-flex rounded-xl p-3 transition-transform duration-300 group-hover:scale-110 ${bgClass || 'bg-slate-50'}`}>
-        <Icon className={iconClass || 'text-slate-500'} size={24} />
+      <div className={`mb-4 inline-flex rounded-xl p-3 transition-transform duration-300 group-hover:scale-110 ${bgClass || 'bg-slate-50 dark:bg-slate-900/50'}`}>
+        <Icon className={iconClass || 'text-slate-500 dark:text-slate-400'} size={24} />
       </div>
-      <h3 className="mb-1.5 text-base font-bold text-slate-900 group-hover:text-blue-700 transition-colors">{title}</h3>
-      <p className="text-xs font-medium text-slate-500">{description}</p>
+      <h3 className="mb-1.5 text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-700 dark:text-blue-400 transition-colors">{title}</h3>
+      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{description}</p>
     </Link>
   )
 }
 
 const InfoRow = ({ label, value, highlight = false, border = true }) => {
   return (
-    <div className={`flex items-center justify-between gap-4 text-sm ${border ? 'border-b border-dashed border-slate-200 pb-3' : ''}`}>
-      <span className="font-medium text-slate-500">{label}</span>
-      <span className={`text-right ${highlight ? 'font-black text-blue-600' : 'font-bold text-slate-800'}`}>
+    <div className={`flex items-center justify-between gap-4 text-sm ${border ? 'border-b border-dashed border-slate-200 dark:border-slate-700 pb-3' : ''}`}>
+      <span className="font-medium text-slate-500 dark:text-slate-400">{label}</span>
+      <span className={`text-right ${highlight ? 'font-black text-blue-600 dark:text-blue-400' : 'font-bold text-slate-800 dark:text-slate-200'}`}>
         {value}
       </span>
     </div>
@@ -244,22 +245,22 @@ const BookingCard = ({ booking }) => {
   const slotText = `${booking.FloorName || '--'} / Khu ${booking.ZoneName || '--'} / Slot ${booking.SlotCode || '--'}`
 
   return (
-    <div className="relative flex h-full min-h-[400px] flex-col rounded-[1.5rem] border border-slate-200/60 bg-white p-6 shadow-sm overflow-hidden hover:border-blue-200 transition-colors">
+    <div className="relative flex h-full min-h-[400px] flex-col rounded-[1.5rem] border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-6 shadow-sm overflow-hidden hover:border-blue-200 transition-colors">
       {/* Decorative top border */}
       <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 to-indigo-500" />
 
       <div className="mb-6 flex items-start justify-between">
         <div>
           <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Mã đặt chỗ</p>
-          <h3 className="text-2xl font-black tracking-tight text-blue-600">{booking.BookingCode}</h3>
+          <h3 className="text-2xl font-black tracking-tight text-blue-600 dark:text-blue-400">{booking.BookingCode}</h3>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/60 bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-600">
-          <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/60 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-50 dark:bg-blue-900/200 animate-pulse" />
           Đang hoạt động
         </span>
       </div>
 
-      <div className="flex-1 space-y-4 rounded-xl bg-slate-50/50 p-5 border border-slate-100">
+      <div className="flex-1 space-y-4 rounded-xl bg-slate-50/50 p-5 border border-slate-100 dark:border-slate-700/50">
         <InfoRow label="Bắt đầu" value={formatDateTime(booking.StartTime)} />
         <InfoRow label="Kết thúc" value={formatDateTime(booking.EndTime)} />
         <InfoRow label="Loại xe" value={booking.VehicleName || '--'} />
@@ -279,7 +280,7 @@ const BookingCard = ({ booking }) => {
           zone: booking.ZoneName,
           selectedSlot: booking.SlotCode
         }}
-        className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
+        className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-slate-300 transition-all hover:bg-slate-50 dark:bg-slate-900/50 hover:border-slate-300 active:scale-95"
       >
         Xem mã QR <ChevronRight size={16} />
       </Link>
@@ -311,7 +312,7 @@ const ActiveSessionCard = ({ session }) => {
       <div className="mb-6 flex items-start justify-between">
         <div>
           <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Biển số đang gửi</p>
-          <h3 className="text-2xl font-black text-slate-900">{session.PlateNumber || '--'}</h3>
+          <h3 className="text-2xl font-black text-slate-900 dark:text-white">{session.PlateNumber || '--'}</h3>
         </div>
         <div className="text-right">
           <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Loại phiên</p>
@@ -332,10 +333,10 @@ const ActiveSessionCard = ({ session }) => {
         <div className="flex items-end justify-between mb-5">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">Tạm tính</p>
-            <span className="text-xl font-black text-blue-600">{formatCurrency(session.Amount)}</span>
+            <span className="text-xl font-black text-blue-600 dark:text-blue-400">{formatCurrency(session.Amount)}</span>
           </div>
           <div className="text-right">
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
               Chưa thanh toán
             </span>
           </div>
@@ -344,7 +345,7 @@ const ActiveSessionCard = ({ session }) => {
         <div className="grid grid-cols-[1fr_2fr] gap-3">
           <Link
             to="/driver/report"
-            className="flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-300 active:scale-95"
+            className="flex h-12 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:bg-slate-900/50 hover:border-slate-300 active:scale-95"
           >
             Sự cố?
           </Link>
@@ -362,12 +363,12 @@ const ActiveSessionCard = ({ session }) => {
 
 const EmptyCard = ({ title, description, actionText, actionTo, icon: Icon }) => {
   return (
-    <div className="flex h-full min-h-[400px] flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 text-center transition-colors hover:border-blue-300 hover:bg-blue-50/30 group">
-      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm border border-slate-100 text-slate-400 group-hover:text-blue-500 group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
+    <div className="flex h-full min-h-[400px] flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 p-8 text-center transition-colors hover:border-blue-300 hover:bg-blue-50/30 group">
+      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700/50 text-slate-400 group-hover:text-blue-500 group-hover:bg-blue-50 dark:bg-blue-900/20 group-hover:border-blue-100 transition-colors">
         <Icon size={32} />
       </div>
-      <h3 className="text-lg font-bold text-slate-900 mb-2">{title}</h3>
-      <p className="max-w-[250px] text-sm font-medium text-slate-500 mb-6">{description}</p>
+      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{title}</h3>
+      <p className="max-w-[250px] text-sm font-medium text-slate-500 dark:text-slate-400 mb-6">{description}</p>
       <Link
         to={actionTo}
         className="rounded-xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-md transition-all hover:bg-slate-800 hover:-translate-y-0.5 active:scale-95"
@@ -417,19 +418,19 @@ const DriverHome = () => {
   if (isLoading && !homeData) {
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600 mb-4" />
-        <p className="font-bold text-slate-500">Đang đồng bộ dữ liệu...</p>
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-blue-600 mb-4" />
+        <p className="font-bold text-slate-500 dark:text-slate-400">Đang đồng bộ dữ liệu...</p>
       </div>
     )
   }
 
   if (errorMessage) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-[2rem] border border-red-100 bg-red-50 p-12 text-center shadow-sm">
+      <div className="flex flex-col items-center justify-center rounded-[2rem] border border-red-100 bg-red-50 dark:bg-red-900/20 p-12 text-center shadow-sm">
         <div className="h-16 w-16 rounded-full bg-red-100 text-red-500 flex items-center justify-center mb-4">
           <AlertCircle size={32} />
         </div>
-        <p className="font-bold text-red-700 text-lg mb-2">Đã có lỗi xảy ra</p>
+        <p className="font-bold text-red-700 dark:text-red-400 text-lg mb-2">Đã có lỗi xảy ra</p>
         <p className="font-medium text-red-600/80 mb-6">{errorMessage}</p>
         <button
           type="button"
@@ -449,17 +450,18 @@ const DriverHome = () => {
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-blue-500">Trang chủ</p>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Xin chào, {displayName}! 👋</h1>
-          <p className="mt-1.5 text-sm font-medium text-slate-500">
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Xin chào, {displayName}! 👋</h1>
+          <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
+            <Sparkles size={16} className="text-amber-500 animate-pulse" />
             Chào mừng bạn quay trở lại. Dưới đây là tổng quan tình trạng bãi xe.
           </p>
         </div>
         <button
           type="button"
           onClick={fetchHomeData}
-          className="flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-blue-600 active:scale-95"
+          className="flex w-fit items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 shadow-sm transition-all hover:bg-slate-50 dark:bg-slate-900/50 hover:text-blue-600 dark:text-blue-400 active:scale-95"
         >
-          <RefreshCcw size={16} className={isLoading ? 'animate-spin text-blue-600' : ''} />
+          <RefreshCcw size={16} className={isLoading ? 'animate-spin text-blue-600 dark:text-blue-400' : ''} />
           {isLoading ? 'Đang tải...' : 'Làm mới'}
         </button>
       </section>
@@ -478,15 +480,15 @@ const DriverHome = () => {
       </section>
 
       {/* Live Capacity */}
-      <section className="rounded-[1.5rem] border border-slate-200/60 bg-white p-7 shadow-sm">
+      <section className="rounded-[1.5rem] border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-7 shadow-sm">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="flex items-center gap-2.5 text-lg font-bold text-slate-900">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-500">
+          <h2 className="flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-500">
               <Activity size={18} />
             </div>
             Trạng thái Sức chứa (Live)
           </h2>
-          <div className="hidden sm:flex items-center gap-2 text-[11px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+          <div className="hidden sm:flex items-center gap-2 text-[11px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700/50">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -501,7 +503,7 @@ const DriverHome = () => {
               <VehicleStatusCard key={vehicle.VehicleTypeID} vehicle={vehicle} />
             ))
           ) : (
-            <div className="col-span-full py-8 text-center text-sm font-medium text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <div className="col-span-full py-8 text-center text-sm font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
               Chưa có dữ liệu vị trí đỗ được cập nhật.
             </div>
           )}
@@ -545,23 +547,23 @@ const DriverHome = () => {
 
 const SummaryMiniCard = ({ label, value, icon: Icon, color }) => {
   const colorMap = {
-    blue: 'bg-blue-50 text-blue-600',
+    blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
     emerald: 'bg-emerald-50 text-emerald-600',
     indigo: 'bg-indigo-50 text-indigo-600',
     rose: 'bg-rose-50 text-rose-600'
   }
 
   return (
-    <div className="group flex flex-col justify-between rounded-[1.25rem] border border-slate-200/60 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:border-slate-300">
+    <div className="group flex flex-col justify-between rounded-[1.25rem] border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:border-slate-300">
       <div className="flex items-start justify-between mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 w-2/3 leading-relaxed">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 w-2/3 leading-relaxed">
           {label}
         </p>
         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-110 ${colorMap[color]}`}>
           <Icon size={20} />
         </div>
       </div>
-      <p className="text-3xl font-black text-slate-900 tracking-tight">
+      <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
         {value}
       </p>
     </div>
