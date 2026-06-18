@@ -461,11 +461,11 @@ export async function getDriverReportContext(req, res, next) {
 
     const pool = await getPool();
 
-    const currentSessionResult = await pool
-      .request()
-      .input("DriverID", sql.Int, driverId)
-      .query(`
-        SELECT TOP 1
+      const currentSessionResult = await pool
+        .request()
+        .input("DriverID", sql.Int, driverId)
+        .query(`
+        SELECT
           s.SessionID,
           CONCAT(
             'SESS-',
@@ -620,6 +620,7 @@ export async function getDriverReportContext(req, res, next) {
       success: true,
       data: {
         currentSession: currentSessionResult.recordset[0] || null,
+        activeSessions: currentSessionResult.recordset,
         reservations: reservationsResult.recordset,
         recentReports: reportsResult.recordset,
       },

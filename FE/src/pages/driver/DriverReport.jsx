@@ -77,6 +77,7 @@ const DriverReport = () => {
 
   const [context, setContext] = useState({
     currentSession: null,
+    activeSessions: [],
     reservations: [],
     recentReports: []
   })
@@ -88,27 +89,29 @@ const DriverReport = () => {
   const relatedOptions = useMemo(() => {
     const options = []
 
-    const currentSession = context.currentSession
+    const activeSessions = Array.isArray(context.activeSessions) && context.activeSessions.length > 0 
+      ? context.activeSessions 
+      : (context.currentSession ? [context.currentSession] : [])
 
-    if (currentSession) {
-      const sessionId = getValue(currentSession, 'SessionID', 'sessionId')
+    activeSessions.forEach((session) => {
+      const sessionId = getValue(session, 'SessionID', 'sessionId')
 
       options.push({
         id: `session-${sessionId}`,
         kind: 'session',
-        label: `Phiên hiện tại (${getValue(currentSession, 'SessionCode', 'sessionCode') || sessionId} - ${getValue(currentSession, 'PlateNumber', 'plateNumber') || 'Chưa có biển số'})`,
+        label: `Phiên hiện tại (${getValue(session, 'SessionCode', 'sessionCode') || sessionId} - ${getValue(session, 'PlateNumber', 'plateNumber') || 'Chưa có biển số'})`,
         sessionId,
-        reservationId: getValue(currentSession, 'ReservationID', 'reservationId') || null,
-        bookingCode: getValue(currentSession, 'BookingCode', 'bookingCode') || '',
-        plateNumber: getValue(currentSession, 'PlateNumber', 'plateNumber') || '',
-        vehicleName: getValue(currentSession, 'VehicleName', 'vehicleName') || '',
-        slotCode: getValue(currentSession, 'SlotCode', 'slotCode') || '',
-        buildingName: getValue(currentSession, 'BuildingName', 'buildingName') || '',
-        time: getValue(currentSession, 'EntryTime', 'entryTime'),
-        status: getValue(currentSession, 'SessionStatus', 'sessionStatus') || 'Active',
+        reservationId: getValue(session, 'ReservationID', 'reservationId') || null,
+        bookingCode: getValue(session, 'BookingCode', 'bookingCode') || '',
+        plateNumber: getValue(session, 'PlateNumber', 'plateNumber') || '',
+        vehicleName: getValue(session, 'VehicleName', 'vehicleName') || '',
+        slotCode: getValue(session, 'SlotCode', 'slotCode') || '',
+        buildingName: getValue(session, 'BuildingName', 'buildingName') || '',
+        time: getValue(session, 'EntryTime', 'entryTime'),
+        status: getValue(session, 'SessionStatus', 'sessionStatus') || 'Active',
         type: 'Phiên gửi xe hiện tại'
       })
-    }
+    })
 
     context.reservations.forEach((reservation) => {
       const status = getValue(reservation, 'ReservationStatus', 'reservationStatus')
@@ -170,6 +173,7 @@ const DriverReport = () => {
 
       setContext({
         currentSession: response.data?.currentSession || null,
+        activeSessions: Array.isArray(response.data?.activeSessions) ? response.data.activeSessions : [],
         reservations: Array.isArray(response.data?.reservations) ? response.data.reservations : [],
         recentReports: Array.isArray(response.data?.recentReports) ? response.data.recentReports : []
       })
