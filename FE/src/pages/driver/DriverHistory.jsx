@@ -272,13 +272,13 @@ const DriverHistory = () => {
         <div className="flex border-b border-slate-200 dark:border-slate-700 mb-6">
           <button
             onClick={() => setActiveTab('booking')}
-            className={`flex items-center gap-2 px-6 py-4 font-bold text-sm border-b-2 transition-all ${activeTab === 'booking' ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-900/50'}`}
+            className={`flex items-center gap-2 px-6 py-4 font-bold text-sm border-b-2 transition-all ${activeTab === 'booking' ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
           >
             <Car size={18} /> Lịch sử đặt chỗ
           </button>
           <button
             onClick={() => setActiveTab('payment')}
-            className={`flex items-center gap-2 px-6 py-4 font-bold text-sm border-b-2 transition-all ${activeTab === 'payment' ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-900/50'}`}
+            className={`flex items-center gap-2 px-6 py-4 font-bold text-sm border-b-2 transition-all ${activeTab === 'payment' ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
           >
             <CreditCard size={18} /> Lịch sử thanh toán
           </button>
@@ -351,10 +351,10 @@ const DriverHistory = () => {
                       <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Thao tác</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                     {isLoading ? (
                       <tr>
-                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50">
+                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/30">
                           <div className="flex flex-col items-center gap-3">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-blue-600"></div>
                             <span>Đang tải dữ liệu...</span>
@@ -363,15 +363,15 @@ const DriverHistory = () => {
                       </tr>
                     ) : filteredBookings.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50">Không có dữ liệu</td>
+                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/30">Không có dữ liệu</td>
                       </tr>
                     ) : (
                       filteredBookings.map((booking) => (
-                        <tr key={booking.id} className="transition-colors hover:bg-slate-50/80 group">
+                        <tr key={booking.id} className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/80 group">
                           <td className="px-5 py-4 font-black text-blue-600 dark:text-blue-400">{booking.id}</td>
                           <td className="px-5 py-4 font-bold text-slate-800 dark:text-slate-200">{booking.building}</td>
                           <td className="px-5 py-4 font-bold text-slate-800 dark:text-slate-200">
-                            <span className="inline-block rounded bg-slate-100 px-2 py-1 text-sm border border-slate-200 dark:border-slate-700">{booking.plate}</span>
+                            <span className="inline-block rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 text-sm border border-slate-200 dark:border-slate-700">{booking.plate}</span>
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2.5">
@@ -427,10 +427,10 @@ const DriverHistory = () => {
                       <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Trạng thái</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                     {isLoading ? (
                       <tr>
-                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50">
+                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/30">
                           <div className="flex flex-col items-center gap-3">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-blue-600"></div>
                             <span>Đang tải dữ liệu...</span>
@@ -439,14 +439,14 @@ const DriverHistory = () => {
                       </tr>
                     ) : payments.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50">Không có giao dịch nào</td>
+                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/30">Không có giao dịch nào</td>
                       </tr>
                     ) : (
                       payments.map((payment) => (
-                        <tr key={payment.PaymentID} className="transition-colors hover:bg-slate-50/80">
+                        <tr key={payment.PaymentID} className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/80">
                           <td className="px-5 py-4 font-black text-slate-800 dark:text-slate-200">#{String(payment.PaymentID || '').slice(-6) || 'N/A'}</td>
                           <td className="px-5 py-4 font-bold text-slate-800 dark:text-slate-200">
-                            <span className="inline-block rounded bg-slate-100 px-2 py-1 text-sm border border-slate-200 dark:border-slate-700">{payment.PlateNumber}</span>
+                            <span className="inline-block rounded bg-slate-100 dark:bg-slate-800 px-2 py-1 text-sm border border-slate-200 dark:border-slate-700">{payment.PlateNumber}</span>
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2.5">
