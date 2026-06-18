@@ -349,10 +349,10 @@ const DriverReport = () => {
                 <select
                   value={selectedRelatedId}
                   onChange={(event) => setSelectedRelatedId(event.target.value)}
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 px-4 py-2.5 text-sm outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                 >
                   {relatedOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
+                    <option key={option.id} value={option.id} className="bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
                       {option.label}
                     </option>
                   ))}
