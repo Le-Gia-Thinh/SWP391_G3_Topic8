@@ -105,16 +105,16 @@ const DriverTicketDetail = () => {
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50/50 dark:bg-gray-950 space-y-6">
         
         {/* Original Ticket Content */}
-        <div className="flex gap-4 max-w-[85%]">
+        <div className="flex gap-4 max-w-[85%] ml-auto flex-row-reverse">
           <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center shrink-0">
-            <User size={16} className="text-blue-600 dark:text-blue-400 dark:text-blue-400" />
+            <User size={16} className="text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 ml-1">Bạn</span>
-            <div className="bg-white dark:bg-slate-800 dark:bg-gray-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 dark:border-slate-700/50 dark:border-gray-700 text-gray-800 dark:text-gray-200 dark:text-gray-200 text-sm whitespace-pre-wrap">
+          <div className="flex flex-col gap-1 items-end">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">Bạn</span>
+            <div className="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none shadow-sm text-sm whitespace-pre-wrap">
               {ticket.Content}
             </div>
-            <span className="text-[10px] text-gray-400 ml-1">{dayjs(ticket.CreatedAt).format('HH:mm DD/MM')}</span>
+            <span className="text-[10px] text-gray-400 mr-1">{dayjs(ticket.CreatedAt).format('HH:mm DD/MM')}</span>
           </div>
         </div>
 
