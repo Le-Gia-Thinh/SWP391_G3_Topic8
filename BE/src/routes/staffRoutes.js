@@ -10,7 +10,7 @@ import {
     validateStaffBookingCheckIn,
     validateStaffCheckOut,
     validateConfirmSurcharge
-} from '../utilities/authValidation.js'
+} from '../utils/validationUtils.js'
 
 const router = express.Router()
 

@@ -32,7 +32,7 @@ import {
   validateCreateReservation,
   validateCheckIn,
   validateCheckOut,
-} from "../utilities/authValidation.js";
+} from "../utils/validationUtils.js";
 
 const router = express.Router();
 

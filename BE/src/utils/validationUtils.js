@@ -1,15 +1,15 @@
-// src/utilities/authValidation.js
+// src/utils/validationUtils.js
 // Validate input trước khi vào controller
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const vietnamPhoneRegex = /^0\d{9}$/;
+export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const vietnamPhoneRegex = /^0\d{9}$/;
 
 // Cho phép dạng biển số phổ biến:
 // 59A-12345
 // 59A-123.45
 // 59AB-12345
 // 51F-99999
-const plateNumberRegex = /^(\d{2}[A-Z]{1,2}-?\d{3}\.?\d{2}|\d{2}[A-Z]{1,2}-?\d{4,5})$/i;
+export const plateNumberRegex = /^(\d{2}[A-Z]{1,2}-?\d{3}\.?\d{2}|\d{2}[A-Z]{1,2}-?\d{4,5})$/i;
 
 function sendValidationError(res, errors) {
   return res.status(400).json({
@@ -19,11 +19,11 @@ function sendValidationError(res, errors) {
   });
 }
 
-function isValidEmail(email) {
+export function isValidEmail(email) {
   return emailRegex.test(String(email || "").trim());
 }
 
-function trim(value) {
+export function trim(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
