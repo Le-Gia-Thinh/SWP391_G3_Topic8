@@ -9,7 +9,8 @@ import {
   ChevronRight,
   MoreHorizontal,
   CreditCard,
-  Car
+  Car,
+  Sparkles
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import authorizeAxios from '../../utils/authorizeAxios'
@@ -253,7 +254,8 @@ const DriverHistory = () => {
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
             Lịch sử hoạt động
           </h1>
-          <p className="mt-1 text-sm font-medium text-slate-500">
+          <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
+            <Sparkles size={16} className="text-amber-500 animate-pulse" />
             Theo dõi các lượt đặt chỗ và thanh toán của bạn.
           </p>
         </div>

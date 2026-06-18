@@ -3,7 +3,7 @@ import {
   Box, Typography, Card, Grid, LinearProgress, Chip, Avatar, Tooltip, Select, MenuItem, FormControl
 } from '@mui/material'
 import {
-  Star, MessageSquare, Car, MapPin, User, Phone, CheckCircle2, TrendingUp, AlertCircle
+  Star, MessageSquare, Car, MapPin, User, Phone, CheckCircle2, TrendingUp, AlertCircle, Sparkles
 } from 'lucide-react'
 import dayjs from 'dayjs'
 import 'dayjs/locale/vi'
@@ -79,7 +79,8 @@ const StaffFeedback = () => {
           <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
             Tổng hợp Đánh giá
           </h1>
-          <p className="mt-2 text-sm font-medium text-slate-500">
+          <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
+            <Sparkles size={16} className="text-amber-500 animate-pulse" />
             Xem và phân tích phản hồi từ tài xế về chất lượng dịch vụ
           </p>
         </div>
