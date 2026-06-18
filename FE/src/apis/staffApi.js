@@ -127,6 +127,11 @@ const staffApi = {
   updateTicketStatus: async (ticketId, status) => {
     const res = await authorizedAxiosInstance.patch(`${STAFF_BASE}/support/tickets/${ticketId}/status`, { status })
     return res.data
+  },
+
+  getFeedbackSummary: async () => {
+    const res = await authorizedAxiosInstance.get('/staff/feedbacks')
+    return res.data
   }
 }
 

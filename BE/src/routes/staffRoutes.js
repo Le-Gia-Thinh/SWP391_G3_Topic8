@@ -2,6 +2,7 @@
 import express from 'express'
 import * as staffController from '../controllers/staffController.js'
 import * as supportController from '../controllers/supportController.js'
+import * as staffFeedbackController from '../controllers/staffFeedbackController.js'
 import { isAuthorized, isStaffOrManager } from '../middlewares/authMiddleware.js'
 import {
     validateStaffWalkIn,
@@ -17,6 +18,9 @@ router.use(isStaffOrManager)
 
 // Dashboard
 router.get('/dashboard', staffController.getDashboard)
+
+// Feedbacks
+router.get('/feedbacks', staffFeedbackController.getFeedbackSummary)
 
 // Parking map / slots
 router.get('/parking-map', staffController.getParkingMap)

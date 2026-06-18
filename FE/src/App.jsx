@@ -42,6 +42,7 @@ const StaffSupportManager = React.lazy(() => import('./pages/staff/StaffSupportM
 const StaffTicketDetail = React.lazy(() => import('./pages/staff/StaffTicketDetail'))
 const StaffUserGuide = React.lazy(() => import('./pages/staff/StaffUserGuide'))
 const StaffPaymentHistory = React.lazy(() => import('./pages/staff/StaffPaymentHistory'))
+const StaffFeedback = React.lazy(() => import('./pages/staff/StaffFeedback'))
 // Driver Pages (Lazy)
 const DriverHome = React.lazy(() => import('./pages/driver/DriverHome'))
 const DriverBooking = React.lazy(() => import('./pages/driver/DriverBooking'))
@@ -96,7 +97,8 @@ const staffLinks = [
   { labelOnly: 'Khác' },
   { path: '/staff/create-incident', label: 'Báo cáo sự cố', icon: AlertTriangle },
   { path: '/staff/user-guide', label: 'Hướng dẫn sử dụng', icon: BookOpen },
-  { path: '/staff/support', label: 'Hỗ trợ kỹ thuật', icon: HelpCircle }
+  { path: '/staff/support', label: 'Hỗ trợ kỹ thuật', icon: HelpCircle },
+  { path: '/staff/feedback', label: 'Đánh giá từ User', icon: Star }
 ]
 
 const driverLinks = [
@@ -208,10 +210,11 @@ const App = () => {
             <Route path="profile" element={<UserProfile />} />
             <Route path="security" element={<UserProfile />} />
 
-            {/* Support / User Guide */}
+            {/* Support / User Guide / Feedback */}
             <Route path="support" element={<StaffSupportManager />} />
             <Route path="support/:id" element={<StaffTicketDetail />} />
             <Route path="user-guide" element={<StaffUserGuide />} />
+            <Route path="feedback" element={<StaffFeedback />} />
           </Route>
         </Route>
 
