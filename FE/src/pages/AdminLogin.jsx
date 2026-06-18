@@ -161,14 +161,16 @@ const AdminLogin = () => {
             fullWidth size="small"
             type={showPass ? 'text' : 'password'}
             error={!!errors.password} helperText={errors.password?.message}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setShowPass(v => !v)}>
-                    {showPass ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                  </IconButton>
-                </InputAdornment>
-              )
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setShowPass(v => !v)}>
+                      {showPass ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }
             }}
             {...register('password', {
               required: 'Mật khẩu không được để trống',
