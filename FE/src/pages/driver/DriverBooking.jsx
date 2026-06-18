@@ -761,7 +761,7 @@ const DriverBooking = () => {
                 <select
                   value={buildingId}
                   onChange={handleChangeBuilding}
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                 >
                   {buildingOptions.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -778,7 +778,7 @@ const DriverBooking = () => {
                 <select
                   value={selectedVehicleId}
                   onChange={handleChangeSelectedVehicle}
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm font-semibold text-blue-700 dark:text-blue-400 outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/20 px-4 py-2.5 text-sm font-semibold text-blue-700 dark:text-blue-400 outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                 >
                   {vehicles.map((v) => (
                     <option key={v.VehicleID} value={v.VehicleID}>
@@ -799,7 +799,7 @@ const DriverBooking = () => {
                   onChange={(event) => setLicensePlate(formatPlateNumber(event.target.value))}
                   placeholder="VD: 51K-123.45"
                   disabled={selectedVehicleId !== 'manual'}
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm uppercase outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm uppercase outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
                   required
                 />
               </div>
@@ -812,7 +812,7 @@ const DriverBooking = () => {
                   value={vehicleType}
                   onChange={handleChangeVehicleType}
                   disabled={selectedVehicleId !== 'manual'}
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {vehicleTypesList.map((item) => (
                     <option key={item.VehicleCode} value={item.VehicleCode} className="bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
@@ -842,7 +842,7 @@ const DriverBooking = () => {
                     value={bookingDate}
                     min={getTodayDateValue()}
                     onChange={handleChangeDate}
-                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
@@ -858,7 +858,7 @@ const DriverBooking = () => {
                     type="time"
                     value={startTime}
                     onChange={handleChangeStartTime}
-                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
@@ -871,7 +871,7 @@ const DriverBooking = () => {
                 <select
                   value={duration}
                   onChange={(event) => setDuration(event.target.value)}
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                 >
                   {durations.map((item) => (
                     <option key={item.value} value={item.value} className="bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
