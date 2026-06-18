@@ -116,8 +116,8 @@ const DriverReport = () => {
     context.reservations.forEach((reservation) => {
       const status = getValue(reservation, 'ReservationStatus', 'reservationStatus')
       
-      // Keep only active reservations as requested by user
-      if (status !== 'Active') return
+      // Giữ lại các đặt chỗ đang Active, Reserved hoặc Pending (để báo cáo sự cố lúc chưa check-in)
+      if (status !== 'Active' && status !== 'Reserved' && status !== 'Pending') return
 
       const reservationId = getValue(reservation, 'ReservationID', 'reservationId')
 
