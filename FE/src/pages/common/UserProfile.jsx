@@ -11,6 +11,7 @@ import driverApi from '../../apis/driverApi'
 import { changePasswordAPI } from '../../apis/authApi'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
+import { useAppTheme } from '../../contexts/AppThemeContext'
 
 const Toggle = ({ checked, onChange, label, desc }) => (
   <div className="flex items-center justify-between py-3.5 border-b border-gray-50 last:border-0">
@@ -154,21 +155,27 @@ const ProfileContent = ({ user, editing, formData, onChange, recentActivity, rec
 }
 
 const SettingsContent = ({ saved, handleSave }) => {
+  const { theme, toggleTheme } = useAppTheme()
   const [settings, setSettings] = useState({
-    darkMode: false, emailNotif: true, pushNotif: true, soundAlert: true, language: 'vi'
+    emailNotif: true, pushNotif: true, soundAlert: true, language: 'vi'
   })
   const set = (key) => (val) => setSettings(prev => ({ ...prev, [key]: val }))
 
   return (
     <div className="flex gap-6 flex-col lg:flex-row animate-in fade-in">
       <div className="flex-1 space-y-5">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h3 className="text-base font-bold text-gray-800 mb-1 flex items-center gap-2"><Monitor size={18} className="text-blue-500" /> Giao diện</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-1 flex items-center gap-2"><Monitor size={18} className="text-blue-500" /> Giao diện</h3>
           <div className="mb-5">
-            <p className="text-sm font-semibold text-gray-700 mb-3 mt-4">Chủ đề màu sắc</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 mt-4">Chủ đề màu sắc</p>
             <div className="flex gap-3">
               {[{ id: 'light', icon: <Sun size={18} />, label: 'Sáng' }, { id: 'dark', icon: <Moon size={18} />, label: 'Tối' }].map(({ id, icon, label }) => (
-                <button key={id} onClick={() => set('darkMode')(id === 'dark')} className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${(id === 'dark' && settings.darkMode) || (id === 'light' && !settings.darkMode) ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500'}`}>
+                <button 
+                  key={id} 
+                  onClick={() => {
+                    if (theme !== id) toggleTheme()
+                  }} 
+                  className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${(id === 'dark' && theme === 'dark') || (id === 'light' && theme === 'light') ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'}`}>
                   {icon}<span className="text-xs font-bold">{label}</span>
                 </button>
               ))}
