@@ -8,7 +8,8 @@ const seedEmails = [
     "bob@email.com",
     "carol@email.com",
     "david@email.com",
-    "eve@email.com"
+    "eve@email.com",
+    "admin@parking.com"
 ];
 
 async function main() {

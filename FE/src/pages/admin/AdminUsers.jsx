@@ -135,15 +135,15 @@ const AdminUsers = () => {
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()}
               placeholder="Tìm tên, email, số điện thoại..."
-              className="w-full rounded-xl bg-slate-50 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+              className="w-full rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white dark:focus:bg-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
           <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setTrigger(t => t + 1) }}
-            className="rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
+            className="rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
             <option value="">Tất cả vai trò</option>
             {roles.map(r => <option key={r.RoleID} value={r.RoleID}>{r.RoleName}</option>)}
           </select>
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setTrigger(t => t + 1) }}
-            className="rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
+            className="rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
             <option value="">Tất cả trạng thái</option>
             <option value="1">Đang hoạt động</option>
             <option value="0">Bị khoá</option>
@@ -245,29 +245,35 @@ const AdminUsers = () => {
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Họ và tên</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Họ và tên</label>
             <input {...register('FullName', { required: 'Vui lòng nhập họ tên' })}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.FullName && <p className="text-xs text-red-500 mt-1">{errors.FullName.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Email</label>
             <input {...register('Email', {
               required: 'Vui lòng nhập email',
               pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Email không hợp lệ' }
             })}
-            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.Email && <p className="text-xs text-red-500 mt-1">{errors.Email.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Số điện thoại</label>
-            <input {...register('PhoneNumber')}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Số điện thoại</label>
+            <input {...register('PhoneNumber', {
+              pattern: {
+                value: /^(0|84)(3|5|7|8|9)[0-9]{8}$/,
+                message: 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0 hoặc 84)'
+              }
+            })}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            {errors.PhoneNumber && <p className="text-xs text-red-500 mt-1">{errors.PhoneNumber.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Vai trò</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Vai trò</label>
             <select {...register('RoleID', { required: 'Vui lòng chọn vai trò' })}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
               <option value="">-- Chọn vai trò --</option>
               {roles.map(r => <option key={r.RoleID} value={r.RoleID}>{r.RoleName}</option>)}
             </select>

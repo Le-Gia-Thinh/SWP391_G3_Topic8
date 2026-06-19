@@ -123,7 +123,7 @@ const AdminBuildings = () => {
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()}
             placeholder="Tìm tên cơ sở, địa chỉ..."
-            className="w-full rounded-xl bg-slate-50 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+            className="w-full rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white dark:focus:bg-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
         </div>
 
         {loading ? (
@@ -184,28 +184,34 @@ const AdminBuildings = () => {
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Tên cơ sở</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Tên cơ sở</label>
             <input {...register('BuildingName', { required: 'Vui lòng nhập tên cơ sở' })}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.BuildingName && <p className="text-xs text-red-500 mt-1">{errors.BuildingName.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Địa chỉ</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Địa chỉ</label>
             <input {...register('Address')}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Giờ hoạt động</label>
-              <input {...register('OperatingHours')} placeholder="06:00-22:00"
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Giờ hoạt động</label>
+              <input {...register('OperatingHours', {
+                pattern: {
+                  value: /^([01]?[0-9]|2[0-3]):[0-5][0-9]-([01]?[0-9]|2[0-3]):[0-5][0-9]$/,
+                  message: 'Sai định dạng (VD: 06:00-22:00)'
+                }
+              })} placeholder="06:00-22:00"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              {errors.OperatingHours && <p className="text-xs text-red-500 mt-1">{errors.OperatingHours.message}</p>}
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Số tầng</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Số tầng</label>
               <input type="number" min="0" {...register('TotalFloors', {
                 min: { value: 0, message: 'Số tầng không hợp lệ' }
               })}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
               {errors.TotalFloors && <p className="text-xs text-red-500 mt-1">{errors.TotalFloors.message}</p>}
             </div>
           </div>

@@ -14,7 +14,7 @@ import authorizeAxios from '../utils/authorizeAxios'
 const BASE = '/admin'
 
 // Bật/tắt chế độ giả lập dữ liệu.
-export const USE_MOCK = true
+export const USE_MOCK = false
 
 // ──────────────────────────────────────────────────────────────
 // MOCK DATA (chỉ dùng khi USE_MOCK = true)

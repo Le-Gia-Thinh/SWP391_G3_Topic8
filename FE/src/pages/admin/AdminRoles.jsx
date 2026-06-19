@@ -144,10 +144,10 @@ const AdminRoles = () => {
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
               placeholder="Tìm tên, email, số điện thoại..."
-              className="w-full rounded-xl bg-slate-50 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+              className="w-full rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white dark:focus:bg-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
           <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setTrigger((t) => t + 1) }}
-            className="rounded-xl bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
+            className="rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
             <option value="">Tất cả vai trò</option>
             {roles.map((r) => <option key={r.RoleID} value={r.RoleID}>{r.RoleName}</option>)}
           </select>
@@ -196,7 +196,7 @@ const AdminRoles = () => {
                             value={u.RoleID}
                             disabled={busyId === u.UserID}
                             onChange={(e) => changeRole(u, e.target.value)}
-                            className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none border border-slate-200 hover:border-blue-300 focus:border-blue-500 transition disabled:opacity-50"
+                            className="rounded-lg bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none border border-slate-200 hover:border-blue-300 focus:border-blue-500 transition disabled:opacity-50"
                           >
                             {roles.map((r) => <option key={r.RoleID} value={r.RoleID}>{r.RoleName}</option>)}
                           </select>

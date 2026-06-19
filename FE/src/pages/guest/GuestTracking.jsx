@@ -21,8 +21,7 @@ const STATUS_MAP = {
 }
 
 const GuestTracking = () => {
-  const [plateNumber, setPlateNumber] = useState('')
-  const [sessionCode, setSessionCode] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
   const [session, setSession] = useState(null)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -57,8 +56,8 @@ const GuestTracking = () => {
 
   const handleSearch = async (e) => {
     e.preventDefault()
-    if (!plateNumber.trim() || !sessionCode.trim()) {
-      setError('Vui lòng nhập đầy đủ Biển số xe và Mã phiên')
+    if (!searchTerm.trim()) {
+      setError('Vui lòng nhập Biển số xe hoặc Mã phiên')
       return
     }
 
@@ -68,7 +67,7 @@ const GuestTracking = () => {
     setIsSearched(true)
 
     try {
-      const res = await guestApi.trackSession(plateNumber.trim(), sessionCode.trim())
+      const res = await guestApi.trackSession(searchTerm.trim())
       if (res.success) {
         setSession(res.data)
         setCurrentFee(res.data.fee)
@@ -84,8 +83,7 @@ const GuestTracking = () => {
   }
 
   const handleReset = () => {
-    setPlateNumber('')
-    setSessionCode('')
+    setSearchTerm('')
     setSession(null)
     setError('')
     setIsSearched(false)
@@ -129,7 +127,7 @@ const GuestTracking = () => {
             Tra cứu Phiên Gửi Xe
           </h1>
           <p className="text-sm font-medium text-slate-500">
-            Nhập biển số xe và mã phiên trên vé gửi xe để xem thông tin
+            Nhập Biển số xe hoặc Mã phiên (trên vé gửi xe) để xem thông tin
           </p>
         </div>
 
@@ -139,26 +137,14 @@ const GuestTracking = () => {
             <div className="p-6 space-y-4">
               <div>
                 <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                  Biển số xe
+                  Biển số xe / Mã phiên
                 </label>
                 <input
                   ref={plateRef}
                   type="text"
-                  value={plateNumber}
-                  onChange={(e) => setPlateNumber(e.target.value.toUpperCase())}
-                  placeholder="VD: 59A-12345"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-base font-bold tracking-wider text-slate-900 placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                  Mã phiên (trên vé gửi xe)
-                </label>
-                <input
-                  type="text"
-                  value={sessionCode}
-                  onChange={(e) => setSessionCode(e.target.value.toUpperCase())}
-                  placeholder="VD: SS-00042"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value.toUpperCase())}
+                  placeholder="VD: 59A-12345 hoặc SS-00042"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-base font-bold tracking-wider text-slate-900 placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal transition-all focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10"
                 />
               </div>
@@ -205,7 +191,7 @@ const GuestTracking = () => {
               <div>
                 <p className="font-bold text-red-800">{error}</p>
                 <p className="mt-1 text-xs font-medium text-red-600/70">
-                  Hãy kiểm tra lại biển số xe và mã phiên trên vé gửi xe của bạn.
+                  Hãy kiểm tra lại biển số xe hoặc mã phiên trên vé gửi xe của bạn.
                 </p>
               </div>
             </div>
@@ -364,7 +350,7 @@ const GuestTracking = () => {
               </div>
               <p className="font-bold text-slate-600">Nhập thông tin để bắt đầu</p>
               <p className="mt-1 text-sm font-medium text-slate-400">
-                Bạn có thể tìm thấy Mã phiên (SS-XXXXX) trên vé gửi xe
+                Bạn có thể tìm bằng Mã phiên (SS-XXXXX) hoặc Biển số xe
               </p>
             </div>
           </div>

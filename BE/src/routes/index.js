@@ -16,6 +16,7 @@ import paymentRoutes from "./paymentRoutes.js";
 import staffRoutes from "./staffRoutes.js";
 import managerRoutes from './managerRoutes.js'
 import commonRoutes from './commonRoutes.js'
+import adminRoutes from './adminRoutes.js'
 import {
   isAuthorized,
   isManager,
@@ -326,5 +327,6 @@ router.use("/", paymentRoutes);
 // Staff routes
 router.use("/staff", staffRoutes);
 router.use('/manager', managerRoutes);
-router.use('/common', commonRoutes)
+router.use('/common', commonRoutes);
+router.use('/admin', adminRoutes);
 export default router;
