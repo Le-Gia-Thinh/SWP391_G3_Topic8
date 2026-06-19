@@ -89,8 +89,8 @@ const DriverReport = () => {
   const relatedOptions = useMemo(() => {
     const options = []
 
-    const activeSessions = Array.isArray(context.activeSessions) && context.activeSessions.length > 0 
-      ? context.activeSessions 
+    const activeSessions = Array.isArray(context.activeSessions) && context.activeSessions.length > 0
+      ? context.activeSessions
       : (context.currentSession ? [context.currentSession] : [])
 
     activeSessions.forEach((session) => {
@@ -115,7 +115,7 @@ const DriverReport = () => {
 
     context.reservations.forEach((reservation) => {
       const status = getValue(reservation, 'ReservationStatus', 'reservationStatus')
-      
+
       // Giữ lại các đặt chỗ đang Active, Reserved hoặc Pending (để báo cáo sự cố lúc chưa check-in)
       if (status !== 'Active' && status !== 'Reserved' && status !== 'Pending') return
 

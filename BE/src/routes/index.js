@@ -11,6 +11,7 @@ import * as vehicleController from "../controllers/vehicleController.js";
 import * as feedbackController from "../controllers/feedbackController.js";
 import * as supportController from "../controllers/supportController.js";
 import * as guestController from "../controllers/guestController.js";
+import * as aiChatController from "../controllers/aiChatController.js";
 
 import paymentRoutes from "./paymentRoutes.js";
 import staffRoutes from "./staffRoutes.js";
@@ -49,10 +50,14 @@ router.get("/guest/track-session", guestController.trackSession);
 router.get("/guest/home-stats", guestController.getHomeStats);
 
 // Auth public
+// Auth public
 router.post("/auth/register", validateRegister, authController.register);
 router.post("/auth/login", validateLogin, authController.login);
 router.post("/auth/logout", authController.logout);
 router.post("/auth/refresh", authController.refreshToken);
+
+// AI Chat - Public
+router.post("/ai/chat", aiChatController.processChat);
 router.post(
   "/auth/forgot-password",
   validateForgotPassword,
@@ -83,6 +88,9 @@ router.get("/vehicle-types", isAuthorized, commonController.getVehicleTypes);
 router.get("/buildings", isAuthorized, commonController.getBuildings);
 router.get("/slots", isAuthorized, commonController.getSlots);
 router.get("/pricing", isAuthorized, commonController.getPricing);
+
+// AI Chat
+router.post("/ai/chat", isAuthorized, aiChatController.processChat);
 
 // Driver
 router.get(

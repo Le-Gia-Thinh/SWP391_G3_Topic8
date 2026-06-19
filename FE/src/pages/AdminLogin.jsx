@@ -120,7 +120,7 @@ const AdminLogin = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 p-4 transition-colors duration-300">
       <div className="w-full max-w-[420px] bg-white dark:bg-slate-800 rounded-2xl shadow-xl border-t-4 border-blue-600 p-8 transition-colors duration-300">
-        
+
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Đăng Nhập</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -224,7 +224,7 @@ const AdminLogin = () => {
               width="350"
             />
           </div>
-          
+
           <button
             onClick={handleFacebookLogin}
             disabled={fbLoading}

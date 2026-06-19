@@ -26,7 +26,6 @@ import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 
 
-
 const VEHICLE_LABELS = {
   CAR: 'Ô tô',
   MOTO: 'Xe máy',

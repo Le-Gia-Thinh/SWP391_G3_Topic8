@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
 import { useState, useEffect } from 'react'
 import { getDashboardAPI } from '../../apis/managerApi'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
 
 const ManagerDashboard = () => {
   const { user } = useAuth()
@@ -178,25 +179,54 @@ const ManagerDashboard = () => {
             </div>
           </div>
 
-          <div className="flex-1 min-h-55 flex items-end justify-between gap-2 sm:gap-4 mt-auto">
-            {last7.map((item) => {
-              const pct = Math.round((item.value / maxRevenue) * 100)
-              return (
-                <div key={item.date} className="group relative flex h-full w-full flex-col items-center justify-end gap-3">
-                  <div className="absolute -top-12 z-10 scale-0 rounded-xl bg-slate-800 px-3 py-2 text-xs font-bold text-white opacity-0 shadow-xl transition-all duration-200 group-hover:scale-100 group-hover:opacity-100 whitespace-nowrap">
-                    {(item.value / 1000).toFixed(0)}K VNĐ
-                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                  </div>
-                  <div className="relative h-180px w-full max-w-12 rounded-t-xl bg-slate-50 overflow-hidden shadow-inner border border-slate-100">
-                    <div
-                      className="absolute bottom-0 w-full rounded-t-xl bg-linear-to-t from-blue-600 to-sky-400 transition-all duration-1000 ease-out"
-                      style={{ height: mounted ? `${Math.max(pct, 2)}%` : '0%' }}
-                    />
-                  </div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{item.label}</span>
-                </div>
-              )
-            })}
+          <div className="flex-1 min-h-64 mt-4 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={last7} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }}
+                  dy={10}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }}
+                  tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
+                />
+                <RechartsTooltip
+                  cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }}
+                  contentStyle={{
+                    borderRadius: '16px',
+                    border: 'none',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                    padding: '12px 16px',
+                    fontWeight: 'bold',
+                    color: '#0f172a'
+                  }}
+                  itemStyle={{ color: '#2563eb' }}
+                  formatter={(value) => [`${value.toLocaleString('vi-VN')} VNĐ`, 'Doanh thu']}
+                  labelStyle={{ color: '#64748b', marginBottom: '4px' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#3b82f6"
+                  strokeWidth={4}
+                  fillOpacity={1}
+                  fill="url(#colorRevenue)"
+                  activeDot={{ r: 6, strokeWidth: 0, fill: '#2563eb' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

@@ -8,7 +8,8 @@ import {
   CheckCircle2,
   Building,
   CreditCard,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { formatPlateNumber } from '../../utils/formatters'
@@ -132,25 +133,25 @@ const DriverBooking = () => {
 
   const durations = useMemo(() => {
     if (!activeVehicleTypeId) return []
-    
+
     const relevantPolicies = pricingPolicies
       .filter(p => p.VehicleTypeID === activeVehicleTypeId && !p.IsOvernight && p.MaxHours !== 999)
-      .sort((a, b) => a.MaxHours - b.MaxHours);
+      .sort((a, b) => a.MaxHours - b.MaxHours)
 
-    if (relevantPolicies.length === 0) return [];
+    if (relevantPolicies.length === 0) return []
 
-    const generated = [];
+    const generated = []
     for (let i = 1; i <= 8; i++) {
-      let policy = relevantPolicies.find(p => p.MaxHours >= i);
-      if (!policy) policy = relevantPolicies[relevantPolicies.length - 1];
+      let policy = relevantPolicies.find(p => p.MaxHours >= i)
+      if (!policy) policy = relevantPolicies[relevantPolicies.length - 1]
 
       generated.push({
         value: `${i}h`,
         label: `${i}h`,
         price: policy.Fee
-      });
+      })
     }
-    return generated;
+    return generated
   }, [pricingPolicies, activeVehicleTypeId])
 
   useEffect(() => {
@@ -366,6 +367,8 @@ const DriverBooking = () => {
       )
 
       const nearestAvailable =
+        scopedSlots.find((slot) => slot.isAIRec) ||
+        data.find((slot) => slot.isAIRec) ||
         scopedSlots.find((slot) => slot.DisplayStatus === 'available') ||
         data.find((slot) => slot.DisplayStatus === 'available')
 
@@ -454,10 +457,14 @@ const DriverBooking = () => {
     if (selectedVisible) return undefined
 
     const scopedNearestAvailable = filteredSlots.find(
+      (slot) => slot.isAIRec
+    ) || filteredSlots.find(
       (slot) => slot.DisplayStatus === 'available'
     )
 
     const globalNearestAvailable = availableSlots.find(
+      (slot) => slot.isAIRec
+    ) || availableSlots.find(
       (slot) => slot.DisplayStatus === 'available'
     )
 
@@ -612,10 +619,14 @@ const DriverBooking = () => {
 
     if (checked) {
       const scopedNearestAvailable = filteredSlots.find(
+        (slot) => slot.isAIRec
+      ) || filteredSlots.find(
         (slot) => slot.DisplayStatus === 'available'
       )
 
       const globalNearestAvailable = availableSlots.find(
+        (slot) => slot.isAIRec
+      ) || availableSlots.find(
         (slot) => slot.DisplayStatus === 'available'
       )
 
@@ -888,15 +899,15 @@ const DriverBooking = () => {
                     step="1"
                     value={Math.max(0, durations.findIndex(d => d.value === duration))}
                     onChange={(event) => {
-                      const idx = parseInt(event.target.value, 10);
-                      if (durations[idx]) setDuration(durations[idx].value);
+                      const idx = parseInt(event.target.value, 10)
+                      if (durations[idx]) setDuration(durations[idx].value)
                     }}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-blue-600"
                   />
                   <div className="flex justify-between text-[10px] text-gray-500 font-medium mt-2 px-1">
                     {durations.map((item, idx) => (
-                      <span 
-                        key={item.value} 
+                      <span
+                        key={item.value}
                         className={durations.findIndex(d => d.value === duration) === idx ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}
                         onClick={() => setDuration(item.value)}
                         style={{ cursor: 'pointer' }}
@@ -960,6 +971,10 @@ const DriverBooking = () => {
               </div>
             </div>
 
+            <div className="mb-4 flex items-start gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
+              ✨ Vị trí có dấu sao là vị trí được AI phân tích tối ưu nhất để tiết kiệm thời gian tìm kiếm.
+            </div>
+
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
               <select
                 value={floorId}
@@ -1016,24 +1031,50 @@ const DriverBooking = () => {
                   Không có vị trí phù hợp với bộ lọc hiện tại.
                 </div>
               ) : (
-                <div className="grid grid-cols-5 gap-3 md:grid-cols-10">
-                  {finalDisplaySlots.map((slot) => (
-                    <button
-                      key={slot.SlotID}
-                      type="button"
-                      disabled={slot.uiStatus === 'occupied'}
-                      onClick={() => handleSelectSlot(slot)}
-                      className={`flex h-12 items-center justify-center rounded-lg border text-xs font-bold outline-none transition-all ${slot.uiStatus === 'occupied'
-                        ? 'cursor-not-allowed border-gray-300 bg-gray-100 font-black text-gray-700 dark:text-gray-300 opacity-80'
-                        : slot.uiStatus === 'selected'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm ring-2 ring-blue-100'
-                          : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:text-blue-500'
-                      }`}
-                    >
-                      {slot.SlotCode}
-                    </button>
-                  ))}
-                </div>
+                <>
+                  {/* AI Recommendation Banner */}
+                  {finalDisplaySlots.find(s => s.isAIRec) && (
+                    <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                      <div className="p-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg animate-pulse shadow-md">
+                        <Sparkles size={20} />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-blue-800 dark:text-blue-300 text-sm flex items-center gap-2">
+                          Đề xuất thông minh từ AI
+                        </h3>
+                        <p className="text-gray-700 dark:text-gray-300 text-xs mt-1.5 leading-relaxed">
+                          Hệ thống khuyên bạn nên chọn vị trí <span className="font-bold text-blue-700 dark:text-blue-400 text-sm">{finalDisplaySlots.find(s => s.isAIRec).SlotCode}</span>. {finalDisplaySlots.find(s => s.isAIRec).AIReason}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-5 gap-3 md:grid-cols-10">
+                    {finalDisplaySlots.map((slot) => (
+                      <button
+                        key={slot.SlotID}
+                        type="button"
+                        disabled={slot.uiStatus === 'occupied'}
+                        onClick={() => handleSelectSlot(slot)}
+                        className={`flex h-12 items-center justify-center rounded-lg border text-xs font-bold outline-none transition-all relative ${slot.uiStatus === 'occupied'
+                          ? 'cursor-not-allowed border-gray-200 bg-gray-100/80 font-semibold text-gray-400 dark:border-slate-700 dark:bg-slate-800/50 dark:text-gray-600 opacity-50'
+                          : slot.uiStatus === 'selected'
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm ring-2 ring-blue-100'
+                            : slot.isAIRec
+                              ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)] ring-2 ring-yellow-400/50 hover:border-yellow-500 z-10 scale-105'
+                              : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:text-blue-500'
+                        }`}
+                      >
+                        {slot.SlotCode}
+                        {slot.isAIRec && (
+                          <div className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400 text-[10px] text-white shadow-sm animate-bounce" title="AI Gợi ý">
+                          ✨
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>

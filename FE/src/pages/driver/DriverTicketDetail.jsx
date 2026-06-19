@@ -22,7 +22,7 @@ const STATUS_LABELS = {
 const DriverTicketDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  
+
   const [ticket, setTicket] = useState(null)
   const [loading, setLoading] = useState(true)
   const [replyContent, setReplyContent] = useState('')
@@ -103,7 +103,7 @@ const DriverTicketDetail = () => {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50/50 dark:bg-gray-950 space-y-6">
-        
+
         {/* Original Ticket Content */}
         <div className="flex gap-4 max-w-[85%] ml-auto flex-row-reverse">
           <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center shrink-0">
@@ -121,7 +121,7 @@ const DriverTicketDetail = () => {
         {/* Replies */}
         {ticket.Replies?.map(reply => {
           const isMe = reply.SenderRole === 'Driver'
-          
+
           return (
             <div key={reply.ReplyID} className={`flex gap-4 max-w-[85%] ${isMe ? 'ml-auto flex-row-reverse' : ''}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isMe ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 dark:text-blue-400' : 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400'}`}>
@@ -132,8 +132,8 @@ const DriverTicketDetail = () => {
                   {isMe ? 'Bạn' : 'Nhân viên hỗ trợ'}
                 </span>
                 <div className={`p-4 rounded-2xl shadow-sm text-sm whitespace-pre-wrap ${
-                  isMe 
-                    ? 'bg-blue-600 text-white rounded-tr-none' 
+                  isMe
+                    ? 'bg-blue-600 text-white rounded-tr-none'
                     : 'bg-white dark:bg-slate-800 dark:bg-gray-800 border border-gray-100 dark:border-slate-700/50 dark:border-gray-700 text-gray-800 dark:text-gray-200 dark:text-gray-200 rounded-tl-none'
                 }`}>
                   {reply.Content}
@@ -164,8 +164,8 @@ const DriverTicketDetail = () => {
               rows={1}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleReply(e);
+                  e.preventDefault()
+                  handleReply(e)
                 }
               }}
             />

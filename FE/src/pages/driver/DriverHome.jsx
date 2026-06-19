@@ -194,7 +194,7 @@ const QuickActionCard = ({ to, title, description, Icon, variant, iconClass, bgC
       >
         <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white dark:bg-slate-800/10 blur-2xl transition-transform duration-500 group-hover:scale-150" />
         <div className="relative z-10">
-          <div className="mb-4 inline-flex rounded-xl bg-white dark:bg-slate-800/20 p-3 backdrop-blur-md">
+          <div className="mb-4 inline-flex rounded-xl bg-white/20 dark:bg-slate-800/20 p-3 backdrop-blur-md">
             <Icon size={24} className="text-white" />
           </div>
           <h3 className="mb-1.5 text-lg font-bold">{title}</h3>

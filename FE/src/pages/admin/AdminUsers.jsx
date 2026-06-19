@@ -267,7 +267,7 @@ const AdminUsers = () => {
                 message: 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0 hoặc 84)'
               }
             })}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.PhoneNumber && <p className="text-xs text-red-500 mt-1">{errors.PhoneNumber.message}</p>}
           </div>
           <div>

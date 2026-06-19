@@ -138,7 +138,7 @@ const DriverLayout = () => {
         <div className="flex items-center gap-4">
           <div className="relative" ref={profileRef}>
             <button onClick={() => setIsProfileOpen(prev => !prev)} className="flex items-center gap-3 rounded-xl p-1.5">
-              <div className="text-sm font-bold text-white bg-orange-600 h-10 w-10 flex items-center justify-center rounded-full">{displayName.slice(0,2)}</div>
+              <div className="text-sm font-bold text-white bg-orange-600 h-10 w-10 flex items-center justify-center rounded-full">{displayName.slice(0, 2)}</div>
             </button>
             {isProfileOpen && (
               <div className="absolute right-0 mt-2 w-72 rounded-2xl border bg-white dark:bg-slate-800 shadow-xl">

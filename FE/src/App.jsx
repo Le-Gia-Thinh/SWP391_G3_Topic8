@@ -7,6 +7,7 @@ import {
 
 // Import Layouts
 import DashboardLayout from './components/layout/DashboardLayout'
+import AIChatBox from './components/chat/AIChatBox'
 
 // Import Common Pages (Lazy)
 const Home = React.lazy(() => import('./pages/Home'))
@@ -281,6 +282,7 @@ const App = () => {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <AIChatBox />
     </Suspense>
   )
 }

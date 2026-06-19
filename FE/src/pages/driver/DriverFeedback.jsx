@@ -375,7 +375,7 @@ const DriverFeedback = () => {
 
                 {item.Comment && (
                   <p className="mt-3 rounded-xl bg-gray-50 dark:bg-slate-900/50 p-3 text-sm text-gray-600 dark:text-gray-400 italic">
-                    "{item.Comment}"
+                    &quot;{item.Comment}&quot;
                   </p>
                 )}
               </div>

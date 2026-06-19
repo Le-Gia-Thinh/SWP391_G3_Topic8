@@ -25,6 +25,7 @@
     "react-hook-form": "^7.79.0",
     "react-router-dom": "^7.18.0",
     "react-toastify": "^11.1.0",
+    "recharts": "^3.8.1",
     "yup": "^1.7.1"
   },
   "devDependencies": {

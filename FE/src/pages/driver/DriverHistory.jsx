@@ -76,12 +76,12 @@ const fmt = (n) =>
 const getDisplayStatus = (item) => {
   const status = item.ReservationStatus || ''
   switch (status) {
-    case 'Pending': return { statusLabel: 'Chờ thanh toán', statusValue: 'Pending' }
-    case 'Prepaid': return { statusLabel: 'Đã trả trước', statusValue: 'Prepaid' }
-    case 'Reserved': return { statusLabel: 'Đã đặt', statusValue: 'active' }
-    case 'Completed': return { statusLabel: 'Đã sử dụng', statusValue: 'used' }
-    case 'Cancelled': return { statusLabel: 'Đã hủy', statusValue: 'cancelled' }
-    default: return { statusLabel: status || 'Không xác định', statusValue: 'default' }
+  case 'Pending': return { statusLabel: 'Chờ thanh toán', statusValue: 'Pending' }
+  case 'Prepaid': return { statusLabel: 'Đã trả trước', statusValue: 'Prepaid' }
+  case 'Reserved': return { statusLabel: 'Đã đặt', statusValue: 'active' }
+  case 'Completed': return { statusLabel: 'Đã sử dụng', statusValue: 'used' }
+  case 'Cancelled': return { statusLabel: 'Đã hủy', statusValue: 'cancelled' }
+  default: return { statusLabel: status || 'Không xác định', statusValue: 'default' }
   }
 }
 
