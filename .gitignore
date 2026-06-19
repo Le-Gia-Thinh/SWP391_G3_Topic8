@@ -8,7 +8,7 @@ node_modules/
 /out/
 
 # Environment variables (Crucial for Express/Node)
-
+BE/.env
 
 # Logs
 npm-debug.log*
