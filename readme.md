@@ -13,6 +13,7 @@ Trong FE : khởi tạo yarn + vite : yarn create vite ==> đặt tên ==> chọ
                     yarn add @mui/icons-material
                     yarn add qrcode
                     yarn add dayjs
+                    yarn add rechart
 Trong BE :
                     Chạy lệnh yarn install trước 
                     chạy lệnh trong sql
@@ -21,4 +22,5 @@ Trong BE :
                     yarn add nodemailer
                     yarn seed:password
                     yarn add ngrok   
+                    yarn add @google/genai
                     ==> chạy test yarn dev                

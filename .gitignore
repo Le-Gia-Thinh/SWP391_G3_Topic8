@@ -7,9 +7,6 @@ node_modules/
 /dist/
 /out/
 
-# Environment variables (Crucial for Express/Node)
-BE/.env
-
 # Logs
 npm-debug.log*
 yarn-debug.log*
