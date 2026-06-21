@@ -77,6 +77,7 @@ const DriverReport = () => {
 
   const [context, setContext] = useState({
     currentSession: null,
+    activeSessions: [],
     reservations: [],
     recentReports: []
   })
@@ -88,29 +89,36 @@ const DriverReport = () => {
   const relatedOptions = useMemo(() => {
     const options = []
 
-    const currentSession = context.currentSession
+    const activeSessions = Array.isArray(context.activeSessions) && context.activeSessions.length > 0
+      ? context.activeSessions
+      : (context.currentSession ? [context.currentSession] : [])
 
-    if (currentSession) {
-      const sessionId = getValue(currentSession, 'SessionID', 'sessionId')
+    activeSessions.forEach((session) => {
+      const sessionId = getValue(session, 'SessionID', 'sessionId')
 
       options.push({
         id: `session-${sessionId}`,
         kind: 'session',
-        label: `Phiên hiện tại (${getValue(currentSession, 'SessionCode', 'sessionCode') || sessionId} - ${getValue(currentSession, 'PlateNumber', 'plateNumber') || 'Chưa có biển số'})`,
+        label: `Phiên hiện tại (${getValue(session, 'SessionCode', 'sessionCode') || sessionId} - ${getValue(session, 'PlateNumber', 'plateNumber') || 'Chưa có biển số'})`,
         sessionId,
-        reservationId: getValue(currentSession, 'ReservationID', 'reservationId') || null,
-        bookingCode: getValue(currentSession, 'BookingCode', 'bookingCode') || '',
-        plateNumber: getValue(currentSession, 'PlateNumber', 'plateNumber') || '',
-        vehicleName: getValue(currentSession, 'VehicleName', 'vehicleName') || '',
-        slotCode: getValue(currentSession, 'SlotCode', 'slotCode') || '',
-        buildingName: getValue(currentSession, 'BuildingName', 'buildingName') || '',
-        time: getValue(currentSession, 'EntryTime', 'entryTime'),
-        status: getValue(currentSession, 'SessionStatus', 'sessionStatus') || 'Active',
+        reservationId: getValue(session, 'ReservationID', 'reservationId') || null,
+        bookingCode: getValue(session, 'BookingCode', 'bookingCode') || '',
+        plateNumber: getValue(session, 'PlateNumber', 'plateNumber') || '',
+        vehicleName: getValue(session, 'VehicleName', 'vehicleName') || '',
+        slotCode: getValue(session, 'SlotCode', 'slotCode') || '',
+        buildingName: getValue(session, 'BuildingName', 'buildingName') || '',
+        time: getValue(session, 'EntryTime', 'entryTime'),
+        status: getValue(session, 'SessionStatus', 'sessionStatus') || 'Active',
         type: 'Phiên gửi xe hiện tại'
       })
-    }
+    })
 
     context.reservations.forEach((reservation) => {
+      const status = getValue(reservation, 'ReservationStatus', 'reservationStatus')
+
+      // Giữ lại các đặt chỗ đang Active, Reserved hoặc Pending (để báo cáo sự cố lúc chưa check-in)
+      if (status !== 'Active' && status !== 'Reserved' && status !== 'Pending') return
+
       const reservationId = getValue(reservation, 'ReservationID', 'reservationId')
 
       if (!reservationId) return
@@ -165,6 +173,7 @@ const DriverReport = () => {
 
       setContext({
         currentSession: response.data?.currentSession || null,
+        activeSessions: Array.isArray(response.data?.activeSessions) ? response.data.activeSessions : [],
         reservations: Array.isArray(response.data?.reservations) ? response.data.reservations : [],
         recentReports: Array.isArray(response.data?.recentReports) ? response.data.recentReports : []
       })
@@ -278,7 +287,7 @@ const DriverReport = () => {
   if (loading) {
     return (
       <div className="flex min-h-[500px] items-center justify-center">
-        <div className="rounded-2xl bg-white px-6 py-4 text-sm font-bold text-gray-600 shadow-sm">
+        <div className="rounded-2xl bg-white dark:bg-slate-800 px-6 py-4 text-sm font-bold text-gray-600 dark:text-gray-400 shadow-sm">
           Đang tải dữ liệu báo cáo...
         </div>
       </div>
@@ -289,11 +298,11 @@ const DriverReport = () => {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Báo cáo sự cố
           </h1>
 
-          <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+          <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span>🏢</span>
             <span>{selectedRelated?.buildingName || 'Tòa nhà đang sử dụng'}</span>
           </div>
@@ -324,8 +333,8 @@ const DriverReport = () => {
                     onClick={() => setSelectedIssue(issue.id)}
                     className={`rounded-xl border p-3 text-sm font-semibold transition-colors ${
                       active
-                        ? 'border-blue-500 bg-blue-50/50 text-blue-700'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                        ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300'
+                        : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     {issue.label}
@@ -342,32 +351,32 @@ const DriverReport = () => {
           >
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">
                   Chọn phiên đỗ xe
                 </label>
 
                 <select
                   value={selectedRelatedId}
                   onChange={(event) => setSelectedRelatedId(event.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                 >
                   {relatedOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
+                    <option key={option.id} value={option.id} className="bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
                       {option.label}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="flex flex-col gap-4 rounded-xl border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-4 rounded-xl border border-gray-200 dark:border-slate-700 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xl text-blue-600">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/20 text-xl text-blue-600 dark:text-blue-400">
                     🚗
                   </div>
 
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-lg font-bold text-gray-900">
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">
                         {selectedRelated?.plateNumber || 'Chưa có biển số'}
                       </span>
 
@@ -376,14 +385,14 @@ const DriverReport = () => {
                       </span>
                     </div>
 
-                    <div className="mt-1 text-xs text-gray-500">
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                       Mã đặt chỗ:{' '}
-                      <span className="font-semibold text-gray-700">
+                      <span className="font-semibold text-gray-700 dark:text-gray-300">
                         {selectedRelated?.bookingCode || 'Không có'}
                       </span>
                     </div>
 
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-gray-500">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                       <span>⏰</span>
                       <span>{formatDateTime(selectedRelated?.time)}</span>
                       <span className="mx-1">•</span>
@@ -401,7 +410,7 @@ const DriverReport = () => {
                 <button
                   type="button"
                   onClick={loadReportContext}
-                  className="w-fit rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+                  className="w-fit rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-1.5 text-sm font-semibold text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800"
                 >
                   Làm mới
                 </button>
@@ -415,7 +424,7 @@ const DriverReport = () => {
             description="Cung cấp thêm chi tiết để chúng tôi có thể hỗ trợ bạn nhanh hơn"
           >
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+              <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Chi tiết vấn đề
               </label>
 
@@ -425,7 +434,7 @@ const DriverReport = () => {
                 placeholder="Hãy mô tả vấn đề của bạn ở đây. Ví dụ: Tôi đã thanh toán nhưng cổng không mở, ứng dụng báo sai phí..."
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                className="w-full resize-none rounded-xl border border-gray-200 p-4 text-sm outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                className="w-full resize-none rounded-xl border border-gray-200 dark:border-slate-700 p-4 text-sm outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
               />
 
               <div className="mt-1 text-right text-xs text-gray-400">
@@ -439,7 +448,7 @@ const DriverReport = () => {
             title="Hình ảnh đính kèm"
             description="Tải lên ảnh chụp bằng chứng như biên lai, màn hình lỗi hoặc vị trí xe"
           >
-            <label className="block cursor-pointer rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-8 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30">
+            <label className="block cursor-pointer rounded-xl border-2 border-dashed border-gray-200 dark:border-slate-700 bg-gray-50/50 p-8 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30">
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/jpg"
@@ -448,15 +457,15 @@ const DriverReport = () => {
                 className="hidden"
               />
 
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-2xl text-blue-600">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-2xl text-blue-600 dark:text-blue-400">
                 ⬆
               </div>
 
-              <p className="mt-4 text-sm font-bold text-gray-700">
+              <p className="mt-4 text-sm font-bold text-gray-700 dark:text-gray-300">
                 Nhấn để chọn tập tin
               </p>
 
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Chấp nhận JPG, PNG. Tối đa 5MB mỗi tệp. Tối đa 5 tệp.
               </p>
             </label>
@@ -466,10 +475,10 @@ const DriverReport = () => {
                 {attachments.map((file) => (
                   <div
                     key={file.id}
-                    className="relative h-24 w-32 overflow-hidden rounded-xl border border-gray-200"
+                    className="relative h-24 w-32 overflow-hidden rounded-xl border border-gray-200 dark:border-slate-700"
                   >
                     <div className="flex h-full w-full items-center justify-center bg-gray-200 px-2 text-center">
-                      <span className="break-all text-xs text-gray-500">
+                      <span className="break-all text-xs text-gray-500 dark:text-gray-400">
                         {file.name}
                       </span>
                     </div>
@@ -486,7 +495,7 @@ const DriverReport = () => {
               </div>
             )}
 
-            <p className="mt-4 text-xs italic text-gray-500">
+            <p className="mt-4 text-xs italic text-gray-500 dark:text-gray-400">
               * Hiện tại hệ thống lưu tên file đính kèm vào database. Nếu muốn upload ảnh thật, cần thêm API upload file riêng.
             </p>
           </SectionCard>
@@ -494,8 +503,8 @@ const DriverReport = () => {
 
         <div className="space-y-6">
           <Card>
-            <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-4">
-              <h2 className="text-lg font-bold text-blue-700">
+            <div className="mb-6 flex items-center justify-between border-b border-gray-100 dark:border-slate-700/50 pb-4">
+              <h2 className="text-lg font-bold text-blue-700 dark:text-blue-400">
                 Tóm tắt báo cáo
               </h2>
 
@@ -532,7 +541,7 @@ const DriverReport = () => {
               />
 
               <div className="flex items-center justify-between pt-2">
-                <span className="font-bold text-gray-800">
+                <span className="font-bold text-gray-800 dark:text-gray-200">
                   Trạng thái sau gửi:
                 </span>
 
@@ -590,13 +599,13 @@ const DriverReport = () => {
             </div>
           </Card>
 
-          <div className="rounded-2xl border border-gray-100 bg-gray-50/80 p-5">
-            <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
+          <div className="rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-gray-50/80 p-5">
+            <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Báo cáo gần đây
             </h3>
 
             {context.recentReports.length === 0 ? (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Bạn chưa có báo cáo nào.
               </p>
             ) : (
@@ -604,19 +613,19 @@ const DriverReport = () => {
                 {context.recentReports.slice(0, 5).map((report) => (
                   <div
                     key={report.IncidentID}
-                    className="rounded-xl border border-gray-100 bg-white p-3"
+                    className="rounded-xl border border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-3"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-bold text-gray-900">
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
                         {report.ReportCode || `RP-${report.IncidentID}`}
                       </span>
 
-                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600">
+                      <span className="rounded-full bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400">
                         {getStatusLabel(report.IncidentStatus)}
                       </span>
                     </div>
 
-                    <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+                    <p className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
                       {report.Description || 'Không có mô tả'}
                     </p>
 
@@ -630,7 +639,7 @@ const DriverReport = () => {
           </div>
 
           <Card className="bg-gray-50/80 p-5">
-            <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
+            <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Hỗ trợ kỹ thuật
             </h3>
 
@@ -639,7 +648,7 @@ const DriverReport = () => {
               <SupportRow icon="✉" label="Email:" value="support@parkingsafe.com" />
             </div>
 
-            <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4 text-[10px] font-semibold text-gray-400">
+            <div className="mt-6 flex items-center justify-between border-t border-gray-200 dark:border-slate-700 pt-4 text-[10px] font-semibold text-gray-400">
               <span>PHIÊN BẢN HỆ THỐNG 2.4.0-RELEASE</span>
               <span>© 2026 PARKINGSAFE INC.</span>
             </div>
@@ -653,7 +662,7 @@ const DriverReport = () => {
         title={alertModal.title}
         footer={<Button variant="primary" onClick={() => setAlertModal({ isOpen: false, message: '', title: '' })}>Đóng</Button>}
       >
-        <p className="text-gray-700">{alertModal.message}</p>
+        <p className="text-gray-700 dark:text-gray-300">{alertModal.message}</p>
       </Modal>
     </div>
   )
@@ -663,16 +672,16 @@ const SectionCard = ({ step, title, description, children }) => {
   return (
     <Card>
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-100 text-xs font-bold text-blue-600">
+        <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-100 text-xs font-bold text-blue-600 dark:text-blue-400">
           {step}
         </div>
 
         <div>
-          <h2 className="text-lg font-bold text-gray-900">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
             {title}
           </h2>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             {description}
           </p>
         </div>
@@ -685,12 +694,12 @@ const SectionCard = ({ step, title, description, children }) => {
 
 const SummaryRow = ({ label, value, border }) => {
   return (
-    <div className={`flex items-center justify-between gap-4 ${border ? 'border-b border-gray-100 pb-4' : ''}`}>
-      <span className="text-gray-500">
+    <div className={`flex items-center justify-between gap-4 ${border ? 'border-b border-gray-100 dark:border-slate-700/50 pb-4' : ''}`}>
+      <span className="text-gray-500 dark:text-gray-400">
         {label}
       </span>
 
-      <span className="text-right font-bold text-gray-900">
+      <span className="text-right font-bold text-gray-900 dark:text-white">
         {value}
       </span>
     </div>
@@ -702,11 +711,11 @@ const SupportRow = ({ icon, label, value }) => {
     <div className="flex items-center gap-2 text-sm">
       <span>{icon}</span>
 
-      <span className="font-semibold text-gray-500">
+      <span className="font-semibold text-gray-500 dark:text-gray-400">
         {label}
       </span>
 
-      <span className="font-bold text-gray-900">
+      <span className="font-bold text-gray-900 dark:text-white">
         {value}
       </span>
     </div>

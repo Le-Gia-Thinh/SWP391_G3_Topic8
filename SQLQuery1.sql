@@ -1,4 +1,4 @@
-﻿USE master;
+USE master;
 GO
 
 IF DB_ID('ParkingManagementDB') IS NULL
@@ -64,6 +64,7 @@ IF OBJECT_ID('Users',             'U') IS NOT NULL DROP TABLE Users;
 IF OBJECT_ID('VehicleTypes',      'U') IS NOT NULL DROP TABLE VehicleTypes;
 IF OBJECT_ID('Permissions',       'U') IS NOT NULL DROP TABLE Permissions;
 IF OBJECT_ID('Roles',             'U') IS NOT NULL DROP TABLE Roles;
+IF OBJECT_ID('AuditLogs',         'U') IS NOT NULL DROP TABLE AuditLogs;
 GO
 
 -- =====================================================
@@ -153,6 +154,20 @@ GO
 
 CREATE INDEX IX_RT_TokenHash ON RefreshTokens(TokenHash);
 CREATE INDEX IX_RT_UserID ON RefreshTokens(UserID);
+GO
+
+CREATE TABLE AuditLogs (
+    LogID INT IDENTITY(1,1) PRIMARY KEY,
+    UserID INT NULL,
+    UserName NVARCHAR(100) NULL,
+    RoleName NVARCHAR(50) NULL,
+    Action NVARCHAR(50) NOT NULL,
+    Target NVARCHAR(100) NULL,
+    Description NVARCHAR(500) NULL,
+    IpAddress NVARCHAR(45) NULL,
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE SET NULL
+);
 GO
 
 CREATE TABLE VehicleTypes (
@@ -310,10 +325,11 @@ GO
 -- =====================================================
 ALTER TABLE Users
 ADD CONSTRAINT CK_Users_MinAge
-CHECK (
-    RoleID = 1
-    OR (
-        RoleID IN (2, 3)
+  CHECK (
+      RoleID = 1
+      OR RoleID = 4
+      OR (
+          RoleID IN (2, 3)
         AND DateOfBirth IS NOT NULL
         AND HireDate IS NOT NULL
         AND DATEDIFF(YEAR, DateOfBirth, HireDate) >= 18
@@ -945,7 +961,8 @@ GO
 INSERT INTO Roles (RoleName, Description) VALUES
 ('Driver',  'Regular parking customer'),
 ('Staff',   'Parking lot staff'),
-('Manager', 'Parking lot manager');
+('Manager', 'Parking lot manager'),
+('Admin',   'System administrator');
 GO
 
 INSERT INTO Permissions (PermissionName, Description) VALUES
@@ -959,7 +976,8 @@ GO
 INSERT INTO RolePermissions (RoleID, PermissionID) VALUES
 (1, 1),
 (2, 1), (2, 2), (2, 5),
-(3, 1), (3, 2), (3, 3), (3, 4), (3, 5);
+(3, 1), (3, 2), (3, 3), (3, 4), (3, 5),
+(4, 1), (4, 2), (4, 3), (4, 4), (4, 5);
 GO
 
 INSERT INTO Users (
@@ -968,11 +986,12 @@ INSERT INTO Users (
     IsActive, IsEmailVerified
 )
 VALUES
-('Alice Driver',  'alice@email.com', 'hash_alice', '0901000001', 1, NULL,         NULL,         1, 1),
-('Bob Staff',     'bob@email.com',   'hash_bob',   '0901000002', 2, '1990-05-10', '2015-06-01', 1, 1),
-('Carol Manager', 'carol@email.com', 'hash_carol', '0901000003', 3, '1985-03-20', '2010-04-15', 1, 1),
-('David Driver',  'david@email.com', 'hash_david', '0901000004', 1, NULL,         NULL,         1, 1),
-('Eve Driver',    'eve@email.com',   'hash_eve',   '0901000005', 1, NULL,         NULL,         1, 1);
+('Alice Driver',  'alice@email.com', '$2a$10$T8Mv3Lg2vR9aI.3tGz.e2.gP0wR.Hj7yX0qA7zJ5rX5f5F5D5Q5g2', '0901000001', 1, NULL,         NULL,         1, 1),
+('Bob Staff',     'bob@email.com',   '$2a$10$T8Mv3Lg2vR9aI.3tGz.e2.gP0wR.Hj7yX0qA7zJ5rX5f5F5D5Q5g2',   '0901000002', 2, '1990-05-10', '2015-06-01', 1, 1),
+('Carol Manager', 'carol@email.com', '$2a$10$T8Mv3Lg2vR9aI.3tGz.e2.gP0wR.Hj7yX0qA7zJ5rX5f5F5D5Q5g2', '0901000003', 3, '1985-03-20', '2010-04-15', 1, 1),
+('David Driver',  'david@email.com', '$2a$10$T8Mv3Lg2vR9aI.3tGz.e2.gP0wR.Hj7yX0qA7zJ5rX5f5F5D5Q5g2', '0901000004', 1, NULL,         NULL,         1, 1),
+('Eve Driver',    'eve@email.com',   '$2a$10$T8Mv3Lg2vR9aI.3tGz.e2.gP0wR.Hj7yX0qA7zJ5rX5f5F5D5Q5g2',   '0901000005', 1, NULL,         NULL,         1, 1),
+('Grace Admin',   'admin@parking.com', '$2a$10$T8Mv3Lg2vR9aI.3tGz.e2.gP0wR.Hj7yX0qA7zJ5rX5f5F5D5Q5g2', '0901000007', 4, '1990-01-01', '2023-01-01', 1, 1);
 GO
 
 INSERT INTO UserAuthProviders (

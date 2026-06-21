@@ -47,7 +47,11 @@ const sx = {
       '& fieldset': { borderColor: '#e5e7eb' },
       '&:hover fieldset': { borderColor: '#d1d5db' },
       '&.Mui-focused': { backgroundColor: '#ffffff' },
-      '&.Mui-focused fieldset': { borderWidth: 2, borderColor: '#3b82f6' }
+      '&.Mui-focused fieldset': { borderWidth: 2, borderColor: '#3b82f6' },
+      '& input:-webkit-autofill': {
+        WebkitBoxShadow: '0 0 0 100px white inset',
+        WebkitTextFillColor: 'black'
+      }
     },
     '& .MuiFormHelperText-root': { marginLeft: 0, fontSize: '0.75rem' }
   },

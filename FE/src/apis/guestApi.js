@@ -1,9 +1,9 @@
 import authorizedAxiosInstance from '../utils/authorizeAxios'
 
 const guestApi = {
-  trackSession: async (plateNumber, sessionCode) => {
+  trackSession: async (searchTerm) => {
     const res = await authorizedAxiosInstance.get('/guest/track-session', {
-      params: { plateNumber, sessionCode }
+      params: { searchTerm }
     })
     return res.data
   },

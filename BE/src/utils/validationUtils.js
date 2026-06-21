@@ -1,15 +1,15 @@
-// src/utilities/authValidation.js
+// src/utils/validationUtils.js
 // Validate input trước khi vào controller
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const vietnamPhoneRegex = /^0\d{9}$/;
+export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const vietnamPhoneRegex = /^0\d{9}$/;
 
 // Cho phép dạng biển số phổ biến:
 // 59A-12345
 // 59A-123.45
 // 59AB-12345
 // 51F-99999
-const plateNumberRegex = /^(\d{2}[A-Z]{1,2}-?\d{3}\.?\d{2}|\d{2}[A-Z]{1,2}-?\d{4,5})$/i;
+export const plateNumberRegex = /^(\d{2}[A-Z]{1,2}-?\d{3}\.?\d{2}|\d{2}[A-Z]{1,2}-?\d{4,5})$/i;
 
 function sendValidationError(res, errors) {
   return res.status(400).json({
@@ -19,12 +19,51 @@ function sendValidationError(res, errors) {
   });
 }
 
-function isValidEmail(email) {
+export function isValidEmail(email) {
   return emailRegex.test(String(email || "").trim());
 }
 
-function trim(value) {
+export function trim(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+export function formatPlateNumber(value) {
+  if (!value) return '';
+  
+  // Lấy giá trị gốc và chuyển thành chữ hoa
+  let raw = String(value).toUpperCase();
+  
+  // Giữ lại dấu '-' ở cuối nếu user cố tình gõ
+  const endsWithHyphen = raw.endsWith('-');
+  
+  // Loại bỏ các ký tự không hợp lệ (chỉ giữ chữ cái, số, và dấu chấm)
+  raw = raw.replace(/[^A-Z0-9.]/g, '');
+  
+  // 1. 2 ký tự đầu tiên phải là số
+  let p1 = raw.substring(0, 2).replace(/[^0-9]/g, '');
+  if (p1.length < 2) return p1;
+  
+  // 2. Ký tự tiếp theo là chữ cái (1 hoặc 2 chữ)
+  let restAfterP1 = raw.substring(p1.length);
+  let letterMatch = restAfterP1.match(/^[A-Z]{1,2}/);
+  let letters = letterMatch ? letterMatch[0] : '';
+  
+  if (letters.length === 0) {
+    // Nếu chưa gõ chữ cái, chỉ trả về p1
+    return p1;
+  }
+  
+  // 3. Các số còn lại
+  let restAfterLetters = restAfterP1.substring(letters.length);
+  let digits = restAfterLetters.replace(/[^0-9.]/g, '');
+  
+  if (digits.length > 0) {
+    // Nếu bắt đầu gõ số sau phần chữ cái -> tự động chèn dấu '-'
+    return `${p1}${letters}-${digits}`;
+  } else {
+    // Nếu chưa gõ số, nhưng người dùng cố tình gõ '-' thì giữ lại
+    return endsWithHyphen ? `${p1}${letters}-` : `${p1}${letters}`;
+  }
 }
 
 export function validateRegister(req, res, next) {

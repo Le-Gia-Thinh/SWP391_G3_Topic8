@@ -431,7 +431,7 @@ const StaffPaymentConfirm = () => {
               </button>
               {surcharge > 0 && (
                 <p className="text-xs text-center text-orange-600 font-medium">
-                  ⚠ Còn phụ trội {formatVND(surcharge)} — thu thêm tại tab "Chờ thu phụ trội"
+                  ⚠ Còn phụ trội {formatVND(surcharge)} — thu thêm tại tab &quot;Chờ thu phụ trội&quot;
                 </p>
               )}
             </>
@@ -492,11 +492,11 @@ const StaffPaymentConfirm = () => {
           <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-xs text-gray-500 space-y-2">
             <p className="font-bold text-gray-700 text-sm mb-2">Lưu ý</p>
             {isPaid ? (
-              <><p>• Khách đã trả trước qua QR. Bấm "Xác nhận xe ra" để hoàn tất.</p><p>• Nếu có phụ trội, thu thêm ở tab "Chờ thu phụ trội".</p></>
+              <><p>• Khách đã trả trước qua QR. Bấm &quot;Xác nhận xe ra&quot; để hoàn tất.</p><p>• Nếu có phụ trội, thu thêm ở tab &quot;Chờ thu phụ trội&quot;.</p></>
             ) : paymentMethod === 'cash' ? (
               <><p>• Thu đúng số tiền hiển thị, xác nhận ngay sau khi thu.</p><p>• Không cần chờ hệ thống — xe ra ngay sau khi xác nhận.</p></>
             ) : (
-              <><p>• Tạo QR cho khách quét tại quầy (khách walk-in không có app).</p><p>• Hệ thống tự kiểm tra mỗi 3 giây, checkout tự hoàn tất khi đã trả.</p><p>• QR có hiệu lực 15 phút. Hết hạn cần tạo lại.</p><p>• Khách có app tự quét ở mục Thanh toán → bấm "Kiểm tra lại".</p></>
+              <><p>• Tạo QR cho khách quét tại quầy (khách walk-in không có app).</p><p>• Hệ thống tự kiểm tra mỗi 3 giây, checkout tự hoàn tất khi đã trả.</p><p>• QR có hiệu lực 15 phút. Hết hạn cần tạo lại.</p><p>• Khách có app tự quét ở mục Thanh toán → bấm &quot;Kiểm tra lại&quot;.</p></>
             )}
           </div>
         </div>

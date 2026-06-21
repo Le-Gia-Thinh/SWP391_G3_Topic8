@@ -31,15 +31,15 @@ const Modal = ({
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${maxWidth} transform rounded-2xl bg-white shadow-2xl transition-all animate-in fade-in zoom-in-95 duration-200`}
+        className={`relative w-full ${maxWidth} transform rounded-2xl bg-white dark:bg-slate-800 shadow-2xl transition-all animate-in fade-in zoom-in-95 duration-200`}
       >
         {(title || showClose) && (
-          <div className="flex items-center justify-between border-b border-gray-100 p-5">
-            {title && <h3 className="text-lg font-bold text-gray-900">{title}</h3>}
+          <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-700/50 p-5">
+            {title && <h3 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h3>}
             {showClose && (
               <button
                 onClick={onClose}
-                className="ml-auto rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                className="ml-auto rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-400 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -52,7 +52,7 @@ const Modal = ({
         </div>
 
         {footer && (
-          <div className="flex items-center justify-end gap-3 border-t border-gray-100 p-5 bg-gray-50/50 rounded-b-2xl">
+          <div className="flex items-center justify-end gap-3 border-t border-gray-100 dark:border-slate-700/50 p-5 bg-gray-50/50 rounded-b-2xl">
             {footer}
           </div>
         )}

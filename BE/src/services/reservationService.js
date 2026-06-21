@@ -6,6 +6,7 @@ import {
   addHours,
   getMinimumReservationStartTime,
 } from "../utils/dateTimeUtils.js";
+import { recommendOptimalSlot } from "./aiAllocationService.js";
 
 function createHttpError(status, message) {
   const error = new Error(message);
@@ -293,34 +294,20 @@ export async function getAvailableSlots(req) {
         AND vt.IsActive = 1
         AND f.IsActive = 1
       ORDER BY
-        CASE
-          WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN 1
-
-          WHEN EXISTS (
-            SELECT 1
-            FROM ParkingSessions s
-            WHERE s.SlotID = ps.SlotID
-              AND s.SessionStatus = 'Active'
-              AND s.ExitTime IS NULL
-          ) THEN 1
-
-          WHEN EXISTS (
-            SELECT 1
-            FROM Reservations r
-            WHERE r.SlotID = ps.SlotID
-              AND r.ReservationStatus = 'Reserved'
-              AND @StartTime < r.EndTime
-              AND @EndTime > r.StartTime
-          ) THEN 1
-
-          ELSE 0
-        END,
         f.FloorID,
         z.ZoneID,
         ps.SlotID
     `);
 
-  return result.recordset;
+  const slots = result.recordset;
+
+  // Áp dụng AI Allocation Service để gán AIScore cho các slot available
+  const bestSlot = recommendOptimalSlot(slots);
+  if (bestSlot) {
+    bestSlot.isAIRec = true;
+  }
+
+  return slots;
 }
 
 export async function createReservation(req) {

@@ -2,8 +2,31 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+html.dark {
+  color-scheme: dark;
+}
+
 @layer base {
   body {
     @apply antialiased text-gray-900 bg-[#fbf9f1] dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300;
   }
+}
+
+/* Fix autofill background for Chrome/Edge */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: black !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+html.dark input:-webkit-autofill,
+html.dark input:-webkit-autofill:hover, 
+html.dark input:-webkit-autofill:focus, 
+html.dark input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #1e1e1e inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
 }

@@ -31,9 +31,9 @@ const CustomSelect = ({ value, onChange, options = [], className = '', placehold
         role="combobox"
         aria-expanded={isOpen}
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm cursor-pointer flex items-center justify-between select-none hover:border-blue-300 transition-colors"
+        className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-gray-200 dark:border-slate-700 text-sm cursor-pointer flex items-center justify-between select-none hover:border-blue-300 transition-colors"
       >
-        <span className={`truncate ${selectedOption ? 'text-gray-800' : 'text-gray-400'}`}>
+        <span className={`truncate ${selectedOption ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400'}`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown
@@ -43,7 +43,7 @@ const CustomSelect = ({ value, onChange, options = [], className = '', placehold
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/50 rounded-xl shadow-lg max-h-60 overflow-auto">
           {options.map((option) => (
             <div
               key={option.value}
@@ -55,8 +55,8 @@ const CustomSelect = ({ value, onChange, options = [], className = '', placehold
               }}
               className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
                 value === option.value
-                  ? 'bg-blue-50 text-blue-600 font-bold'
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:text-blue-400'
               }`}
             >
               {option.label}
