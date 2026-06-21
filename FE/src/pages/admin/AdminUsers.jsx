@@ -17,6 +17,15 @@ const roleBadge = {
   Admin: 'danger'
 }
 
+// Các vai trò bắt buộc phải có Ngày sinh + Ngày vào làm (theo ràng buộc CK_Users_MinAge ở DB)
+const ROLES_REQUIRE_DATES = ['Staff', 'Manager']
+
+// Tài khoản hệ thống walk-in guest — không cho sửa/khóa/đổi vai trò
+const SYSTEM_WALKIN_EMAIL = 'walkin.guest@system.local'
+
+// Tính tuổi tại một mốc thời gian (năm tròn)
+const ageAt = (dob, at) => Math.floor((new Date(at) - new Date(dob)) / (1000 * 60 * 60 * 24 * 365.25))
+
 const fmtDate = (d) => d
   ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
   : '—'
@@ -35,7 +44,11 @@ const AdminUsers = () => {
   // Modal tạo/sửa
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm()
+  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm()
+
+  const selectedRoleId = watch('RoleID')
+  const selectedRoleName = roles.find(r => String(r.RoleID) === String(selectedRoleId))?.RoleName
+  const needsDates = ROLES_REQUIRE_DATES.includes(selectedRoleName)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -58,46 +71,91 @@ const AdminUsers = () => {
   useEffect(() => { fetchData() }, [fetchData])
 
   useEffect(() => {
-    getRolesAPI().then(res => setRoles(res.data.data || [])).catch(() => {})
+    getRolesAPI().then(res => setRoles(res.data.data || [])).catch(() => { })
   }, [])
 
   const applyFilters = () => setTrigger(t => t + 1)
 
+  // Có phải tài khoản hệ thống không
+  const isSystemAccount = (u) => u?.Email === SYSTEM_WALKIN_EMAIL
+
   // ── Modal handlers ───────────────────────────────────────────
   const openCreate = () => {
     setEditing(null)
-    reset({ FullName: '', Email: '', PhoneNumber: '', RoleID: '' })
+    reset({ FullName: '', Email: '', Password: '', PhoneNumber: '', RoleID: '', DateOfBirth: '', HireDate: '' })
     setModalOpen(true)
   }
   const openEdit = (u) => {
+    if (isSystemAccount(u)) {
+      toast.info('Đây là tài khoản hệ thống (khách vãng lai), không thể chỉnh sửa.')
+      return
+    }
     setEditing(u)
-    reset({ FullName: u.FullName, Email: u.Email, PhoneNumber: u.PhoneNumber || '', RoleID: String(u.RoleID) })
+    reset({
+      FullName: u.FullName,
+      Email: u.Email,
+      PhoneNumber: u.PhoneNumber || '',
+      RoleID: String(u.RoleID),
+      DateOfBirth: u.DateOfBirth ? u.DateOfBirth.slice(0, 10) : '',
+      HireDate: u.HireDate ? u.HireDate.slice(0, 10) : '',
+    })
     setModalOpen(true)
   }
 
   const onSubmit = async (form) => {
+    // ── Validate đủ 18 tuổi NGAY tại FE khi là Staff/Manager (Trường hợp A) ──
+    if (needsDates) {
+      if (!form.DateOfBirth || !form.HireDate) {
+        toast.error('Vai trò Staff/Manager bắt buộc có Ngày sinh và Ngày vào làm.')
+        return
+      }
+      if (ageAt(form.DateOfBirth, form.HireDate) < 18) {
+        toast.error('Người dùng phải đủ 18 tuổi tại thời điểm vào làm để giữ vai trò Staff/Manager.')
+        return
+      }
+    }
+
     try {
       if (editing) {
-        await updateUserAPI(editing.UserID, form)
+        // Cập nhật: không gửi email/password (backend không cho đổi email qua route này)
+        await updateUserAPI(editing.UserID, {
+          fullName: form.FullName,
+          phoneNumber: form.PhoneNumber || null,
+          roleId: Number(form.RoleID),
+          dateOfBirth: form.DateOfBirth || null,
+          hireDate: form.HireDate || null,
+        })
         toast.success('Cập nhật người dùng thành công')
       } else {
-        await createUserAPI(form)
+        await createUserAPI({
+          fullName: form.FullName,
+          email: form.Email,
+          password: form.Password,
+          phoneNumber: form.PhoneNumber || null,
+          roleId: Number(form.RoleID),
+          dateOfBirth: form.DateOfBirth || null,
+          hireDate: form.HireDate || null,
+        })
         toast.success('Tạo người dùng thành công')
       }
       setModalOpen(false)
       applyFilters()
-    } catch {
-      toast.error('Thao tác thất bại')
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Thao tác thất bại')
     }
   }
 
   const toggleStatus = async (u) => {
+    if (isSystemAccount(u)) {
+      toast.info('Đây là tài khoản hệ thống (khách vãng lai), không thể khóa.')
+      return
+    }
     try {
       await toggleUserStatusAPI(u.UserID, u.IsActive ? 0 : 1)
       toast.success(u.IsActive ? 'Đã khoá tài khoản' : 'Đã mở khoá tài khoản')
       applyFilters()
-    } catch {
-      toast.error('Không thể đổi trạng thái tài khoản')
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Không thể đổi trạng thái tài khoản')
     }
   }
 
@@ -176,52 +234,63 @@ const AdminUsers = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {rows.map(u => (
-                    <tr key={u.UserID} className="bg-white hover:bg-slate-50 transition-colors">
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-black text-blue-600">
-                            {u.FullName?.charAt(0).toUpperCase() || '?'}
+                  {rows.map(u => {
+                    const system = isSystemAccount(u)
+                    return (
+                      <tr key={u.UserID} className="bg-white hover:bg-slate-50 transition-colors">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-black text-blue-600">
+                              {u.FullName?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                            <span className="font-bold text-slate-900">{u.FullName}</span>
                           </div>
-                          <span className="font-bold text-slate-900">{u.FullName}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <p className="font-medium text-slate-700">{u.Email}</p>
-                        <p className="text-xs text-slate-400">{u.PhoneNumber || '—'}</p>
-                      </td>
-                      <td className="px-5 py-4">
-                        <Badge variant={roleBadge[u.RoleName] || 'default'}>{u.RoleName}</Badge>
-                      </td>
-                      <td className="px-5 py-4">
-                        {u.IsEmailVerified ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><MailCheck size={14} /> Đã xác thực</span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400"><MailX size={14} /> Chưa</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4">
-                        {u.IsActive ? (
-                          <Badge variant="success">Hoạt động</Badge>
-                        ) : (
-                          <Badge variant="danger">Bị khoá</Badge>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-slate-500 text-xs">{fmtDate(u.CreatedAt)}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => openEdit(u)} title="Chỉnh sửa"
-                            className="rounded-lg p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition">
-                            <Pencil size={16} />
-                          </button>
-                          <button onClick={() => toggleStatus(u)} title={u.IsActive ? 'Khoá' : 'Mở khoá'}
-                            className={`rounded-lg p-2 transition ${u.IsActive ? 'text-slate-500 hover:bg-rose-50 hover:text-rose-600' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-600'}`}>
-                            {u.IsActive ? <Lock size={16} /> : <Unlock size={16} />}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="font-medium text-slate-700">{u.Email}</p>
+                          <p className="text-xs text-slate-400">{u.PhoneNumber || '—'}</p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge variant={roleBadge[u.RoleName] || 'default'}>{u.RoleName}</Badge>
+                        </td>
+                        <td className="px-5 py-4">
+                          {u.IsEmailVerified ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><MailCheck size={14} /> Đã xác thực</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400"><MailX size={14} /> Chưa</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          {u.IsActive ? (
+                            <Badge variant="success">Hoạt động</Badge>
+                          ) : (
+                            <Badge variant="danger">Bị khoá</Badge>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-slate-500 text-xs">{fmtDate(u.CreatedAt)}</td>
+                        <td className="px-5 py-4">
+                          {system ? (
+                            <div className="flex items-center justify-end">
+                              <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                                <ShieldCheck size={13} /> Tài khoản hệ thống
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => openEdit(u)} title="Chỉnh sửa"
+                                className="rounded-lg p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition">
+                                <Pencil size={16} />
+                              </button>
+                              <button onClick={() => toggleStatus(u)} title={u.IsActive ? 'Khoá' : 'Mở khoá'}
+                                className={`rounded-lg p-2 transition ${u.IsActive ? 'text-slate-500 hover:bg-rose-50 hover:text-rose-600' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-600'}`}>
+                                {u.IsActive ? <Lock size={16} /> : <Unlock size={16} />}
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             )}
@@ -252,13 +321,25 @@ const AdminUsers = () => {
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Email</label>
-            <input {...register('Email', {
+            <input disabled={!!editing} {...register('Email', {
               required: 'Vui lòng nhập email',
               pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Email không hợp lệ' }
             })}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition disabled:bg-slate-100 disabled:text-slate-400" />
             {errors.Email && <p className="text-xs text-red-500 mt-1">{errors.Email.message}</p>}
+            {editing && <p className="text-xs text-slate-400 mt-1">Không thể đổi email sau khi tạo tài khoản.</p>}
           </div>
+          {!editing && (
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Mật khẩu</label>
+              <input type="password" {...register('Password', {
+                required: 'Vui lòng nhập mật khẩu',
+                minLength: { value: 6, message: 'Mật khẩu tối thiểu 6 ký tự' }
+              })}
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              {errors.Password && <p className="text-xs text-red-500 mt-1">{errors.Password.message}</p>}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Số điện thoại</label>
             <input {...register('PhoneNumber', {
@@ -267,7 +348,7 @@ const AdminUsers = () => {
                 message: 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0 hoặc 84)'
               }
             })}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.PhoneNumber && <p className="text-xs text-red-500 mt-1">{errors.PhoneNumber.message}</p>}
           </div>
           <div>
@@ -279,6 +360,33 @@ const AdminUsers = () => {
             </select>
             {errors.RoleID && <p className="text-xs text-red-500 mt-1">{errors.RoleID.message}</p>}
           </div>
+
+          {/* Ngày sinh / Ngày vào làm: bắt buộc với Staff/Manager (ràng buộc CK_Users_MinAge ở DB) */}
+          {needsDates && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Ngày sinh</label>
+                  <input type="date" {...register('DateOfBirth', {
+                    required: needsDates ? 'Bắt buộc với Staff/Manager' : false
+                  })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                  {errors.DateOfBirth && <p className="text-xs text-red-500 mt-1">{errors.DateOfBirth.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Ngày vào làm</label>
+                  <input type="date" {...register('HireDate', {
+                    required: needsDates ? 'Bắt buộc với Staff/Manager' : false
+                  })}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                  {errors.HireDate && <p className="text-xs text-red-500 mt-1">{errors.HireDate.message}</p>}
+                </div>
+              </div>
+              <p className="text-[12px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
+                Nhân viên phải đủ 18 tuổi tại thời điểm vào làm. Bạn có thể bấm vào lịch hoặc gõ trực tiếp ngày.
+              </p>
+            </>
+          )}
         </form>
       </Modal>
     </div>

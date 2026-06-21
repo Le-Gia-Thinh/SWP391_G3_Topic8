@@ -30,6 +30,25 @@ router.post('/buildings', adminController.createBuilding);
 router.patch('/buildings/:id', adminController.updateBuilding);
 router.delete('/buildings/:id', adminController.deleteBuilding);
 
+// ── Infrastructure: Floors ────────────────────────────────────
+router.get('/floors', adminController.getFloors);            // ?buildingId=
+router.post('/floors', adminController.createFloor);
+router.patch('/floors/:id', adminController.updateFloor);
+router.delete('/floors/:id', adminController.deleteFloor);
+
+// ── Infrastructure: Zones ─────────────────────────────────────
+router.get('/zones', adminController.getZones);              // ?floorId=
+router.post('/zones', adminController.createZone);
+router.patch('/zones/:id', adminController.updateZone);
+router.delete('/zones/:id', adminController.deleteZone);
+
+// ── Infrastructure: Slots ─────────────────────────────────────
+router.get('/zones/:zoneId/slots', adminController.getSlotsByZone); // danh sách slot + sức chứa
+router.post('/slots', adminController.createSlot);
+router.post('/slots/bulk', adminController.createSlotsBulk);
+router.patch('/slots/:id', adminController.updateSlot);
+router.delete('/slots/:id', adminController.deleteSlot);
+
 // Audit Logs
 router.get('/audit-logs', adminController.getAuditLogs);
 

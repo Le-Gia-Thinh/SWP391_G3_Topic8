@@ -9,6 +9,7 @@ import { createTheme } from '@mui/material/styles'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider } from './contexts/AuthContext'
 import { AppThemeProvider } from './contexts/AppThemeContext'
+import './i18n'
 import App from './App'
 
 const theme = createTheme({

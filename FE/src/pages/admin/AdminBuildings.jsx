@@ -60,19 +60,28 @@ const AdminBuildings = () => {
     setModalOpen(true)
   }
 
+  // Map field form (PascalCase, khớp tên cột DB) -> payload camelCase backend yêu cầu
+  const toApiPayload = (form) => ({
+    buildingName: form.BuildingName,
+    address: form.Address || null,
+    operatingHours: form.OperatingHours || null,
+    totalFloors: form.TotalFloors === '' || form.TotalFloors === undefined ? null : Number(form.TotalFloors),
+  })
+
   const onSubmit = async (form) => {
     try {
+      const payload = toApiPayload(form)
       if (editing) {
-        await updateBuildingAPI(editing.BuildingID, form)
+        await updateBuildingAPI(editing.BuildingID, payload)
         toast.success('Cập nhật cơ sở thành công')
       } else {
-        await createBuildingAPI(form)
+        await createBuildingAPI(payload)
         toast.success('Thêm cơ sở thành công')
       }
       setModalOpen(false)
       applyFilters()
-    } catch {
-      toast.error('Thao tác thất bại')
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Thao tác thất bại')
     }
   }
 
@@ -83,8 +92,8 @@ const AdminBuildings = () => {
       toast.success('Đã xoá cơ sở')
       setDeleting(null)
       applyFilters()
-    } catch {
-      toast.error('Không thể xoá cơ sở')
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Không thể xoá cơ sở')
     } finally {
       setBusy(false)
     }
@@ -203,7 +212,7 @@ const AdminBuildings = () => {
                   message: 'Sai định dạng (VD: 06:00-22:00)'
                 }
               })} placeholder="06:00-22:00"
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
               {errors.OperatingHours && <p className="text-xs text-red-500 mt-1">{errors.OperatingHours.message}</p>}
             </div>
             <div>
@@ -211,7 +220,7 @@ const AdminBuildings = () => {
               <input type="number" min="0" {...register('TotalFloors', {
                 min: { value: 0, message: 'Số tầng không hợp lệ' }
               })}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
               {errors.TotalFloors && <p className="text-xs text-red-500 mt-1">{errors.TotalFloors.message}</p>}
             </div>
           </div>

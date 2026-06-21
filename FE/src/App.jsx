@@ -2,7 +2,7 @@ import React, { Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { GuestRoute, ProtectedRoute, RoleRoute } from './components/ProtectedRoute'
 import {
-  LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut, Bell, Car, Star, Users, KeyRound, Building2, ScrollText
+  LayoutGrid, LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut, Bell, Car, Star, Users, KeyRound, Building2, ScrollText
 } from 'lucide-react'
 
 // Import Layouts
@@ -11,7 +11,7 @@ import AIChatBox from './components/chat/AIChatBox'
 
 // Import Common Pages (Lazy)
 const Home = React.lazy(() => import('./pages/Home'))
-const AdminLogin = React.lazy(() => import('./pages/AdminLogin'))
+const Login = React.lazy(() => import('./pages/Login'))
 const DriverRegister = React.lazy(() => import('./pages/DriverRegister'))
 const NotFound = React.lazy(() => import('./pages/common/NotFound'))
 const Forbidden = React.lazy(() => import('./pages/common/Forbidden'))
@@ -34,6 +34,7 @@ const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'))
 const AdminUsers = React.lazy(() => import('./pages/admin/AdminUsers'))
 const AdminRoles = React.lazy(() => import('./pages/admin/AdminRoles'))
 const AdminBuildings = React.lazy(() => import('./pages/admin/AdminBuildings'))
+const AdminParkingConfig = React.lazy(() => import('./pages/admin/AdminParkingConfig'))
 const AdminAuditLog = React.lazy(() => import('./pages/admin/AdminAuditLog'))
 // Staff Pages (Lazy)
 const StaffDashboardScreen = React.lazy(() => import('./pages/staff/StaffDashboardScreen'))
@@ -97,6 +98,7 @@ const adminLinks = [
   { path: '/admin/users', label: 'Người dùng', icon: Users },
   { path: '/admin/roles', label: 'Vai trò & Phân quyền', icon: KeyRound },
   { path: '/admin/buildings', label: 'Cơ sở / Bãi đỗ', icon: Building2 },
+  { path: '/admin/parking-config', label: 'Cấu hình bãi đỗ', icon: LayoutGrid },
   { isDivider: true },
   { labelOnly: 'Giám sát' },
   { path: '/admin/audit-logs', label: 'Nhật ký hoạt động', icon: ScrollText }
@@ -161,7 +163,7 @@ const App = () => {
 
         {/* Guest only */}
         <Route element={<GuestRoute />}>
-          <Route path="/login" element={<AdminLogin />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/register" element={<DriverRegister />} />
         </Route>
 
@@ -185,6 +187,7 @@ const App = () => {
             <Route path="users" element={<AdminUsers />} />
             <Route path="roles" element={<AdminRoles />} />
             <Route path="buildings" element={<AdminBuildings />} />
+            <Route path="parking-config" element={<AdminParkingConfig />} />
             <Route path="audit-logs" element={<AdminAuditLog />} />
             <Route path="profile" element={<UserProfile />} />
           </Route>

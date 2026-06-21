@@ -1,10 +1,12 @@
-// src/pages/AdminLogin.jsx
+// src/pages/Login.jsx
 import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 import { GoogleLogin } from '@react-oauth/google'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
+import { useApiError } from '../utils/apiError'
 import { toast } from 'react-toastify'
 
 const FB_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID
@@ -52,6 +54,8 @@ function FbIcon() {
 }
 
 const AdminLogin = () => {
+  const { t } = useTranslation()
+  const apiError = useApiError()
   const [showPass, setShowPass] = useState(false)
   const [fbLoading, setFbLoading] = useState(false)
 
@@ -72,10 +76,12 @@ const AdminLogin = () => {
   const onSubmit = async ({ account, password }) => {
     try {
       const loggedUser = await login({ email: account, password })
-      toast.success('Đăng nhập thành công')
+      toast.success(t('auth.login.loginSuccess'))
       navigate(getRedirectPath(loggedUser.roleName), { replace: true })
     } catch (error) {
-      const message = error.response?.data?.message || 'Email hoặc mật khẩu không đúng'
+      const message = error.response?.data?.message
+        ? apiError(error)
+        : t('auth.login.loginFailedDefault')
       toast.error(message)
     }
   }
@@ -83,7 +89,7 @@ const AdminLogin = () => {
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
       const { user: loggedUser, message } = await loginWithGoogle(credentialResponse.credential)
-      toast.success(message || `Chào mừng, ${loggedUser.fullName}!`)
+      toast.success(message || t('auth.login.welcomeBack', { name: loggedUser.fullName }))
       navigate(getRedirectPath(loggedUser.roleName), { replace: true })
     } catch {
       // toast xử lý bởi axios interceptor
@@ -93,7 +99,7 @@ const AdminLogin = () => {
   const handleFacebookLogin = () => {
     const FB = fbRef.current || window.FB
     if (!FB) {
-      toast.error('Facebook SDK chưa sẵn sàng, thử lại sau giây lát')
+      toast.error(t('auth.login.facebookNotReady'))
       return
     }
 
@@ -103,14 +109,14 @@ const AdminLogin = () => {
       if (response.authResponse?.accessToken) {
         loginWithFacebook(response.authResponse.accessToken)
           .then(({ user: loggedUser, message }) => {
-            toast.success(message || `Chào mừng, ${loggedUser.fullName}!`)
+            toast.success(message || t('auth.login.welcomeBack', { name: loggedUser.fullName }))
             navigate(getRedirectPath(loggedUser.roleName), { replace: true })
           })
           .catch(() => { })
           .finally(() => setFbLoading(false))
       } else {
         if (response.status !== 'unknown') {
-          toast.warning('Đăng nhập Facebook bị huỷ')
+          toast.warning(t('auth.login.facebookCancelled'))
         }
         setFbLoading(false)
       }
@@ -122,9 +128,9 @@ const AdminLogin = () => {
       <div className="w-full max-w-[420px] bg-white dark:bg-slate-800 rounded-2xl shadow-xl border-t-4 border-blue-600 p-8 transition-colors duration-300">
 
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Đăng Nhập</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{t('auth.login.title')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Vui lòng nhập thông tin để truy cập hệ thống
+            {t('auth.login.subtitle')}
           </p>
         </div>
 
@@ -132,16 +138,16 @@ const AdminLogin = () => {
           {/* Email Field */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
-              Email
+              {t('auth.login.email')}
             </label>
             <div className="relative">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 {...register('account', {
-                  required: 'Email không được để trống',
-                  pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Email không hợp lệ' }
+                  required: t('auth.login.emailRequired'),
+                  pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: t('auth.login.emailInvalid') }
                 })}
-                placeholder="admin@parking.com"
+                placeholder={t('auth.login.emailPlaceholder')}
                 className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-medium outline-none transition-all
                   bg-slate-50 dark:bg-slate-700 dark:text-white
                   focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30
@@ -154,17 +160,17 @@ const AdminLogin = () => {
           {/* Password Field */}
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
-              Mật khẩu
+              {t('auth.login.password')}
             </label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 type={showPass ? 'text' : 'password'}
                 {...register('password', {
-                  required: 'Mật khẩu không được để trống',
-                  minLength: { value: 6, message: 'Mật khẩu tối thiểu 6 ký tự' }
+                  required: t('auth.login.passwordRequired'),
+                  minLength: { value: 6, message: t('auth.login.passwordMinLength') }
                 })}
-                placeholder="Nhập mật khẩu"
+                placeholder={t('auth.login.passwordPlaceholder')}
                 className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-sm font-medium outline-none transition-all
                   bg-slate-50 dark:bg-slate-700 dark:text-white
                   focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30
@@ -189,10 +195,10 @@ const AdminLogin = () => {
                 {...register('remember')}
                 className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-700"
               />
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Ghi nhớ đăng nhập</span>
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('auth.login.rememberMe')}</span>
             </label>
             <Link to="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
-              Quên mật khẩu?
+              {t('auth.login.forgotPassword')}
             </Link>
           </div>
 
@@ -204,13 +210,13 @@ const AdminLogin = () => {
           >
             {isSubmitting ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : 'Đăng Nhập'}
+            ) : t('auth.login.submit')}
           </button>
         </form>
 
         <div className="my-6 flex items-center gap-3">
           <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Hoặc</span>
+          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{t('common.or')}</span>
           <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
         </div>
 
@@ -218,7 +224,7 @@ const AdminLogin = () => {
           <div className="w-[350px]">
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
-              onError={() => toast.error('Đăng nhập Google thất bại')}
+              onError={() => toast.error(t('auth.login.googleFailed'))}
               text="signin_with"
               shape="rectangular"
               width="350"
@@ -233,15 +239,15 @@ const AdminLogin = () => {
             {fbLoading ? (
               <div className="w-5 h-5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
             ) : <FbIcon />}
-            Đăng nhập với Facebook
+            {t('auth.login.facebookButton')}
           </button>
         </div>
 
         <div className="mt-8 text-center">
           <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-            Bạn chưa có tài khoản?{' '}
+            {t('auth.login.noAccount')}{' '}
             <Link to="/register" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-bold transition-colors">
-              Đăng ký ngay
+              {t('auth.login.registerNow')}
             </Link>
           </p>
         </div>

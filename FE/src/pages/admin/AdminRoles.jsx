@@ -1,8 +1,11 @@
 // src/pages/admin/AdminRoles.jsx
 import { useState, useEffect, useCallback } from 'react'
+import { useForm } from 'react-hook-form'
 import { Search, RefreshCcw, ShieldCheck, Lock, Unlock, KeyRound, Users } from 'lucide-react'
 import { toast } from 'react-toastify'
 import Badge from '../../components/ui/Badge'
+import Modal from '../../components/ui/Modal'
+import Button from '../../components/ui/Button'
 import {
   getUsersAPI, getRolesAPI, updateUserAPI, toggleUserStatusAPI, resetUserPasswordAPI, USE_MOCK
 } from '../../apis/adminApi'
@@ -27,6 +30,10 @@ const AdminRoles = () => {
   const [busyId, setBusyId] = useState(null)
   const [trigger, setTrigger] = useState(0)
 
+  // Modal đặt lại mật khẩu
+  const [resetTarget, setResetTarget] = useState(null)
+  const { register, handleSubmit, reset: resetForm, formState: { errors, isSubmitting } } = useForm()
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
@@ -50,7 +57,7 @@ const AdminRoles = () => {
   useEffect(() => {
     getRolesAPI()
       .then((res) => setRoles((res.data.data || []).filter((r) => MANAGED_ROLES.includes(r.RoleName))))
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   const applyFilters = () => setTrigger((t) => t + 1)
@@ -60,14 +67,14 @@ const AdminRoles = () => {
     if (Number(newRoleId) === user.RoleID) return
     setBusyId(user.UserID)
     try {
-      await updateUserAPI(user.UserID, { RoleID: Number(newRoleId) })
+      await updateUserAPI(user.UserID, { roleId: Number(newRoleId) })
       const newRole = roles.find((r) => r.RoleID === Number(newRoleId))
       setRows((prev) => prev.map((u) =>
         u.UserID === user.UserID ? { ...u, RoleID: Number(newRoleId), RoleName: newRole?.RoleName || u.RoleName } : u
       ))
       toast.success(`Đã đổi vai trò "${user.FullName}" → ${newRole?.RoleName}`)
-    } catch {
-      toast.error('Không thể đổi vai trò')
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Không thể đổi vai trò')
     } finally {
       setBusyId(null)
     }
@@ -81,22 +88,26 @@ const AdminRoles = () => {
         u.UserID === user.UserID ? { ...u, IsActive: u.IsActive ? 0 : 1 } : u
       ))
       toast.success(user.IsActive ? 'Đã khoá tài khoản' : 'Đã mở khoá tài khoản')
-    } catch {
-      toast.error('Không thể đổi trạng thái tài khoản')
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Không thể đổi trạng thái tài khoản')
     } finally {
       setBusyId(null)
     }
   }
 
-  const resetPassword = async (user) => {
-    setBusyId(user.UserID)
+  // Mở modal nhập mật khẩu mới
+  const openResetPassword = (user) => {
+    resetForm({ NewPassword: '', ConfirmPassword: '' })
+    setResetTarget(user)
+  }
+
+  const submitResetPassword = async (form) => {
     try {
-      await resetUserPasswordAPI(user.UserID)
-      toast.success(`Đã gửi đặt lại mật khẩu cho "${user.FullName}"`)
-    } catch {
-      toast.error('Không thể đặt lại mật khẩu')
-    } finally {
-      setBusyId(null)
+      await resetUserPasswordAPI(resetTarget.UserID, form.NewPassword)
+      toast.success(`Đã đặt lại mật khẩu cho "${resetTarget.FullName}"`)
+      setResetTarget(null)
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Không thể đặt lại mật khẩu')
     }
   }
 
@@ -207,17 +218,16 @@ const AdminRoles = () => {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => resetPassword(u)} disabled={busyId === u.UserID} title="Đặt lại mật khẩu"
+                          <button onClick={() => openResetPassword(u)} disabled={busyId === u.UserID} title="Đặt lại mật khẩu"
                             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition disabled:opacity-50">
                             <KeyRound size={14} /> Đặt lại MK
                           </button>
                           <button onClick={() => toggleStatus(u)} disabled={busyId === u.UserID}
                             title={u.IsActive ? 'Khoá tài khoản' : 'Mở khoá tài khoản'}
-                            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
-                              u.IsActive
-                                ? 'border-rose-200 text-rose-600 hover:bg-rose-50'
-                                : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
-                            }`}>
+                            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${u.IsActive
+                              ? 'border-rose-200 text-rose-600 hover:bg-rose-50'
+                              : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                              }`}>
                             {u.IsActive ? <><Lock size={14} /> Khoá</> : <><Unlock size={14} /> Mở khoá</>}
                           </button>
                         </div>
@@ -230,6 +240,45 @@ const AdminRoles = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal đặt lại mật khẩu */}
+      <Modal
+        isOpen={!!resetTarget}
+        onClose={() => setResetTarget(null)}
+        title="Đặt lại mật khẩu"
+        footer={(
+          <>
+            <Button variant="secondary" onClick={() => setResetTarget(null)} disabled={isSubmitting}>Huỷ</Button>
+            <Button onClick={handleSubmit(submitResetPassword)} disabled={isSubmitting}>
+              {isSubmitting ? 'Đang lưu...' : 'Đặt lại mật khẩu'}
+            </Button>
+          </>
+        )}
+      >
+        <form onSubmit={handleSubmit(submitResetPassword)} className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Đặt mật khẩu mới cho <span className="font-bold text-slate-900">{resetTarget?.FullName}</span>.
+          </p>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Mật khẩu mới</label>
+            <input type="password" {...register('NewPassword', {
+              required: 'Vui lòng nhập mật khẩu mới',
+              minLength: { value: 6, message: 'Mật khẩu tối thiểu 6 ký tự' }
+            })}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            {errors.NewPassword && <p className="text-xs text-red-500 mt-1">{errors.NewPassword.message}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Xác nhận mật khẩu</label>
+            <input type="password" {...register('ConfirmPassword', {
+              required: 'Vui lòng xác nhận mật khẩu',
+              validate: (val, formVals) => val === formVals.NewPassword || 'Mật khẩu xác nhận không khớp'
+            })}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            {errors.ConfirmPassword && <p className="text-xs text-red-500 mt-1">{errors.ConfirmPassword.message}</p>}
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

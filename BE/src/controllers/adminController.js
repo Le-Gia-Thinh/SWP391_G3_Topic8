@@ -1,384 +1,324 @@
-import { getPool, sql } from '../config/db.js';
-import bcryptjs from 'bcryptjs';
+import { StatusCodes } from 'http-status-codes'
+import { getPool } from '../config/db.js'
+import { logAudit } from '../utils/auditLogger.js'
+import * as infra from '../services/adminService.js'
 
-export const getStats = async (req, res, next) => {
-    try {
-        const pool = await getPool();
-        const usersResult = await pool.request().query(`
-            SELECT 
-                COUNT(*) as totalUsers,
-                SUM(CASE WHEN IsActive = 1 THEN 1 ELSE 0 END) as activeUsers,
-                SUM(CASE WHEN IsActive = 0 THEN 1 ELSE 0 END) as inactiveUsers,
-                SUM(CASE WHEN IsEmailVerified = 1 THEN 1 ELSE 0 END) as verifiedUsers
-            FROM Users
-        `);
+// Ghi audit log "best-effort" (không chặn response nếu lỗi)
+async function audit(req, action, target, description) {
+  try {
+    const pool = await getPool()
+    await logAudit(pool, req.user, action, target, description, req.ip)
+  } catch { /* đã nuốt lỗi trong logAudit */ }
+}
 
-        const rolesResult = await pool.request().query(`
-            SELECT r.RoleID, r.RoleName, COUNT(u.UserID) as Count
-            FROM Roles r
-            LEFT JOIN Users u ON r.RoleID = u.RoleID
-            GROUP BY r.RoleID, r.RoleName
-        `);
+/* ── FLOORS ─────────────────────────────────────────────────── */
 
-        const stats = {
-            ...usersResult.recordset[0],
-            usersByRole: rolesResult.recordset
-        };
+export async function getFloors(req, res, next) {
+  try {
+    const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null
+    const data = await infra.getFloors(buildingId)
+    return res.status(StatusCodes.OK).json({ success: true, data })
+  } catch (err) { next(err) }
+}
 
-        res.json({ success: true, data: stats });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function createFloor(req, res, next) {
+  try {
+    const data = await infra.createFloor({
+      buildingId: req.body.buildingId,
+      floorName: req.body.floorName,
+      isActive: req.body.isActive,
+    })
+    await audit(req, 'Create', 'Tầng', `Thêm tầng "${data.FloorName}" (Building ${data.BuildingID})`)
+    return res.status(StatusCodes.CREATED).json({ success: true, message: 'Tạo tầng thành công', data })
+  } catch (err) { next(err) }
+}
 
-export const getRoles = async (req, res, next) => {
-    try {
-        const pool = await getPool();
-        const result = await pool.request().query('SELECT * FROM Roles');
-        res.json({ success: true, data: result.recordset });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function updateFloor(req, res, next) {
+  try {
+    const data = await infra.updateFloor(Number(req.params.id), {
+      floorName: req.body.floorName,
+      isActive: req.body.isActive,
+    })
+    await audit(req, 'Update', 'Tầng', `Cập nhật tầng ID ${req.params.id}`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật tầng thành công', data })
+  } catch (err) { next(err) }
+}
 
-export const getUsers = async (req, res, next) => {
-    try {
-        const { search, roleId, isActive } = req.query;
-        let query = `
-            SELECT u.UserID, u.FullName, u.Email, u.PhoneNumber, u.RoleID, r.RoleName, 
-                   u.IsActive, u.IsEmailVerified, u.CreatedAt
-            FROM Users u
-            JOIN Roles r ON u.RoleID = r.RoleID
-            WHERE 1=1
-        `;
-        const pool = await getPool();
-        const request = pool.request();
+export async function deleteFloor(req, res, next) {
+  try {
+    const data = await infra.deleteFloor(Number(req.params.id))
+    await audit(req, 'Delete', 'Tầng', `Xóa tầng ID ${req.params.id}`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Xóa tầng thành công', data })
+  } catch (err) { next(err) }
+}
 
-        if (search) {
-            query += ` AND (u.FullName LIKE @Search OR u.Email LIKE @Search OR u.PhoneNumber LIKE @Search)`;
-            request.input('Search', sql.NVarChar(100), `%${search}%`);
-        }
-        if (roleId) {
-            query += ` AND u.RoleID = @RoleID`;
-            request.input('RoleID', sql.Int, roleId);
-        }
-        if (isActive !== undefined && isActive !== '') {
-            query += ` AND u.IsActive = @IsActive`;
-            request.input('IsActive', sql.Bit, isActive === '1' || isActive === 'true');
-        }
+/* ── ZONES ──────────────────────────────────────────────────── */
 
-        query += ' ORDER BY u.CreatedAt DESC';
-        const result = await request.query(query);
+export async function getZones(req, res, next) {
+  try {
+    const floorId = req.query.floorId ? Number(req.query.floorId) : null
+    const data = await infra.getZones(floorId)
+    return res.status(StatusCodes.OK).json({ success: true, data })
+  } catch (err) { next(err) }
+}
 
-        res.json({ success: true, data: result.recordset });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function createZone(req, res, next) {
+  try {
+    const data = await infra.createZone({
+      floorId: req.body.floorId,
+      zoneName: req.body.zoneName,
+      allowedVehicleTypeId: req.body.allowedVehicleTypeId,
+      totalSlots: req.body.totalSlots,
+    })
+    await audit(req, 'Create', 'Khu vực', `Thêm khu vực "${data.ZoneName}" (Floor ${data.FloorID})`)
+    return res.status(StatusCodes.CREATED).json({ success: true, message: 'Tạo khu vực thành công', data })
+  } catch (err) { next(err) }
+}
 
-export const createUser = async (req, res, next) => {
-    try {
-        const { FullName, Email, PhoneNumber, RoleID } = req.body;
-        const pool = await getPool();
+export async function updateZone(req, res, next) {
+  try {
+    const data = await infra.updateZone(Number(req.params.id), {
+      zoneName: req.body.zoneName,
+      allowedVehicleTypeId: req.body.allowedVehicleTypeId,
+      totalSlots: req.body.totalSlots,
+    })
+    await audit(req, 'Update', 'Khu vực', `Cập nhật khu vực ID ${req.params.id}`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật khu vực thành công', data })
+  } catch (err) { next(err) }
+}
 
-        // check email
-        const check = await pool.request().input('Email', sql.NVarChar(100), Email).query('SELECT UserID FROM Users WHERE Email = @Email');
-        if (check.recordset.length > 0) {
-            return res.status(400).json({ success: false, message: 'Email đã tồn tại' });
-        }
+export async function deleteZone(req, res, next) {
+  try {
+    const data = await infra.deleteZone(Number(req.params.id))
+    await audit(req, 'Delete', 'Khu vực', `Xóa khu vực ID ${req.params.id}`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Xóa khu vực thành công', data })
+  } catch (err) { next(err) }
+}
 
-        // Insert
-        const passwordHash = await bcryptjs.hash('123456', 10);
-        const request = pool.request()
-            .input('FullName', sql.NVarChar(100), FullName)
-            .input('Email', sql.NVarChar(100), Email)
-            .input('PhoneNumber', sql.NVarChar(20), PhoneNumber || null)
-            .input('RoleID', sql.Int, RoleID)
-            .input('PasswordHash', sql.NVarChar(256), passwordHash)
-            .input('DateOfBirth', sql.Date, new Date('1990-01-01'));
+/* ── SLOTS ──────────────────────────────────────────────────── */
 
-        const result = await request.query(`
-            INSERT INTO Users (FullName, Email, PhoneNumber, RoleID, PasswordHash, IsActive, IsEmailVerified, DateOfBirth)
-            OUTPUT INSERTED.UserID, INSERTED.CreatedAt
-            VALUES (@FullName, @Email, @PhoneNumber, @RoleID, @PasswordHash, 1, 0, @DateOfBirth)
-        `);
+export async function getSlotsByZone(req, res, next) {
+  try {
+    const data = await infra.getSlotsByZone(Number(req.params.zoneId))
+    return res.status(StatusCodes.OK).json({ success: true, ...data })
+  } catch (err) { next(err) }
+}
 
-        // log audit
-        await logAudit(pool, req.user, 'Create', 'Người dùng', `Tạo tài khoản "${FullName}"`, req.ip);
+export async function createSlot(req, res, next) {
+  try {
+    const data = await infra.createSlot({
+      zoneId: req.body.zoneId,
+      slotCode: req.body.slotCode,
+      vehicleTypeId: req.body.vehicleTypeId,
+    })
+    await audit(req, 'Create', 'Slot', `Thêm slot "${data.SlotCode}" (Zone ${data.ZoneID})`)
+    return res.status(StatusCodes.CREATED).json({ success: true, message: 'Tạo slot thành công', data })
+  } catch (err) { next(err) }
+}
 
-        // Get created user
-        const newUser = await pool.request().input('UserID', sql.Int, result.recordset[0].UserID).query(`
-            SELECT u.*, r.RoleName FROM Users u JOIN Roles r ON u.RoleID = r.RoleID WHERE u.UserID = @UserID
-        `);
+export async function createSlotsBulk(req, res, next) {
+  try {
+    const data = await infra.createSlotsBulk({
+      zoneId: req.body.zoneId,
+      prefix: req.body.prefix,
+      start: req.body.start,
+      end: req.body.end,
+      pad: req.body.pad,
+      vehicleTypeId: req.body.vehicleTypeId,
+    })
+    await audit(req, 'Create', 'Slot', `Tạo hàng loạt ${data.createdCount} slot (Zone ${req.body.zoneId})`)
+    return res.status(StatusCodes.CREATED).json({
+      success: true,
+      message: `Đã tạo ${data.createdCount} slot, bỏ qua ${data.skippedCount} mã trùng`,
+      data,
+    })
+  } catch (err) { next(err) }
+}
 
-        res.json({ success: true, data: newUser.recordset[0] });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function updateSlot(req, res, next) {
+  try {
+    const data = await infra.updateSlot(Number(req.params.id), {
+      slotCode: req.body.slotCode,
+      vehicleTypeId: req.body.vehicleTypeId,
+      slotStatus: req.body.slotStatus,
+    })
+    await audit(req, 'Update', 'Slot', `Cập nhật slot ID ${req.params.id}`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật slot thành công', data })
+  } catch (err) { next(err) }
+}
 
-export const updateUser = async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const { FullName, PhoneNumber, RoleID } = req.body;
-        const pool = await getPool();
+export async function deleteSlot(req, res, next) {
+  try {
+    const data = await infra.deleteSlot(Number(req.params.id))
+    await audit(req, 'Delete', 'Slot', `Xóa slot ID ${req.params.id} (${data.slotCode})`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Xóa slot thành công', data })
+  } catch (err) { next(err) }
+}
 
-        await pool.request()
-            .input('UserID', sql.Int, id)
-            .input('FullName', sql.NVarChar(100), FullName)
-            .input('PhoneNumber', sql.NVarChar(20), PhoneNumber || null)
-            .input('RoleID', sql.Int, RoleID)
-            .query(`
-                UPDATE Users SET FullName = @FullName, PhoneNumber = @PhoneNumber, RoleID = @RoleID, UpdatedAt = GETDATE()
-                WHERE UserID = @UserID
-            `);
 
-        await logAudit(pool, req.user, 'Update', 'Người dùng', `Cập nhật tài khoản ID ${id}`, req.ip);
 
-        const updatedUser = await pool.request().input('UserID', sql.Int, id).query(`
-            SELECT u.*, r.RoleName FROM Users u JOIN Roles r ON u.RoleID = r.RoleID WHERE u.UserID = @UserID
-        `);
-        
-        res.json({ success: true, data: updatedUser.recordset[0] });
-    } catch (err) {
-        next(err);
-    }
-};
+/* ── STATS ──────────────────────────────────────────────────── */
 
-export const toggleUserStatus = async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const { isActive } = req.body;
-        const pool = await getPool();
+export async function getStats(req, res, next) {
+  try {
+    const data = await infra.getStats()
+    return res.status(StatusCodes.OK).json({ success: true, data })
+  } catch (err) { next(err) }
+}
 
-        await pool.request()
-            .input('UserID', sql.Int, id)
-            .input('IsActive', sql.Bit, isActive)
-            .query('UPDATE Users SET IsActive = @IsActive WHERE UserID = @UserID');
+/* ── ROLES ──────────────────────────────────────────────────── */
 
-        const action = isActive ? 'Unlock' : 'Lock';
-        await logAudit(pool, req.user, action, 'Người dùng', `${action === 'Lock' ? 'Khoá' : 'Mở khoá'} tài khoản ID ${id}`, req.ip);
+export async function getRoles(req, res, next) {
+  try {
+    const data = await infra.getRoles()
+    return res.status(StatusCodes.OK).json({ success: true, data })
+  } catch (err) { next(err) }
+}
 
-        const updatedUser = await pool.request().input('UserID', sql.Int, id).query(`
-            SELECT u.*, r.RoleName FROM Users u JOIN Roles r ON u.RoleID = r.RoleID WHERE u.UserID = @UserID
-        `);
-        
-        res.json({ success: true, data: updatedUser.recordset[0] });
-    } catch (err) {
-        next(err);
-    }
-};
+/* ── USERS ──────────────────────────────────────────────────── */
 
-export const resetUserPassword = async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const pool = await getPool();
-        const passwordHash = await bcryptjs.hash('123456', 10);
-        
-        await pool.request()
-            .input('UserID', sql.Int, id)
-            .input('PasswordHash', sql.NVarChar(256), passwordHash)
-            .query('UPDATE Users SET PasswordHash = @PasswordHash WHERE UserID = @UserID');
+export async function getUsers(req, res, next) {
+  try {
+    const data = await infra.getUsers({
+      roleId: req.query.roleId ? Number(req.query.roleId) : null,
+      isActive: req.query.isActive !== undefined ? req.query.isActive === 'true' : null,
+      search: req.query.search,
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+    })
+    return res.status(StatusCodes.OK).json({ success: true, ...data })
+  } catch (err) { next(err) }
+}
 
-        await logAudit(pool, req.user, 'Update', 'Người dùng', `Reset mật khẩu tài khoản ID ${id} về mặc định`, req.ip);
+export async function createUser(req, res, next) {
+  try {
+    const data = await infra.createUser({
+      fullName: req.body.fullName,
+      email: req.body.email,
+      password: req.body.password,
+      phoneNumber: req.body.phoneNumber,
+      roleId: req.body.roleId,
+      dateOfBirth: req.body.dateOfBirth,
+      hireDate: req.body.hireDate,
+    })
+    await audit(req, 'Create', 'Người dùng', `Tạo tài khoản "${data.Email}" (Role ${data.RoleID})`)
+    return res.status(StatusCodes.CREATED).json({ success: true, message: 'Tạo người dùng thành công', data })
+  } catch (err) { next(err) }
+}
 
-        res.json({ success: true, data: { UserID: id } });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function updateUser(req, res, next) {
+  try {
+    const data = await infra.updateUser(Number(req.params.id), {
+      fullName: req.body.fullName,
+      phoneNumber: req.body.phoneNumber,
+      roleId: req.body.roleId,
+      dateOfBirth: req.body.dateOfBirth,
+      hireDate: req.body.hireDate,
+      avatarUrl: req.body.avatarUrl,
+    })
+    await audit(req, 'Update', 'Người dùng', `Cập nhật người dùng ID ${req.params.id}`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật người dùng thành công', data })
+  } catch (err) { next(err) }
+}
 
-export const getPermissions = async (req, res, next) => {
-    try {
-        const pool = await getPool();
-        const result = await pool.request().query('SELECT * FROM Permissions');
-        res.json({ success: true, data: result.recordset });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function toggleUserStatus(req, res, next) {
+  try {
+    const data = await infra.toggleUserStatus(Number(req.params.id), req.body.isActive)
+    await audit(req, data.IsActive ? 'Unlock' : 'Lock', 'Người dùng', `${data.IsActive ? 'Mở khóa' : 'Khóa'} người dùng ID ${req.params.id}`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật trạng thái thành công', data })
+  } catch (err) { next(err) }
+}
 
-export const getRolePermissions = async (req, res, next) => {
-    try {
-        const pool = await getPool();
-        
-        const rolesQuery = await pool.request().query(`
-            SELECT r.RoleID, r.RoleName, COUNT(u.UserID) as userCount
-            FROM Roles r
-            LEFT JOIN Users u ON r.RoleID = u.RoleID
-            GROUP BY r.RoleID, r.RoleName
-        `);
-        
-        const rpQuery = await pool.request().query('SELECT RoleID, PermissionID FROM RolePermissions');
-        
-        const roles = rolesQuery.recordset.map(r => {
-            return {
-                ...r,
-                permissionIds: rpQuery.recordset.filter(rp => rp.RoleID === r.RoleID).map(rp => rp.PermissionID)
-            };
-        });
-        
-        res.json({ success: true, data: roles });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function resetUserPassword(req, res, next) {
+  try {
+    const data = await infra.resetUserPassword(Number(req.params.id), req.body.newPassword)
+    await audit(req, 'Update', 'Người dùng', `Đặt lại mật khẩu cho người dùng ID ${req.params.id}`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Đặt lại mật khẩu thành công', data })
+  } catch (err) { next(err) }
+}
 
-export const updateRolePermissions = async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const { permissionIds } = req.body;
-        const pool = await getPool();
-        const transaction = pool.transaction();
-        await transaction.begin();
-        
-        try {
-            await transaction.request().input('RoleID', sql.Int, id).query('DELETE FROM RolePermissions WHERE RoleID = @RoleID');
-            
-            for (const pid of permissionIds) {
-                await transaction.request()
-                    .input('RoleID', sql.Int, id)
-                    .input('PermissionID', sql.Int, pid)
-                    .query('INSERT INTO RolePermissions (RoleID, PermissionID) VALUES (@RoleID, @PermissionID)');
-            }
-            
-            await transaction.commit();
-            await logAudit(pool, req.user, 'Update', 'Phân quyền', `Cập nhật quyền cho Role ID ${id}`, req.ip);
-            
-            res.json({ success: true, data: { roleId: Number(id), permissionIds } });
-        } catch (err) {
-            await transaction.rollback();
-            throw err;
-        }
-    } catch (err) {
-        next(err);
-    }
-};
+/* ── PERMISSIONS ────────────────────────────────────────────── */
 
-export const getBuildings = async (req, res, next) => {
-    try {
-        const { search } = req.query;
-        let query = 'SELECT * FROM Buildings WHERE 1=1';
-        const pool = await getPool();
-        const request = pool.request();
-        
-        if (search) {
-            query += ' AND (BuildingName LIKE @Search OR Address LIKE @Search)';
-            request.input('Search', sql.NVarChar(100), `%${search}%`);
-        }
-        
-        const result = await request.query(query);
-        res.json({ success: true, data: result.recordset });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function getPermissions(req, res, next) {
+  try {
+    const data = await infra.getPermissions()
+    return res.status(StatusCodes.OK).json({ success: true, data })
+  } catch (err) { next(err) }
+}
 
-export const createBuilding = async (req, res, next) => {
-    try {
-        const { BuildingName, Address, OperatingHours, TotalFloors } = req.body;
-        const pool = await getPool();
-        const result = await pool.request()
-            .input('BuildingName', sql.NVarChar(100), BuildingName)
-            .input('Address', sql.NVarChar(200), Address || null)
-            .input('OperatingHours', sql.NVarChar(50), OperatingHours || null)
-            .input('TotalFloors', sql.Int, TotalFloors || 0)
-            .query(`
-                INSERT INTO Buildings (BuildingName, Address, OperatingHours, TotalFloors)
-                OUTPUT INSERTED.*
-                VALUES (@BuildingName, @Address, @OperatingHours, @TotalFloors)
-            `);
-            
-        await logAudit(pool, req.user, 'Create', 'Cơ sở', `Thêm cơ sở "${BuildingName}"`, req.ip);
-        res.json({ success: true, data: result.recordset[0] });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function getRolePermissions(req, res, next) {
+  try {
+    const data = await infra.getRolePermissions()
+    return res.status(StatusCodes.OK).json({ success: true, data })
+  } catch (err) { next(err) }
+}
 
-export const updateBuilding = async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const { BuildingName, Address, OperatingHours, TotalFloors } = req.body;
-        const pool = await getPool();
-        const result = await pool.request()
-            .input('BuildingID', sql.Int, id)
-            .input('BuildingName', sql.NVarChar(100), BuildingName)
-            .input('Address', sql.NVarChar(200), Address || null)
-            .input('OperatingHours', sql.NVarChar(50), OperatingHours || null)
-            .input('TotalFloors', sql.Int, TotalFloors || 0)
-            .query(`
-                UPDATE Buildings SET BuildingName = @BuildingName, Address = @Address, 
-                                     OperatingHours = @OperatingHours, TotalFloors = @TotalFloors, UpdatedAt = GETDATE()
-                OUTPUT INSERTED.*
-                WHERE BuildingID = @BuildingID
-            `);
-            
-        await logAudit(pool, req.user, 'Update', 'Cơ sở', `Cập nhật cơ sở "${BuildingName || id}"`, req.ip);
-        res.json({ success: true, data: result.recordset[0] });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function updateRolePermissions(req, res, next) {
+  try {
+    const data = await infra.updateRolePermissions(Number(req.params.id), req.body.permissionIds)
+    await audit(req, 'Update', 'Phân quyền', `Cập nhật quyền cho Role ID ${req.params.id}`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật phân quyền thành công', data })
+  } catch (err) { next(err) }
+}
 
-export const deleteBuilding = async (req, res, next) => {
-    try {
-        const { id } = req.params;
-        const pool = await getPool();
-        
-        // Kiểm tra xem cơ sở có dữ liệu tầng/khu vực con không
-        const checkFloors = await pool.request().input('BuildingID', sql.Int, id).query('SELECT TOP 1 FloorID FROM Floors WHERE BuildingID = @BuildingID');
-        if (checkFloors.recordset.length > 0) {
-            return res.status(400).json({ success: false, message: 'Không thể xoá cơ sở vì đang có tầng hoặc dữ liệu bên trong.' });
-        }
+/* ── BUILDINGS ──────────────────────────────────────────────── */
 
-        await pool.request().input('BuildingID', sql.Int, id).query('DELETE FROM Buildings WHERE BuildingID = @BuildingID');
-        await logAudit(pool, req.user, 'Delete', 'Cơ sở', `Xoá cơ sở ID ${id}`, req.ip);
-        res.json({ success: true, data: { BuildingID: Number(id) } });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function getBuildings(req, res, next) {
+  try {
+    const data = await infra.getBuildings()
+    return res.status(StatusCodes.OK).json({ success: true, data })
+  } catch (err) { next(err) }
+}
 
-export const getAuditLogs = async (req, res, next) => {
-    try {
-        const { search, action } = req.query;
-        let query = 'SELECT * FROM AuditLogs WHERE 1=1';
-        const pool = await getPool();
-        const request = pool.request();
-        
-        if (search) {
-            query += ' AND (UserName LIKE @Search OR Description LIKE @Search OR Target LIKE @Search)';
-            request.input('Search', sql.NVarChar(100), `%${search}%`);
-        }
-        if (action) {
-            query += ' AND Action = @Action';
-            request.input('Action', sql.NVarChar(50), action);
-        }
-        query += ' ORDER BY CreatedAt DESC';
-        
-        const result = await request.query(query);
-        res.json({ success: true, data: result.recordset });
-    } catch (err) {
-        next(err);
-    }
-};
+export async function createBuilding(req, res, next) {
+  try {
+    const data = await infra.createBuilding({
+      buildingName: req.body.buildingName,
+      address: req.body.address,
+      operatingHours: req.body.operatingHours,
+      totalFloors: req.body.totalFloors,
+    })
+    await audit(req, 'Create', 'Tòa nhà', `Thêm tòa nhà "${data.BuildingName}"`)
+    return res.status(StatusCodes.CREATED).json({ success: true, message: 'Tạo tòa nhà thành công', data })
+  } catch (err) { next(err) }
+}
 
-const logAudit = async (pool, user, action, target, description, ip) => {
-    try {
-        await pool.request()
-            .input('UserID', sql.Int, user?.UserID || null)
-            .input('UserName', sql.NVarChar(100), user?.FullName || 'Hệ thống')
-            .input('RoleName', sql.NVarChar(50), user?.RoleName || 'Admin')
-            .input('Action', sql.NVarChar(50), action)
-            .input('Target', sql.NVarChar(100), target)
-            .input('Description', sql.NVarChar(500), description)
-            .input('IpAddress', sql.NVarChar(45), ip)
-            .query(`
-                INSERT INTO AuditLogs (UserID, UserName, RoleName, Action, Target, Description, IpAddress)
-                VALUES (@UserID, @UserName, @RoleName, @Action, @Target, @Description, @IpAddress)
-            `);
-    } catch (err) {
-        console.error('Audit Log Error:', err);
-    }
-};
+export async function updateBuilding(req, res, next) {
+  try {
+    const data = await infra.updateBuilding(Number(req.params.id), {
+      buildingName: req.body.buildingName,
+      address: req.body.address,
+      operatingHours: req.body.operatingHours,
+      totalFloors: req.body.totalFloors,
+    })
+    await audit(req, 'Update', 'Tòa nhà', `Cập nhật tòa nhà ID ${req.params.id}`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật tòa nhà thành công', data })
+  } catch (err) { next(err) }
+}
+
+export async function deleteBuilding(req, res, next) {
+  try {
+    const data = await infra.deleteBuilding(Number(req.params.id))
+    await audit(req, 'Delete', 'Tòa nhà', `Xóa tòa nhà ID ${req.params.id}`)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Xóa tòa nhà thành công', data })
+  } catch (err) { next(err) }
+}
+
+/* ── AUDIT LOGS ─────────────────────────────────────────────── */
+
+
+
+export async function getAuditLogs(req, res, next) {
+  try {
+    const result = await infra.getAuditLogs({
+      userId: req.query.userId ? Number(req.query.userId) : null,
+      action: req.query.action,
+      search: req.query.search,
+      fromDate: req.query.fromDate,
+      toDate: req.query.toDate,
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+    })
+    return res.status(StatusCodes.OK).json({ success: true, data: result.data, pagination: result.pagination })
+  } catch (err) { next(err) }
+}
