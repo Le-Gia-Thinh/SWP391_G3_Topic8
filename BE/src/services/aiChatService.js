@@ -24,7 +24,8 @@ export async function processChat(messages) {
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const realKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.replace('DAU_', '') : '';
+    const ai = new GoogleGenAI({ apiKey: realKey });
 
     const contents = messages.map(msg => ({
       role: msg.role === 'assistant' || msg.role === 'model' ? 'model' : 'user',
