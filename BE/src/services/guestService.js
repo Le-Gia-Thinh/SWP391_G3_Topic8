@@ -2,25 +2,13 @@ import { getPool, sql } from '../config/db.js';
 
 /**
  * Tra cứu phiên gửi xe cho khách vãng lai
- * @param {string} plateNumber - Biển số xe
- * @param {string} sessionCode - Mã phiên (VD: SS-00042)
+ * @param {string} searchTerm - Biển số xe hoặc Mã phiên (VD: SS-00042)
  */
-export async function trackSession(plateNumber, sessionCode) {
+export async function trackSession(searchTerm) {
   const pool = await getPool();
 
-  // Parse sessionCode (SS-00042) → sessionId (42)
-  const match = sessionCode.match(/^SS-(\d+)$/i);
-  if (!match) {
-    return null;
-  }
-  const sessionId = parseInt(match[1], 10);
-
-  // Truy vấn thông tin phiên (chỉ trả dữ liệu an toàn, không lộ thông tin cá nhân)
-  const result = await pool.request()
-    .input('SessionID', sql.Int, sessionId)
-    .input('PlateNumber', sql.NVarChar(20), plateNumber.toUpperCase().trim())
-    .query(`
-      SELECT
+  let query = `
+      SELECT TOP 1
         ps.SessionID,
         CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
         ps.PlateNumber,
@@ -43,9 +31,25 @@ export async function trackSession(plateNumber, sessionCode) {
       JOIN Floors f ON z.FloorID = f.FloorID
       JOIN Buildings b ON f.BuildingID = b.BuildingID
       LEFT JOIN Payments pay ON pay.SessionID = ps.SessionID
-      WHERE ps.SessionID = @SessionID
-        AND UPPER(ps.PlateNumber) = @PlateNumber
-    `);
+      WHERE 1=1
+  `;
+
+  const request = pool.request();
+  const term = searchTerm.trim().toUpperCase();
+
+  // Kiểm tra xem có phải mã phiên không (Bắt đầu bằng SS-)
+  const match = term.match(/^SS-(\d+)$/i);
+  if (match) {
+    request.input('SessionID', sql.Int, parseInt(match[1], 10));
+    query += ` AND ps.SessionID = @SessionID`;
+  } else {
+    request.input('PlateNumber', sql.NVarChar(20), term);
+    query += ` AND UPPER(ps.PlateNumber) = @PlateNumber`;
+    // Ưu tiên phiên đang Active, nếu không có thì lấy phiên mới nhất
+    query += ` ORDER BY CASE WHEN ps.SessionStatus = 'Active' THEN 0 ELSE 1 END, ps.EntryTime DESC`;
+  }
+
+  const result = await request.query(query);
 
   if (result.recordset.length === 0) {
     return null;
@@ -71,7 +75,7 @@ export async function trackSession(plateNumber, sessionCode) {
 
       // Lấy VehicleTypeID từ session
       const vtResult = await pool.request()
-        .input('SID', sql.Int, sessionId)
+        .input('SID', sql.Int, session.SessionID)
         .query('SELECT VehicleTypeID FROM ParkingSessions WHERE SessionID = @SID');
       
       if (vtResult.recordset.length > 0) {

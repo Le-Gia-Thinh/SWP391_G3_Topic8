@@ -100,32 +100,32 @@ const DriverLayout = () => {
   }, [])
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f8fafc] font-sans text-gray-900">
+    <div className="flex min-h-screen flex-col bg-[#f8fafc] dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 transition-colors duration-300">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
 
       {/* Top Navbar */}
-      <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-gray-100 bg-white px-4 md:px-8">
+      <header className="sticky top-0 z-30 flex h-20 w-full items-center justify-between border-b border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 px-4 md:px-8">
         {/* Logo + Location */}
         <div className="flex items-center gap-3">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl text-gray-500 hover:bg-gray-50">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800">
             <Menu size={24} />
           </button>
           <Link to="/driver/home" onClick={closeAllDropdowns} className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:text-blue-400">
               <Car size={20} />
             </div>
-            <span className="hidden sm:block text-blue-600 font-black text-2xl">PBMS</span>
+            <span className="hidden sm:block text-blue-600 dark:text-blue-400 font-black text-2xl">PBMS</span>
           </Link>
           {/* Location Dropdown */}
           <div className="relative hidden sm:block" ref={locationRef}>
-            <button onClick={() => setIsLocationOpen(prev => !prev)} className="flex items-center gap-2 rounded-xl p-2 text-sm font-bold text-blue-600">
+            <button onClick={() => setIsLocationOpen(prev => !prev)} className="flex items-center gap-2 rounded-xl p-2 text-sm font-bold text-blue-600 dark:text-blue-400">
               {selectedLocation} <ChevronDown size={14} className={`${isLocationOpen ? 'rotate-180' : ''}`} />
             </button>
             {isLocationOpen && (
-              <div className="absolute left-0 mt-2 w-64 rounded-2xl border bg-white shadow-xl">
+              <div className="absolute left-0 mt-2 w-64 rounded-2xl border bg-white dark:bg-slate-800 shadow-xl">
                 {LOCATIONS.map(loc => (
-                  <button key={loc} onClick={() => handleSelectLocation(loc)} className={`w-full px-3 py-2 text-left ${selectedLocation===loc?'bg-blue-50 font-bold text-blue-600':'text-gray-600 hover:bg-gray-50'}`}>
+                  <button key={loc} onClick={() => handleSelectLocation(loc)} className={`w-full px-3 py-2 text-left ${selectedLocation===loc?'bg-blue-50 dark:bg-blue-900/20 font-bold text-blue-600 dark:text-blue-400':'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'}`}>
                     {loc}
                   </button>
                 ))}
@@ -138,10 +138,10 @@ const DriverLayout = () => {
         <div className="flex items-center gap-4">
           <div className="relative" ref={profileRef}>
             <button onClick={() => setIsProfileOpen(prev => !prev)} className="flex items-center gap-3 rounded-xl p-1.5">
-              <div className="text-sm font-bold text-white bg-orange-600 h-10 w-10 flex items-center justify-center rounded-full">{displayName.slice(0,2)}</div>
+              <div className="text-sm font-bold text-white bg-orange-600 h-10 w-10 flex items-center justify-center rounded-full">{displayName.slice(0, 2)}</div>
             </button>
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-72 rounded-2xl border bg-white shadow-xl">
+              <div className="absolute right-0 mt-2 w-72 rounded-2xl border bg-white dark:bg-slate-800 shadow-xl">
                 <Link to="/driver/profile" onClick={closeAllDropdowns} className="block px-4 py-2">Hồ sơ cá nhân</Link>
                 <Link to="/driver/settings" onClick={closeAllDropdowns} className="block px-4 py-2">Cài đặt</Link>
                 <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-red-600">Đăng xuất</button>
@@ -154,13 +154,13 @@ const DriverLayout = () => {
       {/* Body */}
       <div className="flex min-h-0 flex-1 relative">
         {/* Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 z-50 w-[270px] bg-white border-r shadow-xl transition-transform duration-300 ${sidebarOpen?'translate-x-0 flex':'-translate-x-full hidden'}`}>
+        <aside className={`fixed inset-y-0 left-0 z-50 w-[270px] bg-white dark:bg-slate-800 border-r shadow-xl transition-transform duration-300 ${sidebarOpen?'translate-x-0 flex':'-translate-x-full hidden'}`}>
           <div className="py-6 flex-1 overflow-y-auto">
             <nav className="space-y-1 px-4">
               {MENU_ITEMS.map(item => {
                 const Icon = item.icon
                 return (
-                  <Link key={item.path} to={item.path} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold ${isActiveMenu(item.path)?'bg-blue-600 text-white':'text-gray-600 hover:bg-blue-50 hover:text-blue-600'}`}>
+                  <Link key={item.path} to={item.path} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold ${isActiveMenu(item.path)?'bg-blue-600 text-white':'text-gray-600 dark:text-gray-400 hover:bg-blue-50 dark:bg-blue-900/20 hover:text-blue-600 dark:text-blue-400'}`}>
                     <Icon size={18} /> {item.label}
                   </Link>
                 )
@@ -174,7 +174,7 @@ const DriverLayout = () => {
           <div className="mx-auto max-w-[1280px] px-8 py-8">
             <Outlet />
             {/* Footer Links */}
-            <footer className="mt-10 flex flex-col gap-4 border-t border-gray-200 pt-6 text-xs text-gray-400 lg:flex-row lg:items-center lg:justify-between">
+            <footer className="mt-10 flex flex-col gap-4 border-t border-gray-200 dark:border-slate-700 pt-6 text-xs text-gray-400 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap items-center gap-4">
                 <span>SmartPark v2.4.0-stable</span>
                 <span>© 2026 SmartPark Inc.</span>

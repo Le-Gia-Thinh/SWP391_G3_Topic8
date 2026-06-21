@@ -2,29 +2,21 @@ import * as guestService from '../services/guestService.js';
 
 export const trackSession = async (req, res) => {
   try {
-    const { plateNumber, sessionCode } = req.query;
+    const { searchTerm } = req.query;
 
-    if (!plateNumber || !sessionCode) {
+    if (!searchTerm || !searchTerm.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Vui lòng nhập đầy đủ Biển số xe và Mã phiên'
+        message: 'Vui lòng nhập Biển số xe hoặc Mã phiên'
       });
     }
 
-    // Validate sessionCode format (SS-XXXXX)
-    if (!/^SS-\d+$/i.test(sessionCode)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Mã phiên không hợp lệ. Định dạng đúng: SS-XXXXX (ví dụ: SS-00042)'
-      });
-    }
-
-    const session = await guestService.trackSession(plateNumber, sessionCode);
+    const session = await guestService.trackSession(searchTerm);
 
     if (!session) {
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy phiên gửi xe. Vui lòng kiểm tra lại Biển số xe và Mã phiên.'
+        message: 'Không tìm thấy phiên gửi xe. Vui lòng kiểm tra lại thông tin.'
       });
     }
 

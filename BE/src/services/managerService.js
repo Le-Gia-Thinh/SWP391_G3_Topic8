@@ -27,20 +27,20 @@ export async function getDashboardStats() {
   `);
 
   const revenueToday = await pool.request().query(`
-    SELECT ISNULL(SUM(p.Amount), 0) AS RevenueToday
+    SELECT ISNULL(SUM(ISNULL(p.FinalAmount, p.Amount)), 0) AS RevenueToday
     FROM Payments p
     WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-      AND CAST(p.PaymentTime AS DATE) = CAST(GETDATE() AS DATE)
+      AND CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE)
   `);
 
   const revenue7Days = await pool.request().query(`
     SELECT
-      CAST(p.PaymentTime AS DATE)  AS Period,
-      ISNULL(SUM(p.Amount), 0)    AS TotalRevenue
+      CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE) AS Period,
+      ISNULL(SUM(ISNULL(p.FinalAmount, p.Amount)), 0)        AS TotalRevenue
     FROM Payments p
     WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-      AND p.PaymentTime >= DATEADD(DAY, -6, CAST(GETDATE() AS DATE))
-    GROUP BY CAST(p.PaymentTime AS DATE)
+      AND ISNULL(p.PaymentTime, p.SurchargePaidAt) >= DATEADD(DAY, -6, CAST(GETDATE() AS DATE))
+    GROUP BY CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE)
     ORDER BY Period
   `);
 
@@ -93,13 +93,13 @@ export async function getDashboardStats() {
       p.PaymentID,
       CONCAT('SES-', RIGHT('0000' + CAST(s.SessionID AS VARCHAR), 4)) AS SessionCode,
       s.PlateNumber,
-      p.Amount,
+      ISNULL(p.FinalAmount, p.Amount) AS Amount,
       p.PaymentStatus,
-      p.PaymentTime,
+      ISNULL(p.PaymentTime, p.SurchargePaidAt) AS PaymentTime,
       p.PaymentMethod
     FROM Payments p
     JOIN ParkingSessions s ON p.SessionID = s.SessionID
-    ORDER BY p.PaymentTime DESC
+    ORDER BY ISNULL(p.PaymentTime, p.SurchargePaidAt) DESC
   `);
 
   const slot = slotStats.recordset[0];
@@ -339,9 +339,10 @@ export async function getParkingSlots({
       JOIN Floors f          ON f.FloorID         = z.FloorID
       JOIN Buildings b       ON b.BuildingID      = f.BuildingID
       LEFT JOIN (
-        SELECT s.SlotID, s.SessionID, s.PlateNumber, s.EntryTime, u.FullName AS DriverName
+        SELECT s.SlotID, s.SessionID, s.PlateNumber, s.EntryTime,
+               ISNULL(u.FullName, N'Khách vãng lai') AS DriverName
         FROM ParkingSessions s
-        JOIN Users u ON u.UserID = s.DriverID
+        LEFT JOIN Users u ON u.UserID = s.DriverID
         WHERE s.SessionStatus = 'Active'
       ) sess ON sess.SlotID = ps.SlotID
       WHERE f.IsActive = 1
@@ -426,10 +427,10 @@ export async function getSlotById(slotId) {
         s.SessionStatus,
         s.VehicleTypeID,
         DATEDIFF(MINUTE, s.EntryTime, GETDATE()) AS ParkedMinutes,
-        u.FullName AS DriverName,
+        ISNULL(u.FullName, N'Khách vãng lai') AS DriverName,
         u.PhoneNumber AS DriverPhone
       FROM ParkingSessions s
-      JOIN Users u ON u.UserID = s.DriverID
+      LEFT JOIN Users u ON u.UserID = s.DriverID
       WHERE s.SlotID = @SlotID AND s.SessionStatus = 'Active'
       ORDER BY s.EntryTime DESC
     `);
@@ -445,12 +446,12 @@ export async function getSlotById(slotId) {
         s.ExitTime,
         s.SessionStatus,
         DATEDIFF(MINUTE, s.EntryTime, ISNULL(s.ExitTime, GETDATE())) AS DurationMinutes,
-        u.FullName AS DriverName,
+        ISNULL(u.FullName, N'Khách vãng lai') AS DriverName,
         p.Amount,
         p.PaymentStatus,
         p.PaymentMethod
       FROM ParkingSessions s
-      JOIN Users u     ON u.UserID    = s.DriverID
+      LEFT JOIN Users u    ON u.UserID    = s.DriverID
       LEFT JOIN Payments p ON p.SessionID = s.SessionID
       WHERE s.SlotID = @SlotID
       ORDER BY s.EntryTime DESC
@@ -585,7 +586,7 @@ export async function getIncidents({ status, priority, page = 1, limit = 20, sea
         s.PlateNumber,
         s.EntryTime,
         i.DriverID,
-        d.FullName AS DriverName,
+        ISNULL(d.FullName, N'Khách vãng lai') AS DriverName,
         d.Email    AS DriverEmail,
         i.AssignedStaffID,
         i.Attachments,
@@ -648,7 +649,7 @@ export async function getIncidentById(incidentId) {
       SELECT
         i.*,
         s.PlateNumber, s.EntryTime,
-        d.FullName AS DriverName, d.Email AS DriverEmail, d.PhoneNumber AS DriverPhone,
+        ISNULL(d.FullName, N'Khách vãng lai') AS DriverName, d.Email AS DriverEmail, d.PhoneNumber AS DriverPhone,
         st.FullName AS StaffName,
         ps.SlotCode, z.ZoneName, f.FloorName, b.BuildingName
       FROM Incidents i
@@ -705,10 +706,15 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
   const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const end = endDate || new Date().toISOString().slice(0, 10);
 
+  // Dùng ISNULL(PaymentTime, SurchargePaidAt) làm mốc thời gian doanh thu
+  // để các giao dịch Prepaid (chỉ có PrepaidAt/SurchargePaidAt) không bị rớt.
+  const payTimeExpr = "ISNULL(p.PaymentTime, p.SurchargePaidAt)";
+  const amountExpr = "ISNULL(p.FinalAmount, p.Amount)";
+
   let dateGroup;
-  if (groupBy === 'month') dateGroup = "FORMAT(p.PaymentTime, 'yyyy-MM')";
-  else if (groupBy === 'week') dateGroup = "CONCAT(YEAR(p.PaymentTime), '-W', RIGHT('0' + CAST(DATEPART(WEEK, p.PaymentTime) AS VARCHAR), 2))";
-  else dateGroup = "CAST(p.PaymentTime AS DATE)";
+  if (groupBy === 'month') dateGroup = `FORMAT(${payTimeExpr}, 'yyyy-MM')`;
+  else if (groupBy === 'week') dateGroup = `CONCAT(YEAR(${payTimeExpr}), '-W', RIGHT('0' + CAST(DATEPART(WEEK, ${payTimeExpr}) AS VARCHAR), 2))`;
+  else dateGroup = `CAST(${payTimeExpr} AS DATE)`;
 
   const result = await pool.request()
     .input("StartDate", sql.Date, start)
@@ -717,11 +723,12 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
       SELECT
         ${dateGroup}          AS Period,
         COUNT(*)              AS TransactionCount,
-        SUM(p.Amount)         AS TotalRevenue,
-        AVG(p.Amount)         AS AvgRevenue
+        SUM(${amountExpr})    AS TotalRevenue,
+        AVG(${amountExpr})    AS AvgRevenue
       FROM Payments p
       WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-        AND CAST(p.PaymentTime AS DATE) BETWEEN @StartDate AND @EndDate
+        AND ${payTimeExpr} IS NOT NULL
+        AND CAST(${payTimeExpr} AS DATE) BETWEEN @StartDate AND @EndDate
       GROUP BY ${dateGroup}
       ORDER BY Period
     `);
@@ -731,14 +738,15 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
     .input("EndDate", sql.Date, end)
     .query(`
       SELECT
-        COUNT(*)                                                              AS TotalTransactions,
-        ISNULL(SUM(p.Amount), 0)                                              AS TotalRevenue,
-        ISNULL(AVG(p.Amount), 0)                                              AS AvgPerTransaction,
-        SUM(CASE WHEN p.PaymentMethod = 'Cash'    THEN p.Amount ELSE 0 END)  AS CashRevenue,
-        SUM(CASE WHEN p.PaymentMethod = 'Banking' THEN p.Amount ELSE 0 END)  AS BankingRevenue
+        COUNT(*)                                                                  AS TotalTransactions,
+        ISNULL(SUM(${amountExpr}), 0)                                             AS TotalRevenue,
+        ISNULL(AVG(${amountExpr}), 0)                                             AS AvgPerTransaction,
+        SUM(CASE WHEN p.PaymentMethod = 'Cash'    THEN ${amountExpr} ELSE 0 END) AS CashRevenue,
+        SUM(CASE WHEN p.PaymentMethod = 'Banking' THEN ${amountExpr} ELSE 0 END) AS BankingRevenue
       FROM Payments p
       WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-        AND CAST(p.PaymentTime AS DATE) BETWEEN @StartDate AND @EndDate
+        AND ${payTimeExpr} IS NOT NULL
+        AND CAST(${payTimeExpr} AS DATE) BETWEEN @StartDate AND @EndDate
     `);
 
   // Theo loại xe
@@ -749,13 +757,14 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
       SELECT
         vt.VehicleName,
         vt.VehicleCode,
-        COUNT(p.PaymentID)        AS TransactionCount,
-        ISNULL(SUM(p.Amount), 0) AS TotalRevenue
+        COUNT(p.PaymentID)            AS TransactionCount,
+        ISNULL(SUM(${amountExpr}), 0) AS TotalRevenue
       FROM Payments p
       JOIN ParkingSessions s ON p.SessionID = s.SessionID
       JOIN VehicleTypes vt   ON s.VehicleTypeID = vt.VehicleTypeID
       WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-        AND CAST(p.PaymentTime AS DATE) BETWEEN @StartDate AND @EndDate
+        AND ${payTimeExpr} IS NOT NULL
+        AND CAST(${payTimeExpr} AS DATE) BETWEEN @StartDate AND @EndDate
       GROUP BY vt.VehicleTypeID, vt.VehicleName, vt.VehicleCode
       ORDER BY TotalRevenue DESC
     `);
@@ -1059,14 +1068,14 @@ export async function getUnpaidSessions({ search } = {}) {
         s.SessionID,
         CONCAT('SS-', RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
         s.PlateNumber, s.EntryTime, s.ExitTime, s.SessionStatus,
-        u.FullName AS DriverName, u.PhoneNumber AS DriverPhone,
+        ISNULL(u.FullName, N'Khách vãng lai') AS DriverName, u.PhoneNumber AS DriverPhone,
         vt.VehicleName, vt.VehicleCode,
         sl.SlotCode, z.ZoneName, f.FloorName, b.BuildingName,
         p.PaymentID, p.Amount, p.FinalAmount, p.PrepaidAmount, p.SurchargeAmount,
         p.PaymentStatus, p.SurchargeStatus,
         DATEDIFF(MINUTE, s.EntryTime, ISNULL(s.ExitTime, GETDATE())) AS DurationMinutes
       FROM ParkingSessions s
-      JOIN Users u         ON s.DriverID      = u.UserID
+      LEFT JOIN Users u    ON s.DriverID      = u.UserID
       JOIN VehicleTypes vt ON s.VehicleTypeID = vt.VehicleTypeID
       JOIN ParkingSlots sl ON s.SlotID        = sl.SlotID
       JOIN Zones z         ON sl.ZoneID       = z.ZoneID

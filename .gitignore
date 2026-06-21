@@ -8,11 +8,8 @@ node_modules/
 /out/
 
 # Environment variables (Crucial for Express/Node)
+BE/.env
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # Logs
 npm-debug.log*

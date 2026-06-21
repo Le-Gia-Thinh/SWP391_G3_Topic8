@@ -10,7 +10,7 @@ import JwtProvider from "../providers/JwtProvider.js";
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const BCRYPT_ROUNDS = 10;
 const REFRESH_TTL = ms(process.env.REFRESH_TOKEN_EXPIRES || "7d");
-const SESSION_ABSOLUTE_TTL = ms(process.env.SESSION_ABSOLUTE_EXPIRES);
+const SESSION_ABSOLUTE_TTL = ms(process.env.SESSION_ABSOLUTE_EXPIRES || "30d");
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: parseInt(process.env.SMTP_PORT || "587"),

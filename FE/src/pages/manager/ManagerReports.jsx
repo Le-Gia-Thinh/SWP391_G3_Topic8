@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   FileText, Download, DollarSign, CarFront,
-  RefreshCcw, Calendar, Clock, BarChart3
+  RefreshCcw, Calendar, Clock, BarChart3, Sparkles
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import {
@@ -97,7 +97,10 @@ const ManagerReports = () => {
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">Quản lý / Báo cáo</p>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">Báo cáo hệ thống</h1>
-          <p className="mt-1 text-sm text-slate-500">Doanh thu, lưu lượng xe, tỷ lệ lấp đầy và khung giờ cao điểm theo dữ liệu thực tế.</p>
+          <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
+            <Sparkles size={16} className="text-amber-500 animate-pulse" />
+            Doanh thu, lưu lượng xe, tỷ lệ lấp đầy và khung giờ cao điểm theo dữ liệu thực tế.
+          </p>
         </div>
         <button
           onClick={() => fetchReport(tab)}

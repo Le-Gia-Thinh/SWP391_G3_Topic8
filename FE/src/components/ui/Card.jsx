@@ -3,7 +3,7 @@ import React from 'react'
 const Card = ({ children, className = '', noPadding = false, ...props }) => {
   return (
     <div
-      className={`rounded-2xl border border-gray-100 bg-white shadow-sm ${
+      className={`rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-sm ${
         noPadding ? '' : 'p-6'
       } ${className}`}
       {...props}

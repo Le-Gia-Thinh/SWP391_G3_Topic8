@@ -105,3 +105,15 @@ export function isDriver(req, res, next) {
     });
   next();
 }
+
+export function isAdmin(req, res, next) {
+  if (!req.user)
+    return res.status(401).json({ success: false, message: "Chưa xác thực." });
+  if (req.user.RoleName !== "Admin")
+    return res.status(403).json({
+      success: false,
+      message: "Không có quyền. Yêu cầu: Admin.",
+      code:    "FORBIDDEN",
+    });
+  next();
+}

@@ -11,6 +11,7 @@ import driverApi from '../../apis/driverApi'
 import { changePasswordAPI } from '../../apis/authApi'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
+import { useAppTheme } from '../../contexts/AppThemeContext'
 
 const Toggle = ({ checked, onChange, label, desc }) => (
   <div className="flex items-center justify-between py-3.5 border-b border-gray-50 last:border-0">
@@ -154,21 +155,27 @@ const ProfileContent = ({ user, editing, formData, onChange, recentActivity, rec
 }
 
 const SettingsContent = ({ saved, handleSave }) => {
+  const { theme, toggleTheme } = useAppTheme()
   const [settings, setSettings] = useState({
-    darkMode: false, emailNotif: true, pushNotif: true, soundAlert: true, language: 'vi'
+    emailNotif: true, pushNotif: true, soundAlert: true, language: 'vi'
   })
   const set = (key) => (val) => setSettings(prev => ({ ...prev, [key]: val }))
 
   return (
     <div className="flex gap-6 flex-col lg:flex-row animate-in fade-in">
       <div className="flex-1 space-y-5">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h3 className="text-base font-bold text-gray-800 mb-1 flex items-center gap-2"><Monitor size={18} className="text-blue-500" /> Giao diện</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+          <h3 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-1 flex items-center gap-2"><Monitor size={18} className="text-blue-500" /> Giao diện</h3>
           <div className="mb-5">
-            <p className="text-sm font-semibold text-gray-700 mb-3 mt-4">Chủ đề màu sắc</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 mt-4">Chủ đề màu sắc</p>
             <div className="flex gap-3">
               {[{ id: 'light', icon: <Sun size={18} />, label: 'Sáng' }, { id: 'dark', icon: <Moon size={18} />, label: 'Tối' }].map(({ id, icon, label }) => (
-                <button key={id} onClick={() => set('darkMode')(id === 'dark')} className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${(id === 'dark' && settings.darkMode) || (id === 'light' && !settings.darkMode) ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500'}`}>
+                <button
+                  key={id}
+                  onClick={() => {
+                    if (theme !== id) toggleTheme()
+                  }}
+                  className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${(id === 'dark' && theme === 'dark') || (id === 'light' && theme === 'light') ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'}`}>
                   {icon}<span className="text-xs font-bold">{label}</span>
                 </button>
               ))}
@@ -198,26 +205,26 @@ const SecurityContent = () => {
   const [oldPw, setOldPw] = useState(''); const [newPw, setNewPw] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const hasPassword = user?.hasPassword;
+  const hasPassword = user?.hasPassword
 
-  const handleChangePassword = async (e) => { 
-    e.preventDefault(); 
-    if ((hasPassword && !oldPw) || !newPw) return;
+  const handleChangePassword = async (e) => {
+    e.preventDefault()
+    if ((hasPassword && !oldPw) || !newPw) return
     try {
-      setIsSubmitting(true);
-      const res = await changePasswordAPI({ oldPassword: oldPw, newPassword: newPw });
+      setIsSubmitting(true)
+      const res = await changePasswordAPI({ oldPassword: oldPw, newPassword: newPw })
       if (res.data?.success) {
-        toast.success(res.data.message || 'Cập nhật mật khẩu thành công');
-        setOldPw(''); 
-        setNewPw('');
+        toast.success(res.data.message || 'Cập nhật mật khẩu thành công')
+        setOldPw('')
+        setNewPw('')
         // Option: we could manually update user.HasPassword here but a reload or re-login is fine
       } else {
-        toast.error(res.data?.message || 'Có lỗi xảy ra');
+        toast.error(res.data?.message || 'Có lỗi xảy ra')
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(err.response?.data?.message || 'Có lỗi xảy ra')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
   }
   const handleLogoutAll = async () => { await logout(); navigate('/login') }
@@ -227,11 +234,11 @@ const SecurityContent = () => {
       <div className="flex-1 space-y-5">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h3 className="text-base font-bold text-gray-800 mb-5 flex items-center gap-2">
-            <Lock size={18} className="text-blue-500" /> 
+            <Lock size={18} className="text-blue-500" />
             {hasPassword ? 'Đổi mật khẩu' : 'Tạo mật khẩu'}
           </h3>
           <form onSubmit={handleChangePassword} className="space-y-4">
-            
+
             {hasPassword && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Mật khẩu hiện tại</label>
@@ -249,7 +256,7 @@ const SecurityContent = () => {
                 <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showNew ? <EyeOff size={18} /> : <Eye size={18} />}</button>
               </div>
             </div>
-            
+
             <button type="submit" disabled={(hasPassword && !oldPw) || !newPw || isSubmitting} className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-bold rounded-xl flex justify-center items-center gap-2">
               {isSubmitting ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Cập nhật'}
             </button>
@@ -280,7 +287,7 @@ const UserProfile = () => {
     phoneNumber: user?.phone || user?.PhoneNumber || '',
     dateOfBirth: user?.dateOfBirth || user?.DateOfBirth || ''
   })
-  
+
   const [recentActivity, setRecentActivity] = useState([])
   const [recentPayments, setRecentPayments] = useState([])
   const [isUpdating, setIsUpdating] = useState(false)
@@ -366,7 +373,7 @@ const UserProfile = () => {
           <button
             disabled={isUpdating}
             onClick={() => {
-              if (editing) { handleSave(); }
+              if (editing) { handleSave() }
               else setEditing(true)
             }}
             className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md text-sm transition-colors disabled:opacity-70"

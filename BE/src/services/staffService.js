@@ -143,14 +143,14 @@ export async function getDashboard() {
         z.ZoneName,
         f.FloorName,
         b.BuildingName,
-        u.FullName AS DriverName
+        ISNULL(u.FullName, N'Khách vãng lai') AS DriverName
         FROM ParkingSessions ps
         JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
         JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
         JOIN Zones z ON sl.ZoneID = z.ZoneID
         JOIN Floors f ON z.FloorID = f.FloorID
         JOIN Buildings b ON f.BuildingID = b.BuildingID
-        JOIN Users u ON ps.DriverID = u.UserID
+        LEFT JOIN Users u ON ps.DriverID = u.UserID
         ORDER BY ps.EntryTime DESC
     `)
 
@@ -576,7 +576,7 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
         f.FloorName,
         b.BuildingName,
         ps.DriverID,
-        u.FullName AS DriverName,
+        ISNULL(u.FullName, N'Khách vãng lai') AS DriverName,
         u.PhoneNumber,
         ps.PlateNumber,
         ps.VehicleTypeID,
@@ -594,7 +594,7 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
         p.PaymentStatus,
         p.SurchargeStatus
         FROM ParkingSessions ps
-        JOIN Users u ON ps.DriverID = u.UserID
+        LEFT JOIN Users u ON ps.DriverID = u.UserID
         JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
         JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
         JOIN Zones z ON sl.ZoneID = z.ZoneID
@@ -618,13 +618,13 @@ async function getSessionById(sessionId) {
                 CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
                 ps.SlotID, sl.SlotCode,
                 z.ZoneName, f.FloorName, b.BuildingName,
-                ps.DriverID, u.FullName AS DriverName, u.PhoneNumber,
+                ps.DriverID, ISNULL(u.FullName, N'Khách vãng lai') AS DriverName, u.PhoneNumber,
                 ps.PlateNumber, ps.VehicleTypeID, vt.VehicleName, vt.VehicleCode,
                 ps.EntryTime, ps.ExitTime, ps.SessionStatus,
                 p.PaymentID, p.Amount, p.FinalAmount, p.PrepaidAmount,
                 p.SurchargeAmount, p.PaymentMethod, p.PaymentStatus, p.SurchargeStatus
             FROM ParkingSessions ps
-            JOIN Users u         ON ps.DriverID      = u.UserID
+            LEFT JOIN Users u    ON ps.DriverID      = u.UserID
             JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
             JOIN ParkingSlots sl ON ps.SlotID        = sl.SlotID
             JOIN Zones z         ON sl.ZoneID        = z.ZoneID
@@ -655,7 +655,7 @@ export async function getCheckoutPreview(sessionId) {
             f.FloorName,
             b.BuildingName,
             ps.DriverID,
-            u.FullName AS DriverName,
+            ISNULL(u.FullName, N'Khách vãng lai') AS DriverName,
             ps.PlateNumber,
             ps.VehicleTypeID,
             vt.VehicleName,
@@ -669,7 +669,7 @@ export async function getCheckoutPreview(sessionId) {
             p.PaymentStatus,
             p.SurchargeStatus
         FROM ParkingSessions ps
-        JOIN Users u ON ps.DriverID = u.UserID
+        LEFT JOIN Users u ON ps.DriverID = u.UserID
         JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
         JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
         JOIN Zones z ON sl.ZoneID = z.ZoneID
@@ -865,7 +865,7 @@ export async function getIncidents({ status, priority, keyword, fromDate, toDate
                  ELSE NULL
             END AS SessionCode,
             i.DriverID,
-            u.FullName AS DriverName,
+            ISNULL(u.FullName, N'Khách vãng lai') AS DriverName,
             ps.PlateNumber,
             i.IncidentType,
             i.IncidentStatus,
@@ -877,7 +877,7 @@ export async function getIncidents({ status, priority, keyword, fromDate, toDate
             i.CreatedAt,
             i.UpdatedAt
         FROM Incidents i
-        JOIN Users u ON i.DriverID = u.UserID
+        LEFT JOIN Users u ON i.DriverID = u.UserID
         LEFT JOIN ParkingSessions ps ON i.SessionID = ps.SessionID
         LEFT JOIN Users staff ON i.AssignedStaffID = staff.UserID
         ${where}
@@ -902,7 +902,7 @@ export async function getIncidentById(incidentId) {
                 i.SessionID,
                 CONCAT('SS-', RIGHT('00000' + CAST(i.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
                 i.DriverID,
-                u.FullName AS DriverName,
+                ISNULL(u.FullName, N'Khách vãng lai') AS DriverName,
                 u.PhoneNumber AS DriverPhone,
                 ps.PlateNumber,
                 i.IncidentType, i.IncidentStatus, i.Priority,
@@ -912,7 +912,7 @@ export async function getIncidentById(incidentId) {
                 staff.FullName AS AssignedStaffName,
                 i.CreatedAt, i.UpdatedAt
             FROM Incidents i
-            JOIN Users u ON i.DriverID = u.UserID
+            LEFT JOIN Users u ON i.DriverID = u.UserID
             LEFT JOIN ParkingSessions ps ON i.SessionID = ps.SessionID
             LEFT JOIN Users staff ON i.AssignedStaffID = staff.UserID
             WHERE i.IncidentID = @id
@@ -1073,32 +1073,6 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
         `)
 
     return result.recordset  // flat array
-    const slots = result.recordset
-
-    // Group theo Zone
-    const zonesMap = {}
-    slots.forEach(slot => {
-        if (!zonesMap[slot.ZoneID]) {
-            zonesMap[slot.ZoneID] = {
-                id: slot.ZoneID,
-                label: `${slot.ZoneName} – ${slot.FloorName}`,
-                rows: [],
-                statuses: {}
-            }
-        }
-        zonesMap[slot.ZoneID].statuses[slot.SlotCode] = slot.SlotStatus
-    })
-
-    // Tạo rows (10 slots / row)
-    Object.values(zonesMap).forEach(zone => {
-        const slotCodes = Object.keys(zone.statuses).sort() // sort để FE hiển thị đúng
-        const rowCount = Math.ceil(slotCodes.length / 10)
-        for (let i = 0; i < rowCount; i++) {
-            zone.rows.push(slotCodes.slice(i * 10, i * 10 + 10))
-        }
-    })
-
-    return Object.values(zonesMap)
 }
 export async function getSlotDetail(slotCode) {
     const pool = await getPool();
@@ -1183,7 +1157,7 @@ export async function getSlotDetail(slotCode) {
         reservationStatus: slotDetail.ReservationStatus,
 
         // Driver info
-        driverName: slotDetail.DriverName,
+        driverName: slotDetail.DriverName || (slotDetail.SessionID ? 'Khách vãng lai' : null),
         driverEmail: slotDetail.DriverEmail,
         driverPhone: slotDetail.DriverPhone,
 

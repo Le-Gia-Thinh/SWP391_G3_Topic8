@@ -2,15 +2,16 @@ import React, { Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { GuestRoute, ProtectedRoute, RoleRoute } from './components/ProtectedRoute'
 import {
-  LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut, Bell, Car, Star
+  LayoutGrid, LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut, Bell, Car, Star, Users, KeyRound, Building2, ScrollText
 } from 'lucide-react'
 
 // Import Layouts
 import DashboardLayout from './components/layout/DashboardLayout'
+import AIChatBox from './components/chat/AIChatBox'
 
 // Import Common Pages (Lazy)
 const Home = React.lazy(() => import('./pages/Home'))
-const AdminLogin = React.lazy(() => import('./pages/AdminLogin'))
+const Login = React.lazy(() => import('./pages/Login'))
 const DriverRegister = React.lazy(() => import('./pages/DriverRegister'))
 const NotFound = React.lazy(() => import('./pages/common/NotFound'))
 const Forbidden = React.lazy(() => import('./pages/common/Forbidden'))
@@ -28,6 +29,13 @@ const ManagerIncidents = React.lazy(() => import('./pages/manager/ManagerInciden
 const ManagerReports = React.lazy(() => import('./pages/manager/ManagerReports'))
 const ManagerVehicleTypes = React.lazy(() => import('./pages/manager/ManagerVehicleTypes'))
 const ManagerUnpaid = React.lazy(() => import('./pages/manager/ManagerUnpaid'))
+// Admin Pages (Lazy)
+const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'))
+const AdminUsers = React.lazy(() => import('./pages/admin/AdminUsers'))
+const AdminRoles = React.lazy(() => import('./pages/admin/AdminRoles'))
+const AdminBuildings = React.lazy(() => import('./pages/admin/AdminBuildings'))
+const AdminParkingConfig = React.lazy(() => import('./pages/admin/AdminParkingConfig'))
+const AdminAuditLog = React.lazy(() => import('./pages/admin/AdminAuditLog'))
 // Staff Pages (Lazy)
 const StaffDashboardScreen = React.lazy(() => import('./pages/staff/StaffDashboardScreen'))
 const StaffCheckIn = React.lazy(() => import('./pages/staff/StaffCheckIn'))
@@ -80,6 +88,20 @@ const managerLinks = [
   { path: '/manager/incidents', label: 'Sự cố', icon: AlertTriangle },
   { path: '/manager/unpaid', label: 'Xe chưa thanh toán', icon: Wallet },
   { path: '/manager/feedback', label: 'Đánh giá từ User', icon: Star }
+]
+
+
+const adminLinks = [
+  { path: '/admin/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+  { isDivider: true },
+  { labelOnly: 'Quản trị' },
+  { path: '/admin/users', label: 'Người dùng', icon: Users },
+  { path: '/admin/roles', label: 'Vai trò & Phân quyền', icon: KeyRound },
+  { path: '/admin/buildings', label: 'Cơ sở / Bãi đỗ', icon: Building2 },
+  { path: '/admin/parking-config', label: 'Cấu hình bãi đỗ', icon: LayoutGrid },
+  { isDivider: true },
+  { labelOnly: 'Giám sát' },
+  { path: '/admin/audit-logs', label: 'Nhật ký hoạt động', icon: ScrollText }
 ]
 
 
@@ -141,7 +163,7 @@ const App = () => {
 
         {/* Guest only */}
         <Route element={<GuestRoute />}>
-          <Route path="/login" element={<AdminLogin />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/register" element={<DriverRegister />} />
         </Route>
 
@@ -153,6 +175,22 @@ const App = () => {
         {/* Staff + Manager */}
         <Route element={<RoleRoute allowedRoles={['Staff', 'Manager']} />}>
           <Route path="/checkin" element={<CheckIn />} />
+        </Route>
+
+        {/* Admin only */}
+        {/* ⚠️ TẠM THỜI: thêm 'Manager' để xem thử UI khi chưa có role Admin trong DB.
+            👉 Khi backend có role Admin, đổi lại thành: allowedRoles={['Admin']} */}
+        <Route element={<RoleRoute allowedRoles={['Admin', 'Manager']} />}>
+          <Route path="/admin" element={<DashboardLayout links={adminLinks} roleName="Admin" profileLink="/admin/profile" />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="roles" element={<AdminRoles />} />
+            <Route path="buildings" element={<AdminBuildings />} />
+            <Route path="parking-config" element={<AdminParkingConfig />} />
+            <Route path="audit-logs" element={<AdminAuditLog />} />
+            <Route path="profile" element={<UserProfile />} />
+          </Route>
         </Route>
 
         {/* Manager only */}
@@ -247,6 +285,7 @@ const App = () => {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <AIChatBox />
     </Suspense>
   )
 }

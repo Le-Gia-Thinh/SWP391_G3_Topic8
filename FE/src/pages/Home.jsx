@@ -57,7 +57,7 @@ const guidelines = [
 const Home = () => {
   const navigate = useNavigate()
   const { isAuthenticated, user, getRedirectPath, loading } = useAuth()
-  
+
   const [statsData, setStatsData] = useState(defaultStats)
   const [vehiclesData, setVehiclesData] = useState(defaultVehicles)
 
@@ -67,7 +67,7 @@ const Home = () => {
         const res = await guestApi.getHomeStats()
         if (res.success && res.data) {
           const { overview, vehicles } = res.data
-          
+
           setStatsData([
             { label: 'Tổng Sức Chứa', value: overview.totalCapacity.toLocaleString(), unit: 'Chỗ trống', icon: <Users className="w-5 h-5 text-gray-400" /> },
             { label: 'Đang Có Xe', value: overview.occupied.toLocaleString(), unit: 'Chỗ', icon: <Car className="w-5 h-5 text-gray-400" /> },
@@ -80,7 +80,7 @@ const Home = () => {
               let icon = <Car className="w-6 h-6" />
               if (v.code === 'MOTORBIKE') icon = <Bike className="w-6 h-6" />
               if (v.code === 'BICYCLE') icon = <Bike className="w-6 h-6" />
-              
+
               return {
                 title: v.name,
                 desc: `${v.available} chỗ trống / ${v.total}`,

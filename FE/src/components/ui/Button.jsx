@@ -15,10 +15,10 @@ const Button = ({
 
   const variants = {
     primary: 'bg-blue-600 text-white shadow-md shadow-blue-200 hover:bg-blue-700',
-    secondary: 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50',
+    secondary: 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800',
     danger: 'bg-red-600 text-white shadow-md shadow-red-200 hover:bg-red-700',
-    outline: 'bg-transparent text-blue-600 border-2 border-blue-600 hover:bg-blue-50',
-    ghost: 'bg-transparent text-gray-600 hover:bg-gray-100'
+    outline: 'bg-transparent text-blue-600 dark:text-blue-400 border-2 border-blue-600 hover:bg-blue-50 dark:bg-blue-900/20',
+    ghost: 'bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100'
   }
 
   const sizes = {
