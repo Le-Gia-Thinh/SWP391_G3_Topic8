@@ -5,6 +5,7 @@ import { LogOut } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
 const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
+  const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const { logout } = useAuth()

@@ -44,6 +44,9 @@ export async function processChat(messages) {
     return response.text;
   } catch (error) {
     console.error("Lỗi khi gọi Gemini API:", error);
+    if (error.status === 429 || error.message?.includes('429')) {
+      return "Xin lỗi, API Key của hệ thống đã vượt quá giới hạn yêu cầu (Quota Exceeded). Vui lòng cấu hình API Key mới hoặc thử lại sau vài phút.";
+    }
     return "Xin lỗi, đã xảy ra lỗi khi kết nối với máy chủ AI. Vui lòng thử lại sau.";
   }
 }

@@ -6,6 +6,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import staffApi from '../../apis/staffApi'
+import { useTranslation } from 'react-i18next'
 
 // ── Slot status helper ────────────────────────────────────────
 const SLOT_STATUS_STYLE = {
@@ -18,9 +19,6 @@ const SLOT_STATUS_STYLE = {
 
 // ── Biển số helpers ───────────────────────────────────────────
 // Định dạng chuẩn VN: 2 số tỉnh + 1 chữ series + 4-5 số
-//   - 5 số → DDL-DDD.DD  (ví dụ 51F-123.45)
-//   - 4 số → DDL-DDDD    (ví dụ 51F-1234)
-// Tự động chèn dấu - và . khi người dùng gõ.
 const formatPlate = (raw) => {
   const clean = (raw || '').toUpperCase().replace(/[^0-9A-Z]/g, '')
   if (!clean) return ''
@@ -38,29 +36,26 @@ const formatPlate = (raw) => {
     i++
   }
   result += series
-  if (!series) return result // chưa gõ chữ series → dừng (buộc nhập đúng)
+  if (!series) return result
 
-  // Phần 3: phần số → thêm dấu - và .
-  const nums = clean.slice(i).replace(/[^0-9]/g, '').slice(0, 5) // tối đa 5 số
+  // Phần 3: phần số
+  const nums = clean.slice(i).replace(/[^0-9]/g, '').slice(0, 5)
   if (nums.length === 0) return result
   result += '-'
   if (nums.length <= 3) {
     result += nums
   } else {
-    // tách 2 số cuối bằng dấu chấm
     result += nums.slice(0, nums.length - 2) + '.' + nums.slice(nums.length - 2)
   }
   return result
 }
 
-// Kiểm tra biển số đã đầy đủ & hợp lệ chưa
-// Khớp y hệt plateNumberRegex bên BE (authValidation.js):
-//   59A-12345 / 59A12345 / 59A-123.45 / 59AB-12345 / 51F-99999 ...
 const PLATE_REGEX = /^(\d{2}[A-Z]{1,2}-?\d{3}\.?\d{2}|\d{2}[A-Z]{1,2}-?\d{4,5})$/i
 const isValidPlate = (plate) => PLATE_REGEX.test(plate)
 
 // ── Walk-in content ───────────────────────────────────────────
 const WalkInContent = () => {
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   const [plateNumber, setPlateNumber] = useState('')
@@ -74,7 +69,7 @@ const WalkInContent = () => {
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  // Load vehicle types — chỉ chạy 1 lần
+  // Load vehicle types
   useEffect(() => {
     let cancelled = false
     staffApi.getVehicleTypes()
@@ -85,11 +80,11 @@ const WalkInContent = () => {
           if (res.data.length > 0) setVehicleTypeId(String(res.data[0].VehicleTypeID))
         }
       })
-      .catch(() => { if (!cancelled) toast.error('Không tải được loại phương tiện') })
+      .catch(() => { if (!cancelled) toast.error(t('staff.checkin.walkin.fetchVehicleTypeFailed')) })
     return () => { cancelled = true }
-  }, [])
+  }, [t])
 
-  // Load parking map khi vehicleTypeId thay đổi
+  // Load parking map
   const loadSlots = useCallback(async () => {
     if (!vehicleTypeId) return
     setLoading(true)
@@ -102,13 +97,13 @@ const WalkInContent = () => {
         setSelectedSlotId(prev => prev ?? (first?.SlotID || null))
       }
     } catch {
-      toast.error('Không tải được sơ đồ bãi đỗ')
+      toast.error(t('staff.checkin.walkin.fetchMapFailed'))
     } finally {
       setLoading(false)
     }
-  }, [vehicleTypeId])
+  }, [vehicleTypeId, t])
 
-  // Auto-fetch slots khi đổi loại xe (inline để tránh lỗi React 18)
+  // Auto-fetch slots khi đổi loại xe
   useEffect(() => {
     if (!vehicleTypeId) return
     let cancelled = false
@@ -124,16 +119,15 @@ const WalkInContent = () => {
           setSelectedSlotId(prev => prev ?? (first?.SlotID || null))
         }
       } catch {
-        if (!cancelled) toast.error('Không tải được sơ đồ bãi đỗ')
+        if (!cancelled) toast.error(t('staff.checkin.walkin.fetchMapFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
     run()
     return () => { cancelled = true }
-  }, [vehicleTypeId])
+  }, [vehicleTypeId, t])
 
-  // Xử lý nhập biển số — tự động format
   const handlePlateChange = (e) => {
     const formatted = formatPlate(e.target.value)
     setPlateNumber(formatted)
@@ -142,15 +136,15 @@ const WalkInContent = () => {
 
   const handleSubmit = async () => {
     if (!plateNumber.trim()) {
-      setPlateError('Vui lòng nhập biển số xe')
-      return toast.error('Vui lòng nhập biển số xe')
+      setPlateError(t('staff.checkin.walkin.plateRequired'))
+      return toast.error(t('staff.checkin.walkin.plateRequired'))
     }
     if (!isValidPlate(plateNumber)) {
-      setPlateError('Biển số chưa đúng định dạng. Ví dụ: 51F-123.45')
-      return toast.error('Biển số chưa đúng định dạng (VD: 51F-123.45)')
+      setPlateError(t('staff.checkin.walkin.plateInvalid'))
+      return toast.error(t('staff.checkin.walkin.plateInvalid'))
     }
-    if (!vehicleTypeId) return toast.error('Vui lòng chọn loại phương tiện')
-    if (!selectedSlotId) return toast.error('Vui lòng chọn ô đỗ xe')
+    if (!vehicleTypeId) return toast.error(t('staff.checkin.walkin.vehicleTypeRequired'))
+    if (!selectedSlotId) return toast.error(t('staff.checkin.walkin.noSlot'))
 
     setSubmitting(true)
     try {
@@ -160,7 +154,7 @@ const WalkInContent = () => {
         slotId: selectedSlotId
       })
       if (res.success) {
-        toast.success('Check-in thành công!')
+        toast.success(t('staff.checkin.walkin.checkinSuccess'))
         navigate('/staff/checkin-success', {
           state: {
             actionType: 'walkin-checkin',
@@ -171,7 +165,7 @@ const WalkInContent = () => {
         })
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Check-in thất bại')
+      toast.error(err.response?.data?.message || t('staff.checkin.walkin.checkinFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -193,20 +187,20 @@ const WalkInContent = () => {
         {/* Form */}
         <div className="flex-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col">
           <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
-            <Info size={20} className="text-blue-500" /> Thông tin xe vào bãi
+            <Info size={20} className="text-blue-500" /> {t('staff.checkin.walkin.title')}
           </h3>
-          <p className="text-sm text-gray-500 mb-6">Nhập chính xác biển số và loại phương tiện.</p>
+          <p className="text-sm text-gray-500 mb-6">{t('staff.checkin.walkin.subtitle')}</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Biển số xe <span className="text-red-500">*</span>
+                {t('staff.checkin.walkin.plateLabel')} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={plateNumber}
                 onChange={handlePlateChange}
-                placeholder="51F-123.45"
+                placeholder={t('staff.checkin.walkin.platePlaceholder')}
                 maxLength={12}
                 className={`w-full px-4 py-2.5 rounded-lg border focus:ring-2 transition-all text-sm font-bold uppercase tracking-wider ${plateError
                   ? 'border-red-400 bg-red-50 focus:ring-red-400'
@@ -219,14 +213,14 @@ const WalkInContent = () => {
                 <p className="text-xs text-red-500 mt-1.5 font-medium">{plateError}</p>
               ) : (
                 <p className="text-xs text-gray-400 mt-1.5">
-                  Định dạng: 2 số tỉnh + chữ + số. VD: <span className="font-semibold text-gray-600">51F-123.45</span>
-                  {plateValid && <span className="text-green-600 ml-2">✓ Hợp lệ</span>}
+                  {t('staff.checkin.walkin.plateHint')} <span className="font-semibold text-gray-600">{t('staff.checkin.walkin.platePlaceholder')}</span>
+                  {plateValid && <span className="text-green-600 ml-2">✓ {t('staff.checkin.walkin.plateValid')}</span>}
                 </p>
               )}
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Loại phương tiện <span className="text-red-500">*</span>
+                {t('staff.checkin.walkin.vehicleTypeLabel')} <span className="text-red-500">*</span>
               </label>
               <select
                 value={vehicleTypeId}
@@ -243,12 +237,12 @@ const WalkInContent = () => {
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Ghi chú (tùy chọn)</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('staff.checkin.walkin.noteLabel')}</label>
             <input
               type="text"
               value={note}
               onChange={e => setNote(e.target.value)}
-              placeholder="Nhập ghi chú nếu xe có hư hỏng..."
+              placeholder={t('staff.checkin.walkin.notePlaceholder')}
               className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
@@ -257,10 +251,10 @@ const WalkInContent = () => {
           <div className="mt-auto">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-bold text-gray-700">
-                Chọn ô đỗ <span className="text-green-600">({availableCount} trống)</span>
+                {t('staff.checkin.walkin.selectSlot')} <span className="text-green-600">({availableCount} {t('staff.checkin.walkin.emptySlots')})</span>
               </h4>
               <button onClick={loadSlots} disabled={loading} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                <RefreshCcw size={12} className={loading ? 'animate-spin' : ''} /> Làm mới
+                <RefreshCcw size={12} className={loading ? 'animate-spin' : ''} /> {t('staff.checkin.walkin.refreshHint')}
               </button>
             </div>
 
@@ -285,7 +279,7 @@ const WalkInContent = () => {
                           disabled={isDisabled}
                           onClick={() => setSelectedSlotId(slot.SlotID)}
                           className={`border rounded-lg p-2 text-center transition-all h-12 flex items-center justify-center ${style}`}
-                          title={`${slot.SlotCode} – ${slot.SlotStatus}`}
+                          title={`${slot.SlotCode} – ${t(`staff.checkin.walkin.slotStatus.${slot.SlotStatus.toLowerCase()}`, slot.SlotStatus)}`}
                         >
                           <span className="font-bold text-xs">{slot.SlotCode}</span>
                         </button>
@@ -299,11 +293,11 @@ const WalkInContent = () => {
             {/* Legend */}
             <div className="flex flex-wrap gap-3 mt-3 text-xs text-gray-500">
               {[
-                ['bg-white border-gray-300', 'Trống'],
-                ['bg-red-50 border-red-200', 'Có xe'],
-                ['bg-orange-50 border-orange-400 border-dashed', 'Đã đặt'],
-                ['bg-gray-100 border-gray-300', 'Bảo trì'],
-                ['bg-blue-600 border-blue-600', 'Đang chọn']
+                ['bg-white border-gray-300', t('staff.checkin.walkin.slotStatus.available')],
+                ['bg-red-50 border-red-200', t('staff.checkin.walkin.slotStatus.occupied')],
+                ['bg-orange-50 border-orange-400 border-dashed', t('staff.checkin.walkin.slotStatus.reserved')],
+                ['bg-gray-100 border-gray-300', t('staff.checkin.walkin.slotStatus.maintenance')],
+                ['bg-blue-600 border-blue-600', t('staff.checkin.walkin.slotStatus.selecting')]
               ].map(([style, label]) => (
                 <div key={label} className="flex items-center gap-1">
                   <div className={`w-4 h-4 rounded border ${style}`} />
@@ -318,28 +312,28 @@ const WalkInContent = () => {
         <div className="flex-1 bg-blue-50 rounded-xl border border-blue-100 p-6 flex flex-col justify-between">
           <div>
             <h3 className="text-lg font-bold text-blue-900 mb-2 flex items-center gap-2">
-              <MapPin size={20} className="text-blue-500" /> Gợi ý vị trí tối ưu
+              <MapPin size={20} className="text-blue-500" /> {t('staff.checkin.walkin.suggestedSlot')}
             </h3>
-            <p className="text-sm text-blue-700 mb-6">Hệ thống tìm kiếm vị trí trống gần nhất.</p>
+            <p className="text-sm text-blue-700 mb-6">{t('staff.checkin.walkin.suggestedDesc')}</p>
 
             {suggestedSlot ? (
               <div className="grid grid-cols-3 gap-3 mb-6">
                 <div className="bg-white rounded-xl shadow-sm border border-blue-200 p-3 text-center">
-                  <div className="text-xs text-blue-500 font-bold uppercase mb-1">Khu vực</div>
+                  <div className="text-xs text-blue-500 font-bold uppercase mb-1">{t('staff.checkin.walkin.zone')}</div>
                   <div className="text-lg font-black text-blue-900">{suggestedSlot.ZoneName?.split(' ')[0]}</div>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm border border-blue-200 p-3 text-center">
-                  <div className="text-xs text-blue-500 font-bold uppercase mb-1">Tầng</div>
+                  <div className="text-xs text-blue-500 font-bold uppercase mb-1">{t('staff.checkin.walkin.floor')}</div>
                   <div className="text-lg font-black text-blue-900">{suggestedSlot.FloorName}</div>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm border border-blue-200 p-3 text-center">
-                  <div className="text-xs text-blue-500 font-bold uppercase mb-1">Mã ô</div>
+                  <div className="text-xs text-blue-500 font-bold uppercase mb-1">{t('staff.checkin.walkin.slotCode')}</div>
                   <div className="text-lg font-black text-blue-900">{suggestedSlot.SlotCode}</div>
                 </div>
               </div>
             ) : (
               <div className="bg-white rounded-xl p-4 text-center text-gray-400 text-sm mb-6">
-                {loading ? 'Đang tìm ô trống...' : 'Không có ô trống phù hợp'}
+                {loading ? t('staff.checkin.walkin.searching') : t('staff.checkin.walkin.noSlot')}
               </div>
             )}
           </div>
@@ -350,14 +344,14 @@ const WalkInContent = () => {
                 onClick={() => setSelectedSlotId(suggestedSlot.SlotID)}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md transition-all flex justify-center items-center gap-2"
               >
-                <CheckCircle2 size={18} /> Sử dụng vị trí này
+                <CheckCircle2 size={18} /> {t('staff.checkin.walkin.useThisSlot')}
               </button>
             )}
             <button
               onClick={loadSlots}
               className="w-full py-3 bg-transparent border border-blue-300 hover:bg-blue-100 text-blue-700 rounded-xl font-bold transition-all"
             >
-              Làm mới sơ đồ
+              {t('staff.checkin.walkin.refreshMap')}
             </button>
           </div>
         </div>
@@ -368,11 +362,11 @@ const WalkInContent = () => {
         <div className="flex flex-col md:flex-row items-center justify-between px-6 py-4 gap-4 md:gap-0">
           <div className="flex flex-wrap gap-6 text-sm text-gray-600">
             <div>
-              <span className="text-xs text-gray-400 font-semibold uppercase">Biển số xe</span>
+              <span className="text-xs text-gray-400 font-semibold uppercase">{t('staff.checkin.walkin.selectedPlate')}</span>
               <p className="font-black text-gray-800">{plateNumber || '—'}</p>
             </div>
             <div>
-              <span className="text-xs text-gray-400 font-semibold uppercase">Ô đỗ</span>
+              <span className="text-xs text-gray-400 font-semibold uppercase">{t('staff.checkin.walkin.selectedSlot')}</span>
               <p className="font-bold text-gray-800">
                 {selectedSlotId ? slots.find(s => s.SlotID === selectedSlotId)?.SlotCode || '—' : '—'}
               </p>
@@ -383,7 +377,7 @@ const WalkInContent = () => {
               onClick={() => { setPlateNumber(''); setPlateError(''); setSelectedSlotId(suggestedSlot?.SlotID || null) }}
               className="px-6 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-colors"
             >
-              Hủy
+              {t('staff.checkin.walkin.cancel')}
             </button>
             <button
               onClick={handleSubmit}
@@ -391,7 +385,7 @@ const WalkInContent = () => {
               className="px-8 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {submitting && <Loader2 size={16} className="animate-spin" />}
-              Xác nhận Check-in
+              {t('staff.checkin.walkin.confirmCheckin')}
             </button>
           </div>
         </div>
@@ -402,6 +396,7 @@ const WalkInContent = () => {
 
 // ── Booking content ───────────────────────────────────────────
 const BookingContent = () => {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('Reserved')
   const [keyword, setKeyword] = useState('')
@@ -423,22 +418,22 @@ const BookingContent = () => {
         const res = await staffApi.getBookingQueue(params)
         if (!cancelled && res.success) setBookings(res.data)
       } catch {
-        if (!cancelled) toast.error('Không tải được danh sách booking')
+        if (!cancelled) toast.error(t('staff.checkin.booking.fetchFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
     fetch()
     return () => { cancelled = true }
-  }, [activeTab, searchTrigger])
+  }, [activeTab, searchTrigger, t])
 
   const handleSearch = () => setSearchTrigger(t => t + 1)
 
   const tabs = [
-    { name: 'Reserved', label: 'Đang chờ' },
-    { name: 'Completed', label: 'Đã sử dụng' },
-    { name: 'Cancelled', label: 'Đã hủy' },
-    { name: 'Expired', label: 'Hết hạn' }
+    { name: 'Reserved', label: t('staff.checkin.booking.tabs.reserved') },
+    { name: 'Completed', label: t('staff.checkin.booking.tabs.completed') },
+    { name: 'Cancelled', label: t('staff.checkin.booking.tabs.cancelled') },
+    { name: 'Expired', label: t('staff.checkin.booking.tabs.expired') }
   ]
 
   const statusColor = {
@@ -451,8 +446,8 @@ const BookingContent = () => {
   return (
     <div className="flex flex-col h-full bg-gray-50 animate-in fade-in space-y-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Tìm kiếm nhanh lượt đặt</h2>
-        <p className="text-sm text-gray-500 mb-4">Nhập biển số hoặc mã đặt chỗ để check-in nhanh.</p>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">{t('staff.checkin.booking.searchTitle')}</h2>
+        <p className="text-sm text-gray-500 mb-4">{t('staff.checkin.booking.searchSubtitle')}</p>
         <div className="flex gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-3.5 text-gray-400" size={18} />
@@ -461,7 +456,7 @@ const BookingContent = () => {
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder="Biển số hoặc BK-XXXX"
+              placeholder={t('staff.checkin.booking.searchPlaceholder')}
               className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-all font-medium"
             />
           </div>
@@ -470,7 +465,7 @@ const BookingContent = () => {
             disabled={loading}
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md transition-colors disabled:opacity-50"
           >
-            Tìm kiếm
+            {t('staff.checkin.booking.searchBtn')}
           </button>
         </div>
       </div>
@@ -494,21 +489,21 @@ const BookingContent = () => {
         ) : bookings.length === 0 ? (
           <div className="text-center py-10 text-gray-400">
             <Calendar size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Không có booking nào</p>
+            <p className="text-sm">{t('staff.checkin.booking.noBooking')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-gray-50 text-gray-600 font-semibold border-b border-gray-100">
                 <tr>
-                  <th className="py-3 px-4">Mã</th>
-                  <th className="py-3 px-4">Chủ xe</th>
-                  <th className="py-3 px-4">Loại xe</th>
-                  <th className="py-3 px-4">Vị trí</th>
-                  <th className="py-3 px-4">Bắt đầu</th>
-                  <th className="py-3 px-4">Kết thúc</th>
-                  <th className="py-3 px-4">Trạng thái</th>
-                  <th className="py-3 px-4 text-right">Thao tác</th>
+                  <th className="py-3 px-4">{t('staff.checkin.booking.colCode')}</th>
+                  <th className="py-3 px-4">{t('staff.checkin.booking.colDriver')}</th>
+                  <th className="py-3 px-4">{t('staff.checkin.booking.colVehicle')}</th>
+                  <th className="py-3 px-4">{t('staff.checkin.booking.colLocation')}</th>
+                  <th className="py-3 px-4">{t('staff.checkin.booking.colStart')}</th>
+                  <th className="py-3 px-4">{t('staff.checkin.booking.colEnd')}</th>
+                  <th className="py-3 px-4">{t('staff.checkin.booking.colStatus')}</th>
+                  <th className="py-3 px-4 text-right">{t('staff.checkin.booking.colActions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -541,7 +536,7 @@ const BookingContent = () => {
                           onClick={() => navigate(`/staff/verify-booking/${item.ReservationID}`)}
                           className="px-4 py-1.5 bg-white border border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg font-semibold text-xs"
                         >
-                          Xử lý
+                          {t('staff.checkin.booking.processBtn')}
                         </button>
                       )}
                     </td>
@@ -558,6 +553,7 @@ const BookingContent = () => {
 
 // ── Main wrapper ──────────────────────────────────────────────
 const StaffCheckIn = () => {
+  const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const [activeType, setActiveType] = useState(
     searchParams.get('tab') === 'booking' ? 'booking' : 'walkin'
@@ -567,11 +563,11 @@ const StaffCheckIn = () => {
     <div className="flex flex-col h-full bg-gray-50 pb-8">
       <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Check In Phương Tiện</h1>
-          <p className="text-sm text-gray-500 mt-1">Ghi nhận thông tin xe vào bãi</p>
+          <h1 className="text-2xl font-bold text-gray-800">{t('staff.checkin.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('staff.checkin.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200 text-sm font-medium">
-          <div className="w-2 h-2 rounded-full bg-green-500" /> Cổng vào: Gate A (Main)
+          <div className="w-2 h-2 rounded-full bg-green-500" /> {t('staff.checkin.gateLabel')}
         </div>
       </header>
 
@@ -581,14 +577,14 @@ const StaffCheckIn = () => {
           className={`pb-4 px-2 font-bold text-sm flex items-center gap-2 border-b-2 transition-colors ${activeType === 'walkin' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <FileText size={18} /> Khách vãng lai (Walk-in)
+          <FileText size={18} /> {t('staff.checkin.walkinTab')}
         </button>
         <button
           onClick={() => setActiveType('booking')}
           className={`pb-4 px-2 font-bold text-sm flex items-center gap-2 border-b-2 transition-colors ${activeType === 'booking' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Calendar size={18} /> Khách đặt trước (Booking)
+          <Calendar size={18} /> {t('staff.checkin.bookingTab')}
         </button>
       </div>
 

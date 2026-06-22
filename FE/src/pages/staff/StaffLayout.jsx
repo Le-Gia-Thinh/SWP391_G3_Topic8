@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -17,24 +18,26 @@ import StaffNavbar from './StaffNavbar'
 import { useAuth } from '../../contexts/AuthContext'
 
 const StaffLayout = () => {
+  const { t } = useTranslation()
+
   const location = useLocation()
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const displayName = user?.fullName || 'Nguyễn Văn An'
-  const displayRole = user?.role?.roleName || 'Nhân viên'
+  const displayRole = user?.role?.roleName || t('staff.layout.defaultRole') /* TRANSLATED: Nhân viên */
 
   const mainMenu = [
-    { name: 'Bảng điều khiển', path: '/staff/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'Nhận xe vãng lai', path: '/staff/checkin-walkin', icon: <CarFront size={20} /> },
-    { name: 'Nhận xe đặt trước', path: '/staff/checkin-booking', icon: <CalendarCheck size={20} /> },
-    { name: 'Thanh toán & Trả xe', path: '/staff/checkout', icon: <LogOut size={20} /> }
+    { name: t('staff.layout.mainMenu.dashboard') /* TRANSLATED: Bảng điều khiển */, path: '/staff/dashboard', icon: <LayoutDashboard size={20} /> },
+    { name: t('staff.layout.mainMenu.checkinWalkin') /* TRANSLATED: Nhận xe vãng lai */, path: '/staff/checkin-walkin', icon: <CarFront size={20} /> },
+    { name: t('staff.layout.mainMenu.checkinBooking') /* TRANSLATED: Nhận xe đặt trước */, path: '/staff/checkin-booking', icon: <CalendarCheck size={20} /> },
+    { name: t('staff.layout.mainMenu.checkout') /* TRANSLATED: Thanh toán & Trả xe */, path: '/staff/checkout', icon: <LogOut size={20} /> }
   ]
 
   const manageMenu = [
-    { name: 'Báo cáo sự cố', path: '/staff/create-incident', icon: <AlertCircle size={20} /> },
-    { name: 'Xem sơ đồ chỗ', path: '/staff/parking-map', icon: <Map size={20} /> },
-    { name: 'Tra cứu phiên', path: '/staff/search-session', icon: <Search size={20} /> }
+    { name: t('staff.layout.manageMenu.reportIncident') /* TRANSLATED: Báo cáo sự cố */, path: '/staff/create-incident', icon: <AlertCircle size={20} /> },
+    { name: t('staff.layout.manageMenu.parkingMap') /* TRANSLATED: Xem sơ đồ chỗ */, path: '/staff/parking-map', icon: <Map size={20} /> },
+    { name: t('staff.layout.manageMenu.searchSession') /* TRANSLATED: Tra cứu phiên */, path: '/staff/search-session', icon: <Search size={20} /> }
   ]
 
   const isActive = (path) => {
@@ -90,7 +93,7 @@ const StaffLayout = () => {
 
         {/* Nav - CHÍNH */}
         <div className="px-4 flex-1 overflow-y-auto">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 px-3">Chính</p>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 px-3">{t('staff.layout.main')} {/* TRANSLATED: Chính */}</p>
           <nav className="space-y-1">
             {mainMenu.map((item) => (
               <NavLink
@@ -110,7 +113,7 @@ const StaffLayout = () => {
           </nav>
 
           {/* Nav - QUẢN LÝ */}
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 px-3 mt-8">Quản lý</p>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3 px-3 mt-8">{t('staff.layout.management')} {/* TRANSLATED: Quản lý */}</p>
           <nav className="space-y-1">
             {manageMenu.map((item) => (
               <NavLink
@@ -186,13 +189,13 @@ const StaffLayout = () => {
         {/* Footer Bar */}
         <footer className="bg-white border-t border-gray-200 py-3 px-6 flex items-center justify-between text-xs text-gray-500 z-10">
           <div className="flex items-center gap-6">
-            <span>Hệ thống: Trực tuyến</span>
+            <span>{t('staff.layout.systemOnline')} {/* TRANSLATED: Hệ thống: Trực tuyến */}</span>
             <span>v2.4.12-pro</span>
           </div>
           <div className="flex items-center gap-6">
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              Đồng bộ ổn định
+              {t('staff.layout.syncStable')} {/* TRANSLATED: Đồng bộ ổn định */}
             </span>
             <Link to="/staff/support" className="text-blue-600 hover:underline flex items-center gap-1">
               <HelpCircle size={14} /> Trợ giúp

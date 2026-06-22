@@ -484,5 +484,640 @@
     "report": "Báo cáo sự cố",
     "support": "Hỗ trợ",
     "logout": "Đăng xuất"
+  },
+  "staff": {
+    "layout": {
+      "mainMenu": {
+        "dashboard": "Bảng điều khiển",
+        "checkinWalkin": "Nhận xe vãng lai",
+        "checkinBooking": "Nhận xe đặt trước",
+        "checkout": "Thanh toán & Trả xe"
+      },
+      "manageMenu": {
+        "reportIncident": "Báo cáo sự cố",
+        "parkingMap": "Xem sơ đồ chỗ",
+        "searchSession": "Tra cứu phiên"
+      },
+      "defaultRole": "Nhân viên",
+      "main": "Chính",
+      "management": "Quản lý",
+      "logout": "Đăng xuất",
+      "systemOnline": "Hệ thống: Trực tuyến",
+      "syncStable": "Đồng bộ ổn định",
+      "help": "Trợ giúp"
+    },
+    "dashboard": {
+      "summary": {
+        "title": "Tóm tắt vận hành",
+        "refresh": "Làm mới"
+      },
+      "stats": {
+        "occupied": "Xe trong bãi",
+        "available": "Chỗ trống",
+        "todayCheckin": "Check-in hôm nay",
+        "todayCheckout": "Check-out hôm nay",
+        "openIncidents": "Sự cố đang mở",
+        "pendingBookings": "Lượt đặt trước"
+      },
+      "quickActions": {
+        "title": "Thao tác nhanh",
+        "walkinDesc": "Nhập biển số cho xe không có đặt trước",
+        "bookingDesc": "Quét mã hoặc nhập mã đặt chỗ",
+        "checkoutDesc": "Tính tiền và xác nhận xe ra",
+        "searchDesc": "Tìm kiếm lịch sử vào/ra theo biển số",
+        "incidentDesc": "Báo cáo mất thẻ, hỏng thiết bị, va chạm",
+        "mapDesc": "Kiểm tra chi tiết vị trí các ô đỗ"
+      },
+      "recentCheckins": {
+        "title": "Lượt vào gần đây",
+        "desc": "8 phiên nhận xe mới nhất",
+        "viewAll": "Xem tất cả",
+        "empty": "Chưa có phiên nào hôm nay",
+        "headers": {
+          "sessionId": "ID Phiên",
+          "plate": "Biển số",
+          "vehicle": "Loại xe",
+          "time": "Thời gian vào",
+          "slot": "Ô đỗ",
+          "zone": "Khu vực",
+          "status": "Trạng thái"
+        }
+      },
+      "alerts": {
+        "title": "Thông báo & Cảnh báo",
+        "new": "Mới",
+        "empty": "Không có cảnh báo nào",
+        "viewAll": "XEM TẤT CẢ"
+      },
+      "quickSearch": {
+        "title": "Tra cứu nhanh biển số",
+        "placeholder": "Nhập biển số xe, Enter để tìm...",
+        "hint": "Nhấn Enter để tìm kiếm"
+      },
+      "revenue": {
+        "title": "Doanh thu hôm nay",
+        "desc": "Đã thanh toán hoàn tất"
+      },
+      "loading": "Đang tải...",
+      "error": "Không thể tải dữ liệu dashboard"
+    },
+    "checkin": {
+      "title": "Check In Phương Tiện",
+      "subtitle": "Ghi nhận thông tin xe vào bãi",
+      "gateLabel": "Cổng vào: Gate A (Main)",
+      "walkinTab": "Khách vãng lai (Walk-in)",
+      "bookingTab": "Khách đặt trước (Booking)",
+      "walkin": {
+        "title": "Thông tin xe vào bãi",
+        "subtitle": "Nhập chính xác biển số và loại phương tiện.",
+        "plateLabel": "Biển số xe",
+        "platePlaceholder": "51F-123.45",
+        "plateRequired": "Vui lòng nhập biển số xe",
+        "plateInvalid": "Biển số chưa đúng định dạng (VD: 51F-123.45)",
+        "plateHint": "Định dạng: 2 số tỉnh + chữ + số. VD:",
+        "plateValid": "Hợp lệ",
+        "vehicleTypeLabel": "Loại phương tiện",
+        "vehicleTypeRequired": "Vui lòng chọn loại phương tiện",
+        "fetchVehicleTypeFailed": "Không tải được loại phương tiện",
+        "fetchMapFailed": "Không tải được sơ đồ bãi đỗ",
+        "noteLabel": "Ghi chú (tùy chọn)",
+        "notePlaceholder": "Nhập ghi chú nếu xe có hư hỏng...",
+        "selectSlot": "Chọn ô đỗ",
+        "emptySlots": "trống",
+        "refreshHint": "Làm mới",
+        "slotStatus": {
+          "available": "Trống",
+          "occupied": "Có xe",
+          "reserved": "Đã đặt",
+          "maintenance": "Bảo trì",
+          "selecting": "Đang chọn"
+        },
+        "suggestedSlot": "Gợi ý vị trí tối ưu",
+        "suggestedDesc": "Hệ thống tìm kiếm vị trí trống gần nhất.",
+        "zone": "Khu vực",
+        "floor": "Tầng",
+        "slotCode": "Mã ô",
+        "searching": "Đang tìm ô trống...",
+        "noSlot": "Không có ô trống phù hợp",
+        "useThisSlot": "Sử dụng vị trí này",
+        "refreshMap": "Làm mới sơ đồ",
+        "selectedPlate": "Biển số xe",
+        "selectedSlot": "Ô đỗ",
+        "cancel": "Hủy",
+        "confirmCheckin": "Xác nhận Check-in",
+        "checkinSuccess": "Check-in thành công!",
+        "checkinFailed": "Check-in thất bại"
+      },
+      "booking": {
+        "searchTitle": "Tìm kiếm nhanh lượt đặt",
+        "searchSubtitle": "Nhập biển số hoặc mã đặt chỗ để check-in nhanh.",
+        "searchPlaceholder": "Biển số hoặc BK-XXXX",
+        "searchBtn": "Tìm kiếm",
+        "tabs": {
+          "reserved": "Đang chờ",
+          "completed": "Đã sử dụng",
+          "cancelled": "Đã hủy",
+          "expired": "Hết hạn"
+        },
+        "noBooking": "Không có booking nào",
+        "colCode": "Mã",
+        "colDriver": "Chủ xe",
+        "colVehicle": "Loại xe",
+        "colLocation": "Vị trí",
+        "colStart": "Bắt đầu",
+        "colEnd": "Kết thúc",
+        "colStatus": "Trạng thái",
+        "colActions": "Thao tác",
+        "processBtn": "Xử lý",
+        "fetchFailed": "Không tải được danh sách booking"
+      }
+    },
+    "checkout": {
+      "title": "Vehicle Check-out",
+      "breadcrumb": "Nhân viên / Thanh toán / Vehicle Check-out",
+      "syncStatus": "Đồng bộ: Hoàn tất (Online)",
+      "searchTitle": "Tìm kiếm phiên gửi xe",
+      "searchHint": "Tìm theo:",
+      "searchHint2": "Mã phiên (SS-XXXXX) · Mã booking (BK-XXXX) · Biển số · Tên / SĐT khách",
+      "searchPlaceholder": "SS-01005, BK-0102, 61A-123.45, Tên khách...",
+      "filterBtn": "Lọc & Sắp xếp",
+      "searchBtn": "Tìm kiếm",
+      "resetBtn": "Làm mới",
+      "filterDateHint": "Lọc theo ngày vào:",
+      "filterClear": "Xoá",
+      "activeSessions": "Phiên đang hoạt động",
+      "sessionCount": "phiên",
+      "prepaidCount": "đã trả QR",
+      "totalFeeLabel": "Tổng phí ghi nhận:",
+      "loadingList": "Đang tải danh sách...",
+      "noSessionSearch": "Không tìm thấy phiên nào khớp với bộ lọc",
+      "noSessionEmpty": "Không có phiên đỗ xe nào đang hoạt động",
+      "noSessionHint": "Kiểm tra lại Biển số xe / Mã Phiên / Mã Booking. Nếu xe đang ở cổng nhưng không có trong hệ thống, hãy tạo Báo cáo Sự cố.",
+      "retryBtn": "Thử lại",
+      "createIncidentBtn": "Tạo Báo cáo sự cố",
+      "guidanceTitle": "Hướng dẫn xử lý",
+      "guidance1": "Tìm bằng Biển số, Mã phiên (SS-XXXXX) hoặc Mã booking (BK-XXXX).",
+      "guidance2": "Luôn đối chiếu biển số thực tế với hệ thống trước khi tính tiền.",
+      "guidance3": "Phiên \"Đã trả QR\" — chỉ cần xác nhận biển số, hệ thống tự tính phụ trội nếu có.",
+      "guidance4": "Phí cuối cùng do server tính khi bấm Hoàn tất — không cần tính tay.",
+      "notFoundTitle": "Không tìm thấy phiên?",
+      "notFoundDesc": "Khách bị mất thẻ hoặc biển số mờ/thay đổi lúc check-in. Hỏi lại hoặc tạo báo cáo sự cố.",
+      "quickStats": "Thống kê nhanh",
+      "statTotal": "Tổng đang đỗ",
+      "statWalkin": "Walk-in",
+      "statBooking": "Booking",
+      "statPrepaid": "Đã trả QR",
+      "statDisplayed": "Đang hiển thị",
+      "bottomReading": "reading: Smart_Cam_01",
+      "bottomSync": "ID Sync record: #440019299",
+      "bottomNetwork": "Local Network: Connected",
+      "bottomVerify": "Verify last sync record",
+      "filter": {
+        "title": "Lọc & Sắp xếp",
+        "vehicleType": "Loại xe",
+        "sortBy": "Sắp xếp theo",
+        "vehicles": {
+          "1": "Xe máy",
+          "2": "Ô tô",
+          "3": "Xe tải",
+          "all": "Tất cả loại xe"
+        },
+        "sorts": {
+          "newest": "Mới vào nhất",
+          "oldest": "Cũ vào nhất",
+          "duration_desc": "Lâu nhất",
+          "duration_asc": "Ngắn nhất",
+          "plate": "Biển số A→Z",
+          "fee_desc": "Phí cao nhất"
+        }
+      },
+      "card": {
+        "prepaidBadge": "Đã trả QR",
+        "bookingBadge": "Booking",
+        "walkinBadge": "Vãng lai",
+        "unknownPlate": "? KHÔNG RÕ ?",
+        "entryTime": "Vào:",
+        "driver": "Khách:",
+        "prepaidLabel": "Đã trả trước",
+        "estimatedFeeLabel": "Phí ước tính",
+        "finishBtn": "Hoàn tất & Ra xe",
+        "payBtn": "Thanh toán & Ra xe"
+      },
+      "time": {
+        "minute": "phút",
+        "h": "h",
+        "m": "m",
+        "month": "Th"
+      },
+      "errors": {
+        "loadFailed": "Không tải được danh sách phiên đỗ xe",
+        "noMatch": "Không tìm thấy phiên nào khớp"
+      }
+    },
+    "searchSession": {
+      "title": "Tra cứu",
+      "status": {
+        "active": "Đang đỗ",
+        "completed": "Đã hoàn thành",
+        "reserved": "Đã đặt",
+        "incident": "Sự cố"
+      },
+      "type": {
+        "booking": "Booking",
+        "walkin": "Vãng lai"
+      },
+      "searchPlaceholder": "Biển số, mã phiên, mã booking, tài xế...",
+      "filters": {
+        "allStatus": "Tất cả trạng thái",
+        "allType": "Tất cả loại",
+        "allVehicle": "Tất cả xe",
+        "allGate": "Tất cả slot",
+        "clear": "Xóa bộ lọc"
+      },
+      "loading": "Đang tải dữ liệu...",
+      "noSession": "Không tìm thấy phiên nào",
+      "noSessionHint": "Thử thay đổi từ khóa hoặc bộ lọc",
+      "card": {
+        "slot": "Vị trí (Slot)",
+        "driver": "Tài xế",
+        "entryTime": "Thời gian vào",
+        "exitTime": "Thời gian ra",
+        "notEntered": "Chưa vào"
+      },
+      "detail": {
+        "placeholderTitle": "Xem chi tiết phiên",
+        "placeholderDesc": "Hãy click chọn một phiên gửi xe ở danh sách bên trái để xem thông tin chi tiết.",
+        "header": "Chi tiết phiên gửi xe",
+        "sessionCode": "Mã phiên",
+        "bookingCode": "Mã booking",
+        "type": "Loại",
+        "slot": "Vị trí đỗ",
+        "in": "Vào",
+        "out": "Ra",
+        "phone": "SĐT"
+      }
+    },
+    "createIncident": {
+      "title": "Tạo sự cố",
+      "types": {
+        "lostCard": "Mất thẻ/Hư hỏng thẻ vãng lai",
+        "accident": "Va chạm/Tai nạn trong bãi",
+        "dispute": "Tranh chấp vị trí đỗ",
+        "brokenVehicle": "Xe hỏng/Cần cứu hộ",
+        "damageProperty": "Hư hỏng tài sản bãi đỗ",
+        "violation": "Hành vi vi phạm",
+        "technical": "Sự cố kỹ thuật hệ thống",
+        "other": "Khác"
+      },
+      "priorities": {
+        "low": "Thấp",
+        "normal": "Bình thường",
+        "high": "Khẩn cấp"
+      },
+      "statuses": {
+        "all": "Tất cả",
+        "open": "Mới",
+        "inProgress": "Đang xử lý",
+        "resolved": "Đã giải quyết"
+      },
+      "attachments": {
+        "maxReached": "Đã đạt tối đa {{max}} ảnh.",
+        "oversized": "{{count}} file vượt {{maxMb}}MB, bị bỏ qua.",
+        "readError": "Không thể đọc file.",
+        "dropOrClick": "Nhấn hoặc kéo ảnh vào đây ({{current}}/{{max}})",
+        "limitLabel": "JPG, PNG, WEBP — tối đa {{maxMb}}MB/ảnh",
+        "noImages": "Chưa có ảnh đính kèm. Nhấn vùng upload để thêm.",
+        "changed": "Đã thay đổi",
+        "title": "Ảnh đính kèm"
+      },
+      "form": {
+        "linkedInfo": "Thông tin liên kết (tuỳ chọn)",
+        "searchSession": "🔍 Tìm nhanh phiên đang đỗ",
+        "searchSessionPlaceholder": "Gõ biển số, mã phiên, hoặc tên tài xế...",
+        "loadingSessions": "Đang tải danh sách phiên...",
+        "sessionOptionsCount": "Có {{count}} phiên đang đỗ — chọn để tự điền thông tin",
+        "noSessionMatch": "Không tìm thấy phiên phù hợp",
+        "loading": "Đang tải...",
+        "sessionCodeLabel": "Mã phiên (SessionID)",
+        "sessionCodePlaceholder": "SS-00001",
+        "sessionCodeLinked": "Liên kết từ phiên hiện tại",
+        "sessionCodeHint": "Gõ số → tự thành SS-00xxx, rồi tự ra biển số",
+        "sessionNotFound": "Không tìm thấy phiên {{code}}",
+        "plateLabel": "Biển số xe",
+        "platePlaceholder": "51F-123.45",
+        "plateInvalid": "Biển số chưa đúng định dạng (VD: 51F-123.45)",
+        "plateHint": "Gõ → tự thành 51F-123.45, rồi tự ra mã phiên",
+        "plateNotFound": "Không tìm thấy phiên đang đỗ với biển số {{plate}}",
+        "linkedConfirm": "Đã liên kết phiên gửi xe — vui lòng đối chiếu",
+        "plate": "Biển số",
+        "driver": "Tài xế",
+        "sessionCode": "Mã phiên",
+        "slot": "Vị trí đỗ",
+        "vehicle": "Loại xe",
+        "entryTime": "Vào lúc",
+        "incidentTypeLabel": "Loại sự cố *",
+        "incidentTypeRequired": "Vui lòng chọn loại sự cố",
+        "priorityLabel": "Mức độ ưu tiên",
+        "descLabel": "Mô tả chi tiết *",
+        "descPlaceholder": "Mô tả chi tiết sự cố: thời gian, vị trí, người liên quan, diễn biến...",
+        "descMinLength": "Cần thêm {{count}} ký tự nữa",
+        "descLengthHint": "{{current}}/500 ký tự (cần thêm {{count}})",
+        "attachmentHint": "Ảnh đính kèm bằng chứng (tuỳ chọn, tối đa {{max}} ảnh)",
+        "submitLoading": "Đang gửi báo cáo...",
+        "submitBtn": "Gửi báo cáo sự cố",
+        "submitSuccess": "✅ Báo cáo sự cố thành công!",
+        "submitError": "Tạo sự cố thất bại"
+      },
+      "detail": {
+        "title": "Chi tiết sự cố #{{id}}",
+        "code": "Mã sự cố",
+        "session": "Phiên",
+        "driver": "Tài xế",
+        "phone": "SĐT",
+        "plate": "Biển số",
+        "staff": "Nhân viên",
+        "unassigned": "Chưa giao",
+        "createdAt": "Tạo lúc",
+        "updatedAt": "Cập nhật",
+        "desc": "Mô tả",
+        "updateStatusTitle": "Cập nhật trạng thái",
+        "newStatus": "Trạng thái mới",
+        "updateNote": "Ghi chú cập nhật (tuỳ chọn)",
+        "updateNotePlaceholder": "Ghi chú thêm về hành động xử lý...",
+        "close": "Đóng",
+        "saving": "Đang lưu...",
+        "saveBtn": "Lưu thay đổi",
+        "loadError": "Không tải được chi tiết sự cố",
+        "updateSuccess": "Cập nhật sự cố thành công",
+        "updateError": "Cập nhật thất bại"
+      },
+      "history": {
+        "localSearch": "Tìm nhanh trong kết quả...",
+        "hideFilters": "Ẩn bộ lọc",
+        "showFilters": "Bộ lọc nâng cao",
+        "refresh": "Làm mới",
+        "filters": "Bộ lọc",
+        "keyword": "Từ khoá (ID, loại, tài xế, biển số)",
+        "status": "Trạng thái",
+        "priority": "Mức độ",
+        "fromDate": "Từ ngày",
+        "toDate": "Đến ngày",
+        "searchBtn": "Tìm kiếm",
+        "clearBtn": "Xoá lọc",
+        "showing": "Hiển thị {{current}}/{{total}}",
+        "total": "Tổng: {{total}} sự cố",
+        "loading": "Đang tải...",
+        "empty": "Chưa có sự cố nào được ghi nhận",
+        "noMatch": "Không có kết quả phù hợp",
+        "colId": "ID",
+        "colType": "Loại sự cố",
+        "colDriver": "Tài xế / Biển số",
+        "colPriority": "Mức độ",
+        "colStatus": "Trạng thái",
+        "colImage": "Ảnh",
+        "colTime": "Thời gian",
+        "viewUpdate": "Xem & cập nhật"
+      },
+      "tabs": {
+        "pageTitle": "Quản lý sự cố",
+        "create": "Tạo sự cố mới",
+        "history": "Lịch sử sự cố"
+      }
+    },
+    "checkin": {
+      "title": "Check-in",
+      "subtitle": "Nhận xe vào bãi đỗ",
+      "gateLabel": "Cổng hoạt động",
+      "walkinTab": "Vãng lai",
+      "bookingTab": "Đặt trước",
+      "walkin": {
+        "title": "Thông tin xe",
+        "subtitle": "Nhập biển số và chọn vị trí đỗ xe",
+        "plateLabel": "Biển số xe",
+        "platePlaceholder": "51F-123.45",
+        "plateHint": "Định dạng: ",
+        "plateValid": "Hợp lệ",
+        "plateRequired": "Vui lòng nhập biển số xe",
+        "plateInvalid": "Biển số chưa đúng định dạng (VD: 51F-123.45)",
+        "vehicleTypeLabel": "Loại xe",
+        "vehicleTypeRequired": "Vui lòng chọn loại xe",
+        "noteLabel": "Ghi chú",
+        "notePlaceholder": "Ghi chú thêm (tuỳ chọn)",
+        "selectSlot": "Chọn vị trí đỗ xe",
+        "emptySlots": "trống",
+        "refreshHint": "Làm mới",
+        "slotStatus": {
+          "available": "Trống",
+          "occupied": "Đã đỗ",
+          "reserved": "Đặt trước",
+          "maintenance": "Bảo trì",
+          "selecting": "Đang chọn"
+        },
+        "suggestedSlot": "Vị trí gợi ý",
+        "suggestedDesc": "Hệ thống gợi ý vị trí trống gần nhất",
+        "zone": "Khu vực",
+        "floor": "Tầng",
+        "slotCode": "Ô đỗ",
+        "searching": "Đang tìm...",
+        "noSlot": "Không còn vị trí trống",
+        "useThisSlot": "Chọn vị trí này",
+        "refreshMap": "Làm mới sơ đồ bãi",
+        "selectedPlate": "Biển số",
+        "selectedSlot": "Ô đỗ",
+        "cancel": "Huỷ",
+        "confirmCheckin": "Xác nhận Check-in",
+        "checkinSuccess": "Check-in thành công!",
+        "checkinFailed": "Check-in thất bại",
+        "fetchVehicleTypeFailed": "Không tải được danh sách loại xe",
+        "fetchMapFailed": "Không tải được sơ đồ bãi đỗ"
+      },
+      "booking": {
+        "searchTitle": "Tìm kiếm Booking",
+        "searchSubtitle": "Tìm booking theo mã, tên, SĐT, biển số",
+        "searchPlaceholder": "Nhập mã booking, tên tài xế, SĐT...",
+        "searchBtn": "Tìm kiếm",
+        "fetchFailed": "Không tải được danh sách booking",
+        "noBooking": "Không tìm thấy booking nào",
+        "tabs": {
+          "reserved": "Đã đặt",
+          "completed": "Hoàn thành",
+          "cancelled": "Đã huỷ",
+          "expired": "Hết hạn"
+        },
+        "colCode": "Mã Booking",
+        "colDriver": "Tài xế",
+        "colVehicle": "Loại xe",
+        "colLocation": "Vị trí",
+        "colStart": "Bắt đầu",
+        "colEnd": "Kết thúc",
+        "colStatus": "Trạng thái",
+        "colActions": "Thao tác",
+        "processBtn": "Xử lý"
+      }
+    },
+    "checkout": {
+      "title": "Trả xe",
+      "breadcrumb": "Staff / Bãi đỗ / Trả xe",
+      "syncStatus": "Đồng bộ realtime",
+      "searchTitle": "Tìm kiếm xe",
+      "searchHint": "Nhập biển số, mã phiên, tên tài xế... ",
+      "searchHint2": "Enter để tìm",
+      "searchPlaceholder": "Biển số, mã phiên, tên tài xế, SĐT...",
+      "searchBtn": "Tìm kiếm",
+      "resetBtn": "Đặt lại",
+      "filterBtn": "Bộ lọc",
+      "filterDateHint": "Lọc theo ngày vào:",
+      "filterClear": "Xoá",
+      "filter": {
+        "title": "Lọc & Sắp xếp",
+        "vehicleType": "Loại xe",
+        "sortBy": "Sắp xếp",
+        "vehicles": {
+          "all": "Tất cả loại xe",
+          "1": "Xe máy",
+          "2": "Ô tô",
+          "3": "Xe tải"
+        },
+        "sorts": {
+          "newest": "Mới nhất",
+          "oldest": "Cũ nhất",
+          "duration_desc": "Đỗ lâu nhất",
+          "duration_asc": "Đỗ ngắn nhất",
+          "plate": "Biển số A→Z",
+          "fee_desc": "Phí cao nhất"
+        }
+      },
+      "card": {
+        "prepaidBadge": "Đã thanh toán QR",
+        "bookingBadge": "Booking",
+        "walkinBadge": "Vãng lai",
+        "unknownPlate": "? KHÔNG RÕ ?",
+        "entryTime": "Vào:",
+        "driver": "Tài xế:",
+        "prepaidLabel": "Đã trả trước",
+        "estimatedFeeLabel": "Phí ước tính",
+        "finishBtn": "Hoàn tất & Trả xe",
+        "payBtn": "Thanh toán & Trả xe"
+      },
+      "time": {
+        "minute": "phút",
+        "h": "h",
+        "m": "m",
+        "month": "Th"
+      },
+      "errors": {
+        "loadFailed": "Không tải được danh sách phiên gửi xe",
+        "noMatch": "Không tìm thấy phiên phù hợp"
+      },
+      "activeSessions": "Phiên đang đỗ",
+      "sessionCount": "phiên",
+      "prepaidCount": "đã trả trước",
+      "totalFeeLabel": "Tổng phí:",
+      "loadingList": "Đang tải...",
+      "noSessionSearch": "Không tìm thấy phiên phù hợp",
+      "noSessionEmpty": "Chưa có phiên nào đang đỗ",
+      "noSessionHint": "Thử thay đổi từ khoá hoặc dùng bộ lọc",
+      "retryBtn": "Thử lại",
+      "createIncidentBtn": "Báo sự cố",
+      "guidanceTitle": "Hướng dẫn trả xe",
+      "guidance1": "Tìm xe theo biển số hoặc mã phiên",
+      "guidance2": "Xác minh thông tin xe và phí gửi",
+      "guidance3": "Thu phí (tiền mặt/chuyển khoản) hoặc xác nhận đã trả trước",
+      "guidance4": "Xác nhận trả xe để giải phóng ô đỗ",
+      "notFoundTitle": "Không tìm thấy xe?",
+      "notFoundDesc": "Nếu xe không có trong hệ thống, vui lòng tạo báo cáo sự cố.",
+      "quickStats": "Thống kê nhanh",
+      "statTotal": "Tổng đang đỗ",
+      "statWalkin": "Vãng lai",
+      "statBooking": "Booking",
+      "statPrepaid": "Đã trả trước",
+      "statDisplayed": "Đang hiển thị",
+      "bottomReading": "Hoạt động",
+      "bottomSync": "Tự đồng bộ mỗi 30s",
+      "bottomNetwork": "Mạng: OK",
+      "bottomVerify": "Xác minh thủ công"
+    },
+    "dashboard": {
+      "error": "Không thể tải dữ liệu dashboard",
+      "summary": {
+        "title": "Tóm tắt vận hành",
+        "refresh": "Làm mới"
+      },
+      "stats": {
+        "occupied": "Xe trong bãi",
+        "available": "Chỗ trống",
+        "todayCheckin": "Check-in hôm nay",
+        "todayCheckout": "Check-out hôm nay",
+        "openIncidents": "Sự cố đang mở",
+        "pendingBookings": "Lượt đặt trước"
+      },
+      "quickActions": {
+        "title": "Thao tác nhanh",
+        "walkinDesc": "Nhận xe vãng lai",
+        "bookingDesc": "Nhận xe đặt trước",
+        "checkoutDesc": "Thanh toán & Trả xe",
+        "searchDesc": "Tra cứu phiên",
+        "incidentDesc": "Tạo sự cố",
+        "mapDesc": "Xem sơ đồ chỗ"
+      },
+      "recentCheckins": {
+        "title": "Lượt vào gần đây",
+        "desc": "8 phiên nhận xe mới nhất",
+        "viewAll": "Xem tất cả",
+        "loading": "Đang tải...",
+        "empty": "Chưa có phiên nào hôm nay",
+        "headers": {
+          "sessionId": "ID Phiên",
+          "plate": "Biển số",
+          "vehicle": "Loại xe",
+          "time": "Thời gian vào",
+          "slot": "Ô đỗ",
+          "zone": "Khu vực",
+          "status": "Trạng thái"
+        }
+      },
+      "alerts": {
+        "title": "Thông báo & Cảnh báo",
+        "new": "Mới",
+        "empty": "Không có cảnh báo nào",
+        "viewAll": "XEM TẤT CẢ"
+      },
+      "quickSearch": {
+        "title": "Tra cứu nhanh biển số",
+        "placeholder": "Nhập biển số xe, Enter để tìm...",
+        "hint": "Nhấn Enter để tìm kiếm"
+      },
+      "revenue": {
+        "title": "Doanh thu hôm nay",
+        "desc": "Đã thanh toán hoàn tất"
+      }
+    },
+    "layout": {
+      "mainMenu": {
+        "dashboard": "Bảng điều khiển",
+        "checkinWalkin": "Nhận xe vãng lai",
+        "checkinBooking": "Nhận xe đặt trước",
+        "checkout": "Trả xe"
+      },
+      "manageMenu": {
+        "searchSession": "Tra cứu phiên",
+        "reportIncident": "Báo cáo sự cố",
+        "parkingMap": "Sơ đồ bãi đỗ",
+        "paymentHistory": "Lịch sử thanh toán"
+      },
+      "supportMenu": {
+        "support": "Hỗ trợ",
+        "userGuide": "Hướng dẫn sử dụng"
+      },
+      "labels": {
+        "main": "CHÍNH",
+        "manage": "QUẢN LÝ",
+        "support": "HỖ TRỢ"
+      },
+      "greeting": "Xin chào",
+      "role": "Nhân viên",
+      "logout": "Đăng xuất",
+      "logoutConfirm": "Bạn có chắc muốn đăng xuất không?"
+    }
   }
 }

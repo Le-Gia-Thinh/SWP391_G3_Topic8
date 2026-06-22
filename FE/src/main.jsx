@@ -11,6 +11,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { AppThemeProvider } from './contexts/AppThemeContext'
 import './i18n'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 
 const theme = createTheme({
   palette: {
@@ -27,7 +28,9 @@ createRoot(document.getElementById('root')).render(
         <BrowserRouter>
           <AuthProvider>
             <AppThemeProvider>
-              <App />
+              <ErrorBoundary>
+                <App />
+              </ErrorBoundary>
             </AppThemeProvider>
             <ToastContainer
               position="top-right"
