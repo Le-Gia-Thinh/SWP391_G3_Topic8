@@ -91,7 +91,8 @@
             "loginFailedDefault": "Incorrect email or password",
             "welcomeBack": "Welcome, {{name}}!",
             "noAccount": "Don't have an account?",
-            "registerNow": "Sign up now"
+            "registerNow": "Sign up now",
+            "backToHome": "Back to home"
         },
         "register": {
             "title": "Create a Driver Account",

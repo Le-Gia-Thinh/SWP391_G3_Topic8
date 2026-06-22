@@ -927,8 +927,8 @@ export default function StaffCreateIncident({ sessionId, driverId }) {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f1f5f9', pb: 6 }}>
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider', px: { xs: 2, md: 4 }, py: 2, position: 'sticky', top: 0, zIndex: 10 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider', px: { xs: 2, md: 4 }, py: 2 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <IconButton size="small" onClick={() => navigate('/staff/dashboard')} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
               <ArrowLeft size={18} />
@@ -938,7 +938,7 @@ export default function StaffCreateIncident({ sessionId, driverId }) {
               <Typography variant="h6" fontWeight={700}>Quản lý sự cố</Typography>
             </Stack>
           </Stack>
-          <Button variant="contained" size="small" startIcon={<Plus size={15} />} onClick={() => setTab(0)} sx={{ fontWeight: 600, display: { xs: 'none', sm: 'flex' } }}>
+          <Button variant="contained" size="small" startIcon={<Plus size={15} />} onClick={() => setTab(0)} sx={{ fontWeight: 600, ml: 'auto', flexShrink: 0, display: { xs: 'none', sm: 'flex' } }}>
             Tạo sự cố mới
           </Button>
         </Stack>

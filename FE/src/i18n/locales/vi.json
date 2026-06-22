@@ -91,7 +91,8 @@
       "loginFailedDefault": "Email hoặc mật khẩu không đúng",
       "welcomeBack": "Chào mừng, {{name}}!",
       "noAccount": "Bạn chưa có tài khoản?",
-      "registerNow": "Đăng ký ngay"
+      "registerNow": "Đăng ký ngay",
+      "backToHome": "Về trang chủ"
     },
     "register": {
       "title": "Tạo tài khoản Tài xế mới",
