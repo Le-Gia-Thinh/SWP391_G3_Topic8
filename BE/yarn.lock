@@ -1298,7 +1298,7 @@ negotiator@^1.0.0:
 
 ngrok@^5.0.0-beta.2:
   version "5.0.0-beta.2"
-  resolved "https://registry.npmjs.org/ngrok/-/ngrok-5.0.0-beta.2.tgz"
+  resolved "https://registry.yarnpkg.com/ngrok/-/ngrok-5.0.0-beta.2.tgz#7976690a592b27de9a91ff93892cfabda24360ad"
   integrity sha512-UzsyGiJ4yTTQLCQD11k1DQaMwq2/SsztBg2b34zAqcyjS25qjDpogMKPaCKHwe/APRTHeel3iDXcVctk5CNaCQ==
   dependencies:
     extract-zip "^2.0.1"
