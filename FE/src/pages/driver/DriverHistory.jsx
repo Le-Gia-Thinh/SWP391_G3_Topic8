@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Search,
   Calendar,
@@ -18,22 +19,6 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
-
-const STATUS_OPTIONS = [
-  { value: '', label: 'Tất cả trạng thái' },
-  { value: 'active', label: 'Đang hoạt động' },
-  { value: 'used', label: 'Đã sử dụng' },
-  { value: 'expired', label: 'Hết hạn' },
-  { value: 'cancelled', label: 'Đã hủy' }
-]
-
-const VEHICLE_OPTIONS = [
-  { value: '', label: 'Tất cả' },
-  { value: 'MOTO', label: 'Xe máy' },
-  { value: 'MOTORBIKE', label: 'Xe máy' },
-  { value: 'CAR', label: 'Ô tô' },
-  { value: 'TRUCK', label: 'Xe tải' }
-]
 
 const STATUS_BADGE_VARIANTS = {
   active: 'primary',
@@ -73,15 +58,16 @@ const getIsoDate = (value) => {
 const fmt = (n) =>
   n != null ? new Intl.NumberFormat('vi-VN').format(Number(n)) + ' VNĐ' : '--'
 
+// Trả về key i18n + statusValue cho mỗi ReservationStatus
 const getDisplayStatus = (item) => {
   const status = item.ReservationStatus || ''
   switch (status) {
-  case 'Pending': return { statusLabel: 'Chờ thanh toán', statusValue: 'Pending' }
-  case 'Prepaid': return { statusLabel: 'Đã trả trước', statusValue: 'Prepaid' }
-  case 'Reserved': return { statusLabel: 'Đã đặt', statusValue: 'active' }
-  case 'Completed': return { statusLabel: 'Đã sử dụng', statusValue: 'used' }
-  case 'Cancelled': return { statusLabel: 'Đã hủy', statusValue: 'cancelled' }
-  default: return { statusLabel: status || 'Không xác định', statusValue: 'default' }
+    case 'Pending': return { statusLabelKey: 'driver.history.statusPending', statusValue: 'Pending' }
+    case 'Prepaid': return { statusLabelKey: 'driver.history.statusPrepaid', statusValue: 'Prepaid' }
+    case 'Reserved': return { statusLabelKey: 'driver.history.statusActive', statusValue: 'active' }
+    case 'Completed': return { statusLabelKey: 'driver.history.statusUsed', statusValue: 'used' }
+    case 'Cancelled': return { statusLabelKey: 'driver.history.statusCancelled', statusValue: 'cancelled' }
+    default: return { statusLabelKey: 'driver.history.statusUnknown', statusValue: 'default' }
   }
 }
 
@@ -100,7 +86,8 @@ const splitDateTimeText = (datetimeStr) => {
   }
 }
 
-const mapReservationToBooking = (item) => {
+// mapReservationToBooking nhận t để fallback các giá trị thiếu
+const mapReservationToBooking = (item, t) => {
   const displayStatus = getDisplayStatus(item)
   const start = splitDateTimeText(item.StartTime || item.StartTimeText)
   const end = splitDateTimeText(item.EndTime || item.EndTimeText)
@@ -108,10 +95,10 @@ const mapReservationToBooking = (item) => {
   return {
     id: item.BookingCode || `BK-${String(item.ReservationID).padStart(4, '0')}`,
     reservationId: item.ReservationID,
-    building: item.BuildingName || 'Chưa có tòa nhà',
-    vehicleType: item.VehicleName || 'Chưa có loại xe',
+    building: item.BuildingName || t('driver.history.noBuilding'),
+    vehicleType: item.VehicleName || t('driver.history.noVehicle'),
     vehicleTypeValue: item.VehicleCode || '',
-    plate: item.PlateNumber || 'Chưa check-in',
+    plate: item.PlateNumber || t('driver.history.noPlate'),
     floor: item.FloorName || '--',
     zone: item.ZoneName || '--',
     slot: item.SlotCode || '--',
@@ -125,7 +112,7 @@ const mapReservationToBooking = (item) => {
     rawEndText: item.EndTime || item.EndTimeText,
     rawStartDate: start.isoDate,
 
-    status: displayStatus.statusLabel,
+    statusLabelKey: displayStatus.statusLabelKey,
     statusValue: displayStatus.statusValue,
     reservationStatus: item.ReservationStatus,
     raw: item
@@ -133,6 +120,24 @@ const mapReservationToBooking = (item) => {
 }
 
 const DriverHistory = () => {
+  const { t } = useTranslation()
+
+  const STATUS_OPTIONS = [
+    { value: '', labelKey: 'driver.history.statusAll' },
+    { value: 'active', labelKey: 'driver.history.statusActive' },
+    { value: 'used', labelKey: 'driver.history.statusUsed' },
+    { value: 'expired', labelKey: 'driver.history.statusExpired' },
+    { value: 'cancelled', labelKey: 'driver.history.statusCancelled' }
+  ]
+
+  const VEHICLE_OPTIONS = [
+    { value: '', labelKey: 'driver.history.vehicleAll' },
+    { value: 'MOTO', labelKey: 'driver.history.vehicleMoto' },
+    { value: 'MOTORBIKE', labelKey: 'driver.history.vehicleMoto' },
+    { value: 'CAR', labelKey: 'driver.history.vehicleCar' },
+    { value: 'TRUCK', labelKey: 'driver.history.vehicleTruck' }
+  ]
+
   const [activeTab, setActiveTab] = useState('booking')
 
   // Booking State
@@ -160,11 +165,11 @@ const DriverHistory = () => {
       const response = await authorizeAxios.get('/reservations')
       const data = response.data?.data || []
 
-      let mockData = data.map(mapReservationToBooking)
+      let mockData = data.map((item) => mapReservationToBooking(item, t))
       setBookings(mockData)
     } catch (error) {
       console.error('Get reservations failed:', error)
-      const message = error.response?.data?.message || 'Không thể tải lịch sử đặt chỗ.'
+      const message = error.response?.data?.message || t('driver.history.loadBookingFail')
       setErrorMessage(message)
     } finally {
       setIsLoading(false)
@@ -182,7 +187,7 @@ const DriverHistory = () => {
       setPayments(data)
     } catch (error) {
       console.error('Get payments failed:', error)
-      const message = error.response?.data?.message || 'Không thể tải lịch sử thanh toán.'
+      const message = error.response?.data?.message || t('driver.history.loadPaymentFail')
       setErrorMessage(message)
     } finally {
       setIsLoading(false)
@@ -222,7 +227,7 @@ const DriverHistory = () => {
 
   const handleCancelBooking = (booking) => {
     if (!booking?.reservationId) {
-      setAlertModal({ isOpen: true, message: 'Không tìm thấy mã đặt chỗ để hủy.' })
+      setAlertModal({ isOpen: true, message: t('driver.history.cancelNoCode') })
       return
     }
     setConfirmModal({ isOpen: true, booking })
@@ -237,10 +242,10 @@ const DriverHistory = () => {
       setIsCancelling(true)
       await authorizeAxios.patch(`/reservations/${booking.reservationId}/cancel`)
       await fetchReservations()
-      setAlertModal({ isOpen: true, message: `Đã hủy đặt chỗ ${booking.id} thành công.` })
+      setAlertModal({ isOpen: true, message: t('driver.history.cancelSuccess', { code: booking.id }) })
     } catch (error) {
       console.error('Cancel reservation failed:', error)
-      setAlertModal({ isOpen: true, message: error.response?.data?.message || 'Hủy đặt chỗ thất bại. Vui lòng thử lại.' })
+      setAlertModal({ isOpen: true, message: error.response?.data?.message || t('driver.history.cancelFail') })
     } finally {
       setIsCancelling(false)
     }
@@ -250,13 +255,13 @@ const DriverHistory = () => {
     <div className="animate-in fade-in duration-500 space-y-6 pb-12">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between bg-white dark:bg-slate-800 p-5 rounded-[1.5rem] shadow-sm border border-slate-200 dark:border-slate-700/60">
         <div>
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-blue-500">Quản lý cá nhân</p>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-blue-500">{t('driver.history.eyebrow')}</p>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            Lịch sử hoạt động
+            {t('driver.history.title')}
           </h1>
           <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
             <Sparkles size={16} className="text-amber-500 animate-pulse" />
-            Theo dõi các lượt đặt chỗ và thanh toán của bạn.
+            {t('driver.history.subtitle')}
           </p>
         </div>
 
@@ -264,7 +269,7 @@ const DriverHistory = () => {
           to="/driver/booking"
           className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700 active:scale-95"
         >
-          <span className="text-lg leading-none mb-0.5">+</span> Đặt chỗ mới
+          <span className="text-lg leading-none mb-0.5">+</span> {t('driver.history.newBooking')}
         </Link>
       </div>
 
@@ -274,13 +279,13 @@ const DriverHistory = () => {
             onClick={() => setActiveTab('booking')}
             className={`flex items-center gap-2 px-6 py-4 font-bold text-sm border-b-2 transition-all ${activeTab === 'booking' ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
           >
-            <Car size={18} /> Lịch sử đặt chỗ
+            <Car size={18} /> {t('driver.history.tabBooking')}
           </button>
           <button
             onClick={() => setActiveTab('payment')}
             className={`flex items-center gap-2 px-6 py-4 font-bold text-sm border-b-2 transition-all ${activeTab === 'payment' ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
           >
-            <CreditCard size={18} /> Lịch sử thanh toán
+            <CreditCard size={18} /> {t('driver.history.tabPayment')}
           </button>
         </div>
 
@@ -288,12 +293,12 @@ const DriverHistory = () => {
           <div className="space-y-6 animate-in fade-in">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4 lg:grid-cols-5 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50">
               <div className="lg:col-span-2">
-                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tìm kiếm</label>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.search')}</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Mã đặt chỗ, biển số..."
+                    placeholder={t('driver.history.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-2.5 pl-9 pr-4 text-sm font-medium outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -301,7 +306,7 @@ const DriverHistory = () => {
                 </div>
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Trạng thái</label>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.status')}</label>
                 <select
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
@@ -309,13 +314,13 @@ const DriverHistory = () => {
                 >
                   {STATUS_OPTIONS.map((option) => (
                     <option key={option.value || 'all-status'} value={option.value}>
-                      {option.label}
+                      {t(option.labelKey)}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Loại xe</label>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.vehicleType')}</label>
                 <select
                   value={vehicleFilter}
                   onChange={(event) => setVehicleFilter(event.target.value)}
@@ -323,7 +328,7 @@ const DriverHistory = () => {
                 >
                   {VEHICLE_OPTIONS.map((option) => (
                     <option key={option.value || 'all-vehicle'} value={option.value}>
-                      {option.label}
+                      {t(option.labelKey)}
                     </option>
                   ))}
                 </select>
@@ -333,7 +338,7 @@ const DriverHistory = () => {
                   onClick={handleResetFilters}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 transition-all hover:bg-slate-100 active:scale-95"
                 >
-                  <RefreshCcw size={16} /> Làm mới
+                  <RefreshCcw size={16} /> {t('driver.history.refresh')}
                 </button>
               </div>
             </div>
@@ -343,12 +348,12 @@ const DriverHistory = () => {
                 <table className="min-w-full text-left text-sm text-slate-600 dark:text-slate-400">
                   <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shadow-sm">
                     <tr>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Mã đặt chỗ</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tòa nhà</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Biển số</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Thời gian đặt</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Trạng thái</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Thao tác</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.colCode')}</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.colBuilding')}</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.colPlate')}</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.colTime')}</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.colStatus')}</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">{t('driver.history.colActions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -357,13 +362,13 @@ const DriverHistory = () => {
                         <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/30">
                           <div className="flex flex-col items-center gap-3">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-blue-600"></div>
-                            <span>Đang tải dữ liệu...</span>
+                            <span>{t('driver.history.loading')}</span>
                           </div>
                         </td>
                       </tr>
                     ) : filteredBookings.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/30">Không có dữ liệu</td>
+                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/30">{t('driver.history.noData')}</td>
                       </tr>
                     ) : (
                       filteredBookings.map((booking) => (
@@ -386,7 +391,7 @@ const DriverHistory = () => {
                           </td>
                           <td className="px-5 py-4">
                             <Badge variant={STATUS_BADGE_VARIANTS[booking.statusValue] || 'default'}>
-                              {booking.status}
+                              {t(booking.statusLabelKey)}
                             </Badge>
                           </td>
                           <td className="px-5 py-4">
@@ -397,7 +402,7 @@ const DriverHistory = () => {
                                   onClick={() => handleCancelBooking(booking)}
                                   className="rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-1.5 text-xs font-bold text-red-600 border border-red-100 hover:bg-red-100 transition-colors disabled:opacity-50"
                                 >
-                                  Hủy bỏ
+                                  {t('driver.history.cancel')}
                                 </button>
                               )}
                             </div>
@@ -419,12 +424,12 @@ const DriverHistory = () => {
                 <table className="min-w-full text-left text-sm text-slate-600 dark:text-slate-400">
                   <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shadow-sm">
                     <tr>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Mã GD</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Biển số</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Thời gian</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Số tiền</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Phương thức</th>
-                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Trạng thái</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.colTxId')}</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.colPlate')}</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.colTime')}</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.colAmount')}</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.colMethod')}</th>
+                      <th className="px-5 py-4 text-[12px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t('driver.history.colStatus')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -433,13 +438,13 @@ const DriverHistory = () => {
                         <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/30">
                           <div className="flex flex-col items-center gap-3">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 dark:border-slate-700 border-t-blue-600"></div>
-                            <span>Đang tải dữ liệu...</span>
+                            <span>{t('driver.history.loading')}</span>
                           </div>
                         </td>
                       </tr>
                     ) : payments.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/30">Không có giao dịch nào</td>
+                        <td colSpan={6} className="px-5 py-16 text-center text-slate-500 dark:text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/30">{t('driver.history.noPayment')}</td>
                       </tr>
                     ) : (
                       payments.map((payment) => (
@@ -481,23 +486,23 @@ const DriverHistory = () => {
       <Modal
         isOpen={confirmModal.isOpen}
         onClose={() => setConfirmModal({ isOpen: false, booking: null })}
-        title="Xác nhận hủy đặt chỗ"
+        title={t('driver.history.cancelModalTitle')}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setConfirmModal({ isOpen: false, booking: null })}>Quay lại</Button>
-            <Button variant="danger" onClick={confirmCancel} isLoading={isCancelling}>Xác nhận hủy</Button>
+            <Button variant="secondary" onClick={() => setConfirmModal({ isOpen: false, booking: null })}>{t('driver.history.back')}</Button>
+            <Button variant="danger" onClick={confirmCancel} isLoading={isCancelling}>{t('driver.history.confirmCancel')}</Button>
           </>
         }
       >
-        <p className="text-slate-600 dark:text-slate-400">Bạn có chắc chắn muốn hủy đặt chỗ <span className="font-bold text-slate-900 dark:text-white">{confirmModal.booking?.id}</span> không?</p>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Lưu ý: Thao tác này không thể hoàn tác.</p>
+        <p className="text-slate-600 dark:text-slate-400">{t('driver.history.cancelConfirmPre')} <span className="font-bold text-slate-900 dark:text-white">{confirmModal.booking?.id}</span> {t('driver.history.cancelConfirmPost')}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t('driver.history.cancelConfirmHint')}</p>
       </Modal>
 
       <Modal
         isOpen={alertModal.isOpen}
         onClose={() => setAlertModal({ isOpen: false, message: '' })}
-        title="Thông báo"
-        footer={<Button variant="primary" onClick={() => setAlertModal({ isOpen: false, message: '' })}>Đóng</Button>}
+        title={t('driver.history.alertTitle')}
+        footer={<Button variant="primary" onClick={() => setAlertModal({ isOpen: false, message: '' })}>{t('driver.history.close')}</Button>}
       >
         <p className="text-slate-700 dark:text-slate-300 font-medium">{alertModal.message}</p>
       </Modal>

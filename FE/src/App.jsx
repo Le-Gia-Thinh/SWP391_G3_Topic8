@@ -75,69 +75,69 @@ const GuestTracking = React.lazy(() => import('./pages/guest/GuestTracking'))
 import './index.css'
 
 const managerLinks = [
-  { path: '/manager/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { path: '/manager/positions', label: 'Vị trí đỗ', icon: Map },
-  { path: '/manager/reports', label: 'Báo cáo', icon: FileText },
+  { path: '/manager/dashboard', labelKey: 'sidebar.overview', icon: LayoutDashboard },
+  { path: '/manager/positions', labelKey: 'sidebar.manager.positions', icon: Map },
+  { path: '/manager/reports', labelKey: 'sidebar.manager.reports', icon: FileText },
   { isDivider: true },
-  { labelOnly: 'Cấu hình' },
-  { path: '/manager/config', label: 'Cấu hình bãi đỗ', icon: Settings },
-  { path: '/manager/vehicle-types', label: 'Loại phương tiện', icon: Car },
-  { path: '/manager/pricing', label: 'Bảng giá', icon: Wallet },
+  { labelOnlyKey: 'sidebar.groups.config' },
+  { path: '/manager/config', labelKey: 'sidebar.manager.config', icon: Settings },
+  { path: '/manager/vehicle-types', labelKey: 'sidebar.manager.vehicleTypes', icon: Car },
+  { path: '/manager/pricing', labelKey: 'sidebar.manager.pricing', icon: Wallet },
   { isDivider: true },
-  { labelOnly: 'Giám sát' },
-  { path: '/manager/incidents', label: 'Sự cố', icon: AlertTriangle },
-  { path: '/manager/unpaid', label: 'Xe chưa thanh toán', icon: Wallet },
-  { path: '/manager/feedback', label: 'Đánh giá từ User', icon: Star }
+  { labelOnlyKey: 'sidebar.groups.monitor' },
+  { path: '/manager/incidents', labelKey: 'sidebar.manager.incidents', icon: AlertTriangle },
+  { path: '/manager/unpaid', labelKey: 'sidebar.manager.unpaid', icon: Wallet },
+  { path: '/manager/feedback', labelKey: 'sidebar.manager.feedback', icon: Star }
 ]
 
 
 const adminLinks = [
-  { path: '/admin/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+  { path: '/admin/dashboard', labelKey: 'sidebar.overview', icon: LayoutDashboard },
   { isDivider: true },
-  { labelOnly: 'Quản trị' },
-  { path: '/admin/users', label: 'Người dùng', icon: Users },
-  { path: '/admin/roles', label: 'Vai trò & Phân quyền', icon: KeyRound },
-  { path: '/admin/buildings', label: 'Cơ sở / Bãi đỗ', icon: Building2 },
-  { path: '/admin/parking-config', label: 'Cấu hình bãi đỗ', icon: LayoutGrid },
+  { labelOnlyKey: 'sidebar.groups.admin' },
+  { path: '/admin/users', labelKey: 'sidebar.admin.users', icon: Users },
+  { path: '/admin/roles', labelKey: 'sidebar.admin.roles', icon: KeyRound },
+  { path: '/admin/buildings', labelKey: 'sidebar.admin.buildings', icon: Building2 },
+  { path: '/admin/parking-config', labelKey: 'sidebar.admin.parkingConfig', icon: LayoutGrid },
   { isDivider: true },
-  { labelOnly: 'Giám sát' },
-  { path: '/admin/audit-logs', label: 'Nhật ký hoạt động', icon: ScrollText }
+  { labelOnlyKey: 'sidebar.groups.monitor' },
+  { path: '/admin/audit-logs', labelKey: 'sidebar.admin.auditLogs', icon: ScrollText }
 ]
 
 
 const staffLinks = [
-  { path: '/staff/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { path: '/staff/parking-map', label: 'Bản đồ bãi đỗ', icon: Map },
+  { path: '/staff/dashboard', labelKey: 'sidebar.overview', icon: LayoutDashboard },
+  { path: '/staff/parking-map', labelKey: 'sidebar.staff.parkingMap', icon: Map },
   { isDivider: true },
-  { labelOnly: 'Nghiệp vụ' },
-  { path: '/staff/checkin', label: 'Check-in (Vào)', icon: CheckSquare },
-  { path: '/staff/checkout', label: 'Check-out (Ra)', icon: LogOut },
-  { path: '/staff/search-session', label: 'Tìm kiếm phiên', icon: Search },
-  { path: '/staff/verify-booking', label: 'Xác thực Booking', icon: ShieldCheck },
-  { path: '/staff/payment-confirm', label: 'Xác nhận thanh toán', icon: Wallet },
+  { labelOnlyKey: 'sidebar.groups.operations' },
+  { path: '/staff/checkin', labelKey: 'sidebar.staff.checkin', icon: CheckSquare },
+  { path: '/staff/checkout', labelKey: 'sidebar.staff.checkout', icon: LogOut },
+  { path: '/staff/search-session', labelKey: 'sidebar.staff.searchSession', icon: Search },
+  { path: '/staff/verify-booking', labelKey: 'sidebar.staff.verifyBooking', icon: ShieldCheck },
+  { path: '/staff/payment-confirm', labelKey: 'sidebar.staff.paymentConfirm', icon: Wallet },
 
   { isDivider: true },
-  { labelOnly: 'Khác' },
-  { path: '/staff/create-incident', label: 'Báo cáo sự cố', icon: AlertTriangle },
-  { path: '/staff/user-guide', label: 'Hướng dẫn sử dụng', icon: BookOpen },
-  { path: '/staff/support', label: 'Hỗ trợ kỹ thuật', icon: HelpCircle },
-  { path: '/staff/feedback', label: 'Đánh giá từ User', icon: Star }
+  { labelOnlyKey: 'sidebar.groups.other' },
+  { path: '/staff/create-incident', labelKey: 'sidebar.staff.createIncident', icon: AlertTriangle },
+  { path: '/staff/user-guide', labelKey: 'sidebar.staff.userGuide', icon: BookOpen },
+  { path: '/staff/support', labelKey: 'sidebar.staff.support', icon: HelpCircle },
+  { path: '/staff/feedback', labelKey: 'sidebar.staff.feedback', icon: Star }
 ]
 
 const driverLinks = [
-  { path: '/driver/home', label: 'Trang chủ', icon: HomeIcon },
-  { path: '/driver/session', label: 'Phiên đỗ xe', icon: Clock },
-  { path: '/driver/history', label: 'Lịch sử', icon: FileText },
-  { path: '/driver/payment', label: 'Thanh toán', icon: Wallet },
+  { path: '/driver/home', labelKey: 'sidebar.driver.home', icon: HomeIcon },
+  { path: '/driver/session', labelKey: 'sidebar.driver.session', icon: Clock },
+  { path: '/driver/history', labelKey: 'sidebar.driver.history', icon: FileText },
+  { path: '/driver/payment', labelKey: 'sidebar.driver.payment', icon: Wallet },
   { isDivider: true },
-  { labelOnly: 'Quản lý' },
-  { path: '/driver/vehicles', label: 'Phương tiện', icon: Car },
-  { path: '/driver/notifications', label: 'Thông báo', icon: Bell },
-  { path: '/driver/feedback', label: 'Đánh giá', icon: Star },
+  { labelOnlyKey: 'sidebar.groups.management' },
+  { path: '/driver/vehicles', labelKey: 'sidebar.driver.vehicles', icon: Car },
+  { path: '/driver/notifications', labelKey: 'sidebar.driver.notifications', icon: Bell },
+  { path: '/driver/feedback', labelKey: 'sidebar.driver.feedback', icon: Star },
   { isDivider: true },
-  { labelOnly: 'Hỗ trợ' },
-  { path: '/driver/report', label: 'Báo cáo sự cố', icon: AlertTriangle },
-  { path: '/driver/help', label: 'Trung tâm trợ giúp', icon: HelpCircle }
+  { labelOnlyKey: 'sidebar.groups.support' },
+  { path: '/driver/report', labelKey: 'sidebar.driver.report', icon: AlertTriangle },
+  { path: '/driver/help', labelKey: 'sidebar.driver.help', icon: HelpCircle }
 ]
 
 const LoadingFallback = () => (

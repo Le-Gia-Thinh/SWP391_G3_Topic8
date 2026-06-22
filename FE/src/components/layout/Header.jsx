@@ -1,8 +1,11 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Building2, ChevronLeft } from 'lucide-react'
+import LanguageSwitcher from '../ui/LanguageSwitcher'
+import { useTranslation } from 'react-i18next'
 
 const Header = () => {
+  const { t } = useTranslation()
   const location = useLocation()
   const isAuthPage = location.pathname.includes('/login') || location.pathname.includes('/register')
 
@@ -20,29 +23,30 @@ const Header = () => {
         {isAuthPage ? (
           <Link to="/" className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors">
             <ChevronLeft className="w-4 h-4" />
-            Quay lại trang chủ
+            {t('layout.header.backToHome')}
           </Link>
         ) : (
           <>
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-8">
-              <Link to="/" className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">Trang Chủ</Link>
-              <a href="#bang-gia" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors">Bảng Giá</a>
-              <a href="#ho-tro" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors">Hỗ Trợ</a>
-              <a href="#quy-dinh" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors">Quy Định</a>
-              <a href="#lien-he" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors">Liên Hệ</a>
+              <Link to="/" className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">{t('layout.header.navHome')}</Link>
+              <a href="#bang-gia" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors">{t('layout.header.navPricing')}</a>
+              <a href="#ho-tro" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors">{t('layout.header.navSupport')}</a>
+              <a href="#quy-dinh" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors">{t('layout.header.navRules')}</a>
+              <a href="#lien-he" className="text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors">{t('layout.header.navContact')}</a>
             </nav>
 
             {/* Auth Buttons */}
             <div className="flex items-center gap-4">
+              <LanguageSwitcher />
               <Link to="/admin/login" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
-                Đăng Nhập
+                {t('layout.header.login')}
               </Link>
               <Link
                 to="/register"
                 className="text-sm font-medium bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200"
               >
-                Đăng ký
+                {t('layout.header.register')}
               </Link>
             </div>
           </>

@@ -1,5 +1,6 @@
 // src/pages/driver/DriverPayment.jsx
 import React, { useEffect, useRef, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { toast } from 'react-toastify'
@@ -28,8 +29,9 @@ import {
 import authorizeAxios from '../../utils/authorizeAxios'
 
 // ── Helpers ──────────────────────────────────────────────────────
-const fmt = (n) =>
-  new Intl.NumberFormat('vi-VN').format(Number(n || 0)) + ' VNĐ'
+// fmt cần currency để theo i18n; gọi từ component truyền vào
+const fmt = (n, currency = 'VNĐ') =>
+  new Intl.NumberFormat('vi-VN').format(Number(n || 0)) + ' ' + currency
 
 const fmtTime = (val) => {
   if (!val) return '--'
@@ -59,6 +61,7 @@ const getVehicleIcon = (code) => {
 
 // ── QR Canvas ────────────────────────────────────────────────────
 const QRCanvas = ({ data, size = 230 }) => {
+  const { t } = useTranslation()
   const canvasRef = useRef(null)
   const [error, setError] = useState(false)
 
@@ -79,7 +82,7 @@ const QRCanvas = ({ data, size = 230 }) => {
       bgcolor: 'grey.100', borderRadius: 2, p: 2, textAlign: 'center'
     }}>
       <Typography variant="caption" color="text.secondary">
-        Không hiển thị QR được.<br />Dùng link PayOS bên dưới.
+        {t('driver.payment.qrError1')}<br />{t('driver.payment.qrError2')}
       </Typography>
     </Box>
   )
@@ -92,16 +95,17 @@ const QRCanvas = ({ data, size = 230 }) => {
 
 // ── Countdown ────────────────────────────────────────────────────
 const Countdown = ({ expiredAt }) => {
+  const { t } = useTranslation()
   const [rem, setRem] = useState(0)
   useEffect(() => {
     const exp = new Date(expiredAt).getTime()
     const tick = () => setRem(Math.max(0, Math.floor((exp - Date.now()) / 1000)))
     tick()
-    const t = setInterval(tick, 1000)
-    return () => clearInterval(t)
+    const tm = setInterval(tick, 1000)
+    return () => clearInterval(tm)
   }, [expiredAt])
 
-  if (!rem) return <Typography color="error" fontWeight={700} fontSize={14}>Hết hạn</Typography>
+  if (!rem) return <Typography color="error" fontWeight={700} fontSize={14}>{t('driver.payment.expired')}</Typography>
   const m = Math.floor(rem / 60)
   const s = rem % 60
   return (
@@ -116,6 +120,7 @@ const Countdown = ({ expiredAt }) => {
 
 // ── CopyButton ───────────────────────────────────────────────────
 const CopyButton = ({ text }) => {
+  const { t } = useTranslation()
   const [done, setDone] = useState(false)
   const copy = () => {
     navigator.clipboard.writeText(String(text))
@@ -123,7 +128,7 @@ const CopyButton = ({ text }) => {
     setTimeout(() => setDone(false), 2000)
   }
   return (
-    <Tooltip title={done ? 'Đã copy!' : 'Copy'}>
+    <Tooltip title={done ? t('driver.payment.copied') : t('driver.payment.copy')}>
       <IconButton size="small" onClick={copy} color={done ? 'success' : 'default'}>
         {done ? <CheckCircleIcon fontSize="small" /> : <CopyIcon fontSize="small" />}
       </IconButton>
@@ -133,19 +138,21 @@ const CopyButton = ({ text }) => {
 
 // ── Bảng giá theo loại xe ────────────────────────────────────────
 const PricingTable = ({ data = [], vehicleName = '' }) => {
+  const { t } = useTranslation()
+  const cur = t('driver.common.currency')
   if (!data.length) return null
   return (
     <Box>
       <Typography variant="subtitle2" fontWeight={700} mb={1} color="text.secondary">
-        Bảng phí — {vehicleName}
+        {t('driver.payment.pricingTitle', { vehicle: vehicleName })}
       </Typography>
       <Table size="small" sx={{ '& td,th': { py: 0.75, px: 1.5 } }}>
         <TableHead>
           <TableRow sx={{ bgcolor: 'grey.50' }}>
-            <TableCell sx={{ fontWeight: 700 }}>Từ giờ</TableCell>
-            <TableCell sx={{ fontWeight: 700 }}>Đến giờ</TableCell>
-            <TableCell sx={{ fontWeight: 700 }}>Phí</TableCell>
-            <TableCell sx={{ fontWeight: 700 }}>Loại</TableCell>
+            <TableCell sx={{ fontWeight: 700 }}>{t('driver.payment.colFrom')}</TableCell>
+            <TableCell sx={{ fontWeight: 700 }}>{t('driver.payment.colTo')}</TableCell>
+            <TableCell sx={{ fontWeight: 700 }}>{t('driver.payment.colFee')}</TableCell>
+            <TableCell sx={{ fontWeight: 700 }}>{t('driver.payment.colType')}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -155,13 +162,13 @@ const PricingTable = ({ data = [], vehicleName = '' }) => {
               <TableCell>{row.MaxHours >= 999 ? '∞' : `${row.MaxHours}h`}</TableCell>
               <TableCell>
                 <Typography fontWeight={700} color="primary.main" fontSize={13}>
-                  {fmt(row.Fee)}
+                  {fmt(row.Fee, cur)}
                 </Typography>
               </TableCell>
               <TableCell>
                 {row.IsOvernight
-                  ? <Chip label="Qua đêm" size="small" color="warning" />
-                  : <Chip label="Theo giờ" size="small" color="default" />
+                  ? <Chip label={t('driver.payment.typeOvernight')} size="small" color="warning" />
+                  : <Chip label={t('driver.payment.typeHourly')} size="small" color="default" />
                 }
                 {Number(row.Fee) === 2000 && (
                   <Chip label="TEST" size="small" color="error" sx={{ ml: 0.5 }} />
@@ -177,6 +184,8 @@ const PricingTable = ({ data = [], vehicleName = '' }) => {
 
 // ── Session Card ─────────────────────────────────────────────────
 const SessionCard = ({ session, onPay, paying, now }) => {
+  const { t } = useTranslation()
+  const cur = t('driver.common.currency')
   const dur = getDuration(session.EntryTime, now)
   const isMe = paying?.SessionID === session.SessionID
   const isPrepaid = session.PaymentStatus === 'Prepaid'
@@ -196,7 +205,7 @@ const SessionCard = ({ session, onPay, paying, now }) => {
       }}>
         <Box>
           <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, letterSpacing: 2, mb: 0.25 }}>
-            BIỂN SỐ XE
+            {t('driver.payment.plateLabel')}
           </Typography>
           <Typography sx={{ color: '#fff', fontSize: 24, fontWeight: 900, letterSpacing: 4, fontFamily: 'monospace' }}>
             {session.PlateNumber}
@@ -210,7 +219,7 @@ const SessionCard = ({ session, onPay, paying, now }) => {
             sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: '#fff', '& .MuiChip-icon': { color: '#fff' } }}
           />
           {isPrepaid && (
-            <Chip label="Đã trả trước" size="small" color="warning" icon={<CheckCircleIcon />} />
+            <Chip label={t('driver.payment.prepaid')} size="small" color="warning" icon={<CheckCircleIcon />} />
           )}
         </Stack>
       </Box>
@@ -218,10 +227,10 @@ const SessionCard = ({ session, onPay, paying, now }) => {
       <CardContent sx={{ p: 3 }}>
         <Grid container spacing={2} mb={2.5}>
           {[
-            ['Vào lúc', fmtTime(session.EntryTime)],
-            ['Đã đỗ', dur.text],
-            ['Vị trí', `${session.BuildingName} / ${session.FloorName} / ${session.SlotCode}`],
-            ['Phí tạm tính', fmt(session.CurrentAmount || 0)]
+            [t('driver.payment.entryAt'), fmtTime(session.EntryTime)],
+            [t('driver.payment.parked'), dur.text],
+            [t('driver.payment.location'), `${session.BuildingName} / ${session.FloorName} / ${session.SlotCode}`],
+            [t('driver.payment.estFee'), fmt(session.CurrentAmount || 0, cur)]
           ].map(([label, value]) => (
             <Grid item xs={6} key={label}>
               <Typography variant="caption" color="text.secondary" display="block" mb={0.25} fontWeight={600}>
@@ -234,8 +243,8 @@ const SessionCard = ({ session, onPay, paying, now }) => {
 
         {isPrepaid && session.SurchargeAmount > 0 && (
           <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
-            <AlertTitle>Phụ trội</AlertTitle>
-            Xe đã ở thêm sau khi trả trước. Cần thu thêm: <strong>{fmt(session.SurchargeAmount)}</strong>
+            <AlertTitle>{t('driver.payment.surchargeTitle')}</AlertTitle>
+            {t('driver.payment.surchargeBody')} <strong>{fmt(session.SurchargeAmount, cur)}</strong>
           </Alert>
         )}
 
@@ -252,7 +261,7 @@ const SessionCard = ({ session, onPay, paying, now }) => {
             '&:hover': { opacity: 0.92 }
           }}
         >
-          {isMe ? 'Đang tạo mã QR...' : isPrepaid ? 'Tạo QR bổ sung / Xem lại' : 'Tạo mã QR thanh toán'}
+          {isMe ? t('driver.payment.creatingQr') : isPrepaid ? t('driver.payment.createQrAgain') : t('driver.payment.createQr')}
         </Button>
       </CardContent>
     </Card>
@@ -263,6 +272,8 @@ const SessionCard = ({ session, onPay, paying, now }) => {
 // MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
 const DriverPayment = () => {
+  const { t } = useTranslation()
+  const cur = t('driver.common.currency')
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const statusFromUrl = params.get('status')
@@ -279,8 +290,8 @@ const DriverPayment = () => {
 
   // Clock — cập nhật "đã đỗ" mỗi giây
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(t)
+    const tm = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(tm)
   }, [])
 
   // ✅ FIX: Xử lý redirect từ PayOS — dùng ref để tránh setState sync trong effect
@@ -292,9 +303,9 @@ const DriverPayment = () => {
       // Dùng setTimeout để tránh setState synchronous trong render cycle
       setTimeout(() => setStep('done'), 0)
     } else if (statusFromUrl === 'cancel') {
-      toast.info('Bạn đã huỷ thanh toán trên trang PayOS.')
+      toast.info(t('driver.payment.toastCancelledPayos'))
     }
-  }, [statusFromUrl])
+  }, [statusFromUrl, t])
 
   // Cleanup poller khi unmount
   useEffect(() => {
@@ -334,7 +345,7 @@ const DriverPayment = () => {
       setStep('qr')
       startPolling(r.data.data.orderCode)
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Không thể tạo link thanh toán')
+      toast.error(e.response?.data?.message || t('driver.payment.toastCreateFail'))
       setPaying(null)
     }
   }
@@ -349,7 +360,7 @@ const DriverPayment = () => {
         if (s === 'PAID') {
           clearInterval(pollerRef.current)
           setStep('done')
-          toast.success('🎉 Thanh toán thành công!')
+          toast.success(t('driver.payment.toastSuccess'))
         } else if (s === 'CANCELLED' || s === 'EXPIRED') {
           clearInterval(pollerRef.current)
           setStep('fail')
@@ -386,13 +397,13 @@ const DriverPayment = () => {
     <Container maxWidth="md" sx={{ py: 0 }}>
       <Box mb={3}>
         <Typography variant="caption" color="text.secondary">
-          Hệ thống › Thanh toán phí gửi xe
+          {t('driver.payment.breadcrumb')}
         </Typography>
         <Typography variant="h5" fontWeight={800} mt={0.5}>
-          Thanh toán phí gửi xe
+          {t('driver.payment.title')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Chọn xe cần thanh toán để nhận mã QR chuyển khoản
+          {t('driver.payment.subtitle')}
         </Typography>
       </Box>
 
@@ -406,12 +417,12 @@ const DriverPayment = () => {
           borderStyle: 'dashed', borderColor: 'divider'
         }}>
           <CarIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
-          <Typography fontWeight={700} mb={1}>Không có xe đang gửi tại bãi</Typography>
+          <Typography fontWeight={700} mb={1}>{t('driver.payment.noSessions')}</Typography>
           <Typography variant="body2" color="text.secondary" mb={3}>
-            Phiên gửi xe sẽ hiển thị sau khi Staff check-in xe của bạn.
+            {t('driver.payment.noSessionsHint')}
           </Typography>
           <Button variant="contained" onClick={() => navigate('/driver/home')}>
-            Về trang chủ
+            {t('driver.common.goHome')}
           </Button>
         </Paper>
       ) : (
@@ -431,7 +442,7 @@ const DriverPayment = () => {
       <Box display="flex" justifyContent="center" alignItems="center" gap={1} mt={3}>
         <SecurityIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
         <Typography variant="caption" color="text.disabled">
-          Thanh toán bảo mật qua <strong>PayOS</strong> · VietQR
+          {t('driver.payment.secure')} <strong>PayOS</strong> · VietQR
         </Typography>
       </Box>
     </Container>
@@ -448,7 +459,7 @@ const DriverPayment = () => {
         disabled={cancelling}
         sx={{ mb: 2, color: 'text.secondary' }}
       >
-        Quay lại / Huỷ đơn
+        {t('driver.payment.backCancel')}
       </Button>
 
       <Card sx={{ borderRadius: 3, overflow: 'hidden', boxShadow: 4 }}>
@@ -461,11 +472,11 @@ const DriverPayment = () => {
             <Stack direction="row" spacing={1} alignItems="center">
               <QrCodeIcon />
               <Typography fontWeight={700} fontSize={14} sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                Quét QR để thanh toán
+                {t('driver.payment.scanToPay')}
               </Typography>
             </Stack>
             <Chip
-              label="Chờ thanh toán"
+              label={t('driver.payment.waiting')}
               size="small"
               sx={{
                 bgcolor: 'rgba(251,191,36,0.2)', color: '#fde68a',
@@ -475,9 +486,9 @@ const DriverPayment = () => {
           </Stack>
 
           <Box textAlign="center">
-            <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>Tổng phí gửi xe</Typography>
+            <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>{t('driver.payment.totalFee')}</Typography>
             <Typography sx={{ fontSize: 40, fontWeight: 900, letterSpacing: -1 }}>
-              {fmt(payment.amount)}
+              {fmt(payment.amount, cur)}
             </Typography>
           </Box>
 
@@ -486,7 +497,7 @@ const DriverPayment = () => {
               sx={{ mt: 2.5, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2, py: 1.25 }}
             >
               <ClockIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.7)' }} />
-              <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>Hết hạn sau:</Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>{t('driver.payment.expiresIn')}</Typography>
               <Countdown expiredAt={payment.expiredAt} />
             </Stack>
           )}
@@ -498,29 +509,29 @@ const DriverPayment = () => {
             <QRCanvas data={payment.qrCode} size={220} />
           </Paper>
           <Typography variant="caption" color="text.secondary" textAlign="center" mb={1.5}>
-            Mở app ngân hàng → QR / Scan → quét mã
+            {t('driver.payment.qrHint')}
           </Typography>
           <Button
             variant="outlined" size="small"
             startIcon={<ExternalIcon fontSize="small" />}
             onClick={() => window.open(payment.checkoutUrl, '_blank', 'noopener')}
           >
-            Mở trang PayOS
+            {t('driver.payment.openPayos')}
           </Button>
         </Box>
 
         {/* Thông tin CK */}
         <Box px={3} pb={2}>
           <Typography variant="overline" color="text.secondary" fontWeight={700}>
-            Hoặc chuyển khoản thủ công
+            {t('driver.payment.manualTransfer')}
           </Typography>
 
           <Stack spacing={1.5} mt={1}>
             {[
-              { label: 'Số tài khoản', value: payment.accountNumber, mono: true, color: 'inherit', large: true },
-              { label: 'Tên tài khoản', value: payment.accountName, mono: false, color: 'inherit' },
-              { label: 'Số tiền', value: fmt(payment.amount), mono: false, color: 'success.main' },
-              { label: 'Nội dung CK', value: payment.description, mono: true, color: 'warning.dark' }
+              { label: t('driver.payment.accountNumber'), value: payment.accountNumber, mono: true, color: 'inherit', large: true },
+              { label: t('driver.payment.accountName'), value: payment.accountName, mono: false, color: 'inherit' },
+              { label: t('driver.payment.amount'), value: fmt(payment.amount, cur), mono: false, color: 'success.main' },
+              { label: t('driver.payment.transferContent'), value: payment.description, mono: true, color: 'warning.dark' }
             ].map(({ label, value, mono, color, large }) => (
               <Paper key={label} variant="outlined" sx={{
                 px: 2, py: 1.5, borderRadius: 2,
@@ -547,15 +558,15 @@ const DriverPayment = () => {
           {payment.sessionInfo && (
             <Grid container spacing={2} mt={0.5}>
               <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Biển số</Typography>
+                <Typography variant="caption" color="text.secondary">{t('driver.payment.plate')}</Typography>
                 <Typography fontWeight={700}>{payment.sessionInfo.plateNumber}</Typography>
               </Grid>
               <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Vị trí</Typography>
+                <Typography variant="caption" color="text.secondary">{t('driver.payment.location')}</Typography>
                 <Typography fontWeight={700}>{payment.sessionInfo.slotCode}</Typography>
               </Grid>
               <Grid item xs={12}>
-                <Typography variant="caption" color="text.secondary">Vào lúc</Typography>
+                <Typography variant="caption" color="text.secondary">{t('driver.payment.entryAt')}</Typography>
                 <Typography fontWeight={700}>{fmtTime(payment.sessionInfo.entryTime)}</Typography>
               </Grid>
             </Grid>
@@ -569,7 +580,7 @@ const DriverPayment = () => {
                 onClick={() => setShowPricing(v => !v)}
                 sx={{ mb: 1, px: 0, fontWeight: 600 }}
               >
-                {showPricing ? 'Ẩn bảng phí' : 'Xem bảng phí theo loại xe'}
+                {showPricing ? t('driver.payment.hidePricing') : t('driver.payment.showPricing')}
               </Button>
               {showPricing && (
                 <PricingTable
@@ -584,15 +595,15 @@ const DriverPayment = () => {
           <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" mt={2}>
             <CircularProgress size={12} thickness={5} sx={{ color: 'primary.light' }} />
             <Typography variant="caption" color="text.secondary">
-              Đang chờ xác nhận thanh toán...
+              {t('driver.payment.waitingConfirm')}
             </Typography>
           </Stack>
           <LinearProgress sx={{ mt: 1, borderRadius: 1, height: 3 }} />
 
           {/* Lưu ý prepaid */}
           <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }} icon={<ClockIcon />}>
-            <AlertTitle>Lưu ý thanh toán trước</AlertTitle>
-            Phí được tính tại thời điểm này. Nếu xe ở lại lâu hơn, nhân viên sẽ thu thêm khoản phụ trội khi xe ra.
+            <AlertTitle>{t('driver.payment.prepayNoteTitle')}</AlertTitle>
+            {t('driver.payment.prepayNoteBody')}
           </Alert>
 
           {/* Huỷ */}
@@ -603,20 +614,20 @@ const DriverPayment = () => {
             onClick={handleCancel}
             sx={{ mt: 2, borderRadius: 2, py: 1.25 }}
           >
-            Huỷ đơn hàng
+            {t('driver.payment.cancelOrder')}
           </Button>
         </Box>
 
         {/* Hướng dẫn */}
         <Box mx={3} mb={3}>
           <Alert severity="info" sx={{ borderRadius: 2 }} icon={<PhoneIcon />}>
-            <AlertTitle sx={{ fontWeight: 700 }}>Hướng dẫn thanh toán QR</AlertTitle>
+            <AlertTitle sx={{ fontWeight: 700 }}>{t('driver.payment.qrGuideTitle')}</AlertTitle>
             <Box component="ol" sx={{ pl: 2, m: 0, '& li': { mb: 0.5 } }}>
-              <li>Mở app ngân hàng (MB Bank, VCB, Techcombank...)</li>
-              <li>Chọn <strong>Quét QR / Chuyển khoản QR</strong></li>
-              <li>Quét mã QR phía trên</li>
-              <li>Kiểm tra số tiền và <strong>nội dung chuyển khoản</strong></li>
-              <li>Xác nhận — hệ thống tự cập nhật sau vài giây</li>
+              <li>{t('driver.payment.qrGuide1')}</li>
+              <li>{t('driver.payment.qrGuide2')}</li>
+              <li>{t('driver.payment.qrGuide3')}</li>
+              <li>{t('driver.payment.qrGuide4')}</li>
+              <li>{t('driver.payment.qrGuide5')}</li>
             </Box>
           </Alert>
         </Box>
@@ -625,7 +636,7 @@ const DriverPayment = () => {
       <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center" mt={2}>
         <SecurityIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
         <Typography variant="caption" color="text.disabled">
-          Bảo mật bởi <strong>PayOS</strong> · VietQR
+          {t('driver.payment.securedBy')} <strong>PayOS</strong> · VietQR
         </Typography>
       </Stack>
     </Container>
@@ -649,9 +660,9 @@ const DriverPayment = () => {
           }}>
             <CheckCircleIcon sx={{ fontSize: 48 }} />
           </Box>
-          <Typography variant="h5" fontWeight={900} mb={1}>Thanh toán thành công!</Typography>
+          <Typography variant="h5" fontWeight={900} mb={1}>{t('driver.payment.doneTitle')}</Typography>
           <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
-            Xe của bạn đã được ghi nhận. Vui lòng ra cổng để nhân viên xác nhận.
+            {t('driver.payment.doneBody')}
           </Typography>
         </Box>
 
@@ -660,25 +671,25 @@ const DriverPayment = () => {
             <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5, mb: 3 }}>
               <Stack spacing={1.5}>
                 <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">Số tiền đã trả</Typography>
-                  <Typography fontWeight={800} color="success.main">{fmt(payment.amount)}</Typography>
+                  <Typography variant="body2" color="text.secondary">{t('driver.payment.paidAmount')}</Typography>
+                  <Typography fontWeight={800} color="success.main">{fmt(payment.amount, cur)}</Typography>
                 </Stack>
                 {payment.sessionInfo && (
                   <>
                     <Divider />
                     <Stack direction="row" justifyContent="space-between">
-                      <Typography variant="body2" color="text.secondary">Biển số</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('driver.payment.plate')}</Typography>
                       <Typography fontWeight={700}>{payment.sessionInfo.plateNumber}</Typography>
                     </Stack>
                     <Stack direction="row" justifyContent="space-between">
-                      <Typography variant="body2" color="text.secondary">Vị trí</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('driver.payment.location')}</Typography>
                       <Typography fontWeight={700}>{payment.sessionInfo.slotCode}</Typography>
                     </Stack>
                   </>
                 )}
                 <Divider />
                 <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">Thời gian thanh toán</Typography>
+                  <Typography variant="body2" color="text.secondary">{t('driver.payment.paidAt')}</Typography>
                   <Typography fontWeight={700}>{fmtTime(new Date())}</Typography>
                 </Stack>
               </Stack>
@@ -686,8 +697,8 @@ const DriverPayment = () => {
           )}
 
           <Alert severity="warning" sx={{ borderRadius: 2, mb: 2 }}>
-            <AlertTitle>Lưu ý</AlertTitle>
-            Đây là xác nhận trả trước. Nếu xe ở lại lâu hơn, nhân viên sẽ thu thêm khoản phụ trội khi xe ra cổng.
+            <AlertTitle>{t('driver.payment.doneNoteTitle')}</AlertTitle>
+            {t('driver.payment.doneNoteBody')}
           </Alert>
 
           <Stack spacing={1.5}>
@@ -696,7 +707,7 @@ const DriverPayment = () => {
               onClick={() => navigate('/driver/home')}
               sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}
             >
-              Về trang chủ
+              {t('driver.common.goHome')}
             </Button>
             <Button
               fullWidth variant="outlined"
@@ -704,7 +715,7 @@ const DriverPayment = () => {
               onClick={() => navigate('/driver/history')}
               sx={{ py: 1.25, borderRadius: 2 }}
             >
-              Xem lịch sử giao dịch
+              {t('driver.common.viewHistory')}
             </Button>
           </Stack>
         </CardContent>
@@ -730,9 +741,9 @@ const DriverPayment = () => {
           }}>
             <CancelIcon sx={{ fontSize: 48 }} />
           </Box>
-          <Typography variant="h5" fontWeight={900} mb={1}>Thanh toán thất bại</Typography>
+          <Typography variant="h5" fontWeight={900} mb={1}>{t('driver.payment.failTitle')}</Typography>
           <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
-            Đơn hàng đã bị huỷ hoặc hết hạn 15 phút.
+            {t('driver.payment.failBody')}
           </Typography>
         </Box>
         <CardContent sx={{ p: 4 }}>
@@ -743,14 +754,14 @@ const DriverPayment = () => {
               onClick={() => { setStep('select'); setPayment(null); setPaying(null); loadSessions() }}
               sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}
             >
-              Thử lại
+              {t('driver.common.retry')}
             </Button>
             <Button
               fullWidth variant="outlined"
               onClick={() => navigate('/driver/home')}
               sx={{ py: 1.25, borderRadius: 2 }}
             >
-              Về trang chủ
+              {t('driver.common.goHome')}
             </Button>
           </Stack>
         </CardContent>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Calendar,
   CheckCircle2,
@@ -20,8 +21,8 @@ const getValue = (obj, ...keys) => {
   return ''
 }
 
-const formatDate = (value) => {
-  if (!value) return 'Chưa cập nhật'
+const formatDate = (value, fallback) => {
+  if (!value) return fallback
 
   const date = new Date(value)
 
@@ -44,7 +45,7 @@ const getInitials = (name) => {
     .toUpperCase()
 }
 
-const InfoItem = ({ icon, label, value }) => {
+const InfoItem = ({ icon, label, value, fallback }) => {
   return (
     <div className="rounded-xl border border-gray-100 dark:border-slate-700/50 bg-gray-50/70 p-4">
       <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
@@ -53,13 +54,14 @@ const InfoItem = ({ icon, label, value }) => {
       </div>
 
       <div className="text-sm font-bold text-gray-900 dark:text-white">
-        {value || 'Chưa cập nhật'}
+        {value || fallback}
       </div>
     </div>
   )
 }
 
 const DriverProfile = () => {
+  const { t } = useTranslation()
   const [profile, setProfile] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
@@ -78,7 +80,7 @@ const DriverProfile = () => {
 
       const message =
         error.response?.data?.message ||
-        'Không thể tải hồ sơ cá nhân. Vui lòng thử lại.'
+        t('driver.profile.loadError')
 
       setErrorMessage(message)
     } finally {
@@ -91,7 +93,7 @@ const DriverProfile = () => {
   }, [])
 
   const profileData = useMemo(() => {
-    const fullName = getValue(profile, 'FullName', 'fullName') || 'Người dùng'
+    const fullName = getValue(profile, 'FullName', 'fullName') || t('driver.profile.defaultUser')
     const email = getValue(profile, 'Email', 'email')
     const phoneNumber = getValue(profile, 'PhoneNumber', 'phoneNumber')
     const dateOfBirth = getValue(profile, 'DateOfBirth', 'dateOfBirth')
@@ -108,13 +110,13 @@ const DriverProfile = () => {
       avatarUrl,
       isEmailVerified
     }
-  }, [profile])
+  }, [profile, t])
 
   if (isLoading) {
     return (
       <div className="flex min-h-[420px] items-center justify-center">
         <div className="rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 px-6 py-4 text-sm font-bold text-gray-600 dark:text-gray-400 shadow-sm">
-          Đang tải hồ sơ cá nhân...
+          {t('driver.profile.loading')}
         </div>
       </div>
     )
@@ -133,7 +135,7 @@ const DriverProfile = () => {
           className="mt-4 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
         >
           <RefreshCcw size={16} />
-          Thử lại
+          {t('driver.profile.retry')}
         </button>
       </div>
     )
@@ -144,11 +146,11 @@ const DriverProfile = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-black text-gray-900 dark:text-white">
-            Hồ sơ cá nhân
+            {t('driver.profile.title')}
           </h1>
 
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Thông tin tài khoản Driver trong hệ thống.
+            {t('driver.profile.subtitle')}
           </p>
         </div>
 
@@ -158,7 +160,7 @@ const DriverProfile = () => {
           className="inline-flex w-fit items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800"
         >
           <RefreshCcw size={16} />
-          Làm mới
+          {t('driver.profile.refresh')}
         </button>
       </div>
 
@@ -181,21 +183,21 @@ const DriverProfile = () => {
           </h2>
 
           <p className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-400">
-            Tài khoản Driver
+            {t('driver.profile.accountTag')}
           </p>
 
           <div className="mt-6 rounded-xl bg-gray-50 dark:bg-slate-900/50 p-4 text-left">
             <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
               <Mail size={16} className="text-gray-400" />
               <span className="font-semibold">
-                {profileData.email || 'Chưa cập nhật'}
+                {profileData.email || t('driver.profile.notUpdated')}
               </span>
             </div>
 
             <div className="mt-3 flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
               <Phone size={16} className="text-gray-400" />
               <span className="font-semibold">
-                {profileData.phoneNumber || 'Chưa cập nhật'}
+                {profileData.phoneNumber || t('driver.profile.notUpdated')}
               </span>
             </div>
           </div>
@@ -204,37 +206,41 @@ const DriverProfile = () => {
         <div className="rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-6 shadow-sm">
           <div className="mb-6 border-b border-gray-100 dark:border-slate-700/50 pb-4">
             <h2 className="text-lg font-black text-gray-900 dark:text-white">
-              Thông tin cơ bản
+              {t('driver.profile.basicInfoTitle')}
             </h2>
 
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Các thông tin chính của tài khoản.
+              {t('driver.profile.basicInfoSubtitle')}
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <InfoItem
               icon={<User size={16} />}
-              label="Họ và tên"
+              label={t('driver.profile.fullName')}
               value={profileData.fullName}
+              fallback={t('driver.profile.notUpdated')}
             />
 
             <InfoItem
               icon={<Phone size={16} />}
-              label="Số điện thoại"
+              label={t('driver.profile.phone')}
               value={profileData.phoneNumber}
+              fallback={t('driver.profile.notUpdated')}
             />
 
             <InfoItem
               icon={<Mail size={16} />}
-              label="Email"
+              label={t('driver.profile.email')}
               value={profileData.email}
+              fallback={t('driver.profile.notUpdated')}
             />
 
             <InfoItem
               icon={<Calendar size={16} />}
-              label="Ngày sinh"
-              value={formatDate(profileData.dateOfBirth)}
+              label={t('driver.profile.dob')}
+              value={formatDate(profileData.dateOfBirth, t('driver.profile.notUpdated'))}
+              fallback={t('driver.profile.notUpdated')}
             />
           </div>
 
@@ -248,7 +254,7 @@ const DriverProfile = () => {
 
               <div>
                 <p className="text-sm font-bold text-gray-900 dark:text-white">
-                  Trạng thái email
+                  {t('driver.profile.emailStatus')}
                 </p>
 
                 <p
@@ -259,15 +265,15 @@ const DriverProfile = () => {
                   }`}
                 >
                   {profileData.isEmailVerified
-                    ? 'Email đã xác thực'
-                    : 'Email chưa xác thực'}
+                    ? t('driver.profile.emailVerified')
+                    : t('driver.profile.emailNotVerified')}
                 </p>
               </div>
             </div>
           </div>
 
           <p className="mt-5 text-xs text-gray-400">
-            Nếu cần thay đổi thông tin cá nhân, vui lòng cập nhật ở trang Cài đặt tài khoản.
+            {t('driver.profile.settingsHint')}
           </p>
         </div>
       </div>

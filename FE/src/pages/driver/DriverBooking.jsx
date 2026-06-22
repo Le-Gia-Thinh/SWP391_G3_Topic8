@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CalendarDays,
   MapPin,
@@ -12,6 +12,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { formatPlateNumber } from '../../utils/formatters'
 import authorizeAxios from '../../utils/authorizeAxios'
 
@@ -98,6 +99,7 @@ const uniqueBy = (items, keyGetter) => {
 }
 
 const DriverBooking = () => {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const latestSlotRequestRef = useRef(0)
 
@@ -382,7 +384,7 @@ const DriverBooking = () => {
 
       const message =
         error.response?.data?.message ||
-        'Không thể tải sơ đồ vị trí trống từ database.'
+        t('driver.booking.errLoadSlots')
 
       setErrorMessage(message)
       setAvailableSlots([])
@@ -496,7 +498,7 @@ const DriverBooking = () => {
       setBookingDate(today)
       setStartTime(getMinimumStartTimeValue())
       setIsStartTimeTouched(false)
-      setErrorMessage('Không thể chọn ngày trong quá khứ.')
+      setErrorMessage(t('driver.booking.errPastDate'))
       return
     }
 
@@ -523,7 +525,7 @@ const DriverBooking = () => {
     if (isToday(bookingDate) && !isStartTimeValid(bookingDate, value)) {
       setStartTime(minimumTime)
       setIsStartTimeTouched(false)
-      setErrorMessage('Giờ bắt đầu đã được tự động cập nhật để cách hiện tại tối thiểu 15 phút.')
+      setErrorMessage(t('driver.booking.errTimeAdjusted'))
       return
     }
 
@@ -650,7 +652,7 @@ const DriverBooking = () => {
     setErrorMessage('')
 
     if (!licensePlate.trim()) {
-      setErrorMessage('Vui lòng nhập biển số xe.')
+      setErrorMessage(t('driver.booking.errNoPlate'))
       return
     }
 
@@ -658,12 +660,12 @@ const DriverBooking = () => {
       const minimumTime = getMinimumStartTimeValue()
       setStartTime(minimumTime)
       setIsStartTimeTouched(false)
-      setErrorMessage('Thời gian đặt chỗ đã được cập nhật. Vui lòng bấm xác nhận lại.')
+      setErrorMessage(t('driver.booking.errReconfirm'))
       return
     }
 
     if (!selectedSlotId) {
-      setErrorMessage('Vui lòng chọn một vị trí đỗ xe còn trống.')
+      setErrorMessage(t('driver.booking.errNoSlot'))
       return
     }
 
@@ -700,9 +702,7 @@ const DriverBooking = () => {
 
       if (!reservationId) {
         console.error('Không tìm thấy ReservationID trong response:', response.data)
-        setErrorMessage(
-          'Đặt chỗ thành công nhưng không lấy được mã đặt chỗ để chuyển sang trang xác nhận.'
-        )
+        setErrorMessage(t('driver.booking.errNoReservationId'))
         return
       }
 
@@ -724,7 +724,7 @@ const DriverBooking = () => {
           endClockText: reservation?.EndClockText,
           temporaryPrice,
           statusValue: reservation?.StatusValue || 'active',
-          statusLabel: reservation?.StatusLabel || 'Đang hoạt động'
+          statusLabel: reservation?.StatusLabel || t('driver.booking.statusActive')
         }
       })
     } catch (error) {
@@ -734,7 +734,7 @@ const DriverBooking = () => {
       const message =
         error.response?.data?.message ||
         error.response?.data?.errors?.[0] ||
-        'Đặt chỗ thất bại. Vui lòng thử lại.'
+        t('driver.booking.errBookFail')
 
       setErrorMessage(message)
       await fetchAvailableSlots()
@@ -751,10 +751,10 @@ const DriverBooking = () => {
     <form onSubmit={handleSubmit} className="mx-auto max-w-6xl animate-in fade-in duration-500">
       <div className="mb-6">
         <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
-          Đặt chỗ đỗ xe mới
+          {t('driver.booking.title')}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Chọn thời gian theo giờ Việt Nam, vị trí trống sẽ được tải trực tiếp từ database.
+          {t('driver.booking.subtitle')}
         </p>
       </div>
 
@@ -768,10 +768,10 @@ const DriverBooking = () => {
 
               <div>
                 <h2 className="text-base font-bold text-gray-900 dark:text-white">
-                  Thông tin đặt chỗ
+                  {t('driver.booking.infoTitle')}
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Giờ bắt đầu sẽ tự động bám theo thời gian hiện tại + 15 phút nếu bạn chưa chọn giờ xa hơn.
+                  {t('driver.booking.infoDesc')}
                 </p>
               </div>
             </div>
@@ -779,7 +779,7 @@ const DriverBooking = () => {
             <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Tòa nhà
+                  {t('driver.booking.building')}
                 </label>
                 <select
                   value={buildingId}
@@ -796,7 +796,7 @@ const DriverBooking = () => {
 
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Chọn xe
+                  {t('driver.booking.selectVehicle')}
                 </label>
                 <select
                   value={selectedVehicleId}
@@ -805,22 +805,22 @@ const DriverBooking = () => {
                 >
                   {vehicles.map((v) => (
                     <option key={v.VehicleID} value={v.VehicleID}>
-                      {v.PlateNumber} ({v.VehicleTypeID === 1 ? 'Xe máy' : v.VehicleTypeID === 2 ? 'Ô tô' : 'Xe tải'})
+                      {v.PlateNumber} ({v.VehicleTypeID === 1 ? t('driver.booking.vehicleMoto') : v.VehicleTypeID === 2 ? t('driver.booking.vehicleCar') : t('driver.booking.vehicleTruck')})
                     </option>
                   ))}
-                  <option value="manual">[Nhập thủ công]</option>
+                  <option value="manual">{t('driver.booking.manualOption')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Biển số xe
+                  {t('driver.booking.plate')}
                 </label>
                 <input
                   type="text"
                   value={licensePlate}
                   onChange={(event) => setLicensePlate(formatPlateNumber(event.target.value))}
-                  placeholder="VD: 51K-123.45"
+                  placeholder={t('driver.booking.platePlaceholder')}
                   disabled={selectedVehicleId !== 'manual'}
                   className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 px-4 py-2.5 text-sm uppercase outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
                   required
@@ -829,7 +829,7 @@ const DriverBooking = () => {
 
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Loại phương tiện
+                  {t('driver.booking.vehicleType')}
                 </label>
                 <select
                   value={vehicleType}
@@ -849,14 +849,14 @@ const DriverBooking = () => {
             <div className="mt-5 flex items-start gap-1 text-xs text-gray-500 dark:text-gray-400">
               <Info size={14} className="mt-0.5 shrink-0 text-blue-500" />
               <span>
-                Nếu bạn để giờ bắt đầu ở mốc sớm nhất, hệ thống sẽ tự tăng theo thời gian thực để luôn hợp lệ.
+                {t('driver.booking.autoUpdateHint')}
               </span>
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3">
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Ngày đỗ
+                  {t('driver.booking.date')}
                 </label>
                 <div className="relative">
                   <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -873,7 +873,7 @@ const DriverBooking = () => {
 
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Giờ bắt đầu
+                  {t('driver.booking.startTime')}
                 </label>
                 <div className="relative">
                   <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -889,7 +889,7 @@ const DriverBooking = () => {
 
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Thời lượng: <span className="text-blue-600 dark:text-blue-400">{duration.replace('h', ' Giờ')}</span>
+                  {t('driver.booking.durationLabel', { value: duration.replace('h', t('driver.booking.hourSuffix')) })}
                 </label>
                 <div className="pt-2 pb-1">
                   <input
@@ -925,7 +925,7 @@ const DriverBooking = () => {
             <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <h2 className="text-base font-bold text-gray-900 dark:text-white">
-                  Sơ đồ vị trí trống
+                  {t('driver.booking.slotsTitle')}
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {buildingLabel} - {selectedSlot?.FloorName || '--'} - {selectedSlot?.ZoneName || '--'}
@@ -942,7 +942,7 @@ const DriverBooking = () => {
                     onChange={() => setSlotFilter('all')}
                     className="h-3 w-3 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
                   />
-                  Tất cả
+                  {t('driver.booking.filterAll')}
                 </label>
 
                 <label className="flex items-center gap-1.5 cursor-pointer">
@@ -954,7 +954,7 @@ const DriverBooking = () => {
                     onChange={() => setSlotFilter('available')}
                     className="h-4 w-4 text-blue-600 dark:text-blue-400 focus:ring-blue-500"
                   />
-                  Trống (Viền xanh)
+                  {t('driver.booking.filterAvailable')}
                 </label>
 
                 <label className="flex items-center gap-1.5 cursor-pointer">
@@ -966,13 +966,13 @@ const DriverBooking = () => {
                     onChange={() => setSlotFilter('occupied')}
                     className="h-4 w-4 text-gray-600 dark:text-gray-400 focus:ring-gray-500"
                   />
-                  Đã đỗ / Đã giữ (Màu xám)
+                  {t('driver.booking.filterOccupied')}
                 </label>
               </div>
             </div>
 
             <div className="mb-4 flex items-start gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
-              ✨ Vị trí có dấu sao là vị trí được AI phân tích tối ưu nhất để tiết kiệm thời gian tìm kiếm.
+              {t('driver.booking.aiHint')}
             </div>
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -983,7 +983,7 @@ const DriverBooking = () => {
                 disabled={floorOptions.length === 0}
               >
                 {floorOptions.length === 0 ? (
-                  <option value="">Chọn tầng...</option>
+                  <option value="">{t('driver.booking.selectFloor')}</option>
                 ) : (
                   floorOptions.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -1000,7 +1000,7 @@ const DriverBooking = () => {
                 disabled={zoneOptions.length === 0}
               >
                 {zoneOptions.length === 0 ? (
-                  <option value="">Chọn khu...</option>
+                  <option value="">{t('driver.booking.selectZone')}</option>
                 ) : (
                   zoneOptions.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -1017,18 +1017,18 @@ const DriverBooking = () => {
                   onChange={handleAutoSelectChange}
                   className="h-4 w-4 rounded border-gray-300"
                 />
-                Tự động chọn vị trí tối ưu
+                {t('driver.booking.autoSelect')}
               </label>
             </div>
 
             <div className="rounded-xl border border-gray-100 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-900/50 p-6">
               {isLoadingSlots ? (
                 <div className="py-8 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">
-                  Đang tải vị trí từ database...
+                  {t('driver.booking.loadingSlots')}
                 </div>
               ) : finalDisplaySlots.length === 0 ? (
                 <div className="py-8 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">
-                  Không có vị trí phù hợp với bộ lọc hiện tại.
+                  {t('driver.booking.noSlotsFilter')}
                 </div>
               ) : (
                 <>
@@ -1040,10 +1040,10 @@ const DriverBooking = () => {
                       </div>
                       <div className="flex-1">
                         <h3 className="font-bold text-blue-800 dark:text-blue-300 text-sm flex items-center gap-2">
-                          Đề xuất thông minh từ AI
+                          {t('driver.booking.aiBannerTitle')}
                         </h3>
                         <p className="text-gray-700 dark:text-gray-300 text-xs mt-1.5 leading-relaxed">
-                          Hệ thống khuyên bạn nên chọn vị trí <span className="font-bold text-blue-700 dark:text-blue-400 text-sm">{finalDisplaySlots.find(s => s.isAIRec).SlotCode}</span>. {finalDisplaySlots.find(s => s.isAIRec).AIReason}
+                          {t('driver.booking.aiBannerBodyPre')} <span className="font-bold text-blue-700 dark:text-blue-400 text-sm">{finalDisplaySlots.find(s => s.isAIRec).SlotCode}</span>. {finalDisplaySlots.find(s => s.isAIRec).AIReason}
                         </p>
                       </div>
                     </div>
@@ -1063,12 +1063,12 @@ const DriverBooking = () => {
                             : slot.isAIRec
                               ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)] ring-2 ring-yellow-400/50 hover:border-yellow-500 z-10 scale-105'
                               : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:text-blue-500'
-                        }`}
+                          }`}
                       >
                         {slot.SlotCode}
                         {slot.isAIRec && (
-                          <div className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400 text-[10px] text-white shadow-sm animate-bounce" title="AI Gợi ý">
-                          ✨
+                          <div className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-yellow-400 text-[10px] text-white shadow-sm animate-bounce" title={t('driver.booking.aiTooltip')}>
+                            ✨
                           </div>
                         )}
                       </button>
@@ -1090,13 +1090,13 @@ const DriverBooking = () => {
                   {buildingLabel}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {selectedSlot?.Address || 'Địa chỉ bãi xe'}
+                  {selectedSlot?.Address || t('driver.booking.addressFallback')}
                 </p>
               </div>
             </div>
 
             <div className="w-fit rounded-lg border border-blue-100 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 shadow-sm">
-              Slot: {selectedSlot?.SlotCode || '--'}
+              {t('driver.booking.slotBadge', { code: selectedSlot?.SlotCode || '--' })}
             </div>
           </div>
         </div>
@@ -1105,20 +1105,20 @@ const DriverBooking = () => {
           <div className="sticky top-6 rounded-2xl border-2 border-blue-100 bg-white dark:bg-slate-800 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-white">
               <CreditCard className="text-blue-500" size={20} />
-              Tóm tắt đặt chỗ
+              {t('driver.booking.summaryTitle')}
             </h2>
 
             <div className="mb-6 space-y-4">
-              <SummaryRow icon={<Building size={16} />} label="Tòa nhà" value={buildingLabel} />
-              <SummaryRow icon={<Car size={16} />} label="Biển số xe" value={licensePlate || 'Chưa nhập'} />
-              <SummaryRow label="Loại xe" value={vehicleLabel} />
-              <SummaryRow icon={<Clock size={16} />} label="Thời gian vào" value={`${startTime} - ${bookingDate}`} />
-              <SummaryRow label="Thời lượng" value={durationLabel} />
+              <SummaryRow icon={<Building size={16} />} label={t('driver.booking.buildingLabel')} value={buildingLabel} />
+              <SummaryRow icon={<Car size={16} />} label={t('driver.booking.plateLabel')} value={licensePlate || t('driver.booking.plateNotEntered')} />
+              <SummaryRow label={t('driver.booking.vehicleLabel')} value={vehicleLabel} />
+              <SummaryRow icon={<Clock size={16} />} label={t('driver.booking.timeIn')} value={`${startTime} - ${bookingDate}`} />
+              <SummaryRow label={t('driver.booking.durationSummary')} value={durationLabel} />
 
               <div className="flex items-center justify-between pb-2 text-sm">
                 <span className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                   <MapPin size={16} />
-                  Vị trí đỗ
+                  {t('driver.booking.slotPos')}
                 </span>
 
                 <span className="rounded-md bg-blue-50 dark:bg-blue-900/20 px-2 py-1 font-bold text-blue-600 dark:text-blue-400">
@@ -1130,29 +1130,29 @@ const DriverBooking = () => {
             <div className="mb-6 rounded-xl border border-gray-100 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-900/50 p-4">
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                  Giá tạm tính
+                  {t('driver.booking.tempPrice')}
                 </span>
 
                 <span className="text-xl font-black text-gray-900 dark:text-white">
-                  {formatCurrency(temporaryPrice)} VND
+                  {formatCurrency(temporaryPrice)} {t('driver.common.currency')}
                 </span>
               </div>
 
               <p className="text-right text-[10px] font-medium text-blue-500">
-                Giá demo tạm tính
+                {t('driver.booking.tempPriceNote')}
               </p>
             </div>
 
             <div className="mb-6 rounded-xl border border-orange-100 bg-orange-50/50 p-4">
               <h4 className="mb-2 flex items-center gap-1.5 text-xs font-bold text-orange-800">
                 <AlertCircle size={14} />
-                Lưu ý
+                {t('driver.booking.noteTitle')}
               </h4>
 
               <ul className="list-disc space-y-1.5 pl-4 text-[11px] font-medium text-orange-700 opacity-90">
-                <li>Giờ bắt đầu tự cập nhật nếu đang ở mốc sớm nhất.</li>
-                <li>Booking chỉ hết hạn khi EndTime nhỏ hơn giờ hiện tại của SQL Server.</li>
-                <li>Khi staff check-in, xe chuyển sang phiên gửi hiện tại.</li>
+                <li>{t('driver.booking.note1')}</li>
+                <li>{t('driver.booking.note2')}</li>
+                <li>{t('driver.booking.note3')}</li>
               </ul>
             </div>
 
@@ -1168,7 +1168,7 @@ const DriverBooking = () => {
               className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <CheckCircle2 size={18} />
-              {isSubmitting ? 'Đang đặt chỗ...' : 'Xác nhận đặt chỗ'}
+              {isSubmitting ? t('driver.booking.submitting') : t('driver.booking.submit')}
             </button>
 
             <button
@@ -1176,7 +1176,7 @@ const DriverBooking = () => {
               onClick={() => navigate('/driver/home')}
               className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-3.5 font-bold text-gray-600 dark:text-gray-400 transition-all hover:bg-gray-50 dark:hover:bg-slate-800"
             >
-              Hủy bỏ
+              {t('driver.booking.cancelBtn')}
             </button>
           </div>
         </div>

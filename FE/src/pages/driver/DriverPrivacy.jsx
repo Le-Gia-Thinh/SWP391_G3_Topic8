@@ -1,8 +1,10 @@
 import React from 'react'
 import { ShieldAlert, ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 const DriverPrivacy = () => {
+  const { t } = useTranslation()
   return (
     <div className="animate-in fade-in duration-500 max-w-3xl mx-auto space-y-6 bg-white dark:bg-slate-800 p-8 rounded-2xl border border-gray-100 dark:border-slate-700/50 shadow-sm">
       <div className="flex items-center gap-3 border-b border-gray-100 dark:border-slate-700/50 pb-4">
@@ -10,27 +12,27 @@ const DriverPrivacy = () => {
           <ChevronLeft size={20} />
         </Link>
         <ShieldAlert className="text-emerald-500" size={24} />
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Chính sách bảo mật</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('driver.helpPage.privacy.title')}</h1>
       </div>
 
       <div className="prose prose-sm prose-emerald max-w-none text-gray-600 dark:text-gray-400 leading-relaxed space-y-4">
-        <p className="font-semibold text-gray-800 dark:text-gray-200">Cập nhật lần cuối: 24/05/2026</p>
+        <p className="font-semibold text-gray-800 dark:text-gray-200">{t('driver.helpPage.privacy.lastUpdated')}</p>
 
-        <p>Chính sách này giải thích cách chúng tôi thu thập, sử dụng, chia sẻ và bảo vệ thông tin cá nhân của bạn khi sử dụng hệ thống đỗ xe thông minh PBMS.</p>
+        <p>{t('driver.helpPage.privacy.intro')}</p>
 
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">1. Thông tin chúng tôi thu thập</h3>
-        <p>Chúng tôi chỉ thu thập các thông tin cần thiết phục vụ cho việc quản lý bãi xe bao gồm:</p>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">{t('driver.helpPage.privacy.section1Title')}</h3>
+        <p>{t('driver.helpPage.privacy.section1Intro')}</p>
         <ul className="list-disc pl-5 space-y-2">
-          <li>Thông tin tài khoản: Họ tên, Email, Số điện thoại.</li>
-          <li>Thông tin phương tiện: Biển số xe, Loại xe.</li>
-          <li>Dữ liệu lịch sử gửi xe và hình ảnh biển số chụp tự động tại cổng ra/vào.</li>
+          <li>{t('driver.helpPage.privacy.section1Item1')}</li>
+          <li>{t('driver.helpPage.privacy.section1Item2')}</li>
+          <li>{t('driver.helpPage.privacy.section1Item3')}</li>
         </ul>
 
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">2. Sử dụng thông tin</h3>
-        <p>Dữ liệu của bạn được dùng hoàn toàn cho mục đích xác thực tự động tại cổng, ghi nhận thời gian gửi để tính phí chính xác và đảm bảo an ninh cho phương tiện của bạn.</p>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">{t('driver.helpPage.privacy.section2Title')}</h3>
+        <p>{t('driver.helpPage.privacy.section2Body')}</p>
 
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">3. Bảo vệ dữ liệu</h3>
-        <p>Chúng tôi áp dụng các tiêu chuẩn mã hóa SSL/TLS để bảo vệ dữ liệu truyền tải. Dữ liệu thẻ thanh toán không được lưu trữ trực tiếp trên máy chủ của chúng tôi mà qua đối tác thanh toán đạt chuẩn PCI-DSS.</p>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6">{t('driver.helpPage.privacy.section3Title')}</h3>
+        <p>{t('driver.helpPage.privacy.section3Body')}</p>
       </div>
     </div>
   )
