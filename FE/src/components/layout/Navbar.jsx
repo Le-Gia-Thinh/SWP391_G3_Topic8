@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useAppTheme } from '../../contexts/AppThemeContext'
 import { toast } from 'react-toastify'
 import driverApi from '../../apis/driverApi'
+import LanguageSwitcher from '../ui/LanguageSwitcher'
 
 const getInitials = (name) => {
   if (!name) return 'U'
@@ -123,6 +124,8 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
         >
           {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
         </button>
+
+        <LanguageSwitcher />
 
         {/* Notifications */}
         <div className="relative">

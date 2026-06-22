@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Bike,
   CarFront,
@@ -25,39 +26,39 @@ import authorizeAxios from '../../utils/authorizeAxios'
 
 const QUICK_ACTIONS = [
   {
-    title: 'Đặt chỗ đỗ xe',
-    description: 'Giữ chỗ trước cho chuyến đi',
+    titleKey: 'driverHome.quickActions.booking.title',
+    descriptionKey: 'driverHome.quickActions.booking.desc',
     to: '/driver/booking',
     Icon: CalendarDays,
     variant: 'primary'
   },
   {
-    title: 'Phiên gửi xe',
-    description: 'Thời gian, vị trí, phí gửi',
+    titleKey: 'driverHome.quickActions.session.title',
+    descriptionKey: 'driverHome.quickActions.session.desc',
     to: '/driver/session',
     Icon: Clock,
     iconClass: 'text-blue-500',
     bgClass: 'bg-blue-50 dark:bg-blue-900/20'
   },
   {
-    title: 'Lịch sử đặt chỗ',
-    description: 'Xem các booking đã tạo',
+    titleKey: 'driverHome.quickActions.history.title',
+    descriptionKey: 'driverHome.quickActions.history.desc',
     to: '/driver/history',
     Icon: FileText,
     iconClass: 'text-indigo-500',
     bgClass: 'bg-indigo-50'
   },
   {
-    title: 'Báo sự cố',
-    description: 'Gửi báo cáo vấn đề',
+    titleKey: 'driverHome.quickActions.report.title',
+    descriptionKey: 'driverHome.quickActions.report.desc',
     to: '/driver/report',
     Icon: AlertCircle,
     iconClass: 'text-rose-500',
     bgClass: 'bg-rose-50'
   },
   {
-    title: 'Hỗ trợ kỹ thuật',
-    description: 'Chat với nhân viên',
+    titleKey: 'driverHome.quickActions.support.title',
+    descriptionKey: 'driverHome.quickActions.support.desc',
     to: '/driver/support',
     Icon: MessageSquare,
     iconClass: 'text-emerald-500',
@@ -144,7 +145,8 @@ const SectionHeader = ({ icon: Icon, title, actionText, actionTo }) => {
   )
 }
 
-const VehicleStatusCard = ({ vehicle }) => {
+const VehicleStatusCard = ({ vehicle }) => {  const { t } = useTranslation();
+
   const { Icon, color } = getVehicleIconAndColor(vehicle.VehicleCode, vehicle.VehicleName)
   const classes = COLOR_CLASSES[color] || COLOR_CLASSES.blue
   const available = Number(vehicle.AvailableSlots || 0)
@@ -164,14 +166,14 @@ const VehicleStatusCard = ({ vehicle }) => {
           </p>
           <div className="flex items-baseline justify-end gap-1">
             <span className="text-2xl font-black text-slate-900 dark:text-white">{available}</span>
-            <span className="text-xs font-bold text-slate-400">/ {total} trống</span>
+            <span className="text-xs font-bold text-slate-400">{t('driverHome.capacity.available', { total })}</span>
           </div>
         </div>
       </div>
 
       <div className="mt-5">
         <div className="flex justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5">
-          <span>Tỷ lệ lấp đầy</span>
+          <span>{t('driverHome.capacity.fillRate')}</span>
           <span>{percentage.toFixed(1)}%</span>
         </div>
         <div className={`h-2 w-full overflow-hidden rounded-full ${classes.progressBg}`}>
@@ -185,7 +187,11 @@ const VehicleStatusCard = ({ vehicle }) => {
   )
 }
 
-const QuickActionCard = ({ to, title, description, Icon, variant, iconClass, bgClass }) => {
+const QuickActionCard = ({ to, title, titleKey, description, descriptionKey, Icon, variant, iconClass, bgClass }) => {
+  const { t } = useTranslation();
+  const displayTitle = titleKey ? t(titleKey) : title;
+  const displayDesc = descriptionKey ? t(descriptionKey) : description;
+
   if (variant === 'primary') {
     return (
       <Link
@@ -197,8 +203,8 @@ const QuickActionCard = ({ to, title, description, Icon, variant, iconClass, bgC
           <div className="mb-4 inline-flex rounded-xl bg-white/20 dark:bg-slate-800/20 p-3 backdrop-blur-md">
             <Icon size={24} className="text-white" />
           </div>
-          <h3 className="mb-1.5 text-lg font-bold">{title}</h3>
-          <p className="text-xs font-medium text-blue-100/90">{description}</p>
+          <h3 className="mb-1.5 text-lg font-bold">{displayTitle}</h3>
+          <p className="text-xs font-medium text-blue-100/90">{displayDesc}</p>
         </div>
       </Link>
     )
@@ -212,13 +218,14 @@ const QuickActionCard = ({ to, title, description, Icon, variant, iconClass, bgC
       <div className={`mb-4 inline-flex rounded-xl p-3 transition-transform duration-300 group-hover:scale-110 ${bgClass || 'bg-slate-50 dark:bg-slate-900/50'}`}>
         <Icon className={iconClass || 'text-slate-500 dark:text-slate-400'} size={24} />
       </div>
-      <h3 className="mb-1.5 text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-700 dark:text-blue-400 transition-colors">{title}</h3>
-      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{description}</p>
+      <h3 className="mb-1.5 text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-700 dark:text-blue-400 transition-colors">{displayTitle}</h3>
+      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{displayDesc}</p>
     </Link>
   )
 }
 
-const InfoRow = ({ label, value, highlight = false, border = true }) => {
+const InfoRow = ({ label, value, highlight = false, border = true }) => {  const { t } = useTranslation();
+
   return (
     <div className={`flex items-center justify-between gap-4 text-sm ${border ? 'border-b border-dashed border-slate-200 dark:border-slate-700 pb-3' : ''}`}>
       <span className="font-medium text-slate-500 dark:text-slate-400">{label}</span>
@@ -229,13 +236,14 @@ const InfoRow = ({ label, value, highlight = false, border = true }) => {
   )
 }
 
-const BookingCard = ({ booking }) => {
+const BookingCard = ({ booking }) => {  const { t } = useTranslation();
+
   if (!booking) {
     return (
       <EmptyCard
-        title="Chưa có đặt chỗ"
-        description="Giữ vị trí đẹp cho chuyến đi sắp tới của bạn ngay hôm nay."
-        actionText="Tạo đặt chỗ"
+        title={t('driverHome.workflows.noBooking')}
+        description={t('driverHome.workflows.noBookingDesc')}
+        actionText={t('driverHome.workflows.createBooking')}
         actionTo="/driver/booking"
         icon={CalendarCheck2}
       />
@@ -251,7 +259,7 @@ const BookingCard = ({ booking }) => {
 
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Mã đặt chỗ</p>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('driverHome.workflows.bookingCode')}</p>
           <h3 className="text-2xl font-black tracking-tight text-blue-600 dark:text-blue-400">{booking.BookingCode}</h3>
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/60 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-blue-600 dark:text-blue-400">
@@ -261,10 +269,10 @@ const BookingCard = ({ booking }) => {
       </div>
 
       <div className="flex-1 space-y-4 rounded-xl bg-slate-50/50 p-5 border border-slate-100 dark:border-slate-700/50">
-        <InfoRow label="Bắt đầu" value={formatDateTime(booking.StartTime)} />
-        <InfoRow label="Kết thúc" value={formatDateTime(booking.EndTime)} />
-        <InfoRow label="Loại xe" value={booking.VehicleName || '--'} />
-        <InfoRow label="Vị trí chỉ định" value={slotText} highlight border={false} />
+        <InfoRow label={t('driverHome.workflows.start')} value={formatDateTime(booking.StartTime)} />
+        <InfoRow label={t('driverHome.workflows.end')} value={formatDateTime(booking.EndTime)} />
+        <InfoRow label={t('driverHome.workflows.vehicleType')} value={booking.VehicleName || '--'} />
+        <InfoRow label={t('driverHome.workflows.location')} value={slotText} highlight border={false} />
       </div>
 
       <Link
@@ -282,19 +290,20 @@ const BookingCard = ({ booking }) => {
         }}
         className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-slate-300 transition-all hover:bg-slate-50 dark:bg-slate-900/50 hover:border-slate-300 active:scale-95"
       >
-        Xem mã QR <ChevronRight size={16} />
+        {t('driverHome.workflows.viewQr')} <ChevronRight size={16} />
       </Link>
     </div>
   )
 }
 
-const ActiveSessionCard = ({ session }) => {
+const ActiveSessionCard = ({ session }) => {  const { t } = useTranslation();
+
   if (!session) {
     return (
       <EmptyCard
-        title="Chưa có phiên gửi xe"
-        description="Phiên gửi xe sẽ tự động xuất hiện khi bạn check-in vào bãi đỗ."
-        actionText="Xem lịch sử"
+        title={t('driverHome.workflows.noSession')}
+        description={t('driverHome.workflows.noSessionDesc')}
+        actionText={t('driverHome.workflows.viewHistory')}
         actionTo="/driver/session"
         icon={Activity}
       />
@@ -311,33 +320,33 @@ const ActiveSessionCard = ({ session }) => {
 
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Biển số đang gửi</p>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('driverHome.workflows.plate')}</p>
           <h3 className="text-2xl font-black text-slate-900 dark:text-white">{session.PlateNumber || '--'}</h3>
         </div>
         <div className="text-right">
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">Loại phiên</p>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('driverHome.workflows.sessionType')}</p>
           <span className="inline-block rounded-lg bg-indigo-50 px-2 py-1 text-xs font-bold text-indigo-700 border border-indigo-100">
-            {session.BookingCode ? 'Đặt trước' : 'Vãng lai'}
+            {session.BookingCode ? t('driverHome.workflows.prebooked') : t('driverHome.workflows.walkIn')}
           </span>
         </div>
       </div>
 
       <div className="flex-1 space-y-3 border-y border-dashed border-blue-200 py-5">
-        <InfoRow label="Mã phiên" value={session.SessionCode || `SESS-${session.SessionID}`} />
-        <InfoRow label="Liên kết đặt chỗ" value={session.BookingCode || 'Không'} />
-        <InfoRow label="Giờ vào" value={formatDateTime(session.EntryTime)} />
-        <InfoRow label="Vị trí hiện tại" value={slotText} highlight border={false} />
+        <InfoRow label={t('driverHome.workflows.sessionCode')} value={session.SessionCode || `SESS-${session.SessionID}`} />
+        <InfoRow label={t('driverHome.workflows.bookingLink')} value={session.BookingCode || t('driverHome.workflows.none')} />
+        <InfoRow label={t('driverHome.workflows.entryTime')} value={formatDateTime(session.EntryTime)} />
+        <InfoRow label={t('driverHome.workflows.currentLocation')} value={slotText} highlight border={false} />
       </div>
 
       <div className="mt-5">
         <div className="flex items-end justify-between mb-5">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">Tạm tính</p>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">{t('driverHome.workflows.estimatedFee')}</p>
             <span className="text-xl font-black text-blue-600 dark:text-blue-400">{formatCurrency(session.Amount)}</span>
           </div>
           <div className="text-right">
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-              Chưa thanh toán
+              {t('driverHome.workflows.unpaid')}
             </span>
           </div>
         </div>
@@ -347,13 +356,13 @@ const ActiveSessionCard = ({ session }) => {
             to="/driver/report"
             className="flex h-12 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 dark:bg-slate-900/50 hover:border-slate-300 active:scale-95"
           >
-            Sự cố?
+            {t('driverHome.workflows.issue')}
           </Link>
           <Link
             to="/driver/session"
             className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 active:scale-95"
           >
-            Thanh toán ngay <ExternalLink size={16} />
+            {t('driverHome.workflows.payNow')} <ExternalLink size={16} />
           </Link>
         </div>
       </div>
@@ -361,7 +370,8 @@ const ActiveSessionCard = ({ session }) => {
   )
 }
 
-const EmptyCard = ({ title, description, actionText, actionTo, icon: Icon }) => {
+const EmptyCard = ({ title, description, actionText, actionTo, icon: Icon }) => {  const { t } = useTranslation();
+
   return (
     <div className="flex h-full min-h-[400px] flex-col items-center justify-center rounded-[1.5rem] border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 p-8 text-center transition-colors hover:border-blue-300 hover:bg-blue-50/30 group">
       <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700/50 text-slate-400 group-hover:text-blue-500 group-hover:bg-blue-50 dark:bg-blue-900/20 group-hover:border-blue-100 transition-colors">
@@ -379,7 +389,8 @@ const EmptyCard = ({ title, description, actionText, actionTo, icon: Icon }) => 
   )
 }
 
-const DriverHome = () => {
+const DriverHome = () => {  const { t } = useTranslation();
+
   const { user } = useAuth()
   const [homeData, setHomeData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -450,10 +461,10 @@ const DriverHome = () => {
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-blue-500">Trang chủ</p>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Xin chào, {displayName}! 👋</h1>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{t('driverHome.greeting', { name: displayName })}</h1>
           <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
             <Sparkles size={16} className="text-amber-500 animate-pulse" />
-            Chào mừng bạn quay trở lại. Dưới đây là tổng quan tình trạng bãi xe.
+            {t('driverHome.welcomeBack')}
           </p>
         </div>
         <button
@@ -462,17 +473,17 @@ const DriverHome = () => {
           className="flex w-fit items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-400 shadow-sm transition-all hover:bg-slate-50 dark:bg-slate-900/50 hover:text-blue-600 dark:text-blue-400 active:scale-95"
         >
           <RefreshCcw size={16} className={isLoading ? 'animate-spin text-blue-600 dark:text-blue-400' : ''} />
-          {isLoading ? 'Đang tải...' : 'Làm mới'}
+          {isLoading ? t('driverHome.loading') : t('driverHome.refresh')}
         </button>
       </section>
 
       {/* Summary Stats */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <SummaryMiniCard label="Tổng booking" value={bookingSummary.TotalBookings || 0} icon={FileText} color="blue" />
-        <SummaryMiniCard label="Đang hoạt động" value={bookingSummary.ActiveBookings || 0} icon={TrendingUp} color="emerald" />
-        <SummaryMiniCard label="Đã hoàn thành" value={bookingSummary.CompletedBookings || 0} icon={CheckCircle2} color="indigo" />
+        <SummaryMiniCard label={t('driverHome.stats.totalBookings')} value={bookingSummary.TotalBookings || 0} icon={FileText} color="blue" />
+        <SummaryMiniCard label={t('driverHome.stats.active')} value={bookingSummary.ActiveBookings || 0} icon={TrendingUp} color="emerald" />
+        <SummaryMiniCard label={t('driverHome.stats.completed')} value={bookingSummary.CompletedBookings || 0} icon={CheckCircle2} color="indigo" />
         <SummaryMiniCard
-          label="Đã hủy / hết hạn"
+          label={t('driverHome.stats.cancelled')}
           value={Number(bookingSummary.CancelledBookings || 0) + Number(bookingSummary.ExpiredBookings || 0)}
           icon={XCircle}
           color="rose"
@@ -486,14 +497,14 @@ const DriverHome = () => {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-500">
               <Activity size={18} />
             </div>
-            Trạng thái Sức chứa (Live)
+            {t('driverHome.capacity.title')}
           </h2>
           <div className="hidden sm:flex items-center gap-2 text-[11px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700/50">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            Cập nhật lúc {updatedAt}
+            {t('driverHome.capacity.updatedAt', { time: updatedAt })}
           </div>
         </div>
 
@@ -504,7 +515,7 @@ const DriverHome = () => {
             ))
           ) : (
             <div className="col-span-full py-8 text-center text-sm font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
-              Chưa có dữ liệu vị trí đỗ được cập nhật.
+              {t('driverHome.capacity.empty')}
             </div>
           )}
         </div>
@@ -512,7 +523,7 @@ const DriverHome = () => {
 
       {/* Quick Actions */}
       <section>
-        <SectionHeader title="Tiện ích nhanh" icon={CalendarDays} />
+        <SectionHeader title={t('driverHome.quickActions.title')} icon={CalendarDays} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {QUICK_ACTIONS.map((action) => (
             <QuickActionCard key={action.title} {...action} />
@@ -525,8 +536,8 @@ const DriverHome = () => {
         <div className="flex flex-col">
           <SectionHeader
             icon={CalendarCheck2}
-            title="Phiếu Đặt chỗ hiện tại"
-            actionText="Xem lịch sử"
+            title={t('driverHome.workflows.currentBooking')}
+            actionText={t('driverHome.workflows.viewHistory')}
             actionTo="/driver/history"
           />
           <BookingCard booking={homeData?.currentBooking} />
@@ -534,8 +545,8 @@ const DriverHome = () => {
         <div className="flex flex-col">
           <SectionHeader
             icon={Clock}
-            title="Phiếu Gửi xe đang hoạt động"
-            actionText="Chi tiết phiên"
+            title={t('driverHome.workflows.currentSession')}
+            actionText={t('driverHome.workflows.sessionDetail')}
             actionTo="/driver/session"
           />
           <ActiveSessionCard session={homeData?.currentSession} />
@@ -545,7 +556,8 @@ const DriverHome = () => {
   )
 }
 
-const SummaryMiniCard = ({ label, value, icon: Icon, color }) => {
+const SummaryMiniCard = ({ label, value, icon: Icon, color }) => {  const { t } = useTranslation();
+
   const colorMap = {
     blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
     emerald: 'bg-emerald-50 text-emerald-600',

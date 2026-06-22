@@ -397,5 +397,92 @@
     "FORBIDDEN": "Bạn không có quyền thực hiện thao tác này.",
     "REFRESH_TOKEN_EXPIRED": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
     "SESSION_EXPIRED": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại."
+  },
+  "driverHome": {
+    "title": "Trang chủ",
+    "greeting": "Xin chào, {{name}}! 👋",
+    "welcomeBack": "Chào mừng bạn quay trở lại. Dưới đây là tổng quan tình trạng bãi xe.",
+    "refresh": "Làm mới",
+    "loading": "Đang tải...",
+    "syncing": "Đang đồng bộ dữ liệu...",
+    "errorTitle": "Đã có lỗi xảy ra",
+    "retry": "Thử lại",
+    "stats": {
+      "totalBookings": "Tổng booking",
+      "active": "Đang hoạt động",
+      "completed": "Đã hoàn thành",
+      "cancelled": "Đã hủy / hết hạn"
+    },
+    "capacity": {
+      "title": "Trạng thái Sức chứa (Live)",
+      "updatedAt": "Cập nhật lúc {{time}}",
+      "empty": "Chưa có dữ liệu vị trí đỗ được cập nhật.",
+      "fillRate": "Tỷ lệ lấp đầy",
+      "available": "/ {{total}} trống"
+    },
+    "quickActions": {
+      "title": "Tiện ích nhanh",
+      "booking": {
+        "title": "Đặt chỗ đỗ xe",
+        "desc": "Giữ chỗ trước cho chuyến đi"
+      },
+      "session": {
+        "title": "Phiên gửi xe",
+        "desc": "Thời gian, vị trí, phí gửi"
+      },
+      "history": {
+        "title": "Lịch sử đặt chỗ",
+        "desc": "Xem các booking đã tạo"
+      },
+      "report": {
+        "title": "Báo sự cố",
+        "desc": "Gửi báo cáo vấn đề"
+      },
+      "support": {
+        "title": "Hỗ trợ kỹ thuật",
+        "desc": "Chat với nhân viên"
+      }
+    },
+    "workflows": {
+      "currentBooking": "Phiếu Đặt chỗ hiện tại",
+      "viewHistory": "Xem lịch sử",
+      "currentSession": "Phiếu Gửi xe đang hoạt động",
+      "sessionDetail": "Chi tiết phiên",
+      "noBooking": "Chưa có đặt chỗ",
+      "noBookingDesc": "Giữ vị trí đẹp cho chuyến đi sắp tới của bạn ngay hôm nay.",
+      "createBooking": "Tạo đặt chỗ",
+      "noSession": "Chưa có phiên gửi xe",
+      "noSessionDesc": "Phiên gửi xe sẽ tự động xuất hiện khi bạn check-in vào bãi đỗ.",
+      "bookingCode": "Mã đặt chỗ",
+      "start": "Bắt đầu",
+      "end": "Kết thúc",
+      "vehicleType": "Loại xe",
+      "location": "Vị trí chỉ định",
+      "viewQr": "Xem mã QR",
+      "plate": "Biển số đang gửi",
+      "sessionType": "Loại phiên",
+      "prebooked": "Đặt trước",
+      "walkIn": "Vãng lai",
+      "sessionCode": "Mã phiên",
+      "bookingLink": "Liên kết đặt chỗ",
+      "none": "Không",
+      "entryTime": "Giờ vào",
+      "currentLocation": "Vị trí hiện tại",
+      "estimatedFee": "Tạm tính",
+      "unpaid": "Chưa thanh toán",
+      "issue": "Sự cố?",
+      "payNow": "Thanh toán ngay"
+    }
+  },
+  "sidebar": {
+    "home": "Trang chủ",
+    "sessions": "Phiên đỗ xe",
+    "history": "Lịch sử",
+    "payment": "Thanh toán",
+    "vehicles": "Phương tiện",
+    "notifications": "Thông báo",
+    "report": "Báo cáo sự cố",
+    "support": "Hỗ trợ",
+    "logout": "Đăng xuất"
   }
 }

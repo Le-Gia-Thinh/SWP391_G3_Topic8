@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
@@ -113,7 +114,7 @@ const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
         <div className="border-t border-gray-100 p-4">
           <button
             onClick={handleLogout}
-            title={!isOpen ? 'Đăng xuất' : ''}
+            title={!isOpen ? t('sidebar.logout') : ''}
             className={`flex items-center rounded-xl py-3 font-semibold text-red-600 transition-colors hover:bg-red-50 whitespace-nowrap ${isOpen ? 'w-full gap-3 px-3' : 'lg:justify-center w-full px-3 lg:px-0'}`}
           >
             <div className="flex w-5 h-5 shrink-0 items-center justify-center">

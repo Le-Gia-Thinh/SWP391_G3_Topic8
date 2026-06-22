@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
 import { useApiError } from '../utils/apiError'
 import { toast } from 'react-toastify'
+import LanguageSwitcher from '../components/ui/LanguageSwitcher'
 
 const FB_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID
 
@@ -131,8 +132,13 @@ const AdminLogin = () => {
         className="absolute top-6 left-6 flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm hover:shadow-md"
       >
         <ArrowLeft size={18} />
-        Trang chủ
+        {t('layout.header.backToHome')}
       </Link>
+
+      {/* Language Switcher */}
+      <div className="absolute top-6 right-6">
+        <LanguageSwitcher />
+      </div>
 
       <div className="w-full max-w-[420px] bg-white dark:bg-slate-800 rounded-2xl shadow-xl border-t-4 border-blue-600 p-8 transition-colors duration-300">
 
