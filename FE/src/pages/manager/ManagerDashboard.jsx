@@ -58,10 +58,15 @@ const ManagerDashboard = () => {
   // Build revenue chart data – last 7 days
   const last7 = []
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i)
-    const key = d.toISOString().slice(0, 10)
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    const key = `${year}-${month}-${day}` // Local date string YYYY-MM-DD
     const dayName = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][d.getDay()]
-    const found = revenue7Days.find(r => String(r.Period) === key)
+
+    const found = revenue7Days.find(r => String(r.Period).split('T')[0] === key)
     last7.push({ label: dayName, value: found ? found.TotalRevenue : 0, date: key })
   }
   const maxRevenue = Math.max(...last7.map(d => d.value), 1)
@@ -184,8 +189,8 @@ const ManagerDashboard = () => {
               <AreaChart data={last7} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -332,9 +337,9 @@ const ManagerDashboard = () => {
                   <td className="px-5 py-4">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border
                       ${row.PaymentStatus === 'Completed' || row.PaymentStatus === 'Prepaid'
-                  ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                  : 'bg-orange-50 text-orange-600 border-orange-100'
-                }`}>
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                        : 'bg-orange-50 text-orange-600 border-orange-100'
+                      }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${row.PaymentStatus === 'Completed' || row.PaymentStatus === 'Prepaid' ? 'bg-emerald-500' : 'bg-orange-500'}`} />
                       {row.PaymentStatus}
                     </span>
