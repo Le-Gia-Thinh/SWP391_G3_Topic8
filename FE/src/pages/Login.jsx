@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, Navigate, Link } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 import { GoogleLogin } from '@react-oauth/google'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../contexts/AuthContext'
@@ -124,15 +124,7 @@ const AdminLogin = () => {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 p-4 transition-colors duration-300">
-      <Link
-        to="/"
-        className="absolute top-5 left-5 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 bg-white/80 hover:bg-white hover:text-blue-600 shadow-sm border border-slate-200 dark:text-slate-300 dark:bg-slate-800/80 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-blue-400 transition-colors"
-      >
-        <ArrowLeft size={16} />
-        {t('auth.login.backToHome', 'Về trang chủ')}
-      </Link>
-
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 p-4 transition-colors duration-300">
       <div className="w-full max-w-[420px] bg-white dark:bg-slate-800 rounded-2xl shadow-xl border-t-4 border-blue-600 p-8 transition-colors duration-300">
 
         <div className="text-center mb-8">
