@@ -26,6 +26,7 @@ import staffRoutes from "./staffRoutes.js";
 import managerRoutes from './managerRoutes.js'
 import commonRoutes from './commonRoutes.js'
 import adminRoutes from './adminRoutes.js'
+import subscriptionRoutes from './subscriptionRoutes.js';
 
 // Import Middlewares dùng để kiểm tra quyền (Authorization)
 import {
@@ -359,4 +360,5 @@ router.use("/staff", staffRoutes);
 router.use('/manager', managerRoutes);
 router.use('/common', commonRoutes);
 router.use('/admin', adminRoutes);
+router.use('/driver/subscriptions', subscriptionRoutes);
 export default router;

@@ -6,7 +6,14 @@ export async function dashboard(req, res, next) {
     const [slots, sessions, revenue, incidents] = await Promise.all([
       pool.request().query("SELECT SlotStatus, COUNT(*) AS Total FROM ParkingSlots GROUP BY SlotStatus"),
       pool.request().query("SELECT SessionStatus, COUNT(*) AS Total FROM ParkingSessions GROUP BY SessionStatus"),
-      pool.request().query("SELECT ISNULL(SUM(Amount),0) AS Revenue FROM Payments WHERE PaymentStatus='Completed'"),
+      pool.request().query(`
+        SELECT ISNULL(SUM(Revenue), 0) AS Revenue 
+        FROM (
+            SELECT ISNULL(FinalAmount, Amount) AS Revenue FROM Payments WHERE PaymentStatus IN ('Completed', 'Prepaid')
+            UNION ALL
+            SELECT AmountPaid AS Revenue FROM UserSubscriptions WHERE AmountPaid > 0
+        ) t
+      `),
       pool.request().query("SELECT IncidentStatus, COUNT(*) AS Total FROM Incidents GROUP BY IncidentStatus")
     ]);
 

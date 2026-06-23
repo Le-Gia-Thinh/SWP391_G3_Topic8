@@ -2,7 +2,7 @@ import React, { Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { GuestRoute, ProtectedRoute, RoleRoute } from './components/ProtectedRoute'
 import {
-  LayoutGrid, LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut, Bell, Car, Star, Users, KeyRound, Building2, ScrollText, Crown
+  LayoutGrid, LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut, Bell, Car, Star, Users, KeyRound, Building2, ScrollText, Crown, CreditCard
 } from 'lucide-react'
 
 // Import Layouts
@@ -72,6 +72,8 @@ const DriverSubscription = React.lazy(() => import('./pages/driver/DriverSubscri
 const DriverSubscriptionPayment = React.lazy(() => import('./pages/driver/DriverSubscriptionPayment'))
 const DriverSubscriptionUpgrade = React.lazy(() => import('./pages/driver/DriverSubscriptionUpgrade'))
 const DriverSubscriptionCancel = React.lazy(() => import('./pages/driver/DriverSubscriptionCancel'))
+const DriverTopUp = React.lazy(() => import('./pages/driver/DriverTopUp'))
+const DriverTopUpPayment = React.lazy(() => import('./pages/driver/DriverTopUpPayment'))
 
 // Guest Pages (Lazy)
 const GuestTracking = React.lazy(() => import('./pages/guest/GuestTracking'))
@@ -133,6 +135,7 @@ const driverLinks = [
   { path: '/driver/session', labelKey: 'sidebar.driver.session', icon: Clock },
   { path: '/driver/history', labelKey: 'sidebar.driver.history', icon: FileText },
   { path: '/driver/payment', labelKey: 'sidebar.driver.payment', icon: Wallet },
+  { path: '/driver/topup', labelKey: 'Nạp tiền', icon: CreditCard },
   { isDivider: true },
   { labelOnlyKey: 'sidebar.groups.management' },
   { path: '/driver/vehicles', labelKey: 'sidebar.driver.vehicles', icon: Car },
@@ -274,6 +277,8 @@ const App = () => {
             <Route path="history" element={<DriverHistory />} />
             <Route path="session" element={<DriverSession />} />
             <Route path="payment" element={<DriverPayment />} />
+            <Route path="topup" element={<DriverTopUp />} />
+            <Route path="topup-payment" element={<DriverTopUpPayment />} />
             <Route path="report" element={<DriverReport />} />
             <Route path="profile" element={<UserProfile />} />
             <Route path="payment-result" element={<DriverPaymentResult />} />

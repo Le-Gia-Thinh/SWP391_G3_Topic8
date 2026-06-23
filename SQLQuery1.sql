@@ -1,4 +1,4 @@
-﻿/* =====================================================================
+/* =====================================================================
    PARKING MANAGEMENT DB - FULL SETUP (HỢP NHẤT TỪ SCRIPT 1 -> 8)
    *** PHIÊN BẢN: v2 - FIX BATCH SP (2026-06-21) ***
    Chạy 1 lần từ đầu đến cuối. An toàn để chạy lại (idempotent ở mức tối đa).
@@ -1677,6 +1677,46 @@ GO
 
 -- Slot status
 SELECT SlotID, SlotCode, SlotStatus FROM ParkingSlots ORDER BY SlotID;
+GO
+
+PRINT '==== TẠO BẢNG SUBSCRIPTION ====';
+GO
+
+IF OBJECT_ID('UserSubscriptions', 'U') IS NOT NULL DROP TABLE UserSubscriptions;
+IF OBJECT_ID('SubscriptionPlans', 'U') IS NOT NULL DROP TABLE SubscriptionPlans;
+
+CREATE TABLE SubscriptionPlans (
+    PlanID NVARCHAR(50) PRIMARY KEY, -- 'basic', 'pro', 'premium'
+    Name NVARCHAR(100) NOT NULL,
+    BasePrice INT NOT NULL,
+    Description NVARCHAR(255) NOT NULL,
+    IsActive BIT DEFAULT 1
+);
+
+CREATE TABLE UserSubscriptions (
+    UserSubscriptionID INT IDENTITY(1,1) PRIMARY KEY,
+    UserID INT NOT NULL,
+    PlanID NVARCHAR(50) NOT NULL,
+    StartDate DATETIME NOT NULL,
+    EndDate DATETIME NOT NULL,
+    AmountPaid DECIMAL(10,2) NOT NULL DEFAULT 0,
+    Status NVARCHAR(50) DEFAULT 'Active', -- 'Active', 'Expired', 'Cancelled'
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_UserSubscriptions_Users FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    CONSTRAINT FK_UserSubscriptions_Plans FOREIGN KEY (PlanID) REFERENCES SubscriptionPlans(PlanID)
+);
+GO
+
+-- Seed data for SubscriptionPlans
+INSERT INTO SubscriptionPlans (PlanID, Name, BasePrice, Description) VALUES
+('basic', N'Cơ Bản', 99000, N'Phù hợp cho người đỗ xe không thường xuyên.'),
+('pro', N'Nâng Cao', 199000, N'Lựa chọn phổ biến cho người đi làm hàng ngày.'),
+('premium', N'Cao Cấp', 399000, N'Trải nghiệm đặc quyền, không giới hạn.');
+GO
+
+-- Sample Subscription for User 1 (Driver)
+INSERT INTO UserSubscriptions (UserID, PlanID, StartDate, EndDate, AmountPaid, Status) VALUES
+(1, 'premium', GETDATE(), DATEADD(month, 1, GETDATE()), 399000, 'Active');
 GO
 
 PRINT '==== SETUP HOÀN TẤT ====';

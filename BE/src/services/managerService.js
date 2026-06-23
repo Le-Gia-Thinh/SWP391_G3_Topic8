@@ -730,23 +730,37 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
   const amountExpr = "ISNULL(p.FinalAmount, p.Amount)";
 
   let dateGroup;
-  if (groupBy === 'month') dateGroup = `FORMAT(${payTimeExpr}, 'yyyy-MM')`;
-  else if (groupBy === 'week') dateGroup = `CONCAT(YEAR(${payTimeExpr}), '-W', RIGHT('0' + CAST(DATEPART(WEEK, ${payTimeExpr}) AS VARCHAR), 2))`;
-  else dateGroup = `CAST(${payTimeExpr} AS DATE)`;
+  if (groupBy === 'month') dateGroup = `FORMAT(t.PayTime, 'yyyy-MM')`;
+  else if (groupBy === 'week') dateGroup = `CONCAT(YEAR(t.PayTime), '-W', RIGHT('0' + CAST(DATEPART(WEEK, t.PayTime) AS VARCHAR), 2))`;
+  else dateGroup = `CAST(t.PayTime AS DATE)`;
 
   const result = await pool.request()
     .input("StartDate", sql.Date, start)
     .input("EndDate", sql.Date, end)
     .query(`
+      WITH AllPayments AS (
+          SELECT 
+              ISNULL(p.FinalAmount, p.Amount) AS Revenue, 
+              ISNULL(p.PaymentTime, p.SurchargePaidAt) AS PayTime,
+              p.PaymentMethod
+          FROM Payments p
+          WHERE p.PaymentStatus IN ('Completed', 'Prepaid') 
+            AND ISNULL(p.PaymentTime, p.SurchargePaidAt) IS NOT NULL
+          UNION ALL
+          SELECT 
+              AmountPaid AS Revenue, 
+              CreatedAt AS PayTime,
+              'Banking' AS PaymentMethod
+          FROM UserSubscriptions
+          WHERE AmountPaid > 0
+      )
       SELECT
         ${dateGroup}          AS Period,
         COUNT(*)              AS TransactionCount,
-        SUM(${amountExpr})    AS TotalRevenue,
-        AVG(${amountExpr})    AS AvgRevenue
-      FROM Payments p
-      WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-        AND ${payTimeExpr} IS NOT NULL
-        AND CAST(${payTimeExpr} AS DATE) BETWEEN @StartDate AND @EndDate
+        SUM(t.Revenue)        AS TotalRevenue,
+        AVG(t.Revenue)        AS AvgRevenue
+      FROM AllPayments t
+      WHERE CAST(t.PayTime AS DATE) BETWEEN @StartDate AND @EndDate
       GROUP BY ${dateGroup}
       ORDER BY Period
     `);
@@ -755,16 +769,30 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
     .input("StartDate", sql.Date, start)
     .input("EndDate", sql.Date, end)
     .query(`
+      WITH AllPayments AS (
+          SELECT 
+              ISNULL(p.FinalAmount, p.Amount) AS Revenue, 
+              ISNULL(p.PaymentTime, p.SurchargePaidAt) AS PayTime,
+              p.PaymentMethod
+          FROM Payments p
+          WHERE p.PaymentStatus IN ('Completed', 'Prepaid') 
+            AND ISNULL(p.PaymentTime, p.SurchargePaidAt) IS NOT NULL
+          UNION ALL
+          SELECT 
+              AmountPaid AS Revenue, 
+              CreatedAt AS PayTime,
+              'Banking' AS PaymentMethod
+          FROM UserSubscriptions
+          WHERE AmountPaid > 0
+      )
       SELECT
         COUNT(*)                                                                  AS TotalTransactions,
-        ISNULL(SUM(${amountExpr}), 0)                                             AS TotalRevenue,
-        ISNULL(AVG(${amountExpr}), 0)                                             AS AvgPerTransaction,
-        SUM(CASE WHEN p.PaymentMethod = 'Cash'    THEN ${amountExpr} ELSE 0 END) AS CashRevenue,
-        SUM(CASE WHEN p.PaymentMethod = 'Banking' THEN ${amountExpr} ELSE 0 END) AS BankingRevenue
-      FROM Payments p
-      WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-        AND ${payTimeExpr} IS NOT NULL
-        AND CAST(${payTimeExpr} AS DATE) BETWEEN @StartDate AND @EndDate
+        ISNULL(SUM(t.Revenue), 0)                                                 AS TotalRevenue,
+        ISNULL(AVG(t.Revenue), 0)                                                 AS AvgPerTransaction,
+        SUM(CASE WHEN t.PaymentMethod = 'Cash'    THEN t.Revenue ELSE 0 END)      AS CashRevenue,
+        SUM(CASE WHEN t.PaymentMethod = 'Banking' THEN t.Revenue ELSE 0 END)      AS BankingRevenue
+      FROM AllPayments t
+      WHERE CAST(t.PayTime AS DATE) BETWEEN @StartDate AND @EndDate
     `);
 
   // Theo loại xe

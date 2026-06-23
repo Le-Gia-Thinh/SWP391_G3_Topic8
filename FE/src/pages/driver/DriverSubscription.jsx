@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Crown, CheckCircle2, Star, Zap, Shield, ChevronRight, Calendar, Clock, CreditCard, AlertCircle } from 'lucide-react';
+import { subscriptionApi } from '../../apis/subscriptionApi';
+import { toast } from 'react-toastify';
 
-const plans = [
-  {
-    id: 'basic',
-    name: 'Cơ Bản',
-    basePrice: 99000,
-    description: 'Phù hợp cho người đỗ xe không thường xuyên.',
+// Frontend UI configs for plans
+const planConfigs = {
+  basic: {
     icon: Shield,
     color: 'text-blue-500',
     bgColor: 'bg-blue-50',
@@ -21,11 +20,7 @@ const plans = [
     ],
     popular: false,
   },
-  {
-    id: 'pro',
-    name: 'Nâng Cao',
-    basePrice: 199000,
-    description: 'Lựa chọn phổ biến cho người đi làm hàng ngày.',
+  pro: {
     icon: Star,
     color: 'text-amber-500',
     bgColor: 'bg-amber-50',
@@ -39,11 +34,7 @@ const plans = [
     ],
     popular: true,
   },
-  {
-    id: 'premium',
-    name: 'Cao Cấp',
-    basePrice: 399000,
-    description: 'Trải nghiệm đặc quyền, không giới hạn.',
+  premium: {
     icon: Crown,
     color: 'text-purple-500',
     bgColor: 'bg-purple-50',
@@ -57,7 +48,7 @@ const plans = [
     ],
     popular: false,
   }
-];
+};
 
 const durations = [
   { months: 1, discount: 0, label: '1 tháng' },
@@ -72,6 +63,9 @@ const DriverSubscription = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('plans'); // 'plans' or 'status'
   const [duration, setDuration] = useState(1);
+  const [plans, setPlans] = useState([]);
+  const [currentSubscription, setCurrentSubscription] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Read activeTab from location state if redirected back from payment
   useEffect(() => {
@@ -80,17 +74,53 @@ const DriverSubscription = () => {
     }
   }, [location.state]);
 
-  // Mock data for current subscription status
-  const currentSubscription = {
-    active: true,
-    planId: 'pro',
-    planName: 'Nâng Cao',
-    startDate: '15/06/2026',
-    endDate: '15/12/2026',
-    totalDays: 183,
-    daysLeft: 175,
-    autoRenew: true,
+  const fetchData = async () => {
+    try {
+        setLoading(true);
+        const [plansRes, statusRes] = await Promise.all([
+            subscriptionApi.getPlans(),
+            subscriptionApi.getMyStatus()
+        ]);
+        
+        // Merge DB plans with UI configs
+        const mergedPlans = plansRes.data.map(p => ({
+            ...p,
+            ...(planConfigs[p.id] || planConfigs.basic) // fallback to basic if not found
+        }));
+        
+        setPlans(mergedPlans);
+        
+        if (statusRes.data) {
+            const startDate = new Date(statusRes.data.startDate);
+            const endDate = new Date(statusRes.data.endDate);
+            const today = new Date();
+            
+            const totalDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+            const daysLeft = Math.round((endDate - today) / (1000 * 60 * 60 * 24));
+            
+            setCurrentSubscription({
+                active: true,
+                planId: statusRes.data.planId,
+                planName: statusRes.data.planName,
+                startDate: startDate.toLocaleDateString('vi-VN'),
+                endDate: endDate.toLocaleDateString('vi-VN'),
+                totalDays: Math.max(1, totalDays),
+                daysLeft: Math.max(0, daysLeft),
+                autoRenew: true, // Mock logic
+            });
+        } else {
+            setCurrentSubscription({ active: false });
+        }
+    } catch (error) {
+        toast.error("Không thể tải thông tin gói hội viên");
+    } finally {
+        setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const getDiscountedPrice = (basePrice, months, discountPercent) => {
     const totalBase = basePrice * months;
@@ -98,9 +128,16 @@ const DriverSubscription = () => {
     return totalBase - discountAmount;
   };
 
+  if (loading) {
+      return (
+          <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+      );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      
       {/* Tabs Navigation */}
       <div className="max-w-7xl mx-auto mb-8 flex justify-center">
         <div className="bg-white p-1.5 rounded-full border border-slate-200 shadow-sm inline-flex">
@@ -129,7 +166,6 @@ const DriverSubscription = () => {
 
       {activeTab === 'plans' && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Header Section */}
           <div className="max-w-7xl mx-auto text-center mb-12">
             <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">
               Nâng Cấp Trải Nghiệm Đỗ Xe
@@ -138,7 +174,6 @@ const DriverSubscription = () => {
               Lựa chọn thời hạn và gói hội viên phù hợp với nhu cầu của bạn để tiết kiệm chi phí tối đa.
             </p>
 
-            {/* Duration Selector */}
             <div className="flex justify-center mt-10">
               <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-center gap-2 max-w-3xl">
                 {durations.map((opt) => (
@@ -167,7 +202,6 @@ const DriverSubscription = () => {
             </div>
           </div>
 
-          {/* Pricing Cards */}
           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
             {plans.map((plan) => {
               const Icon = plan.icon;
@@ -243,9 +277,8 @@ const DriverSubscription = () => {
 
       {activeTab === 'status' && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
-          {currentSubscription.active ? (
+          {currentSubscription?.active ? (
             <div className="bg-white rounded-3xl shadow-lg border border-slate-200 overflow-hidden">
-              {/* Status Header */}
               <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-8 text-white relative overflow-hidden">
                 <Star className="absolute top-4 right-4 w-32 h-32 text-white opacity-10 -rotate-12" />
                 <div className="flex items-center gap-3 mb-2">
@@ -257,7 +290,6 @@ const DriverSubscription = () => {
                 <p className="text-amber-100">Tận hưởng các đặc quyền ưu tiên của bạn.</p>
               </div>
 
-              {/* Status Body */}
               <div className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                   <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex items-start gap-4">
@@ -287,23 +319,21 @@ const DriverSubscription = () => {
                   </div>
                 </div>
 
-                {/* Progress Bar */}
                 <div className="mb-8">
                   <div className="flex justify-between text-sm font-semibold mb-2">
                     <span className="text-slate-600">Tiến trình gói</span>
                     <span className="text-amber-600">
-                      {Math.round(((currentSubscription.totalDays - currentSubscription.daysLeft) / currentSubscription.totalDays) * 100)}%
+                      {Math.min(100, Math.max(0, Math.round(((currentSubscription.totalDays - currentSubscription.daysLeft) / currentSubscription.totalDays) * 100)))}%
                     </span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
                     <div 
                       className="bg-gradient-to-r from-amber-400 to-amber-500 h-3 rounded-full" 
-                      style={{ width: `${((currentSubscription.totalDays - currentSubscription.daysLeft) / currentSubscription.totalDays) * 100}%` }}
+                      style={{ width: `${Math.min(100, Math.max(0, ((currentSubscription.totalDays - currentSubscription.daysLeft) / currentSubscription.totalDays) * 100))}%` }}
                     ></div>
                   </div>
                 </div>
 
-                {/* Actions */}
                 <div className="flex flex-wrap gap-4 pt-6 border-t border-slate-100">
                   <button 
                     onClick={() => navigate('/driver/subscription-upgrade')}
