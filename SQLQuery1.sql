@@ -151,6 +151,8 @@ CREATE TABLE Users (
     ResetToken          NVARCHAR(500) NULL,
     ResetTokenExpires   DATETIME NULL,
 
+    AccountBalance      DECIMAL(18,2) NOT NULL DEFAULT 0,
+
     CreatedAt           DATETIME NOT NULL DEFAULT GETDATE(),
     UpdatedAt           DATETIME NOT NULL DEFAULT GETDATE(),
 
@@ -1717,6 +1719,122 @@ GO
 -- Sample Subscription for User 1 (Driver)
 INSERT INTO UserSubscriptions (UserID, PlanID, StartDate, EndDate, AmountPaid, Status) VALUES
 (1, 'premium', GETDATE(), DATEADD(month, 1, GETDATE()), 399000, 'Active');
+GO
+
+/* =====================================================================
+   PHẦN: VÍ TIỀN (WALLET)
+   ===================================================================== */
+PRINT '==== TẠO WALLET ===='
+GO
+
+-- Thêm cột AccountBalance vào Users (nếu chưa có)
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'AccountBalance')
+BEGIN
+    ALTER TABLE Users ADD AccountBalance DECIMAL(10,2) NOT NULL DEFAULT 0;
+    PRINT 'Đã thêm cột AccountBalance vào bảng Users';
+END
+GO
+
+-- Bảng lịch sử giao dịch ví
+IF OBJECT_ID('WalletTransactions', 'U') IS NOT NULL DROP TABLE WalletTransactions;
+GO
+
+CREATE TABLE WalletTransactions (
+    TransactionID       INT IDENTITY(1,1) PRIMARY KEY,
+    UserID              INT NOT NULL,
+    Amount              DECIMAL(18,2) NOT NULL,
+    TransactionType     NVARCHAR(50) NOT NULL CHECK (TransactionType IN ('TOPUP', 'PAY_PARKING', 'PAY_SUBSCRIPTION')),
+    Status              NVARCHAR(50) NOT NULL DEFAULT 'COMPLETED',
+    ReferenceID         NVARCHAR(100) NULL,
+    Description         NVARCHAR(200) NULL,
+    CreatedAt           DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT FK_WalletTx_Users FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+GO
+
+CREATE INDEX IX_WalletTx_UserID ON WalletTransactions(UserID, CreatedAt DESC);
+GO
+
+-- SP: Nạp tiền vào ví
+IF OBJECT_ID('sp_TopUpWallet', 'P') IS NOT NULL DROP PROCEDURE sp_TopUpWallet;
+GO
+
+CREATE PROCEDURE sp_TopUpWallet
+    @UserID INT,
+    @Amount DECIMAL(18,2),
+    @ReferenceID NVARCHAR(100),
+    @Description NVARCHAR(200)
+AS
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        INSERT INTO WalletTransactions (UserID, Amount, TransactionType, Status, ReferenceID, Description)
+        VALUES (@UserID, @Amount, 'TOPUP', 'COMPLETED', @ReferenceID, @Description);
+
+        UPDATE Users
+        SET AccountBalance = AccountBalance + @Amount,
+            UpdatedAt = GETDATE()
+        WHERE UserID = @UserID;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+-- SP: Thanh toán bằng ví (trừ tiền)
+IF OBJECT_ID('sp_PayByWallet', 'P') IS NOT NULL DROP PROCEDURE sp_PayByWallet;
+GO
+
+CREATE PROCEDURE sp_PayByWallet
+    @UserID INT,
+    @Amount DECIMAL(18,2),
+    @TransactionType NVARCHAR(50),
+    @ReferenceID NVARCHAR(100),
+    @Description NVARCHAR(200)
+AS
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE @CurrentBalance DECIMAL(18,2);
+        SELECT @CurrentBalance = AccountBalance FROM Users WHERE UserID = @UserID;
+
+        IF @CurrentBalance < @Amount
+        BEGIN
+            THROW 50001, 'Insufficient wallet balance', 1;
+        END
+
+        INSERT INTO WalletTransactions (UserID, Amount, TransactionType, Status, ReferenceID, Description)
+        VALUES (@UserID, -@Amount, @TransactionType, 'COMPLETED', @ReferenceID, @Description);
+
+        UPDATE Users
+        SET AccountBalance = AccountBalance - @Amount,
+            UpdatedAt = GETDATE()
+        WHERE UserID = @UserID;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+-- Nạp 500k cho Alice để test
+DECLARE @AliceID INT;
+SELECT @AliceID = UserID FROM Users WHERE Email = 'alice@email.com';
+IF @AliceID IS NOT NULL
+BEGIN
+    EXEC sp_TopUpWallet @UserID = @AliceID, @Amount = 500000, @ReferenceID = 'SEED', @Description = 'Admin Topup 500k cho Alice test';
+END
 GO
 
 PRINT '==== SETUP HOÀN TẤT ====';

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { ArrowLeft, Clock, QrCode, ShieldCheck, CheckCircle2, Copy, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Clock, QrCode, ShieldCheck, CheckCircle2, Copy, ExternalLink, Wallet } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { subscriptionApi } from '../../apis/subscriptionApi';
+import walletApi from '../../apis/walletApi';
 
 // ── Helpers ──────────────────────────────────────────────────────
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n || 0)) + ' VNĐ';
@@ -77,6 +78,7 @@ const DriverSubscriptionPayment = () => {
   const [step, setStep] = useState('loading'); // loading | qr | done | error
   const [payment, setPayment] = useState(null);
   const [confirming, setConfirming] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   const { plan, duration, finalPrice } = location.state || {};
 
@@ -86,6 +88,13 @@ const DriverSubscriptionPayment = () => {
       navigate('/driver/subscription');
     }
   }, [plan, duration, navigate]);
+
+  // Fetch balance
+  useEffect(() => {
+    walletApi.getBalance().then(res => {
+      if (res.success) setWalletBalance(res.data.balance);
+    }).catch(() => {});
+  }, []);
 
   // Create PayOS payment link on mount
   useEffect(() => {
@@ -151,6 +160,22 @@ const DriverSubscriptionPayment = () => {
     }
   }, [payment]);
 
+  const handlePayByWallet = async () => {
+    try {
+       if (walletBalance < payment.amount) {
+           toast.error('Số dư ví không đủ!');
+           return;
+       }
+       const res = await walletApi.paySubscription(plan.id, duration.months);
+       if (res.success) {
+           setStep('done');
+           toast.success('Thanh toán bằng ví thành công!');
+       }
+    } catch (e) {
+       toast.error(e.response?.data?.message || 'Thanh toán bằng ví thất bại');
+    }
+  }
+
   if (!plan || !duration) return null;
 
   // ──────────────────────────────────────────────────────────────
@@ -202,7 +227,7 @@ const DriverSubscriptionPayment = () => {
   );
 
   // ──────────────────────────────────────────────────────────────
-  // STEP: qr (giống y hệt DriverPayment)
+  // STEP: qr
   // ──────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
@@ -219,7 +244,7 @@ const DriverSubscriptionPayment = () => {
 
         {/* Main Card */}
         <div className="rounded-3xl overflow-hidden shadow-xl">
-          {/* ── Header (Dark gradient giống DriverPayment) ── */}
+          {/* ── Header (Dark gradient) ── */}
           <div className="px-6 py-6" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)' }}>
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
@@ -247,8 +272,27 @@ const DriverSubscriptionPayment = () => {
             )}
           </div>
 
+          {/* ── Nút thanh toán bằng ví ── */}
+          <div className="px-6 pt-6">
+             <button
+                onClick={handlePayByWallet}
+                className="w-full flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors shadow-md"
+             >
+                <Wallet className="w-5 h-5" />
+                Thanh toán ngay bằng Ví
+             </button>
+             <p className="text-center text-sm text-slate-500 mt-2">
+                Số dư hiện tại: <span className="font-bold text-slate-700">{fmt(walletBalance)}</span>
+             </p>
+             <div className="flex items-center gap-4 my-4">
+                <div className="h-px bg-slate-200 flex-1"></div>
+                <span className="text-slate-400 text-sm">HOẶC CHUYỂN KHOẢN</span>
+                <div className="h-px bg-slate-200 flex-1"></div>
+             </div>
+          </div>
+
           {/* ── QR Code area ── */}
-          <div className="bg-slate-50 flex flex-col items-center py-6 px-6">
+          <div className="bg-slate-50 flex flex-col items-center pb-6 px-6">
             <div className="mb-3">
               <QRCanvas data={payment.qrCode} size={220} />
             </div>
@@ -261,13 +305,13 @@ const DriverSubscriptionPayment = () => {
                 className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-white transition-colors"
               >
                 <ExternalLink className="w-4 h-4" />
-                Mở trang thanh toán
+                Mở trang thanh toán PayOS
               </button>
             )}
           </div>
 
           {/* ── Bank transfer info ── */}
-          <div className="px-6 pb-4">
+          <div className="px-6 pb-4 bg-slate-50">
             <p className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-3">
               Hoặc chuyển khoản thủ công
             </p>

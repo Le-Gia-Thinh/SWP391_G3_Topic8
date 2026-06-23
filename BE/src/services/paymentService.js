@@ -520,7 +520,16 @@ export async function handleWebhookService(body) {
 
     const { code, data } = body
     if (code === '00' && data?.orderCode) {
-        await markPrepaid(data.orderCode)
+        const desc = (data.description || '').toUpperCase()
+
+        if (desc.startsWith('TOPUP')) {
+            // Nạp tiền ví
+            const { handleTopupWebhook } = await import('./walletService.js')
+            await handleTopupWebhook(data.orderCode, data.amount)
+        } else {
+            // Thanh toán đỗ xe (PARK...) hoặc các loại khác
+            await markPrepaid(data.orderCode)
+        }
     }
 
     return { received: true }

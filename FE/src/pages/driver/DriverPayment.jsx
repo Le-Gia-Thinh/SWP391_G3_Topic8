@@ -24,9 +24,11 @@ import {
   Smartphone as PhoneIcon,
   History as HistoryIcon,
   TwoWheeler as BikeIcon,
-  LocalShipping as TruckIcon
+  LocalShipping as TruckIcon,
+  AccountBalanceWallet as WalletIcon
 } from '@mui/icons-material'
 import authorizeAxios from '../../utils/authorizeAxios'
+import walletApi from '../../apis/walletApi'
 
 // ── Helpers ──────────────────────────────────────────────────────
 // fmt cần currency để theo i18n; gọi từ component truyền vào
@@ -286,6 +288,7 @@ const DriverPayment = () => {
   const [cancelling, setCancelling] = useState(false)
   const [now, setNow] = useState(new Date())
   const [showPricing, setShowPricing] = useState(false)
+  const [walletBalance, setWalletBalance] = useState(0)
   const pollerRef = useRef(null)
 
   // Clock — cập nhật "đã đỗ" mỗi giây
@@ -293,6 +296,13 @@ const DriverPayment = () => {
     const tm = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(tm)
   }, [])
+
+  // Fetch wallet balance
+  useEffect(() => {
+    walletApi.getBalance().then(res => {
+      if (res.success) setWalletBalance(res.data.balance);
+    }).catch(() => {});
+  }, []);
 
   // ✅ FIX: Xử lý redirect từ PayOS — dùng ref để tránh setState sync trong effect
   const statusHandledRef = useRef(false)
@@ -389,6 +399,23 @@ const DriverPayment = () => {
       setCancelling(false)
       setStep('select')
       loadSessions()
+    }
+  }
+
+  // Thanh toán bằng ví
+  const handlePayByWallet = async () => {
+    try {
+      if (walletBalance < payment.amount) {
+        toast.error('Số dư ví không đủ!')
+        return
+      }
+      const res = await walletApi.payParking(paying.SessionID)
+      if (res.success) {
+        setStep('done')
+        toast.success('Thanh toán bằng ví thành công!')
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Thanh toán bằng ví thất bại')
     }
   }
 
@@ -538,13 +565,25 @@ const DriverPayment = () => {
           <Typography variant="caption" color="text.secondary" textAlign="center" mb={1.5}>
             {t('driver.payment.qrHint')}
           </Typography>
-          <Button
-            variant="outlined" size="small"
-            startIcon={<ExternalIcon fontSize="small" />}
-            onClick={() => window.open(payment.checkoutUrl, '_blank', 'noopener')}
-          >
-            {t('driver.payment.openPayos')}
-          </Button>
+          <Stack direction="row" spacing={2} width="100%" justifyContent="center" mt={2}>
+            <Button
+              variant="outlined" size="small"
+              startIcon={<ExternalIcon fontSize="small" />}
+              onClick={() => window.open(payment.checkoutUrl, '_blank', 'noopener')}
+              sx={{ flex: 1 }}
+            >
+              {t('driver.payment.openPayos')}
+            </Button>
+            <Button
+              variant="contained" size="small"
+              color="primary"
+              startIcon={<WalletIcon fontSize="small" />}
+              onClick={handlePayByWallet}
+              sx={{ flex: 1 }}
+            >
+              Thanh toán ví ({fmt(walletBalance)})
+            </Button>
+          </Stack>
         </Box>
 
         {/* Thông tin CK */}
