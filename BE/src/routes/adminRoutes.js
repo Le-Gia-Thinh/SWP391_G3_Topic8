@@ -62,4 +62,7 @@ router.delete('/slots/:id', adminController.deleteSlot); // Xóa slot
 // API lấy lịch sử hoạt động của người dùng (chỉ Admin được xem)
 router.get('/audit-logs', adminController.getAuditLogs);
 
+// ================= THÔNG BÁO HỆ THỐNG =================
+router.post('/notify-manager', adminController.notifyManagers); // Gửi thông báo đến Manager
+
 export default router;

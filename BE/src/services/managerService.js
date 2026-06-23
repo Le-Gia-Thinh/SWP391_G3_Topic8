@@ -695,7 +695,25 @@ export async function updateIncidentStatus(incidentId, { status, assignedStaffId
       WHERE IncidentID = @IncidentID
     `);
 
-  return getIncidentById(incidentId);
+    const updatedIncident = await getIncidentById(incidentId);
+
+    if (status === 'Resolved' && updatedIncident.DriverID) {
+        await pool.request().query(`
+            INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+            VALUES (
+                ${updatedIncident.DriverID},
+                N'Sự cố đã được giải quyết',
+                N'Sự cố (ID: ${updatedIncident.IncidentID}) của bạn đã được đánh dấu là giải quyết.',
+                'Incident',
+                ${updatedIncident.IncidentID},
+                'Incident',
+                0,
+                GETDATE()
+            )
+        `);
+    }
+
+    return updatedIncident;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1095,4 +1113,21 @@ export async function getUnpaidSessions({ search } = {}) {
       ORDER BY s.EntryTime DESC
     `);
   return result.recordset;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SYSTEM NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────
+export async function broadcastSystemMaintenance(message) {
+  const pool = await getPool();
+  await pool.request()
+    .input("Title", sql.NVarChar(200), 'Bảo trì hệ thống')
+    .input("Message", sql.NVarChar(500), message || 'Hệ thống sẽ tiến hành bảo trì. Vui lòng theo dõi thông báo tiếp theo.')
+    .query(`
+      INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+      SELECT u.UserID, @Title, @Message, 'System', NULL, 'Maintenance', 0, GETDATE()
+      FROM Users u
+      JOIN Roles r ON u.RoleID = r.RoleID
+      WHERE r.RoleName IN ('Driver', 'Staff', 'Admin') AND u.IsActive = 1
+    `);
 }

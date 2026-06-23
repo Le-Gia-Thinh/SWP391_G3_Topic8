@@ -304,3 +304,10 @@
         } catch (err) { next(err); }
     }
     
+    // ── System Notifications ──────────────────────────────────────
+    export async function broadcastSystemMaintenance(req, res, next) {
+        try {
+            await managerService.broadcastSystemMaintenance(req.body.message);
+            return res.status(StatusCodes.OK).json({ success: true, message: "Đã gửi thông báo bảo trì toàn hệ thống" });
+        } catch (err) { next(err); }
+    }

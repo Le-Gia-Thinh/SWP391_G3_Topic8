@@ -966,6 +966,22 @@ export async function updateIncidentStatus(incidentId, { status, note, attachmen
     const incident = result.recordset[0]
     if (!incident) throw notFound('Không tìm thấy sự cố.', 'INCIDENT_NOT_FOUND')
 
+    if (status === 'Resolved' && incident.DriverID) {
+        await request.query(`
+            INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+            VALUES (
+                ${incident.DriverID},
+                N'Sự cố đã được giải quyết',
+                N'Sự cố (ID: ${incident.IncidentID}) của bạn đã được đánh dấu là giải quyết.',
+                'Incident',
+                ${incident.IncidentID},
+                'Incident',
+                0,
+                GETDATE()
+            )
+        `);
+    }
+
     return {
         ...incident,
         Attachments: parseAttachments(incident.Attachments)
