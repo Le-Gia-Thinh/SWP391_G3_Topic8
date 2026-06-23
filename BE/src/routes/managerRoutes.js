@@ -56,4 +56,7 @@ router.get("/unpaid", mc.getUnpaidSessions);
 // Staff list
 router.get("/staff", mc.getStaffList);
 
+// System Notifications
+router.post("/system-maintenance", mc.broadcastSystemMaintenance);
+
 export default router;

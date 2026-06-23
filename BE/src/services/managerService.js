@@ -1114,3 +1114,20 @@ export async function getUnpaidSessions({ search } = {}) {
     `);
   return result.recordset;
 }
+
+// ─────────────────────────────────────────────────────────────
+// SYSTEM NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────
+export async function broadcastSystemMaintenance(message) {
+  const pool = await getPool();
+  await pool.request()
+    .input("Title", sql.NVarChar(200), 'Bảo trì hệ thống')
+    .input("Message", sql.NVarChar(500), message || 'Hệ thống sẽ tiến hành bảo trì. Vui lòng theo dõi thông báo tiếp theo.')
+    .query(`
+      INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+      SELECT u.UserID, @Title, @Message, 'System', NULL, 'Maintenance', 0, GETDATE()
+      FROM Users u
+      JOIN Roles r ON u.RoleID = r.RoleID
+      WHERE r.RoleName IN ('Driver', 'Staff', 'Admin') AND u.IsActive = 1
+    `);
+}
