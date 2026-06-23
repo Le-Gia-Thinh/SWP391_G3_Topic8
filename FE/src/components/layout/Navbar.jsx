@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useAppTheme } from '../../contexts/AppThemeContext'
 import { toast } from 'react-toastify'
 import driverApi from '../../apis/driverApi'
+import notificationApi from '../../apis/notificationApi'
 import LanguageSwitcher from '../ui/LanguageSwitcher'
 
 const getInitials = (name) => {
@@ -28,30 +29,23 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
   const [notifications, setNotifications] = useState([])
 
   useEffect(() => {
-    if (isDriver) {
-      driverApi.getUnreadCount()
+    if (user) {
+      notificationApi.getUnreadCount()
         .then(res => {
-          const count = res?.unreadCount ?? res?.count ?? (typeof res === 'number' ? res : 0)
+          const count = res?.data?.unreadCount ?? res?.unreadCount ?? res?.count ?? (typeof res === 'number' ? res : 0)
           setUnreadCount(count)
         })
         .catch(() => { })
 
-      driverApi.getNotifications({ limit: 5 })
+      notificationApi.getNotifications({ limit: 5 })
         .then(res => {
           if (res.success && res.data) {
             setNotifications(res.data.slice(0, 5))
           }
         })
         .catch(() => { })
-    } else {
-      // Mock notifications cho Manager/Staff để xem giao diện đẹp
-      setNotifications([
-        { NotificationID: 1, Title: 'Báo cáo doanh thu', Message: 'Doanh thu tuần này đạt 50tr VNĐ, vượt chỉ tiêu 15%', CreatedAt: new Date().toISOString(), IsRead: false, NotificationType: 'system' },
-        { NotificationID: 2, Title: 'Bảo trì hệ thống', Message: 'Sẽ có đợt bảo trì server lúc 00:00 đêm nay.', CreatedAt: new Date(Date.now() - 3600000).toISOString(), IsRead: true, NotificationType: 'incident' }
-      ])
-      setUnreadCount(1)
     }
-  }, [user, isDriver])
+  }, [user])
 
   const handleSearch = (e) => {
     if (e.key === 'Enter') {
@@ -64,9 +58,7 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
   }
 
   const handleMarkAllRead = () => {
-    if (isDriver) {
-      driverApi.markAllNotificationsRead().catch(() => { })
-    }
+    notificationApi.markAllAsRead().catch(() => { })
     setNotifications(prev => prev.map(n => ({ ...n, IsRead: true })))
     setUnreadCount(0)
     toast.success(t('driver.notifications.toastAllRead'))

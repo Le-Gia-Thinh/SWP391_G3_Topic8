@@ -695,7 +695,25 @@ export async function updateIncidentStatus(incidentId, { status, assignedStaffId
       WHERE IncidentID = @IncidentID
     `);
 
-  return getIncidentById(incidentId);
+    const updatedIncident = await getIncidentById(incidentId);
+
+    if (status === 'Resolved' && updatedIncident.DriverID) {
+        await pool.request().query(`
+            INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+            VALUES (
+                ${updatedIncident.DriverID},
+                N'Sự cố đã được giải quyết',
+                N'Sự cố (ID: ${updatedIncident.IncidentID}) của bạn đã được đánh dấu là giải quyết.',
+                'Incident',
+                ${updatedIncident.IncidentID},
+                'Incident',
+                0,
+                GETDATE()
+            )
+        `);
+    }
+
+    return updatedIncident;
 }
 
 // ─────────────────────────────────────────────────────────────

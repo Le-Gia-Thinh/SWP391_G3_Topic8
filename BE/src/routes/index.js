@@ -105,6 +105,12 @@ router.get("/buildings", isAuthorized, commonController.getBuildings);
 router.get("/slots", isAuthorized, commonController.getSlots);
 router.get("/pricing", isAuthorized, commonController.getPricing);
 
+// Common Notifications
+router.get("/notifications", isAuthorized, notificationController.getNotifications);
+router.get("/notifications/unread-count", isAuthorized, notificationController.getUnreadCount);
+router.patch("/notifications/read-all", isAuthorized, notificationController.markAllAsRead);
+router.patch("/notifications/:id/read", isAuthorized, notificationController.markAsRead);
+
 // AI Chat
 router.post("/ai/chat", isAuthorized, aiChatController.processChat);
 
