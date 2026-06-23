@@ -323,6 +323,7 @@ export async function getDriverProfile(req, res, next) {
           u.AvatarUrl,
           u.IsActive,
           u.IsEmailVerified,
+          u.AccountBalance,
           u.CreatedAt,
           u.UpdatedAt,
           r.RoleName
@@ -426,6 +427,7 @@ export async function updateDriverProfile(req, res, next) {
           u.AvatarUrl,
           u.IsActive,
           u.IsEmailVerified,
+          u.AccountBalance,
           u.CreatedAt,
           u.UpdatedAt,
           r.RoleName

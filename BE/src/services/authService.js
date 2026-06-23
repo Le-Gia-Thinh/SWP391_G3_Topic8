@@ -55,6 +55,7 @@ function formatUser(u) {
         roleName: u.RoleName,
         avatarUrl: u.AvatarUrl || null,
         isEmailVerified: !!u.IsEmailVerified,
+        accountBalance: u.AccountBalance || 0,
         dateOfBirth: u.DateOfBirth ? new Date(u.DateOfBirth).toISOString().split('T')[0] : null,
         hasPassword: u.HasPassword !== undefined ? !!u.HasPassword : (u.PasswordHash != null || !!u.HasLocalAuth),
     };
@@ -344,7 +345,7 @@ export async function getMeService(userId) {
         .query(`
             SELECT u.UserID, u.FullName, u.Email, u.PhoneNumber,
                    u.RoleID, r.RoleName, u.AvatarUrl,
-                   u.IsEmailVerified,
+                   u.IsEmailVerified, u.AccountBalance,
                    u.DateOfBirth, u.HireDate, u.IsActive,
                    u.CreatedAt, u.UpdatedAt,
                    CAST(CASE WHEN u.PasswordHash IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS HasPassword
