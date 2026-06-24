@@ -77,7 +77,6 @@ const DriverTopUp = () => {
             <Banknote className="w-5 h-5 text-green-500" />
             Chọn mệnh giá nạp
           </h2>
-          
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             {predefinedAmounts.map((amount) => (
               <button
@@ -85,9 +84,9 @@ const DriverTopUp = () => {
                 onClick={() => handleAmountSelect(amount)}
                 className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center gap-2
                   ${selectedAmount === amount 
-                    ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-bold transform scale-[1.02] shadow-sm' 
-                    : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
+                ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-bold transform scale-[1.02] shadow-sm' 
+                : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
               >
                 <span className="text-lg">{amount.toLocaleString('vi-VN')} đ</span>
               </button>
@@ -141,7 +140,6 @@ const DriverTopUp = () => {
               </span>
             )}
           </button>
-          
           <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
             <ShieldCheck className="w-4 h-4 text-green-500" />
             <span>Giao dịch được mã hóa và bảo mật an toàn 100%</span>

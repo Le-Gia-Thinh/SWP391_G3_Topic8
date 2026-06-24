@@ -2,7 +2,7 @@
 // Trang redirect từ PayOS về sau khi quét QR
 // Route: /driver/payment-result?sessionId=X&status=success|cancel
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {

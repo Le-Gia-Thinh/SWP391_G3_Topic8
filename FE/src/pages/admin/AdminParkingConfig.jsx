@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import {
-  Building, Layers, Map, RefreshCcw, Plus, Pencil, Trash2, X, ChevronRight,
+  Building, Layers, Map, RefreshCcw, Plus, Pencil, Trash2, X,
   Power, Car, LayoutGrid, Rows3, Info, AlertTriangle, Check
 } from 'lucide-react'
 import { toast } from 'react-toastify'

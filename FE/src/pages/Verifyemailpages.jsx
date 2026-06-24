@@ -9,7 +9,7 @@ import { toast } from 'react-toastify'
 import authorizeAxios from '../utils/authorizeAxios'
 import { checkEmailVerifiedAPI } from '../apis/authApi'
 import { useAuth } from '../contexts/AuthContext'
-import LanguageSwitcher from '../components/LanguageSwitcher'
+import LanguageSwitcher from '../components/ui/LanguageSwitcher'
 
 async function resendVerifyEmailAPI(email) {
   return authorizeAxios.post('/auth/resend-verify', { email })
