@@ -13,20 +13,23 @@ import {
 } from '../../apis/managerApi'
 
 /* ─── Status config ──────────────────────────────────────────── */
+const STATUS_KEYS = ['Available', 'Occupied', 'Reserved', 'Maintenance', 'Blocked']
+
 const STATUS_CFG = {
-  Available: { color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', mapBg: 'bg-emerald-50 border-emerald-300 hover:border-emerald-500', label: 'Trống' },
-  Occupied: { color: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500', mapBg: 'bg-blue-50 border-blue-300 hover:border-blue-500', label: 'Đang đỗ' },
-  Reserved: { color: 'bg-violet-50 text-violet-700 border-violet-200', dot: 'bg-violet-500', mapBg: 'bg-violet-50 border-violet-300 hover:border-violet-500', label: 'Đặt trước' },
-  Maintenance: { color: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500', mapBg: 'bg-amber-50 border-amber-300 hover:border-amber-500', label: 'Bảo trì' },
-  Blocked: { color: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500', mapBg: 'bg-slate-700 border-slate-700 text-white', label: 'Khoá' },
+  Available: { color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', mapBg: 'bg-emerald-50 border-emerald-300 hover:border-emerald-500' },
+  Occupied: { color: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500', mapBg: 'bg-blue-50 border-blue-300 hover:border-blue-500' },
+  Reserved: { color: 'bg-violet-50 text-violet-700 border-violet-200', dot: 'bg-violet-500', mapBg: 'bg-violet-50 border-violet-300 hover:border-violet-500' },
+  Maintenance: { color: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500', mapBg: 'bg-amber-50 border-amber-300 hover:border-amber-500' },
+  Blocked: { color: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500', mapBg: 'bg-slate-700 border-slate-700 text-white' },
 }
 
 const StatusBadge = ({ status }) => {
+  const { t } = useTranslation()
   const cfg = STATUS_CFG[status] || STATUS_CFG.Available
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold border ${cfg.color}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-      {cfg.label}
+      {t(`manager.slots.status.${status}`, status)}
     </span>
   )
 }
@@ -56,6 +59,7 @@ function buildHierarchy(slots) {
 
 /* ─── Occupancy bar ──────────────────────────────────────────── */
 function OccupancyBar({ slots }) {
+  const { t } = useTranslation()
   const total = slots.length
   const occupied = slots.filter(s => s.SlotStatus === 'Occupied').length
   const reserved = slots.filter(s => s.SlotStatus === 'Reserved').length
@@ -71,8 +75,8 @@ function OccupancyBar({ slots }) {
         <div className="bg-emerald-400 transition-all" style={{ width: `${avail / total * 100}%` }} />
       </div>
       <div className="flex justify-between text-[10px] text-slate-400 font-medium">
-        <span>{avail} trống</span>
-        <span>{total} tổng</span>
+        <span>{avail} {t('manager.slots.status.Available')}</span>
+        <span>{total} {t('manager.slots.slotUnit', 'slot')}</span>
       </div>
     </div>
   )
@@ -91,10 +95,10 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
       const res = await getSlotByIdAPI(slotId)
       setData(res.data.data)
     } catch {
-      toast.error(t('manager.slots.loadDetailFail', 'Không tải được chi tiết'))
+      toast.error(t('manager.slots.loadDetailFail'))
       onClose()
     } finally { setLoading(false) }
-  }, [slotId])
+  }, [slotId, t, onClose])
 
   useEffect(() => { load() }, [load])
 
@@ -102,11 +106,20 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
     setUpdating(true)
     try {
       await updateSlotStatusAPI(slotId, { status: newStatus })
-      toast.success(`Đã cập nhật slot ${data?.slot?.SlotCode} → ${STATUS_CFG[newStatus]?.label}`)
+
+      const code = data?.slot?.SlotCode
+      if (newStatus === 'Maintenance') {
+        toast.success(t('manager.slots.toastMaintenance', { code }))
+      } else if (newStatus === 'Blocked') {
+        toast.success(t('manager.slots.toastBlocked', { code }))
+      } else {
+        toast.success(t('manager.slots.toastUnlocked', { code }))
+      }
+
       onStatusChange()
       load()
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Cập nhật thất bại')
+      toast.error(err?.response?.data?.message || t('manager.slots.updateFail'))
     } finally { setUpdating(false) }
   }
 
@@ -118,11 +131,18 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-0 sm:px-4">
       <div className="w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Chi tiết slot</h3>
-            {slot && <p className="text-xs text-slate-400 mt-0.5">{slot.SlotCode} · {slot.ZoneName} · {slot.FloorName}</p>}
+            <h3 className="text-base font-bold text-slate-900">
+              {t('manager.slots.detail.title')}
+            </h3>
+            {slot && (
+              <p className="text-xs text-slate-400 mt-0.5">
+                {slot.SlotCode} · {slot.ZoneName} · {slot.FloorName}
+              </p>
+            )}
           </div>
           <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100 transition">
             <X size={18} />
@@ -136,18 +156,21 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
             </div>
           ) : slot ? (
             <div className="p-5 space-y-4">
+
               {/* Info grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { label: 'Mã slot', value: slot.SlotCode, bold: true },
-                  { label: 'Loại xe', value: slot.VehicleName },
-                  { label: 'Khu vực', value: slot.ZoneName },
-                  { label: 'Trạng thái', value: <StatusBadge status={slot.SlotStatus} />, raw: true },
+                  { label: t('manager.slots.detail.slotCode'), value: slot.SlotCode, bold: true },
+                  { label: t('manager.slots.detail.vehicle'), value: slot.VehicleName },
+                  { label: t('manager.slots.detail.zone'), value: slot.ZoneName },
+                  { label: t('manager.slots.detail.status'), value: <StatusBadge status={slot.SlotStatus} />, raw: true },
                 ].map(({ label, value, bold, raw }) => (
                   <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 p-3">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">{label}</p>
                     {raw ? value : (
-                      <p className={`text-sm ${bold ? 'font-black text-blue-600 text-base' : 'font-semibold text-slate-800'}`}>{value || '—'}</p>
+                      <p className={`text-sm ${bold ? 'font-black text-blue-600 text-base' : 'font-semibold text-slate-800'}`}>
+                        {value || '—'}
+                      </p>
                     )}
                   </div>
                 ))}
@@ -158,19 +181,33 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
                 <div className="rounded-xl bg-blue-600 p-5 text-white">
                   <div className="flex items-center gap-2 mb-3">
                     <Activity size={15} className="text-blue-200" />
-                    <p className="text-sm font-bold text-blue-100">Phiên đang đỗ</p>
+                    <p className="text-sm font-bold text-blue-100">
+                      {t('manager.slots.detail.activeSession')}
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div><p className="text-blue-200 text-xs mb-0.5">Biển số</p><p className="font-black text-xl">{session.PlateNumber}</p></div>
-                    <div><p className="text-blue-200 text-xs mb-0.5">Thời gian</p><p className="font-bold">{Math.floor(session.ParkedMinutes / 60)}h {session.ParkedMinutes % 60}m</p></div>
-                    <div><p className="text-blue-200 text-xs mb-0.5">Tài xế</p><p className="font-semibold">{session.DriverName}</p></div>
-                    <div><p className="text-blue-200 text-xs mb-0.5">Vào lúc</p><p className="font-semibold">{new Date(session.EntryTime).toLocaleTimeString('vi-VN')}</p></div>
+                    <div>
+                      <p className="text-blue-200 text-xs mb-0.5">{t('manager.slots.detail.plate')}</p>
+                      <p className="font-black text-xl">{session.PlateNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-blue-200 text-xs mb-0.5">{t('manager.slots.detail.duration')}</p>
+                      <p className="font-bold">{Math.floor(session.ParkedMinutes / 60)}h {session.ParkedMinutes % 60}m</p>
+                    </div>
+                    <div>
+                      <p className="text-blue-200 text-xs mb-0.5">{t('manager.slots.detail.driver')}</p>
+                      <p className="font-semibold">{session.DriverName}</p>
+                    </div>
+                    <div>
+                      <p className="text-blue-200 text-xs mb-0.5">{t('manager.slots.detail.entryTime')}</p>
+                      <p className="font-semibold">{new Date(session.EntryTime).toLocaleTimeString('vi-VN')}</p>
+                    </div>
                   </div>
                 </div>
               ) : (
                 <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex items-center gap-3 text-slate-400">
                   <Info size={15} />
-                  <p className="text-sm">Không có xe đang đỗ</p>
+                  <p className="text-sm">{t('manager.slots.detail.noSession')}</p>
                 </div>
               )}
 
@@ -178,21 +215,30 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
               {canMaintain && (
                 <div className="flex gap-2">
                   {slot.SlotStatus !== 'Available' && (
-                    <button onClick={() => handleStatusUpdate('Available')} disabled={updating}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 transition">
-                      <Unlock size={15} /> Mở slot
+                    <button
+                      onClick={() => handleStatusUpdate('Available')}
+                      disabled={updating}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 transition"
+                    >
+                      <Unlock size={15} /> {t('manager.slots.detail.unlockBtn')}
                     </button>
                   )}
                   {slot.SlotStatus !== 'Maintenance' && (
-                    <button onClick={() => handleStatusUpdate('Maintenance')} disabled={updating}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-60 transition">
-                      <Wrench size={15} /> Bảo trì
+                    <button
+                      onClick={() => handleStatusUpdate('Maintenance')}
+                      disabled={updating}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-60 transition"
+                    >
+                      <Wrench size={15} /> {t('manager.slots.detail.maintenanceBtn')}
                     </button>
                   )}
                   {slot.SlotStatus !== 'Blocked' && (
-                    <button onClick={() => handleStatusUpdate('Blocked')} disabled={updating}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60 transition">
-                      <Lock size={15} /> Khoá slot
+                    <button
+                      onClick={() => handleStatusUpdate('Blocked')}
+                      disabled={updating}
+                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60 transition"
+                    >
+                      <Lock size={15} /> {t('manager.slots.detail.blockBtn')}
                     </button>
                   )}
                 </div>
@@ -202,29 +248,44 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <History size={15} className="text-slate-400" />
-                  <h4 className="text-sm font-bold text-slate-700">Lịch sử gần đây</h4>
+                  <h4 className="text-sm font-bold text-slate-700">
+                    {t('manager.slots.detail.historyTitle')}
+                  </h4>
                 </div>
                 <div className="rounded-xl border border-slate-100 overflow-hidden">
                   <div className="overflow-y-auto max-h-56">
                     <table className="min-w-full text-left text-xs text-slate-600">
                       <thead className="bg-slate-50 border-b border-slate-100 sticky top-0">
                         <tr>
-                          <th className="px-4 py-2.5 font-bold text-slate-400">Phiên</th>
-                          <th className="px-4 py-2.5 font-bold text-slate-400">Biển số</th>
-                          <th className="px-4 py-2.5 font-bold text-slate-400">Vào</th>
-                          <th className="px-4 py-2.5 font-bold text-slate-400">Thời gian</th>
-                          <th className="px-4 py-2.5 font-bold text-slate-400">Thanh toán</th>
+                          <th className="px-4 py-2.5 font-bold text-slate-400">{t('manager.slots.detail.colSession')}</th>
+                          <th className="px-4 py-2.5 font-bold text-slate-400">{t('manager.slots.detail.colPlate')}</th>
+                          <th className="px-4 py-2.5 font-bold text-slate-400">{t('manager.slots.detail.colIn')}</th>
+                          <th className="px-4 py-2.5 font-bold text-slate-400">{t('manager.slots.detail.colTime')}</th>
+                          <th className="px-4 py-2.5 font-bold text-slate-400">{t('manager.slots.detail.colPayment')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {history.length === 0 ? (
-                          <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-300">Chưa có lịch sử</td></tr>
+                          <tr>
+                            <td colSpan={5} className="px-4 py-8 text-center text-slate-300">
+                              {t('manager.slots.detail.noHistory')}
+                            </td>
+                          </tr>
                         ) : history.map(h => (
                           <tr key={h.SessionID} className="hover:bg-slate-50 bg-white">
                             <td className="px-4 py-2.5 font-bold text-slate-700">{h.SessionCode}</td>
                             <td className="px-4 py-2.5 font-semibold">{h.PlateNumber}</td>
-                            <td className="px-4 py-2.5 text-slate-400">{new Date(h.EntryTime).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</td>
-                            <td className="px-4 py-2.5">{h.DurationMinutes != null ? `${Math.floor(h.DurationMinutes / 60)}h${h.DurationMinutes % 60}m` : 'Đang đỗ'}</td>
+                            <td className="px-4 py-2.5 text-slate-400">
+                              {new Date(h.EntryTime).toLocaleString('vi-VN', {
+                                hour: '2-digit', minute: '2-digit',
+                                day: '2-digit', month: '2-digit',
+                              })}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              {h.DurationMinutes != null
+                                ? `${Math.floor(h.DurationMinutes / 60)}h${h.DurationMinutes % 60}m`
+                                : t('manager.slots.detail.stillParking')}
+                            </td>
                             <td className="px-4 py-2.5">
                               {h.Amount ? (
                                 <span className={`font-semibold ${h.PaymentStatus === 'Completed' ? 'text-emerald-600' : 'text-amber-600'}`}>
@@ -239,6 +300,7 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
                   </div>
                 </div>
               </div>
+
             </div>
           ) : null}
         </div>
@@ -256,14 +318,16 @@ const ZoneMapView = ({ slots, onSelectSlot, selectedSlotId }) => {
         const cfg = STATUS_CFG[slot.SlotStatus] || STATUS_CFG.Available
         const isSelected = selectedSlotId === slot.SlotID
         return (
-          <button key={slot.SlotID}
+          <button
+            key={slot.SlotID}
             onClick={() => onSelectSlot(slot.SlotID)}
-            title={`${slot.SlotCode} · ${cfg.label}${slot.PlateNumber ? ' · ' + slot.PlateNumber : ''}`}
+            title={`${slot.SlotCode}${slot.PlateNumber ? ' · ' + slot.PlateNumber : ''}`}
             className={`w-14 h-14 rounded-xl border-2 flex flex-col items-center justify-center transition-all duration-150
               ${isSelected
                 ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110 z-10'
                 : `${cfg.mapBg} ${slot.SlotStatus === 'Blocked' ? 'text-white' : 'text-slate-700'}`
-              }`}>
+              }`}
+          >
             <span className="font-black text-[10px] leading-tight text-center px-0.5">
               {slot.SlotCode.split('-').slice(-1)[0]}
             </span>
@@ -276,27 +340,6 @@ const ZoneMapView = ({ slots, onSelectSlot, selectedSlotId }) => {
         )
       })}
     </div>
-  )
-}
-
-/* ─── Nav item for sidebar ───────────────────────────────────── */
-function NavItem({ icon: Icon, label, active, onClick, count, indent = 0, badge }) {
-  return (
-    <button onClick={onClick}
-      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all text-sm
-        ${indent === 1 ? 'pl-6' : indent === 2 ? 'pl-9' : ''}
-        ${active
-          ? 'bg-blue-600 text-white font-semibold shadow-sm'
-          : 'text-slate-600 hover:bg-slate-100 font-medium'}`}>
-      <Icon size={13} className={active ? 'text-blue-100' : 'text-slate-400'} />
-      <span className="flex-1 truncate text-xs">{label}</span>
-      {badge !== undefined && (
-        <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-bold min-w-[20px] text-center
-          ${active ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
-          {badge}
-        </span>
-      )}
-    </button>
   )
 }
 
@@ -319,15 +362,16 @@ const ManagerSlots = () => {
   const [selFloor, setSelFloor] = useState(null)
   const [selZone, setSelZone] = useState(null)
 
-  /* Load all slots once (no pagination — use hierarchy nav to drill down) */
+  /* Load all slots once */
   const loadSlots = useCallback(async () => {
     setLoading(true)
     try {
       const res = await getParkingSlotsAPI({ limit: 2000 })
       setAllSlots(res.data.data || [])
-    } catch { toast.error('Không tải được danh sách slot') }
-    finally { setLoading(false) }
-  }, [])
+    } catch {
+      toast.error(t('manager.slots.loadFail'))
+    } finally { setLoading(false) }
+  }, [t])
 
   useEffect(() => { loadSlots() }, [loadSlots])
 
@@ -349,7 +393,7 @@ const ManagerSlots = () => {
     }
   }, [hierarchy])
 
-  /* Derived slots for current view */
+  /* Derived slots for current zone */
   const zoneSlots = useMemo(() => {
     if (!selBuilding || !selFloor || !selZone) return []
     return allSlots.filter(s =>
@@ -377,7 +421,7 @@ const ManagerSlots = () => {
   /* Stats for current zone / all */
   const stats = useMemo(() => {
     const source = selZone ? zoneSlots : allSlots
-    return Object.keys(STATUS_CFG).reduce((acc, k) => {
+    return STATUS_KEYS.reduce((acc, k) => {
       acc[k] = source.filter(s => s.SlotStatus === k).length
       return acc
     }, {})
@@ -385,8 +429,6 @@ const ManagerSlots = () => {
 
   const totalSlots = (selZone ? zoneSlots : allSlots).length
   const displaySlots = viewMode === 'map' ? zoneSlots : filteredSlots
-
-  /* Current zone object for OccupancyBar */
   const currentZoneSlots = selZone ? zoneSlots : []
 
   return (
@@ -395,47 +437,66 @@ const ManagerSlots = () => {
       {/* ── Header ── */}
       <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500">Quản lý</p>
-          <h1 className="text-xl font-bold text-slate-900 mt-0.5">Sơ đồ slot bãi đỗ xe</h1>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500">
+            {t('manager.slots.eyebrow')}
+          </p>
+          <h1 className="text-xl font-bold text-slate-900 mt-0.5">
+            {t('manager.slots.title')}
+          </h1>
         </div>
         <div className="flex items-center gap-2">
           {/* View toggle */}
           <div className="flex items-center bg-slate-100 rounded-lg p-1">
-            <button onClick={() => setViewMode('map')}
+            <button
+              onClick={() => setViewMode('map')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all
-                ${viewMode === 'map' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>
-              <LayoutGrid size={13} /> Bản đồ
+                ${viewMode === 'map' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+            >
+              <LayoutGrid size={13} /> {t('manager.slots.viewMap', 'Bản đồ')}
             </button>
-            <button onClick={() => setViewMode('list')}
+            <button
+              onClick={() => setViewMode('list')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all
-                ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>
-              <List size={13} /> Danh sách
+                ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}
+            >
+              <List size={13} /> {t('manager.slots.viewList', 'Danh sách')}
             </button>
           </div>
-          <button onClick={loadSlots} disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-            <RefreshCcw size={13} className={loading ? 'animate-spin' : ''} /> Làm mới
+          <button
+            onClick={loadSlots}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <RefreshCcw size={13} className={loading ? 'animate-spin' : ''} />
+            {t('manager.slots.refresh')}
           </button>
         </div>
       </div>
 
       {/* ── Stats bar ── */}
       <div className="grid grid-cols-5 gap-2">
-        {Object.entries(STATUS_CFG).map(([k, cfg]) => (
-          <button key={k}
-            onClick={() => setFilterStatus(filterStatus === k ? 'all' : k)}
-            className={`rounded-xl border p-3 text-left transition-all hover:shadow-sm
-              ${filterStatus === k ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-slate-100 bg-white'}`}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{cfg.label}</span>
-            </div>
-            <p className="text-2xl font-black text-slate-800">{stats[k] || 0}</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">
-              {totalSlots > 0 ? Math.round((stats[k] || 0) / totalSlots * 100) : 0}%
-            </p>
-          </button>
-        ))}
+        {STATUS_KEYS.map(k => {
+          const cfg = STATUS_CFG[k]
+          return (
+            <button
+              key={k}
+              onClick={() => setFilterStatus(filterStatus === k ? 'all' : k)}
+              className={`rounded-xl border p-3 text-left transition-all hover:shadow-sm
+                ${filterStatus === k ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-slate-100 bg-white'}`}
+            >
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                  {t(`manager.slots.status.${k}`)}
+                </span>
+              </div>
+              <p className="text-2xl font-black text-slate-800">{stats[k] || 0}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                {totalSlots > 0 ? Math.round((stats[k] || 0) / totalSlots * 100) : 0}%
+              </p>
+            </button>
+          )
+        })}
       </div>
 
       {/* ── Body: sidebar + content ── */}
@@ -443,7 +504,9 @@ const ManagerSlots = () => {
 
         {/* ━━ LEFT SIDEBAR ━━ */}
         <aside className="w-52 flex-shrink-0 bg-white rounded-xl border border-slate-100 shadow-sm overflow-y-auto p-2 max-h-[calc(100vh-280px)]">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1 mb-1">Vị trí</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1 mb-1">
+            {t('manager.slots.eyebrow').split('/').pop()?.trim() || 'Vị trí'}
+          </p>
 
           {loading ? (
             <div className="flex justify-center py-8">
@@ -463,7 +526,8 @@ const ManagerSlots = () => {
                     setSelFloor(null); setSelZone(null)
                   }}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all
-                    ${selBuilding === building.name && !selFloor ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                    ${selBuilding === building.name && !selFloor ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                >
                   <Building2 size={13} className={selBuilding === building.name && !selFloor ? 'text-blue-100' : 'text-slate-400'} />
                   <span className="flex-1 truncate text-xs font-semibold">
                     {building.name.split(' - ').slice(-1)[0] || building.name}
@@ -471,24 +535,28 @@ const ManagerSlots = () => {
                   <span className={`text-[10px] font-bold ${selBuilding === building.name && !selFloor ? 'text-blue-100' : 'text-slate-400'}`}>
                     {bAvail}
                   </span>
-                  <ChevronDown size={11} className={`transition-transform ${isExpB ? 'rotate-180' : ''} ${selBuilding === building.name && !selFloor ? 'text-blue-100' : 'text-slate-300'}`} />
+                  <ChevronDown
+                    size={11}
+                    className={`transition-transform ${isExpB ? 'rotate-180' : ''} ${selBuilding === building.name && !selFloor ? 'text-blue-100' : 'text-slate-300'}`}
+                  />
                 </button>
 
                 {isExpB && building.floors.map(floor => {
                   const fSlots = allSlots.filter(s => s.BuildingName === building.name && s.FloorName === floor.name)
                   const fAvail = fSlots.filter(s => s.SlotStatus === 'Available').length
-                  const isExpF = expandedFloors[`${building.name}-${floor.name}`]
+                  const floorKey = `${building.name}-${floor.name}`
+                  const isExpF = expandedFloors[floorKey]
 
                   return (
                     <div key={floor.name}>
                       <button
                         onClick={() => {
-                          const key = `${building.name}-${floor.name}`
-                          setExpandedFloors(prev => ({ ...prev, [key]: !prev[key] }))
+                          setExpandedFloors(prev => ({ ...prev, [floorKey]: !prev[floorKey] }))
                           setSelBuilding(building.name); setSelFloor(floor.name); setSelZone(null)
                         }}
                         className={`w-full flex items-center gap-2 pl-6 pr-3 py-1.5 rounded-lg text-left transition-all
-                          ${selFloor === floor.name && selBuilding === building.name && !selZone ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+                          ${selFloor === floor.name && selBuilding === building.name && !selZone ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+                      >
                         <Layers size={12} className="text-slate-300 flex-shrink-0" />
                         <span className="flex-1 truncate text-xs font-medium">{floor.name}</span>
                         <span className="text-[10px] text-slate-400 font-bold">{fAvail}</span>
@@ -496,14 +564,20 @@ const ManagerSlots = () => {
                       </button>
 
                       {isExpF && floor.zones.map(zone => {
-                        const zSlots = allSlots.filter(s => s.BuildingName === building.name && s.FloorName === floor.name && s.ZoneName === zone.name)
+                        const zSlots = allSlots.filter(s =>
+                          s.BuildingName === building.name &&
+                          s.FloorName === floor.name &&
+                          s.ZoneName === zone.name
+                        )
                         const zAvail = zSlots.filter(s => s.SlotStatus === 'Available').length
                         const isAct = selZone === zone.name && selFloor === floor.name && selBuilding === building.name
                         return (
-                          <button key={zone.name}
+                          <button
+                            key={zone.name}
                             onClick={() => { setSelBuilding(building.name); setSelFloor(floor.name); setSelZone(zone.name); setSelectedSlotId(null) }}
                             className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-left transition-all
-                              ${isAct ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+                              ${isAct ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+                          >
                             <Grid3X3 size={11} className={isAct ? 'text-blue-100' : 'text-slate-300'} />
                             <span className="flex-1 truncate text-[11px] font-medium">
                               {zone.name.split(' ').slice(-2).join(' ')}
@@ -532,7 +606,7 @@ const ManagerSlots = () => {
               </>}
               {selFloor && <><span>›</span><Layers size={11} className="text-blue-400" /><span className="font-medium text-slate-600">{selFloor}</span></>}
               {selZone && <><span>›</span><Grid3X3 size={11} className="text-blue-400" /><span className="font-medium text-slate-600">{selZone}</span></>}
-              {!selBuilding && <span className="italic">Chọn vị trí từ menu trái</span>}
+              {!selBuilding && <span className="italic">{t('manager.slots.filters.allFloor')}</span>}
             </div>
             {selZone && currentZoneSlots.length > 0 && (
               <div className="w-40 flex-shrink-0">
@@ -545,9 +619,12 @@ const ManagerSlots = () => {
           {viewMode === 'list' && (
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Tìm theo mã slot, biển số, khu vực..."
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={t('manager.slots.filters.searchPlaceholder')}
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+              />
             </div>
           )}
 
@@ -565,25 +642,34 @@ const ManagerSlots = () => {
                   <div className="flex items-center justify-center pt-4 pb-2">
                     <div className="flex items-center gap-2 px-4 py-1.5 bg-slate-700 rounded-full">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-[10px] text-white font-bold tracking-widest">CỔNG VÀO / RA</span>
+                      <span className="text-[10px] text-white font-bold tracking-widest">
+                        {t('manager.slots.gate', 'CỔNG VÀO / RA')}
+                      </span>
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     </div>
                   </div>
+
                   <ZoneMapView slots={zoneSlots} onSelectSlot={setSelectedSlotId} selectedSlotId={selectedSlotId} />
+
                   {/* Legend */}
                   <div className="flex items-center gap-4 flex-wrap px-4 pb-4 pt-2 border-t border-slate-50">
-                    {Object.entries(STATUS_CFG).map(([k, cfg]) => (
-                      <div key={k} className="flex items-center gap-1.5">
-                        <span className={`w-2.5 h-2.5 rounded-sm border ${cfg.mapBg.split(' ').slice(0, 2).join(' ')}`} />
-                        <span className="text-[11px] text-slate-500 font-medium">{cfg.label}</span>
-                      </div>
-                    ))}
+                    {STATUS_KEYS.map(k => {
+                      const cfg = STATUS_CFG[k]
+                      return (
+                        <div key={k} className="flex items-center gap-1.5">
+                          <span className={`w-2.5 h-2.5 rounded-sm border ${cfg.mapBg.split(' ').slice(0, 2).join(' ')}`} />
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            {t(`manager.slots.status.${k}`)}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-slate-300 gap-2">
                   <Grid3X3 size={40} />
-                  <p className="text-sm font-medium">Chọn khu vực từ menu bên trái để xem bản đồ slot</p>
+                  <p className="text-sm font-medium">{t('manager.slots.empty')}</p>
                 </div>
               )
             ) : (
@@ -592,14 +678,22 @@ const ManagerSlots = () => {
                 <table className="min-w-full text-left text-sm text-slate-700">
                   <thead className="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
                     <tr>
-                      {['Mã slot', 'Vị trí', 'Loại xe', 'Trạng thái', 'Xe hiện tại', 'Đỗ từ', ''].map(col => (
-                        <th key={col} className="px-4 py-3 font-bold text-[11px] text-slate-400 uppercase tracking-wide">{col}</th>
-                      ))}
+                      <th className="px-4 py-3 font-bold text-[11px] text-slate-400 uppercase tracking-wide">{t('manager.slots.col.slotCode')}</th>
+                      <th className="px-4 py-3 font-bold text-[11px] text-slate-400 uppercase tracking-wide">{t('manager.slots.col.location')}</th>
+                      <th className="px-4 py-3 font-bold text-[11px] text-slate-400 uppercase tracking-wide">{t('manager.slots.col.vehicle')}</th>
+                      <th className="px-4 py-3 font-bold text-[11px] text-slate-400 uppercase tracking-wide">{t('manager.slots.col.status')}</th>
+                      <th className="px-4 py-3 font-bold text-[11px] text-slate-400 uppercase tracking-wide">{t('manager.slots.col.currentVehicle')}</th>
+                      <th className="px-4 py-3 font-bold text-[11px] text-slate-400 uppercase tracking-wide">{t('manager.slots.col.parkedFrom')}</th>
+                      <th className="px-4 py-3 font-bold text-[11px] text-slate-400 uppercase tracking-wide">{t('manager.slots.col.detail')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {displaySlots.length === 0 ? (
-                      <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-300 text-sm">Không có slot nào</td></tr>
+                      <tr>
+                        <td colSpan={7} className="px-4 py-12 text-center text-slate-300 text-sm">
+                          {t('manager.slots.empty')}
+                        </td>
+                      </tr>
                     ) : displaySlots.map(slot => (
                       <tr key={slot.SlotID} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 font-black text-slate-900">{slot.SlotCode}</td>
@@ -608,7 +702,9 @@ const ManagerSlots = () => {
                           <p className="text-[11px] text-slate-400">{slot.FloorName} · {slot.BuildingName}</p>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-semibold">{slot.VehicleCode}</span>
+                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-semibold">
+                            {slot.VehicleCode}
+                          </span>
                         </td>
                         <td className="px-4 py-3"><StatusBadge status={slot.SlotStatus} /></td>
                         <td className="px-4 py-3">
@@ -617,12 +713,19 @@ const ManagerSlots = () => {
                             : <span className="text-slate-300">—</span>}
                         </td>
                         <td className="px-4 py-3 text-slate-400 text-xs">
-                          {slot.EntryTime ? new Date(slot.EntryTime).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '—'}
+                          {slot.EntryTime
+                            ? new Date(slot.EntryTime).toLocaleString('vi-VN', {
+                              hour: '2-digit', minute: '2-digit',
+                              day: '2-digit', month: '2-digit',
+                            })
+                            : '—'}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button onClick={() => setSelectedSlotId(slot.SlotID)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all">
-                            Chi tiết <ChevronRight size={11} />
+                          <button
+                            onClick={() => setSelectedSlotId(slot.SlotID)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all"
+                          >
+                            {t('manager.slots.detailBtn')} <ChevronRight size={11} />
                           </button>
                         </td>
                       </tr>
