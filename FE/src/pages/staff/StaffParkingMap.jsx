@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import axios from '../../utils/authorizeAxios'
 import { Map, RefreshCcw, Car, Info, ZoomIn, ZoomOut } from 'lucide-react'
 
 const STATUS_CONFIG = {
-  available: { label: 'Trống', bg: 'bg-green-50', border: 'border-green-300', text: 'text-green-700' },
-  occupied: { label: 'Đã đỗ', bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700' },
-  reserved: { label: 'Đã đặt', bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-700' },
-  maintenance: { label: 'Bảo trì', bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-500' },
-  blocked: { label: 'Khóa', bg: 'bg-gray-800', border: 'border-gray-800', text: 'text-white' }
+  available: { labelKey: 'staff.parkingMap.statusAvailable', bg: 'bg-green-50', border: 'border-green-300', text: 'text-green-700' },
+  occupied: { labelKey: 'staff.parkingMap.statusOccupied', bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700' },
+  reserved: { labelKey: 'staff.parkingMap.statusReserved', bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-700' },
+  maintenance: { labelKey: 'staff.parkingMap.statusMaintenance', bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-500' },
+  blocked: { labelKey: 'staff.parkingMap.statusBlocked', bg: 'bg-gray-800', border: 'border-gray-800', text: 'text-white' }
 }
 
 function buildZones(slots) {
@@ -34,6 +35,7 @@ function buildZones(slots) {
 }
 
 const StaffParkingMap = () => {
+  const { t } = useTranslation()
   const [zones, setZones] = useState([])
   const [activeZone, setActiveZone] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
@@ -79,7 +81,7 @@ const StaffParkingMap = () => {
       const res = await axios.get(`/staff/slots/${slotCode}`)
       const slotData = res.data?.data
       if (!slotData) {
-        setSelectedSlot({ id: slotCode, status: getStatus(slotCode), zone: zone?.label, details: null, error: 'Không có dữ liệu' })
+        setSelectedSlot({ id: slotCode, status: getStatus(slotCode), zone: zone?.label, details: null, error: t('staff.parkingMap.noDataShort') })
         return
       }
       setSelectedSlot({
@@ -98,7 +100,7 @@ const StaffParkingMap = () => {
         }
       })
     } catch {
-      setSelectedSlot({ id: slotCode, status: getStatus(slotCode), zone: zone?.label, details: null, error: 'Lỗi tải dữ liệu' })
+      setSelectedSlot({ id: slotCode, status: getStatus(slotCode), zone: zone?.label, details: null, error: t('staff.parkingMap.loadError') })
     }
   }
 
@@ -121,12 +123,12 @@ const StaffParkingMap = () => {
     <div className="flex flex-col h-full bg-gray-50">
       <header className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><Map size={24} className="text-blue-600" /> Sơ đồ bãi đỗ xe</h1>
-          <p className="text-sm text-gray-500 mt-1">Xem trạng thái theo thời gian thực của từng ô đỗ</p>
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><Map size={24} className="text-blue-600" /> {t('staff.parkingMap.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('staff.parkingMap.subtitle')}</p>
         </div>
         <button onClick={handleRefresh} disabled={loading}
           className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm">
-          <RefreshCcw size={15} /> Làm mới
+          <RefreshCcw size={15} /> {t('staff.parkingMap.refresh')}
         </button>
       </header>
 
@@ -148,10 +150,10 @@ const StaffParkingMap = () => {
 
           <div className="flex gap-3 mb-4">
             {[
-              { label: 'Tổng ô', value: totalSlots, color: 'text-gray-800' },
-              { label: 'Trống', value: availableCount, color: 'text-green-600' },
-              { label: 'Đã đỗ', value: occupiedCount, color: 'text-red-600' },
-              { label: 'Đã đặt', value: reservedCount, color: 'text-orange-500' }
+              { label: t('staff.parkingMap.statTotal'), value: totalSlots, color: 'text-gray-800' },
+              { label: t('staff.parkingMap.statAvailable'), value: availableCount, color: 'text-green-600' },
+              { label: t('staff.parkingMap.statOccupied'), value: occupiedCount, color: 'text-red-600' },
+              { label: t('staff.parkingMap.statReserved'), value: reservedCount, color: 'text-orange-500' }
             ].map(item => (
               <div key={item.label} className="bg-white rounded-lg border border-gray-100 px-4 py-2 text-center shadow-sm flex-1">
                 <p className={`text-xl font-black ${item.color}`}>{item.value}</p>
@@ -162,7 +164,7 @@ const StaffParkingMap = () => {
 
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex-1 overflow-auto">
             <div className="h-6 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center mb-4">
-              <span className="text-xs text-gray-400 font-semibold tracking-widest">◀ LỐI VÀO / RA ▶</span>
+              <span className="text-xs text-gray-400 font-semibold tracking-widest">{t('staff.parkingMap.gateLabel')}</span>
             </div>
             <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', transition: 'transform 0.2s' }}>
               {zone?.rows.map((row, ri) => (
@@ -174,13 +176,13 @@ const StaffParkingMap = () => {
                     return (
                       <button key={`slot-${slotCode}`} onClick={() => handleSelectSlot(slotCode)}
                         className={`w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center transition-all hover:scale-110 hover:shadow-md ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110' : `${cfg.bg} ${cfg.border} ${cfg.text}`}`}
-                        title={`${slotCode} – ${cfg.label}`}>
+                        title={`${slotCode} – ${t(cfg.labelKey)}`}>
                         <span className="font-bold text-xs">{slotCode}</span>
                         {st === 'occupied' && <Car size={10} className="mt-0.5 opacity-70" />}
-                        {st === 'available' && <span className="text-[8px] opacity-50 font-semibold">TRỐNG</span>}
-                        {st === 'reserved' && <span className="text-[8px] font-bold opacity-70">ĐẶT</span>}
-                        {st === 'maintenance' && <span className="text-[8px] font-bold opacity-70">BT</span>}
-                        {st === 'blocked' && <span className="text-[8px] font-bold opacity-70">KH</span>}
+                        {st === 'available' && <span className="text-[8px] opacity-50 font-semibold">{t('staff.parkingMap.tagAvailable')}</span>}
+                        {st === 'reserved' && <span className="text-[8px] font-bold opacity-70">{t('staff.parkingMap.tagReserved')}</span>}
+                        {st === 'maintenance' && <span className="text-[8px] font-bold opacity-70">{t('staff.parkingMap.tagMaintenance')}</span>}
+                        {st === 'blocked' && <span className="text-[8px] font-bold opacity-70">{t('staff.parkingMap.tagBlocked')}</span>}
                       </button>
                     )
                   })}
@@ -193,57 +195,57 @@ const StaffParkingMap = () => {
         <div className="w-64 flex flex-col gap-4">
           {selectedSlot && !selectedSlot.error ? (
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-left max-h-[calc(100vh-300px)] overflow-y-auto">
-              <h3 className="text-sm font-bold text-gray-600 uppercase mb-4 border-b pb-2">Chi tiết ô đỗ</h3>
+              <h3 className="text-sm font-bold text-gray-600 uppercase mb-4 border-b pb-2">{t('staff.parkingMap.detailTitle')}</h3>
               <div className="text-center mb-4">
                 <div className="text-4xl font-black text-blue-600">{selectedSlot.id}</div>
                 <div className="text-xs text-gray-400 mt-1">{selectedSlot.zone}</div>
               </div>
               <div className={`text-center py-2 px-3 rounded-lg font-bold text-sm mb-4 ${STATUS_CONFIG[selectedSlot.status]?.bg} ${STATUS_CONFIG[selectedSlot.status]?.text} border ${STATUS_CONFIG[selectedSlot.status]?.border}`}>
-                {STATUS_CONFIG[selectedSlot.status]?.label.toUpperCase()}
+                {t(STATUS_CONFIG[selectedSlot.status]?.labelKey).toUpperCase()}
               </div>
               {selectedSlot.details ? (
                 <div className="text-xs text-gray-600 space-y-2">
                   {selectedSlot.type === 'session' && (
                     <>
-                      <p className="font-bold text-gray-700 border-b pb-2">Phiên gửi xe</p>
-                      {selectedSlot.details.sessionCode && <p><strong>Mã phiên:</strong> {selectedSlot.details.sessionCode}</p>}
-                      {selectedSlot.details.plateNumber && <p><strong>Biển số:</strong> {selectedSlot.details.plateNumber}</p>}
-                      {selectedSlot.details.entryTime && <p><strong>Vào lúc:</strong> {formatDateTime(selectedSlot.details.entryTime)}</p>}
+                      <p className="font-bold text-gray-700 border-b pb-2">{t('staff.parkingMap.sessionTitle')}</p>
+                      {selectedSlot.details.sessionCode && <p><strong>{t('staff.parkingMap.sessionCode')}:</strong> {selectedSlot.details.sessionCode}</p>}
+                      {selectedSlot.details.plateNumber && <p><strong>{t('staff.parkingMap.plate')}:</strong> {selectedSlot.details.plateNumber}</p>}
+                      {selectedSlot.details.entryTime && <p><strong>{t('staff.parkingMap.entryTime')}:</strong> {formatDateTime(selectedSlot.details.entryTime)}</p>}
                     </>
                   )}
                   {selectedSlot.type === 'reservation' && (
                     <>
-                      <p className="font-bold text-gray-700 border-b pb-2">Đặt chỗ</p>
-                      {selectedSlot.details.bookingCode && <p><strong>Mã booking:</strong> {selectedSlot.details.bookingCode}</p>}
-                      {selectedSlot.details.startTime && <p><strong>Bắt đầu:</strong> {formatDateTime(selectedSlot.details.startTime)}</p>}
-                      {selectedSlot.details.endTime && <p><strong>Dự kiến ra:</strong> {formatDateTime(selectedSlot.details.endTime)}</p>}
-                      {selectedSlot.details.reservationStatus && <p><strong>Trạng thái:</strong> {selectedSlot.details.reservationStatus}</p>}
+                      <p className="font-bold text-gray-700 border-b pb-2">{t('staff.parkingMap.reservationTitle')}</p>
+                      {selectedSlot.details.bookingCode && <p><strong>{t('staff.parkingMap.bookingCode')}:</strong> {selectedSlot.details.bookingCode}</p>}
+                      {selectedSlot.details.startTime && <p><strong>{t('staff.parkingMap.startTime')}:</strong> {formatDateTime(selectedSlot.details.startTime)}</p>}
+                      {selectedSlot.details.endTime && <p><strong>{t('staff.parkingMap.endTime')}:</strong> {formatDateTime(selectedSlot.details.endTime)}</p>}
+                      {selectedSlot.details.reservationStatus && <p><strong>{t('staff.parkingMap.reservationStatus')}:</strong> {selectedSlot.details.reservationStatus}</p>}
                     </>
                   )}
                   <div className="border-t pt-2 mt-2">
-                    <p className="font-bold text-gray-700 mb-1">Thông tin tài xế</p>
-                    {selectedSlot.details.driverName && <p><strong>Tên:</strong> {selectedSlot.details.driverName}</p>}
-                    {selectedSlot.details.driverEmail && <p><strong>Email:</strong> {selectedSlot.details.driverEmail}</p>}
-                    {selectedSlot.details.driverPhone && <p><strong>Điện thoại:</strong> {selectedSlot.details.driverPhone}</p>}
+                    <p className="font-bold text-gray-700 mb-1">{t('staff.parkingMap.driverInfo')}</p>
+                    {selectedSlot.details.driverName && <p><strong>{t('staff.parkingMap.driverName')}:</strong> {selectedSlot.details.driverName}</p>}
+                    {selectedSlot.details.driverEmail && <p><strong>{t('staff.parkingMap.driverEmail')}:</strong> {selectedSlot.details.driverEmail}</p>}
+                    {selectedSlot.details.driverPhone && <p><strong>{t('staff.parkingMap.driverPhone')}:</strong> {selectedSlot.details.driverPhone}</p>}
                   </div>
                   {selectedSlot.details.paymentStatus && (
                     <div className="border-t pt-2 mt-2">
-                      <p className="font-bold text-gray-700 mb-1">Thanh toán</p>
-                      <p><strong>Trạng thái:</strong> {selectedSlot.details.paymentStatus}</p>
-                      {selectedSlot.details.finalAmount != null && <p><strong>Tổng phí:</strong> {formatCurrency(selectedSlot.details.finalAmount)}</p>}
-                      {selectedSlot.details.prepaidAmount && <p><strong>Đã thanh toán:</strong> {formatCurrency(selectedSlot.details.prepaidAmount)}</p>}
-                      {selectedSlot.details.surchargeAmount > 0 && <p><strong>Phụ trội:</strong> {formatCurrency(selectedSlot.details.surchargeAmount)}</p>}
+                      <p className="font-bold text-gray-700 mb-1">{t('staff.parkingMap.payment')}</p>
+                      <p><strong>{t('staff.parkingMap.paymentStatus')}:</strong> {selectedSlot.details.paymentStatus}</p>
+                      {selectedSlot.details.finalAmount != null && <p><strong>{t('staff.parkingMap.totalFee')}:</strong> {formatCurrency(selectedSlot.details.finalAmount)}</p>}
+                      {selectedSlot.details.prepaidAmount && <p><strong>{t('staff.parkingMap.paidAmount')}:</strong> {formatCurrency(selectedSlot.details.prepaidAmount)}</p>}
+                      {selectedSlot.details.surchargeAmount > 0 && <p><strong>{t('staff.parkingMap.surcharge')}:</strong> {formatCurrency(selectedSlot.details.surchargeAmount)}</p>}
                     </div>
                   )}
                 </div>
               ) : (
-                <p className="text-center text-gray-400 text-xs">Chưa có dữ liệu</p>
+                <p className="text-center text-gray-400 text-xs">{t('staff.parkingMap.noData')}</p>
               )}
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-center">
               <Info size={32} className="text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">{selectedSlot?.error || 'Nhấn vào một ô đỗ để xem chi tiết'}</p>
+              <p className="text-sm text-gray-400">{selectedSlot?.error || t('staff.parkingMap.clickHint')}</p>
             </div>
           )}
         </div>

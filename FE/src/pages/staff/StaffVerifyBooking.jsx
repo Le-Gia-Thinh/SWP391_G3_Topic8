@@ -8,34 +8,36 @@ import {
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import staffApi from '../../apis/staffApi'
+import { useTranslation } from 'react-i18next'
 
 // ── Helpers ───────────────────────────────────────────────────
-const formatDateTime = (dt) => {
+const formatDateTime = (dt, t) => {
   if (!dt) return '—'
   const d = new Date(dt)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${d.getDate()} Th${d.getMonth() + 1} ${d.getFullYear()}`
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${d.getDate()} ${t('staff.verifyBooking.monthShort')}${d.getMonth() + 1} ${d.getFullYear()}`
 }
 
-const getTimeRemaining = (endTime) => {
+const getTimeRemaining = (endTime, t) => {
   if (!endTime) return null
   const diff = Math.floor((new Date(endTime) - Date.now()) / 60000)
-  if (diff <= 0) return { label: 'Đã hết hạn', type: 'error' }
-  if (diff <= 60) return { label: `Còn ${diff} phút`, type: 'warning' }
+  if (diff <= 0) return { label: t('staff.verifyBooking.timeExpired'), type: 'error' }
+  if (diff <= 60) return { label: t('staff.verifyBooking.timeLeftMin', { n: diff }), type: 'warning' }
   const h = Math.floor(diff / 60); const m = diff % 60
-  return { label: `Còn ${h}h ${m}m`, type: 'ok' }
+  return { label: t('staff.verifyBooking.timeLeftHM', { h, m }), type: 'ok' }
 }
 
 const STATUS_CONFIG = {
-  Reserved: { label: 'Chờ xác thực', color: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
-  Completed: { label: 'Đã check-in', color: 'bg-green-50 text-green-700 border-green-200', dot: 'bg-green-500' },
-  Expired: { label: 'Hết hạn', color: 'bg-red-50 text-red-600 border-red-200', dot: 'bg-red-500' },
-  Cancelled: { label: 'Đã hủy', color: 'bg-gray-100 text-gray-500 border-gray-200', dot: 'bg-gray-400' }
+  Reserved: { labelKey: 'staff.verifyBooking.status.reserved', color: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
+  Completed: { labelKey: 'staff.verifyBooking.status.completed', color: 'bg-green-50 text-green-700 border-green-200', dot: 'bg-green-500' },
+  Expired: { labelKey: 'staff.verifyBooking.status.expired', color: 'bg-red-50 text-red-600 border-red-200', dot: 'bg-red-500' },
+  Cancelled: { labelKey: 'staff.verifyBooking.status.cancelled', color: 'bg-gray-100 text-gray-500 border-gray-200', dot: 'bg-gray-400' }
 }
 
 // ── Booking Row Card (dùng trong list) ────────────────────────
 const BookingRow = ({ booking, onSelect, isSelected }) => {
+  const { t } = useTranslation()
   const cfg = STATUS_CONFIG[booking.ReservationStatus] || STATUS_CONFIG.Cancelled
-  const tr = getTimeRemaining(booking.EndTime)
+  const tr = getTimeRemaining(booking.EndTime, t)
 
   return (
     <button
@@ -43,21 +45,21 @@ const BookingRow = ({ booking, onSelect, isSelected }) => {
       className={`w-full text-left p-4 rounded-xl border transition-all hover:shadow-md ${isSelected
         ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-100 shadow-md'
         : 'border-gray-200 bg-white hover:border-blue-300'
-      }`}
+        }`}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-black text-blue-600 font-mono text-sm shrink-0">{booking.BookingCode}</span>
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${cfg.color}`}>
             <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${cfg.dot}`} />
-            {cfg.label}
+            {t(cfg.labelKey)}
           </span>
         </div>
         {tr && (
           <span className={`text-xs font-bold shrink-0 px-2 py-0.5 rounded-full ${tr.type === 'error' ? 'bg-red-50 text-red-600' :
             tr.type === 'warning' ? 'bg-yellow-50 text-yellow-600' :
               'bg-gray-50 text-gray-500'
-          }`}>
+            }`}>
             <Clock size={10} className="inline mr-0.5" />{tr.label}
           </span>
         )}
@@ -80,7 +82,7 @@ const BookingRow = ({ booking, onSelect, isSelected }) => {
 
       <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
         <span className="text-[11px] text-gray-400">
-          {formatDateTime(booking.StartTime)} → {formatDateTime(booking.EndTime)}
+          {formatDateTime(booking.StartTime, t)} → {formatDateTime(booking.EndTime, t)}
         </span>
         <ArrowRight size={14} className={`shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-300'}`} />
       </div>
@@ -90,11 +92,12 @@ const BookingRow = ({ booking, onSelect, isSelected }) => {
 
 // ── Detail Panel ──────────────────────────────────────────────
 const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [plateNumber, setPlateNumber] = useState('') // ✅ thêm state
   const [plateError, setPlateError] = useState('')
 
-  const tr = getTimeRemaining(booking.EndTime)
+  const tr = getTimeRemaining(booking.EndTime, t)
   const isValid = booking.ReservationStatus === 'Reserved'
   const isExpired = tr?.type === 'error'
   const cfg = STATUS_CONFIG[booking.ReservationStatus] || STATUS_CONFIG.Cancelled
@@ -102,7 +105,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
   // ✅ Validate + gọi onCheckIn với plateNumber
   const handleSubmit = () => {
     if (!plateNumber.trim()) {
-      setPlateError('Vui lòng nhập biển số xe thực tế')
+      setPlateError(t('staff.verifyBooking.plateRequired'))
       return
     }
     setPlateError('')
@@ -111,29 +114,29 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
 
   const validations = [
     {
-      label: 'Trạng thái đặt chỗ',
-      value: isValid ? 'Booking còn hiệu lực' : cfg.label,
+      label: t('staff.verifyBooking.checks.reservationStatus'),
+      value: isValid ? t('staff.verifyBooking.checks.reservationValid') : t(cfg.labelKey),
       status: isValid ? 'ok' : 'error'
     },
     {
-      label: 'Vị trí bãi đỗ',
+      label: t('staff.verifyBooking.checks.slotLabel'),
       value: booking.SlotCode
-        ? `Slot ${booking.SlotCode}${booking.SlotStatus ? ` · ${booking.SlotStatus}` : ''}`
-        : 'Chưa có slot',
+        ? `${t('staff.verifyBooking.checks.slotPrefix')} ${booking.SlotCode}${booking.SlotStatus ? ` · ${booking.SlotStatus}` : ''}`
+        : t('staff.verifyBooking.checks.noSlot'),
       status: booking.SlotCode ? 'ok' : 'warning'
     },
     {
-      label: 'Loại phương tiện',
+      label: t('staff.verifyBooking.checks.vehicleType'),
       value: booking.VehicleName || '—',
       status: 'ok'
     },
     {
-      label: 'Khu vực / Tầng',
+      label: t('staff.verifyBooking.checks.zoneFloor'),
       value: [booking.ZoneName, booking.FloorName].filter(Boolean).join(' · ') || '—',
       status: booking.SlotCode ? 'ok' : 'warning'
     },
     {
-      label: 'Thời gian hiệu lực',
+      label: t('staff.verifyBooking.checks.validUntil'),
       value: tr?.label || '—',
       status: tr?.type || 'ok'
     }
@@ -146,36 +149,36 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
       <div className={`rounded-xl p-5 border ${isExpired || !isValid
         ? 'bg-red-50 border-red-200'
         : 'bg-blue-600 border-blue-500'
-      }`}>
+        }`}>
         <div className="flex items-start justify-between mb-3">
           <div>
             <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${isExpired || !isValid ? 'text-red-400' : 'text-blue-200'}`}>
-              Mã đặt chỗ
+              {t('staff.verifyBooking.bookingCodeLabel')}
             </p>
             <p className={`text-2xl font-black tracking-wider ${isExpired || !isValid ? 'text-red-700' : 'text-white'}`}>
               {booking.BookingCode}
             </p>
           </div>
           <span className={`text-xs font-bold px-3 py-1 rounded-full border ${cfg.color}`}>
-            {cfg.label}
+            {t(cfg.labelKey)}
           </span>
         </div>
         <div className={`text-sm font-medium ${isExpired || !isValid ? 'text-red-600' : 'text-blue-100'}`}>
-          {booking.VehicleName} · Slot {booking.SlotCode || '—'}
+          {booking.VehicleName} · {t('staff.verifyBooking.checks.slotPrefix')} {booking.SlotCode || '—'}
         </div>
       </div>
 
       {/* Info grid */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Thông tin chi tiết</p>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('staff.verifyBooking.detailTitle')}</p>
         {[
-          { icon: User, label: 'Tài xế', value: booking.DriverName },
-          { icon: Phone, label: 'SĐT', value: booking.PhoneNumber || '—' },
-          { icon: Car, label: 'Phương tiện', value: booking.VehicleName },
-          { icon: MapPin, label: 'Vị trí', value: [booking.BuildingName, booking.FloorName, booking.ZoneName, booking.SlotCode].filter(Boolean).join(' · ') || '—' },
-          { icon: Hash, label: 'ID hệ thống', value: `#${booking.ReservationID}` },
-          { icon: Calendar, label: 'Bắt đầu', value: formatDateTime(booking.StartTime) },
-          { icon: Calendar, label: 'Kết thúc', value: formatDateTime(booking.EndTime) }
+          { icon: User, label: t('staff.verifyBooking.fields.driver'), value: booking.DriverName },
+          { icon: Phone, label: t('staff.verifyBooking.fields.phone'), value: booking.PhoneNumber || '—' },
+          { icon: Car, label: t('staff.verifyBooking.fields.vehicle'), value: booking.VehicleName },
+          { icon: MapPin, label: t('staff.verifyBooking.fields.location'), value: [booking.BuildingName, booking.FloorName, booking.ZoneName, booking.SlotCode].filter(Boolean).join(' · ') || '—' },
+          { icon: Hash, label: t('staff.verifyBooking.fields.systemId'), value: `#${booking.ReservationID}` },
+          { icon: Calendar, label: t('staff.verifyBooking.fields.start'), value: formatDateTime(booking.StartTime, t) },
+          { icon: Calendar, label: t('staff.verifyBooking.fields.end'), value: formatDateTime(booking.EndTime, t) }
         ].map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-start justify-between gap-3">
             <span className="flex items-center gap-1.5 text-xs text-gray-400 font-semibold shrink-0 w-24">
@@ -188,7 +191,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
 
       {/* Validation */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Kết quả đối soát</p>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">{t('staff.verifyBooking.validationTitle')}</p>
         <div className="space-y-3">
           {validations.map((item, i) => (
             <div key={i} className="flex items-center justify-between gap-2">
@@ -199,8 +202,8 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded shrink-0 ${item.status === 'ok' ? 'text-green-600 bg-green-50' :
                 item.status === 'warning' ? 'text-yellow-600 bg-yellow-50' :
                   'text-red-600 bg-red-50'
-              }`}>
-                {item.status === 'ok' ? '✓ Hợp lệ' : item.status === 'warning' ? '⚠ Cảnh báo' : '✗ Không hợp lệ'}
+                }`}>
+                {item.status === 'ok' ? t('staff.verifyBooking.checks.ok') : item.status === 'warning' ? t('staff.verifyBooking.checks.warning') : t('staff.verifyBooking.checks.invalid')}
               </span>
             </div>
           ))}
@@ -211,7 +214,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
       {isValid && !isExpired && (
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-            Biển số xe thực tế *
+            {t('staff.verifyBooking.actualPlateLabel')}
           </p>
           <input
             type="text"
@@ -220,7 +223,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
               setPlateNumber(e.target.value.toUpperCase())
               setPlateError('')
             }}
-            placeholder="VD: 51F-123.45"
+            placeholder={t('staff.verifyBooking.actualPlatePlaceholder')}
             className={`w-full px-3 py-2.5 border rounded-lg text-sm font-bold uppercase focus:ring-2 focus:ring-blue-500 outline-none ${plateError ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
           />
           {plateError && (
@@ -238,8 +241,8 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
             className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl shadow-md shadow-blue-200 transition-colors flex items-center justify-center gap-2"
           >
             {checking
-              ? <><Loader2 size={16} className="animate-spin" /> Đang xử lý...</>
-              : <><ShieldCheck size={16} /> Xác nhận cho xe vào</>
+              ? <><Loader2 size={16} className="animate-spin" /> {t('staff.verifyBooking.processing')}</>
+              : <><ShieldCheck size={16} /> {t('staff.verifyBooking.confirmCheckin')}</>
             }
           </button>
           <div className="flex gap-2">
@@ -247,13 +250,13 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
               onClick={onClose}
               className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
             >
-              <XCircle size={15} /> Từ chối
+              <XCircle size={15} /> {t('staff.verifyBooking.reject')}
             </button>
             <button
               onClick={() => navigate('/staff/create-incident')}
               className="flex-1 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
             >
-              <FileText size={15} /> Tạo Sự cố
+              <FileText size={15} /> {t('staff.verifyBooking.createIncidentShort')}
             </button>
           </div>
         </div>
@@ -263,15 +266,15 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
             <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
             <p className="text-sm text-red-700 font-medium">
               {isExpired
-                ? 'Booking đã hết hạn. Không thể check-in.'
-                : `Trạng thái "${booking.ReservationStatus}" — không thể check-in.`}
+                ? t('staff.verifyBooking.expiredNotice')
+                : t('staff.verifyBooking.invalidStatusNotice', { status: booking.ReservationStatus })}
             </p>
           </div>
           <button
             onClick={() => navigate('/staff/create-incident')}
             className="w-full py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors flex justify-center items-center gap-2 text-sm"
           >
-            <FileText size={15} /> Tạo Báo cáo Sự cố
+            <FileText size={15} /> {t('staff.verifyBooking.createIncidentFull')}
           </button>
         </div>
       )}
@@ -281,6 +284,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
 
 // ── Main Page ─────────────────────────────────────────────────
 const StaffVerifyBooking = () => {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { reservationId } = useParams()
 
@@ -301,9 +305,9 @@ const StaffVerifyBooking = () => {
       const res = await staffApi.getBookingQueue({ status: 'Reserved' })
       const data = res?.data ?? res ?? []
       setPendingList(Array.isArray(data) ? data : [])
-    } catch { toast.error('Không tải được danh sách chờ xác thực') }
+    } catch { toast.error(t('staff.verifyBooking.errors.loadPending')) }
     finally { setLoadingList(false) }
-  }, [])
+  }, [t])
 
   const fetchHistory = useCallback(async () => {
     setLoadingList(true)
@@ -317,9 +321,9 @@ const StaffVerifyBooking = () => {
       const merged = [...(Array.isArray(c) ? c : []), ...(Array.isArray(e) ? e : [])]
         .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt))
       setHistoryList(merged)
-    } catch { toast.error('Không tải được lịch sử') }
+    } catch { toast.error(t('staff.verifyBooking.errors.loadHistory')) }
     finally { setLoadingList(false) }
-  }, [])
+  }, [t])
 
   useEffect(() => { fetchPending() }, [fetchPending])
   useEffect(() => { if (tab === 'history') fetchHistory() }, [tab, fetchHistory])
@@ -329,8 +333,8 @@ const StaffVerifyBooking = () => {
     if (!reservationId) return
     staffApi.getBookingDetail(reservationId)
       .then(res => { const d = res?.data ?? res; if (d) setSelected(d) })
-      .catch(() => toast.error('Không tìm thấy booking từ URL'))
-  }, [reservationId])
+      .catch(() => toast.error(t('staff.verifyBooking.errors.notFoundFromUrl')))
+  }, [reservationId, t])
 
   const handleSearch = async () => {
     const id = searchId.trim()
@@ -342,7 +346,7 @@ const StaffVerifyBooking = () => {
       if (!d) throw new Error()
       setSearchResult(d)
       setSelected(d)
-    } catch { toast.error('Không tìm thấy booking') }
+    } catch { toast.error(t('staff.verifyBooking.errors.notFound')) }
     finally { setSearching(false) }
   }
 
@@ -350,7 +354,7 @@ const StaffVerifyBooking = () => {
     setChecking(true)
     try {
       await staffApi.checkInBooking(booking.ReservationID, plateNumber) // ✅ truyền xuống
-      toast.success(`Check-in ${booking.BookingCode} thành công!`)
+      toast.success(t('staff.verifyBooking.checkinSuccess', { code: booking.BookingCode }))
       navigate('/staff/checkin-success', {
         state: {
           actionType: 'booking-checkin',
@@ -359,7 +363,7 @@ const StaffVerifyBooking = () => {
         }
       })
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Check-in thất bại')
+      toast.error(err?.response?.data?.message || t('staff.verifyBooking.checkinFailed'))
     } finally {
       setChecking(false)
     }
@@ -372,14 +376,14 @@ const StaffVerifyBooking = () => {
       {/* Breadcrumb */}
       <div className="mb-2 text-sm text-gray-500 flex items-center gap-2">
         <ChevronLeft size={16} className="cursor-pointer" onClick={() => navigate(-1)} />
-        <span>Nhân viên</span><ChevronRight size={14} />
-        <span className="text-blue-600 font-medium">Xác thực Booking</span>
+        <span>{t('staff.verifyBooking.breadcrumbStaff')}</span><ChevronRight size={14} />
+        <span className="text-blue-600 font-medium">{t('staff.verifyBooking.breadcrumbCurrent')}</span>
       </div>
 
       <header className="flex justify-between items-center mb-5">
-        <h1 className="text-2xl font-bold text-gray-800">Xác thực Đặt chỗ</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t('staff.verifyBooking.title')}</h1>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 text-sm font-medium">
-          CỔNG VÀO: GATE-01 <ShieldCheck size={16} />
+          {t('staff.verifyBooking.gateLabel')} <ShieldCheck size={16} />
         </div>
       </header>
 
@@ -391,7 +395,7 @@ const StaffVerifyBooking = () => {
           value={searchId}
           onChange={e => setSearchId(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSearch()}
-          placeholder="Nhập mã booking (BK-0001) hoặc ID để tra cứu nhanh..."
+          placeholder={t('staff.verifyBooking.searchPlaceholder')}
           className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
         />
         {searchId && (
@@ -405,7 +409,7 @@ const StaffVerifyBooking = () => {
           className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 disabled:opacity-40 flex items-center gap-1.5 shrink-0"
         >
           {searching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
-          Tra cứu
+          {t('staff.verifyBooking.searchBtn')}
         </button>
       </div>
 
@@ -422,13 +426,13 @@ const StaffVerifyBooking = () => {
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'pending'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                 : 'text-gray-500 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <ListChecks size={15} />
-              Chờ xác thực
+              {t('staff.verifyBooking.tabPending')}
               {pendingList.length > 0 && (
                 <span className={`text-xs font-black px-2 py-0.5 rounded-full ${tab === 'pending' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600'
-                }`}>
+                  }`}>
                   {pendingList.length}
                 </span>
               )}
@@ -438,24 +442,24 @@ const StaffVerifyBooking = () => {
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'history'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                 : 'text-gray-500 hover:bg-gray-50'
-              }`}
+                }`}
             >
               <History size={15} />
-              Lịch sử
+              {t('staff.verifyBooking.tabHistory')}
             </button>
           </div>
 
           {/* Refresh + count */}
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-              {tab === 'pending' ? `${pendingList.length} booking đang chờ` : `${historyList.length} bản ghi`}
+              {tab === 'pending' ? t('staff.verifyBooking.pendingCount', { n: pendingList.length }) : t('staff.verifyBooking.historyCount', { n: historyList.length })}
             </p>
             <button
               onClick={tab === 'pending' ? fetchPending : fetchHistory}
               disabled={loadingList}
               className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-semibold"
             >
-              <RefreshCcw size={12} className={loadingList ? 'animate-spin' : ''} /> Làm mới
+              <RefreshCcw size={12} className={loadingList ? 'animate-spin' : ''} /> {t('staff.verifyBooking.refresh')}
             </button>
           </div>
 
@@ -470,13 +474,13 @@ const StaffVerifyBooking = () => {
                 {tab === 'pending' ? (
                   <>
                     <CheckCircle2 size={32} className="text-green-300 mx-auto mb-3" />
-                    <p className="text-sm font-bold text-gray-600">Không có booking nào đang chờ</p>
-                    <p className="text-xs text-gray-400 mt-1">Tất cả đã được xử lý hoặc chưa có đặt chỗ mới</p>
+                    <p className="text-sm font-bold text-gray-600">{t('staff.verifyBooking.emptyPendingTitle')}</p>
+                    <p className="text-xs text-gray-400 mt-1">{t('staff.verifyBooking.emptyPendingHint')}</p>
                   </>
                 ) : (
                   <>
                     <History size={32} className="text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm font-bold text-gray-600">Chưa có lịch sử</p>
+                    <p className="text-sm font-bold text-gray-600">{t('staff.verifyBooking.emptyHistoryTitle')}</p>
                   </>
                 )}
               </div>
@@ -507,9 +511,9 @@ const StaffVerifyBooking = () => {
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
                 <ShieldCheck size={28} className="text-blue-300" />
               </div>
-              <p className="text-gray-700 font-bold mb-1">Chọn một booking để xem chi tiết</p>
+              <p className="text-gray-700 font-bold mb-1">{t('staff.verifyBooking.placeholderTitle')}</p>
               <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
-                Click vào bất kỳ booking nào ở danh sách bên trái, hoặc tra cứu nhanh bằng mã booking ở thanh tìm kiếm phía trên.
+                {t('staff.verifyBooking.placeholderDesc')}
               </p>
             </div>
           )}
@@ -523,17 +527,17 @@ const StaffVerifyBooking = () => {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" />
           </div>
-          <span className="font-bold text-gray-700 uppercase tracking-wide">Quy trình tự động:</span>
+          <span className="font-bold text-gray-700 uppercase tracking-wide">{t('staff.verifyBooking.autoFlowLabel')}</span>
           <span className="hidden md:inline">
-            Cập nhật trạng thái Booking <span className="mx-1.5 text-gray-300">|</span>
-            Kích hoạt Phiên <span className="mx-1.5 text-gray-300">|</span>
-            Cập nhật Slot
+            {t('staff.verifyBooking.autoFlowStep1')} <span className="mx-1.5 text-gray-300">|</span>
+            {t('staff.verifyBooking.autoFlowStep2')} <span className="mx-1.5 text-gray-300">|</span>
+            {t('staff.verifyBooking.autoFlowStep3')}
           </span>
         </div>
         <div className="flex items-center gap-4 text-gray-400 font-medium">
-          <Link to="/staff/user-guide" className="hover:text-blue-600 transition-colors">Hướng dẫn</Link>
+          <Link to="/staff/user-guide" className="hover:text-blue-600 transition-colors">{t('staff.verifyBooking.footerGuide')}</Link>
           <span className="text-gray-200">|</span>
-          <Link to="/staff/support" className="hover:text-blue-600 transition-colors">Hỗ trợ & Báo lỗi</Link>
+          <Link to="/staff/support" className="hover:text-blue-600 transition-colors">{t('staff.verifyBooking.footerSupport')}</Link>
           <span className="text-gray-200">|</span>
           <span>v2.4.0-stable</span>
         </div>

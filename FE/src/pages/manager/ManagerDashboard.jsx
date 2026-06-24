@@ -5,10 +5,12 @@ import { toast } from 'react-toastify'
 import { useState, useEffect } from 'react'
 import { getDashboardAPI } from '../../apis/managerApi'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts'
+import { useTranslation } from 'react-i18next'
 
 const ManagerDashboard = () => {
+  const { t } = useTranslation()
   const { user } = useAuth()
-  const displayName = user?.fullName || 'Manager'
+  const displayName = user?.fullName || t('manager.dashboard.defaultManager')
 
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -20,7 +22,7 @@ const ManagerDashboard = () => {
       const res = await getDashboardAPI()
       setData(res.data.data)
     } catch {
-      toast.error('Không thể tải dữ liệu dashboard')
+      toast.error(t('manager.dashboard.errLoad'))
     } finally {
       setLoading(false)
       setTimeout(() => setMounted(true), 100)
@@ -30,8 +32,8 @@ const ManagerDashboard = () => {
   useEffect(() => { fetchDashboard() }, [])
 
   const handleExport = () => {
-    toast.info('Đang chuẩn bị dữ liệu báo cáo...')
-    setTimeout(() => toast.success('Đã xuất báo cáo thành công!'), 1500)
+    toast.info(t('manager.dashboard.exportPreparing'))
+    setTimeout(() => toast.success(t('manager.dashboard.exportSuccess')), 1500)
   }
 
   if (loading) {
@@ -48,14 +50,19 @@ const ManagerDashboard = () => {
 
   // KPI cards
   const kpiCards = [
-    { title: 'Tổng vị trí', value: kpis.totalSlots, delta: null, color: 'from-sky-500 to-blue-600', shadow: 'shadow-blue-500/20' },
-    { title: 'Vị trí trống', value: kpis.available, delta: null, color: 'from-emerald-500 to-teal-600', shadow: 'shadow-teal-500/20' },
-    { title: 'Đang đỗ', value: kpis.occupied, delta: null, color: 'from-orange-500 to-amber-600', shadow: 'shadow-orange-500/20' },
-    { title: 'Đặt trước', value: kpis.reserved, delta: null, color: 'from-violet-500 to-fuchsia-600', shadow: 'shadow-fuchsia-500/20' },
-    { title: 'Bảo trì', value: kpis.maintenance, delta: null, color: 'from-rose-500 to-pink-600', shadow: 'shadow-rose-500/20' }
+    { title: t('manager.dashboard.kpi.totalSlots'), value: kpis.totalSlots, delta: null, color: 'from-sky-500 to-blue-600', shadow: 'shadow-blue-500/20' },
+    { title: t('manager.dashboard.kpi.available'), value: kpis.available, delta: null, color: 'from-emerald-500 to-teal-600', shadow: 'shadow-teal-500/20' },
+    { title: t('manager.dashboard.kpi.occupied'), value: kpis.occupied, delta: null, color: 'from-orange-500 to-amber-600', shadow: 'shadow-orange-500/20' },
+    { title: t('manager.dashboard.kpi.reserved'), value: kpis.reserved, delta: null, color: 'from-violet-500 to-fuchsia-600', shadow: 'shadow-fuchsia-500/20' },
+    { title: t('manager.dashboard.kpi.maintenance'), value: kpis.maintenance, delta: null, color: 'from-rose-500 to-pink-600', shadow: 'shadow-rose-500/20' }
   ]
 
   // Build revenue chart data – last 7 days
+  const dayKeys = [
+    t('manager.dashboard.weekdays.sun'), t('manager.dashboard.weekdays.mon'), t('manager.dashboard.weekdays.tue'),
+    t('manager.dashboard.weekdays.wed'), t('manager.dashboard.weekdays.thu'), t('manager.dashboard.weekdays.fri'),
+    t('manager.dashboard.weekdays.sat')
+  ]
   const last7 = []
   for (let i = 6; i >= 0; i--) {
     const d = new Date()
@@ -64,12 +71,11 @@ const ManagerDashboard = () => {
     const month = String(d.getMonth() + 1).padStart(2, '0')
     const day = String(d.getDate()).padStart(2, '0')
     const key = `${year}-${month}-${day}` // Local date string YYYY-MM-DD
-    const dayName = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][d.getDay()]
+    const dayName = dayKeys[d.getDay()]
 
     const found = revenue7Days.find(r => String(r.Period).split('T')[0] === key)
     last7.push({ label: dayName, value: found ? found.TotalRevenue : 0, date: key })
   }
-  const maxRevenue = Math.max(...last7.map(d => d.value), 1)
 
   // Vehicle breakdown total
   const totalVehicles = vehicleBreakdown.reduce((s, v) => s + v.Count, 0) || 1
@@ -88,10 +94,10 @@ const ManagerDashboard = () => {
       {/* Header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Manager Dashboard</h1>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">{t('manager.dashboard.title')}</h1>
           <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
             <Sparkles size={16} className="text-amber-500 animate-pulse" />
-            Xin chào <span className="font-black text-blue-600">{displayName}</span>, đây là tổng quan hoạt động của bãi đỗ.
+            {t('manager.dashboard.greetingPre')} <span className="font-black text-blue-600">{displayName}</span>{t('manager.dashboard.greetingPost')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -99,24 +105,24 @@ const ManagerDashboard = () => {
             onClick={fetchDashboard}
             className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition"
           >
-            <RefreshCcw size={16} /> Làm mới
+            <RefreshCcw size={16} /> {t('manager.dashboard.refresh')}
           </button>
           <button
             onClick={handleExport}
             className="group relative inline-flex items-center gap-2 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:shadow-blue-500/50 hover:-translate-y-0.5 active:scale-95"
           >
-            <Download size={18} /> Xuất báo cáo
+            <Download size={18} /> {t('manager.dashboard.exportReport')}
           </button>
         </div>
       </div>
 
       {/* Doanh thu hôm nay banner */}
       <div className="rounded-3xl bg-linear-to-r from-blue-600 to-indigo-600 p-6 text-white shadow-lg shadow-blue-500/20">
-        <p className="text-sm font-semibold text-blue-100 mb-1">Doanh thu hôm nay</p>
+        <p className="text-sm font-semibold text-blue-100 mb-1">{t('manager.dashboard.revenueTodayLabel')}</p>
         <p className="text-4xl font-black tracking-tight">{revenueFormatted}</p>
         <p className="text-sm text-blue-200 mt-1">
-          {kpis.todaySessions} phiên •
-          {kpis.activeSessions} đang hoạt động
+          {t('manager.dashboard.sessionsTodayCount', { n: kpis.todaySessions })} •
+          {t('manager.dashboard.activeSessionsCount', { n: kpis.activeSessions })}
         </p>
       </div>
 
@@ -131,7 +137,7 @@ const ManagerDashboard = () => {
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">{item.title}</p>
             <p className="text-3xl font-black text-slate-800 tracking-tight">{item.value}</p>
             <div className={`mt-2 inline-flex rounded-lg bg-linear-to-br ${item.color} px-2.5 py-1 text-xs font-bold text-white`}>
-              {item.title === 'Đang đỗ' && kpis.totalSlots > 0
+              {item.title === t('manager.dashboard.kpi.occupied') && kpis.totalSlots > 0
                 ? `${Math.round((item.value / kpis.totalSlots) * 100)}%`
                 : '—'
               }
@@ -145,8 +151,8 @@ const ManagerDashboard = () => {
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Tỷ lệ lấp đầy</h2>
-              <p className="text-xs text-slate-500 font-medium mt-1">Theo từng tầng</p>
+              <h2 className="text-lg font-bold text-slate-900">{t('manager.dashboard.occupancyTitle')}</h2>
+              <p className="text-xs text-slate-500 font-medium mt-1">{t('manager.dashboard.occupancySubtitle')}</p>
             </div>
             <span className="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 border border-blue-100 px-3 py-1.5 text-sm font-bold text-blue-600 shadow-sm">
               <ArrowUpRight size={16} />
@@ -170,7 +176,7 @@ const ManagerDashboard = () => {
               </div>
             ))}
             {floorOccupancy.length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-4">Chưa có dữ liệu tầng</p>
+              <p className="text-sm text-slate-400 text-center py-4">{t('manager.dashboard.noFloorData')}</p>
             )}
           </div>
         </div>
@@ -179,8 +185,8 @@ const ManagerDashboard = () => {
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm xl:col-span-2 flex flex-col">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Doanh thu 7 ngày qua</h2>
-              <p className="text-xs text-slate-500 font-medium mt-1">Tổng doanh thu (VNĐ)</p>
+              <h2 className="text-lg font-bold text-slate-900">{t('manager.dashboard.revenue7DaysTitle')}</h2>
+              <p className="text-xs text-slate-500 font-medium mt-1">{t('manager.dashboard.revenue7DaysSubtitle')}</p>
             </div>
           </div>
 
@@ -218,7 +224,7 @@ const ManagerDashboard = () => {
                     color: '#0f172a'
                   }}
                   itemStyle={{ color: '#2563eb' }}
-                  formatter={(value) => [`${value.toLocaleString('vi-VN')} VNĐ`, 'Doanh thu']}
+                  formatter={(value) => [`${value.toLocaleString('vi-VN')} VNĐ`, t('manager.dashboard.revenueTooltipLabel')]}
                   labelStyle={{ color: '#64748b', marginBottom: '4px' }}
                 />
                 <Area
@@ -241,7 +247,7 @@ const ManagerDashboard = () => {
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm flex flex-col">
           <div className="flex items-center gap-2 mb-6">
             <CarFront className="text-blue-500" size={24} />
-            <h2 className="text-lg font-bold text-slate-900">Cơ cấu loại xe</h2>
+            <h2 className="text-lg font-bold text-slate-900">{t('manager.dashboard.vehicleBreakdownTitle')}</h2>
           </div>
           <div className="space-y-5 flex-1">
             {vehicleBreakdown.length > 0 ? vehicleBreakdown.map((v, idx) => {
@@ -261,7 +267,7 @@ const ManagerDashboard = () => {
                 </div>
               )
             }) : (
-              <p className="text-sm text-slate-400 text-center py-8">Không có xe đang đỗ</p>
+              <p className="text-sm text-slate-400 text-center py-8">{t('manager.dashboard.noVehicles')}</p>
             )}
           </div>
         </div>
@@ -270,18 +276,18 @@ const ManagerDashboard = () => {
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm xl:col-span-2">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Lượt xe vào gần đây</h2>
-              <p className="text-xs text-slate-500 font-medium mt-1">Dữ liệu thực tế từ hệ thống</p>
+              <h2 className="text-lg font-bold text-slate-900">{t('manager.dashboard.recentCheckInsTitle')}</h2>
+              <p className="text-xs text-slate-500 font-medium mt-1">{t('manager.dashboard.realDataSubtitle')}</p>
             </div>
           </div>
           <div className="overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
                 <tr>
-                  <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">Session</th>
-                  <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">Biển số</th>
-                  <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">Vị trí</th>
-                  <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">Giờ vào</th>
+                  <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colSession')}</th>
+                  <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colPlate')}</th>
+                  <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colSlot')}</th>
+                  <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colEntryTime')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 bg-white">
@@ -298,7 +304,7 @@ const ManagerDashboard = () => {
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={4} className="px-5 py-8 text-center text-slate-400 text-sm">Chưa có dữ liệu</td>
+                    <td colSpan={4} className="px-5 py-8 text-center text-slate-400 text-sm">{t('manager.dashboard.noData')}</td>
                   </tr>
                 )}
               </tbody>
@@ -311,19 +317,19 @@ const ManagerDashboard = () => {
       <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Giao dịch thanh toán gần đây</h2>
-            <p className="text-xs text-slate-500 font-medium mt-1">Dữ liệu thực tế</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('manager.dashboard.recentPaymentsTitle')}</h2>
+            <p className="text-xs text-slate-500 font-medium mt-1">{t('manager.dashboard.realDataLabel')}</p>
           </div>
         </div>
         <div className="overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
               <tr>
-                <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">Session</th>
-                <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">Biển số</th>
-                <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">Số tiền</th>
-                <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">Trạng thái</th>
-                <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">Thời gian</th>
+                <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colSession')}</th>
+                <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colPlate')}</th>
+                <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colAmount')}</th>
+                <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colStatus')}</th>
+                <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colTime')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 bg-white">
@@ -337,11 +343,11 @@ const ManagerDashboard = () => {
                   <td className="px-5 py-4">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border
                       ${row.PaymentStatus === 'Completed' || row.PaymentStatus === 'Prepaid'
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                        : 'bg-orange-50 text-orange-600 border-orange-100'
-                      }`}>
+                  ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                  : 'bg-orange-50 text-orange-600 border-orange-100'
+                }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${row.PaymentStatus === 'Completed' || row.PaymentStatus === 'Prepaid' ? 'bg-emerald-500' : 'bg-orange-500'}`} />
-                      {row.PaymentStatus}
+                      {t(`manager.dashboard.paymentStatus.${row.PaymentStatus}`, row.PaymentStatus)}
                     </span>
                   </td>
                   <td className="px-5 py-4 font-medium text-slate-500">
@@ -353,7 +359,7 @@ const ManagerDashboard = () => {
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-400 text-sm">Chưa có giao dịch</td>
+                  <td colSpan={5} className="px-5 py-8 text-center text-slate-400 text-sm">{t('manager.dashboard.noPayments')}</td>
                 </tr>
               )}
             </tbody>

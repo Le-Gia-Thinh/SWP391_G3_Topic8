@@ -122,7 +122,7 @@ export default function StaffDashboardScreen() {
           {/* Recent Check-ins */}
           <div>
             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <Clock size={20} className="text-blue-500" /> {t('staff.dashboard.recentCheckins.title', 'Lượt check-in gần đây')}
+              <Clock size={20} className="text-blue-500" /> {t('staff.dashboard.recentCheckins.title')}
             </h3>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               {loading ? (
@@ -130,13 +130,13 @@ export default function StaffDashboardScreen() {
                   <Loader2 className="animate-spin text-blue-500" size={28} />
                 </div>
               ) : recentCheckIns.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">{t('staff.dashboard.recentCheckins.empty', 'Chưa có lượt check-in nào')}</p>
+                <p className="text-sm text-gray-400 text-center py-8">{t('staff.dashboard.recentCheckins.empty')}</p>
               ) : (
                 <table className="w-full text-sm text-left">
                   <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
                     <tr>
-                      <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.session', 'Mã phiên')}</th>
-                      <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.plate', 'Biển số')}</th>
+                      <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.sessionId')}</th>
+                      <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.plate')}</th>
                       <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.vehicle')} {/* TRANSLATED: Loại xe */}</th>
                       <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.time')} {/* TRANSLATED: Thời gian vào */}</th>
                       <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.slot')} {/* TRANSLATED: Ô đỗ */}</th>

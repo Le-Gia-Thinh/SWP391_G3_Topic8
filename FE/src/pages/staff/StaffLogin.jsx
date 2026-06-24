@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -7,6 +8,7 @@ import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 
 const StaffLogin = () => {
+  const { t } = useTranslation()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('bob@email.com')
   const [password, setPassword] = useState('123456')
@@ -25,10 +27,10 @@ const StaffLogin = () => {
     setIsLoading(true)
     try {
       const loggedUser = await login({ email, password })
-      toast.success('Đăng nhập thành công')
+      toast.success(t('staff.login.loginSuccess'))
       navigate(getRedirectPath(loggedUser.roleName), { replace: true })
     } catch (error) {
-      const message = error.response?.data?.message || 'Email hoặc mật khẩu không đúng'
+      const message = error.response?.data?.message || t('staff.login.loginFail')
       toast.error(message)
     } finally {
       setIsLoading(false)
@@ -54,10 +56,10 @@ const StaffLogin = () => {
             </div>
 
             <h1 className="text-4xl font-extrabold mb-6 leading-tight">
-              Quản lý bãi đỗ xe <br/> thông minh
+              {t('staff.login.brandTitleLine1')} <br /> {t('staff.login.brandTitleLine2')}
             </h1>
             <p className="text-blue-100 text-lg mb-8 max-w-md">
-              Hệ thống dành riêng cho nhân viên vận hành. Kiểm soát xe ra vào, quản lý doanh thu và xử lý sự cố nhanh chóng.
+              {t('staff.login.brandSubtitle')}
             </p>
           </div>
 
@@ -65,9 +67,9 @@ const StaffLogin = () => {
             <div className="flex items-start gap-4">
               <ShieldCheck className="w-8 h-8 text-blue-200 shrink-0 mt-1" />
               <div>
-                <h3 className="font-semibold text-lg">Bảo mật đa lớp</h3>
+                <h3 className="font-semibold text-lg">{t('staff.login.securityTitle')}</h3>
                 <p className="text-blue-100 text-sm mt-1">
-                  Mọi thao tác truy cập đều được mã hóa và theo dõi 24/7 để đảm bảo an toàn cho hệ thống.
+                  {t('staff.login.securityBody')}
                 </p>
               </div>
             </div>
@@ -84,13 +86,13 @@ const StaffLogin = () => {
           </div>
 
           <div className="mb-10 text-center md:text-left">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Đăng nhập Nhân viên</h2>
-            <p className="text-gray-500">Vui lòng điền thông tin để tiếp tục truy cập</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('staff.login.title')}</h2>
+            <p className="text-gray-500">{t('staff.login.subtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Email hoặc Tên đăng nhập</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('staff.login.emailLabel')}</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Mail className="h-5 w-5 text-gray-400" />
@@ -100,14 +102,14 @@ const StaffLogin = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-transparent transition-all"
-                  placeholder="nhanvien@parking.com"
+                  placeholder={t('staff.login.emailPlaceholder')}
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Mật khẩu</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('staff.login.passwordLabel')}</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-gray-400" />
@@ -117,7 +119,7 @@ const StaffLogin = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-11 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-transparent transition-all"
-                  placeholder="••••••••"
+                  placeholder={t('staff.login.passwordPlaceholder')}
                   required
                 />
                 <button
@@ -139,17 +141,17 @@ const StaffLogin = () => {
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-600 cursor-pointer">
-                  Ghi nhớ đăng nhập
+                  {t('staff.login.rememberMe')}
                 </label>
               </div>
 
               <div className="text-sm">
                 <button
                   type="button"
-                  onClick={() => setInfoModal({ isOpen: true, title: 'Quên mật khẩu', message: 'Tính năng Khôi phục mật khẩu đang được phát triển. Vui lòng liên hệ Quản lý trực tiếp để reset mật khẩu.' })}
+                  onClick={() => setInfoModal({ isOpen: true, title: t('staff.login.forgotModalTitle'), message: t('staff.login.forgotModalBody') })}
                   className="font-semibold text-blue-600 hover:text-blue-500 hover:underline"
                 >
-                  Quên mật khẩu?
+                  {t('staff.login.forgotPassword')}
                 </button>
               </div>
             </div>
@@ -159,19 +161,19 @@ const StaffLogin = () => {
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-2 py-4 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors mt-8 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'} <ArrowRight className="w-5 h-5" />
+              {isLoading ? t('staff.login.submitting') : t('staff.login.submit')} <ArrowRight className="w-5 h-5" />
             </button>
           </form>
 
           <div className="mt-8 pt-8 border-t border-gray-100 text-center">
             <p className="text-sm text-gray-500">
-              Bạn gặp vấn đề khi đăng nhập?{' '}
+              {t('staff.login.supportPrompt')}{' '}
               <button
                 type="button"
-                onClick={() => setInfoModal({ isOpen: true, title: 'Liên hệ IT Support', message: 'Hotline IT Support: 1900 1234. Email: it.support@parkingsafe.com' })}
+                onClick={() => setInfoModal({ isOpen: true, title: t('staff.login.supportModalTitle'), message: t('staff.login.supportModalBody') })}
                 className="font-semibold text-blue-600 hover:text-blue-500 hover:underline"
               >
-                Liên hệ IT Support
+                {t('staff.login.supportLink')}
               </button>
             </p>
           </div>
@@ -182,7 +184,7 @@ const StaffLogin = () => {
         isOpen={infoModal.isOpen}
         onClose={() => setInfoModal({ isOpen: false, title: '', message: '' })}
         title={infoModal.title}
-        footer={<Button variant="primary" onClick={() => setInfoModal({ isOpen: false, title: '', message: '' })}>Đóng</Button>}
+        footer={<Button variant="primary" onClick={() => setInfoModal({ isOpen: false, title: '', message: '' })}>{t('staff.login.close')}</Button>}
       >
         <p className="text-gray-700">{infoModal.message}</p>
       </Modal>

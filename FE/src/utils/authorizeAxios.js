@@ -1,6 +1,7 @@
 // src/utils/authorizeAxios.js
 import axios from 'axios'
 import { toast } from 'react-toastify'
+import { translateError } from './apiError'   // ← THÊM
 
 // ── Instance ──────────────────────────────────────────────────────
 // Project dùng httpOnly cookie:
@@ -112,9 +113,9 @@ authorizeAxios.interceptors.response.use(
     const isRefreshRequest = original?.url?.includes('/auth/refresh')
 
     if (status !== 401 && !isRefreshRequest) {
-      const message =
-        error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại'
-      toast.error(message)
+      // Dùng translateError: ưu tiên dịch theo error code trong errors.*,  ← THAY ĐỔI
+      // fallback về message BE, fallback về errors.DEFAULT
+      toast.error(translateError(error))                                     // ← THAY ĐỔI
     }
 
     return Promise.reject(error)

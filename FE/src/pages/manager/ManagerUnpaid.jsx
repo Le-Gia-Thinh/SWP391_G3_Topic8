@@ -1,5 +1,6 @@
 // src/pages/manager/ManagerUnpaid.jsx
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Search, RefreshCcw, AlertTriangle, Clock, CircleDollarSign, Car, Download } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { getUnpaidSessionsAPI } from '../../apis/managerApi'
@@ -14,29 +15,30 @@ const fmtDur = (m) => {
   return `${h}h${m % 60}m`
 }
 
-function exportCsv(rows) {
-  if (!rows.length) { toast.info('Không có dữ liệu để xuất'); return }
-  const cols = ['SessionCode', 'PlateNumber', 'DriverName', 'DriverPhone', 'VehicleName',
-    'SlotCode', 'ZoneName', 'EntryTime', 'SessionStatus', 'PaymentStatus', 'Amount', 'SurchargeAmount']
-  const escape = (v) => {
-    const s = v == null ? '' : String(v)
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-  }
-  const csv = [cols.join(','), ...rows.map(r => cols.map(c => escape(r[c])).join(','))].join('\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = 'xe-chua-thanh-toan.csv'; a.click()
-  URL.revokeObjectURL(url)
-  toast.success('Đã xuất file CSV')
-}
-
 const ManagerUnpaid = () => {
+  const { t } = useTranslation()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [isLoaded, setIsLoaded] = useState(false)
   const [search, setSearch] = useState('')
   const [trigger, setTrigger] = useState(0)
+
+  const exportCsv = useCallback((rowsArg) => {
+    if (!rowsArg.length) { toast.info(t('manager.unpaid.exportEmpty')); return }
+    const cols = ['SessionCode', 'PlateNumber', 'DriverName', 'DriverPhone', 'VehicleName',
+      'SlotCode', 'ZoneName', 'EntryTime', 'SessionStatus', 'PaymentStatus', 'Amount', 'SurchargeAmount']
+    const escape = (v) => {
+      const s = v == null ? '' : String(v)
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+    }
+    const csv = [cols.join(','), ...rowsArg.map(r => cols.map(c => escape(r[c])).join(','))].join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = t('manager.unpaid.csvName'); a.click()
+    URL.revokeObjectURL(url)
+    toast.success(t('manager.unpaid.exportSuccess'))
+  }, [t])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -44,15 +46,15 @@ const ManagerUnpaid = () => {
       const res = await getUnpaidSessionsAPI(search.trim() ? { search: search.trim() } : {})
       setRows(res.data.data || [])
     } catch {
-      toast.error('Không thể tải danh sách xe chưa thanh toán')
+      toast.error(t('manager.unpaid.loadFail'))
     } finally {
       setLoading(false)
       setTimeout(() => setIsLoaded(true), 80)
     }
-  }, [trigger])
+  }, [trigger, t])
   useEffect(() => { fetchData() }, [fetchData])
 
-  const doSearch = () => setTrigger(t => t + 1)
+  const doSearch = () => setTrigger(tt => tt + 1)
 
   // Tổng tiền còn phải thu (ước tính)
   const totalOwed = rows.reduce((s, r) => {
@@ -69,17 +71,17 @@ const ManagerUnpaid = () => {
       {/* Header */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-sm border border-slate-200/60">
         <div className="px-2">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">Giám sát / Công nợ</p>
-          <h1 className="text-2xl font-bold text-slate-900 mt-1">Xe chưa thanh toán</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('manager.unpaid.eyebrow')}</p>
+          <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('manager.unpaid.title')}</h1>
         </div>
         <div className="flex gap-3">
           <button onClick={() => exportCsv(rows)}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
-            <Download size={16} /> Xuất CSV
+            <Download size={16} /> {t('manager.unpaid.exportCsv')}
           </button>
           <button onClick={doSearch}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
-            <RefreshCcw size={16} /> Làm mới
+            <RefreshCcw size={16} /> {t('manager.unpaid.refresh')}
           </button>
         </div>
       </div>
@@ -87,15 +89,15 @@ const ManagerUnpaid = () => {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-1"><AlertTriangle size={16} className="text-amber-500" /><p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Tổng số phiên</p></div>
+          <div className="flex items-center gap-2 mb-1"><AlertTriangle size={16} className="text-amber-500" /><p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('manager.unpaid.stats.total')}</p></div>
           <p className="text-3xl font-black text-slate-800">{rows.length}</p>
         </div>
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-1"><Clock size={16} className="text-blue-500" /><p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Còn đang đỗ</p></div>
+          <div className="flex items-center gap-2 mb-1"><Clock size={16} className="text-blue-500" /><p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('manager.unpaid.stats.stillParking')}</p></div>
           <p className="text-3xl font-black text-slate-800">{stillParking}</p>
         </div>
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-1"><CircleDollarSign size={16} className="text-red-500" /><p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Ước tính cần thu</p></div>
+          <div className="flex items-center gap-2 mb-1"><CircleDollarSign size={16} className="text-red-500" /><p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('manager.unpaid.stats.totalOwed')}</p></div>
           <p className="text-3xl font-black text-red-600">{fmtVnd(totalOwed)}</p>
         </div>
       </div>
@@ -104,7 +106,7 @@ const ManagerUnpaid = () => {
         <div className="relative mb-5 max-w-md">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && doSearch()}
-            placeholder="Tìm biển số, tài xế, mã slot, mã phiên..."
+            placeholder={t('manager.unpaid.searchPlaceholder')}
             className="w-full rounded-xl bg-slate-50 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
         </div>
 
@@ -117,20 +119,20 @@ const ManagerUnpaid = () => {
             ) : rows.length === 0 ? (
               <div className="py-16 flex flex-col items-center justify-center text-center text-slate-500">
                 <CircleDollarSign size={44} className="text-emerald-300 mb-3" />
-                <p className="font-bold text-slate-700">Không có xe nào nợ thanh toán</p>
-                <p className="text-sm mt-1 text-slate-500">Tất cả phiên đã được thanh toán đầy đủ.</p>
+                <p className="font-bold text-slate-700">{t('manager.unpaid.emptyTitle')}</p>
+                <p className="text-sm mt-1 text-slate-500">{t('manager.unpaid.emptyDesc')}</p>
               </div>
             ) : (
               <table className="min-w-full text-left text-sm text-slate-700">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Phiên</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Tài xế / Biển số</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Vị trí</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Vào lúc</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Thời gian</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Tình trạng</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50 text-right">Cần thu</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.session')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.driverPlate')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.slot')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.entryAt')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.duration')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.status')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50 text-right">{t('manager.unpaid.col.owed')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -157,18 +159,18 @@ const ManagerUnpaid = () => {
                         <td className="px-5 py-4">
                           {r.SessionStatus === 'Active' ? (
                             <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200/60">
-                              <Clock size={12} /> Đang đỗ
+                              <Clock size={12} /> {t('manager.unpaid.statusActive')}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-600 border border-amber-200/60">
-                              <AlertTriangle size={12} /> Đã ra · chưa trả
+                              <AlertTriangle size={12} /> {t('manager.unpaid.statusExitedUnpaid')}
                             </span>
                           )}
                           {r.SurchargeStatus === 'Pending' && (
-                            <p className="text-[11px] text-red-500 font-semibold mt-1">Còn phụ trội</p>
+                            <p className="text-[11px] text-red-500 font-semibold mt-1">{t('manager.unpaid.surchargePending')}</p>
                           )}
                         </td>
-                        <td className="px-5 py-4 text-right font-black text-red-600">{owe > 0 ? fmtVnd(owe) : 'Chờ tính'}</td>
+                        <td className="px-5 py-4 text-right font-black text-red-600">{owe > 0 ? fmtVnd(owe) : t('manager.unpaid.pendingCalc')}</td>
                       </tr>
                     )
                   })}
