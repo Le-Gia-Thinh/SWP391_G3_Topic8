@@ -514,8 +514,44 @@ export async function getPricingPolicies({ vehicleTypeId, isActive } = {}) {
     `);
   return result.recordset;
 }
+async function checkOverlap(vehicleTypeId, minHours, maxHours, isOvernight, excludePolicyId = null) {
+  const pool = await getPool();
+  if (isOvernight) {
+    // Overnight không check theo range giờ cụ thể, chỉ check trùng overnight khác đã có
+    const result = await pool.request()
+      .input("VehicleTypeID", sql.Int, vehicleTypeId)
+      .input("ExcludeID", sql.Int, excludePolicyId)
+      .query(`
+        SELECT PricingPolicyID FROM PricingPolicies
+        WHERE VehicleTypeID = @VehicleTypeID AND IsActive = 1 AND IsOvernight = 1
+          AND (@ExcludeID IS NULL OR PricingPolicyID <> @ExcludeID)
+      `);
+    return result.recordset;
+  }
+
+  const result = await pool.request()
+    .input("VehicleTypeID", sql.Int, vehicleTypeId)
+    .input("MinHours", sql.Decimal(5, 2), minHours)
+    .input("MaxHours", sql.Decimal(5, 2), maxHours)
+    .input("ExcludeID", sql.Int, excludePolicyId)
+    .query(`
+      SELECT PricingPolicyID, MinHours, MaxHours FROM PricingPolicies
+      WHERE VehicleTypeID = @VehicleTypeID AND IsActive = 1 AND IsOvernight = 0
+        AND (@ExcludeID IS NULL OR PricingPolicyID <> @ExcludeID)
+        AND @MinHours < MaxHours AND @MaxHours > MinHours
+    `);
+  return result.recordset;
+}
 
 export async function createPricingPolicy(data) {
+  const overlaps = await checkOverlap(data.vehicleTypeId, data.minHours, data.maxHours, data.isOvernight ? 1 : 0);
+  if (overlaps.length > 0) {
+    const e = new Error(`Khoảng giờ bị trùng với chính sách #${overlaps[0].PricingPolicyID}` +
+      (overlaps[0].MinHours !== undefined ? ` (${overlaps[0].MinHours}h-${overlaps[0].MaxHours}h)` : ' (đã có chính sách qua đêm)'));
+    e.statusCode = 409;
+    throw e;
+  }
+
   const pool = await getPool();
   const result = await pool.request()
     .input("VehicleTypeID", sql.Int, data.vehicleTypeId)
@@ -534,6 +570,23 @@ export async function createPricingPolicy(data) {
 
 export async function updatePricingPolicy(policyId, data) {
   const pool = await getPool();
+
+  if (data.minHours !== undefined || data.maxHours !== undefined || data.isOvernight !== undefined) {
+    const current = await pool.request()
+      .input("PricingPolicyID", sql.Int, policyId)
+      .query(`SELECT VehicleTypeID, MinHours, MaxHours, IsOvernight FROM PricingPolicies WHERE PricingPolicyID = @PricingPolicyID`);
+    const cur = current.recordset[0];
+    const min = data.minHours ?? cur.MinHours;
+    const max = data.maxHours ?? cur.MaxHours;
+    const overnight = data.isOvernight !== undefined ? (data.isOvernight ? 1 : 0) : cur.IsOvernight;
+
+    const overlaps = await checkOverlap(cur.VehicleTypeID, min, max, overnight, policyId);
+    if (overlaps.length > 0) {
+      const e = new Error(`Khoảng giờ bị trùng với chính sách #${overlaps[0].PricingPolicyID}`);
+      e.statusCode = 409;
+      throw e;
+    }
+  }
 
   // Build dynamic SET clause - chỉ update fields được truyền vào
   const req = pool.request().input("PricingPolicyID", sql.Int, policyId);
@@ -559,7 +612,25 @@ export async function updatePricingPolicy(policyId, data) {
     `);
   return r.recordset[0];
 }
+export async function deletePricingPolicy(policyId) {
+  const pool = await getPool();
 
+  const check = await pool.request()
+    .input("PricingPolicyID", sql.Int, policyId)
+    .query(`SELECT PricingPolicyID FROM PricingPolicies WHERE PricingPolicyID = @PricingPolicyID`);
+
+  if (!check.recordset[0]) {
+    const e = new Error("Chính sách không tồn tại");
+    e.statusCode = 404;
+    throw e;
+  }
+
+  await pool.request()
+    .input("PricingPolicyID", sql.Int, policyId)
+    .query(`DELETE FROM PricingPolicies WHERE PricingPolicyID = @PricingPolicyID`);
+
+  return { deleted: true, policyId };
+}
 // ─────────────────────────────────────────────────────────────
 // INCIDENTS
 // ─────────────────────────────────────────────────────────────
@@ -695,10 +766,10 @@ export async function updateIncidentStatus(incidentId, { status, assignedStaffId
       WHERE IncidentID = @IncidentID
     `);
 
-    const updatedIncident = await getIncidentById(incidentId);
+  const updatedIncident = await getIncidentById(incidentId);
 
-    if (status === 'Resolved' && updatedIncident.DriverID) {
-        await pool.request().query(`
+  if (status === 'Resolved' && updatedIncident.DriverID) {
+    await pool.request().query(`
             INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
             VALUES (
                 ${updatedIncident.DriverID},
@@ -711,9 +782,9 @@ export async function updateIncidentStatus(incidentId, { status, assignedStaffId
                 GETDATE()
             )
         `);
-    }
+  }
 
-    return updatedIncident;
+  return updatedIncident;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1158,4 +1229,40 @@ export async function broadcastSystemMaintenance(message) {
       JOIN Roles r ON u.RoleID = r.RoleID
       WHERE r.RoleName IN ('Driver', 'Staff', 'Admin') AND u.IsActive = 1
     `);
+}
+export async function getNightPricingPolicies() {
+  const pool = await getPool();
+  const result = await pool.request().query(`
+    SELECT np.NightPolicyID, np.VehicleTypeID, vt.VehicleName, vt.VehicleCode,
+           CONVERT(VARCHAR(5), np.NightStartTime, 108) AS NightStartTime,
+           CONVERT(VARCHAR(5), np.NightEndTime, 108)   AS NightEndTime,
+           np.NightFee, np.IsActive
+    FROM NightPricingPolicies np
+    JOIN VehicleTypes vt ON vt.VehicleTypeID = np.VehicleTypeID
+    ORDER BY np.VehicleTypeID
+  `);
+  return result.recordset;
+}
+export async function updateNightPricingPolicy(policyId, data) {
+  const pool = await getPool();
+  const req = pool.request().input("NightPolicyID", sql.Int, policyId);
+  const sets = [];
+
+  if (data.nightStartTime !== undefined) { req.input("NightStartTime", sql.VarChar(8), data.nightStartTime); sets.push("NightStartTime = @NightStartTime"); }
+  if (data.nightEndTime !== undefined) { req.input("NightEndTime", sql.VarChar(8), data.nightEndTime); sets.push("NightEndTime = @NightEndTime"); }
+  if (data.nightFee !== undefined) { req.input("NightFee", sql.Decimal(10, 2), data.nightFee); sets.push("NightFee = @NightFee"); }
+  if (data.isActive !== undefined) { req.input("IsActive", sql.Bit, data.isActive ? 1 : 0); sets.push("IsActive = @IsActive"); }
+
+  if (sets.length) {
+    await req.query(`UPDATE NightPricingPolicies SET ${sets.join(", ")} WHERE NightPolicyID = @NightPolicyID`);
+  }
+
+  const r = await pool.request()
+    .input("NightPolicyID", sql.Int, policyId)
+    .query(`
+      SELECT np.*, vt.VehicleName, vt.VehicleCode
+      FROM NightPricingPolicies np JOIN VehicleTypes vt ON vt.VehicleTypeID = np.VehicleTypeID
+      WHERE np.NightPolicyID = @NightPolicyID
+    `);
+  return r.recordset[0];
 }

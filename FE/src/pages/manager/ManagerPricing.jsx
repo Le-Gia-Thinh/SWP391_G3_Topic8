@@ -3,19 +3,31 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Search, Filter, Save, Edit3, Plus, RefreshCcw,
-  AlertTriangle, CheckCircle, X
+  AlertTriangle, CheckCircle, X, Trash2, Moon, HelpCircle, ChevronDown
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import {
   getPricingPoliciesAPI,
   createPricingPolicyAPI,
   updatePricingPolicyAPI,
-  getVehicleTypesAPI
+  deletePricingPolicyAPI,
+  getVehicleTypesAPI,
+  getNightPricingPoliciesAPI,
+  updateNightPricingPolicyAPI
 } from '../../apis/managerApi'
 
 const fmtVnd = (n) => Number(n || 0).toLocaleString('vi-VN') + 'đ'
 const fmtH = (h) => h == null ? '—' : `${h}h`
-
+const fmtTime = (t) => {
+  if (!t) return '--:--'
+  // Nếu là chuỗi ISO datetime (chứa 'T'), lấy phần giờ
+  if (t.includes('T')) {
+    const match = t.match(/T(\d{2}:\d{2})/)
+    return match ? match[1] : t.slice(0, 5)
+  }
+  // Nếu đã là "HH:mm" hoặc "HH:mm:ss"
+  return t.slice(0, 5)
+}
 const EMPTY_FORM = {
   vehicleTypeId: '',
   minHours: '0',
@@ -30,7 +42,7 @@ const StatusBadge = ({ isActive }) => {
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold
       ${isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-      : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+        : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
       {isActive ? t('manager.pricing.statusActive') : t('manager.pricing.statusInactive')}
     </span>
@@ -132,7 +144,7 @@ const PolicyModal = ({ open, onClose, vehicleTypes, editing, onSaved }) => {
           <div className="grid grid-cols-2 gap-4">
             <FormField label={t('manager.pricing.modal.minHoursLabel')}>
               <input type="number" name="minHours" min="0" step="0.5" value={form.minHours} onChange={handleChange}
-                className="field-input" placeholder="0" />
+                className="field-input" placeholder="0" disabled={form.isOvernight} />
             </FormField>
             <FormField label={t('manager.pricing.modal.maxHoursLabel')}>
               <input type="number" name="maxHours" min="0" step="0.5" value={form.maxHours} onChange={handleChange}
@@ -193,7 +205,111 @@ const PolicyModal = ({ open, onClose, vehicleTypes, editing, onSaved }) => {
     </div>
   )
 }
+const PricingGuide = () => {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
 
+  return (
+    <div className="rounded-3xl bg-white shadow-sm border border-slate-200/60 overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-6 py-5 hover:bg-slate-50/60 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <HelpCircle size={18} />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-bold text-slate-900">{t('manager.pricing.guide.title')}</p>
+            <p className="text-xs text-slate-500">{t('manager.pricing.guide.subtitle')}</p>
+          </div>
+        </div>
+        <ChevronDown size={18} className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="px-6 pb-6 pt-2 space-y-5 border-t border-slate-100">
+
+          {/* Bước 1: Nguyên tắc chung */}
+          <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+            <p className="text-sm font-bold text-blue-700 mb-1">{t('manager.pricing.guide.rule.title')}</p>
+            <p className="text-xs text-blue-700/80 leading-relaxed">{t('manager.pricing.guide.rule.desc')}</p>
+          </div>
+
+          {/* Bước 2: Cách chia đoạn */}
+          <div>
+            <p className="text-sm font-bold text-slate-800 mb-2">{t('manager.pricing.guide.split.title')}</p>
+            <p className="text-xs text-slate-500 leading-relaxed mb-3">{t('manager.pricing.guide.split.desc')}</p>
+          </div>
+
+          {/* Ví dụ minh hoạ trực quan */}
+          <div className="rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200">
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">{t('manager.pricing.guide.example.label')}</p>
+            </div>
+            <div className="p-4 space-y-2.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-slate-600">
+                  <span className="w-2 h-2 rounded-full bg-blue-400" />
+                  {t('manager.pricing.guide.example.seg1')}
+                </span>
+                <span className="font-bold text-slate-900">5.000đ</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-slate-600">
+                  <span className="w-2 h-2 rounded-full bg-violet-400" />
+                  {t('manager.pricing.guide.example.seg2')}
+                </span>
+                <span className="font-bold text-slate-900">10.000đ</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-slate-600">
+                  <span className="w-2 h-2 rounded-full bg-blue-400" />
+                  {t('manager.pricing.guide.example.seg3')}
+                </span>
+                <span className="font-bold text-slate-900">5.000đ</span>
+              </div>
+              <div className="flex items-center justify-between text-sm pt-2.5 border-t border-slate-100">
+                <span className="font-bold text-slate-800">{t('manager.pricing.guide.example.total')}</span>
+                <span className="font-black text-emerald-600 text-base">20.000đ</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bảng chú giải 2 loại đoạn */}
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50/40 p-3.5">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-blue-200/60 bg-blue-50 text-blue-600">
+                <Search size={14} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-800">{t('manager.pricing.guide.dayBlock.title')}</p>
+                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{t('manager.pricing.guide.dayBlock.desc')}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-xl border border-violet-100 bg-violet-50/30 p-3.5">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-violet-200/60 bg-violet-50 text-violet-600">
+                <Moon size={14} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-800">{t('manager.pricing.guide.nightBlock.title')}</p>
+                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{t('manager.pricing.guide.nightBlock.desc')}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Lưu ý */}
+          <div className="flex gap-3 rounded-xl border border-amber-100 bg-amber-50/40 p-3.5">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-amber-200/60 bg-amber-50 text-amber-600">
+              <AlertTriangle size={14} />
+            </div>
+            <p className="text-xs text-amber-700/90 leading-relaxed">{t('manager.pricing.guide.note')}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 const ManagerPricing = () => {
   const { t } = useTranslation()
   const [policies, setPolicies] = useState([])
@@ -206,6 +322,7 @@ const ManagerPricing = () => {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingPolicy, setEditingPolicy] = useState(null)
   const [togglingId, setTogglingId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -225,7 +342,39 @@ const ManagerPricing = () => {
   }, [t])
 
   useEffect(() => { fetchData() }, [fetchData])
+  const [nightPolicies, setNightPolicies] = useState([])
+  const [editingNight, setEditingNight] = useState(null)
+  const [savingNight, setSavingNight] = useState(false)
 
+  const fetchNightPolicies = useCallback(async () => {
+    try {
+      const res = await getNightPricingPoliciesAPI()
+      setNightPolicies(res.data.data || [])
+    } catch {
+      toast.error(t('manager.pricing.night.loadFail'))
+    }
+  }, [t])
+
+  useEffect(() => { fetchNightPolicies() }, [fetchNightPolicies])
+
+  const handleSaveNight = async (policy, newFee, newStart, newEnd, newActive) => {
+    setSavingNight(true)
+    try {
+      await updateNightPricingPolicyAPI(policy.NightPolicyID, {
+        nightFee: parseFloat(newFee),
+        nightStartTime: newStart,
+        nightEndTime: newEnd,
+        isActive: newActive ? 1 : 0
+      })
+      toast.success(t('manager.pricing.night.updateSuccess'))
+      fetchNightPolicies()
+      setEditingNight(null)
+    } catch (err) {
+      toast.error(err?.response?.data?.message || t('manager.pricing.night.saveFail'))
+    } finally {
+      setSavingNight(false)
+    }
+  }
   const filtered = policies.filter(p => {
     const matchSearch = !query ||
       p.VehicleName?.toLowerCase().includes(query.toLowerCase()) ||
@@ -251,6 +400,20 @@ const ManagerPricing = () => {
     }
   }
 
+  const handleDelete = async (policy) => {
+    if (policy.IsActive) return // an toàn 2 lớp, dù nút chỉ hiện khi Inactive
+    if (!window.confirm(t('manager.pricing.confirmDelete', { id: policy.PricingPolicyID }))) return
+    setDeletingId(policy.PricingPolicyID)
+    try {
+      await deletePricingPolicyAPI(policy.PricingPolicyID)
+      toast.success(t('manager.pricing.deleteSuccess'))
+      fetchData()
+    } catch (err) {
+      toast.error(err?.response?.data?.message || t('manager.pricing.deleteFail'))
+    } finally {
+      setDeletingId(null)
+    }
+  }
   const openCreate = () => { setEditingPolicy(null); setModalOpen(true) }
   const openEdit = (p) => { setEditingPolicy(p); setModalOpen(true) }
 
@@ -272,6 +435,9 @@ const ManagerPricing = () => {
           </button>
         </div>
       </div>
+
+      <PricingGuide />
+
 
       <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200/60">
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -363,10 +529,19 @@ const ManagerPricing = () => {
                             className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-all ${p.IsActive
                               ? 'border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
                               : 'border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                            } disabled:opacity-50`}
+                              } disabled:opacity-50`}
                             title={p.IsActive ? t('manager.pricing.turnOff') : t('manager.pricing.turnOn')}>
                             {p.IsActive ? <X size={14} /> : <CheckCircle size={14} />}
                           </button>
+
+                          {/* Chỉ hiện khi policy đã Inactive */}
+                          {!p.IsActive && (
+                            <button onClick={() => handleDelete(p)} disabled={deletingId === p.PricingPolicyID}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-white text-red-500 hover:bg-red-100 transition-all disabled:opacity-50"
+                              title={t('manager.pricing.delete')}>
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -378,6 +553,27 @@ const ManagerPricing = () => {
         </div>
       </div>
 
+      <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200/60">
+        <div className="flex items-center gap-2 mb-4">
+          <Moon size={18} className="text-violet-500" />
+          <h2 className="text-lg font-bold text-slate-900">{t('manager.pricing.night.title')}</h2>
+        </div>
+        <p className="text-xs text-slate-500 mb-4">{t('manager.pricing.night.desc')}</p>
+
+        <div className="space-y-3">
+          {nightPolicies.map(np => (
+            <NightPolicyRow
+              key={np.NightPolicyID}
+              policy={np}
+              editing={editingNight === np.NightPolicyID}
+              onEdit={() => setEditingNight(np.NightPolicyID)}
+              onCancel={() => setEditingNight(null)}
+              onSave={handleSaveNight}
+              saving={savingNight}
+            />
+          ))}
+        </div>
+      </div>
       <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200/60">
         <p className="text-[11px] font-bold uppercase tracking-widest text-amber-500 flex items-center gap-2">
           <AlertTriangle size={14} />
@@ -440,5 +636,60 @@ const FormField = ({ label, children }) => (
     {children}
   </label>
 )
+const NightPolicyRow = ({ policy, editing, onEdit, onCancel, onSave, saving }) => {
+  const { t } = useTranslation()
+  const [fee, setFee] = useState(policy.NightFee)
+  const [start, setStart] = useState(fmtTime(policy.NightStartTime))
+  const [end, setEnd] = useState(fmtTime(policy.NightEndTime))
+  const [active, setActive] = useState(Boolean(policy.IsActive))
 
+  if (!editing) {
+    return (
+      <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
+        <div>
+          <p className="font-bold text-slate-800">{policy.VehicleName} <span className="text-xs text-slate-400">({policy.VehicleCode})</span></p>
+          <p className="text-sm text-slate-500">
+            {fmtTime(policy.NightStartTime)} → {fmtTime(policy.NightEndTime)} · <span className="font-bold text-slate-900">{fmtVnd(policy.NightFee)}</span> / đêm
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <StatusBadge isActive={policy.IsActive} />
+          <button onClick={onEdit} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-blue-600 transition-all">
+            <Edit3 size={14} />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 space-y-3">
+      <p className="font-bold text-slate-800">{policy.VehicleName}</p>
+      <div className="grid grid-cols-3 gap-3">
+        <FormField label={t('manager.pricing.night.startLabel')}>
+          <input type="time" value={start} onChange={e => setStart(e.target.value)} className="field-input" />
+        </FormField>
+        <FormField label={t('manager.pricing.night.endLabel')}>
+          <input type="time" value={end} onChange={e => setEnd(e.target.value)} className="field-input" />
+        </FormField>
+        <FormField label={t('manager.pricing.night.feeLabel')}>
+          <input type="number" min="0" step="1000" value={fee} onChange={e => setFee(e.target.value)} className="field-input" />
+        </FormField>
+      </div>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
+        <span className="text-sm font-semibold text-slate-700">{t('manager.pricing.modal.activeToggle')}</span>
+      </label>
+      <div className="flex gap-2 pt-2">
+        <button onClick={onCancel} className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          {t('manager.pricing.modal.cancel')}
+        </button>
+        <button onClick={() => onSave(policy, fee, start, end, active)} disabled={saving}
+          className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60">
+          {saving ? t('manager.pricing.modal.saving') : t('manager.pricing.modal.update')}
+        </button>
+      </div>
+    </div>
+  )
+}
 export default ManagerPricing

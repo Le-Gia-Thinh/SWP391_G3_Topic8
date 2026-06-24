@@ -2574,6 +2574,48 @@
       "toggleOn": "Policy enabled",
       "toggleOff": "Policy disabled",
       "toggleFail": "Update failed",
+      "delete": "Delete permanently",
+      "confirmDelete": "Are you sure you want to permanently delete policy #{{id}}? This action cannot be undone.",
+      "deleteSuccess": "Pricing policy deleted",
+      "deleteFail": "Failed to delete pricing policy",
+      "night": {
+        "title": "Night block pricing configuration",
+        "desc": "Each vehicle type has one fixed night window. If a session overlaps this window, the system automatically adds the flat night fee to the total.",
+        "startLabel": "Night start time",
+        "endLabel": "Night end time",
+        "feeLabel": "Flat fee/night (VND)",
+        "updateSuccess": "Night fee updated",
+        "saveFail": "Failed to update night fee",
+        "loadFail": "Failed to load night pricing config"
+      },
+      "guide": {
+        "title": "How parking fees are calculated",
+        "subtitle": "Click to see the formula used when a vehicle spans multiple time blocks",
+        "rule": {
+          "title": "Pricing principle",
+          "desc": "The system doesn't apply one flat rate for the whole parking session. Instead, it splits the parked duration into segments based on the Day/Night window, calculates each segment separately, then sums them into the total."
+        },
+        "split": {
+          "title": "How segments are split",
+          "desc": "The Night window is fixed (e.g. 22:00 → 06:00 the next morning). Every time the parked duration crosses the 22:00 or 06:00 mark, a new segment starts."
+        },
+        "example": {
+          "label": "Example: vehicle enters at 20:00, exits at 08:00 the next day",
+          "seg1": "20:00 → 22:00 (2h, daytime)",
+          "seg2": "22:00 → 06:00 (8h, flat night fee)",
+          "seg3": "06:00 → 08:00 (2h, daytime)",
+          "total": "Total"
+        },
+        "dayBlock": {
+          "title": "Daytime segment",
+          "desc": "Calculated using the tier table above (0-4h, 4-8h...), based on the ACTUAL hours of that segment only, not the total parked time."
+        },
+        "nightBlock": {
+          "title": "Night segment",
+          "desc": "Charged once as a flat fee from the 'Night block pricing' panel, regardless of how long the segment is within the 22:00-06:00 window."
+        },
+        "note": "If a vehicle spans multiple consecutive nights (e.g. 2 days 2 nights), each night is charged its own flat fee — never merged or double-counted."
+      },
       "col": {
         "id": "ID",
         "vehicle": "Vehicle",

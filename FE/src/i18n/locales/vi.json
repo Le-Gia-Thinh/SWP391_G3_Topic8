@@ -2574,6 +2574,48 @@
       "toggleOn": "Đã bật chính sách",
       "toggleOff": "Đã tắt chính sách",
       "toggleFail": "Cập nhật thất bại",
+      "delete": "Xóa hẳn",
+      "confirmDelete": "Bạn có chắc muốn xóa vĩnh viễn chính sách #{{id}}? Hành động này không thể hoàn tác.",
+      "deleteSuccess": "Đã xóa chính sách giá",
+      "deleteFail": "Xóa chính sách giá thất bại",
+      "night": {
+        "title": "Cấu hình phí qua đêm (Block giờ cố định)",
+        "desc": "Mỗi loại xe có 1 khung giờ đêm cố định. Nếu khách gửi xe có giao với khung này, hệ thống tự cộng dồn phí trọn gói đêm vào tổng tiền.",
+        "startLabel": "Giờ bắt đầu đêm",
+        "endLabel": "Giờ kết thúc đêm",
+        "feeLabel": "Phí trọn gói/đêm (VNĐ)",
+        "updateSuccess": "Đã cập nhật giá đêm",
+        "saveFail": "Cập nhật giá đêm thất bại",
+        "loadFail": "Không tải được cấu hình giá đêm"
+      },
+      "guide": {
+        "title": "Cách hệ thống tính giá gửi xe",
+        "subtitle": "Bấm để xem công thức tính tiền khi xe gửi qua nhiều khung giờ",
+        "rule": {
+          "title": "Nguyên tắc tính tiền",
+          "desc": "Hệ thống không tính 1 mức giá duy nhất cho cả phiên gửi xe. Thay vào đó, nó chia thời gian xe gửi thành các đoạn nhỏ theo khung giờ Ngày/Đêm, tính tiền riêng từng đoạn, rồi cộng lại thành tổng tiền."
+        },
+        "split": {
+          "title": "Cách chia đoạn",
+          "desc": "Khung giờ Đêm được cấu hình cố định (ví dụ 22:00 → 06:00 sáng hôm sau). Mỗi lần thời gian gửi xe đi qua mốc 22:00 hoặc 06:00, hệ thống cắt thành 1 đoạn mới."
+        },
+        "example": {
+          "label": "Ví dụ: xe vào 20:00, lấy xe 08:00 sáng hôm sau",
+          "seg1": "20:00 → 22:00 (2h, giờ ban ngày)",
+          "seg2": "22:00 → 06:00 (8h, trọn gói đêm)",
+          "seg3": "06:00 → 08:00 (2h, giờ ban ngày)",
+          "total": "Tổng cộng"
+        },
+        "dayBlock": {
+          "title": "Đoạn ban ngày",
+          "desc": "Tính theo bảng giá lượt ở trên (0-4h, 4-8h...), dựa vào số giờ THỰC TẾ của riêng đoạn đó, không phải tổng thời gian gửi."
+        },
+        "nightBlock": {
+          "title": "Đoạn ban đêm",
+          "desc": "Tính trọn gói 1 lần theo giá ở panel 'Cấu hình phí qua đêm', bất kể đoạn đêm đó dài bao nhiêu giờ (miễn còn trong khung 22:00-06:00)."
+        },
+        "note": "Nếu xe gửi nhiều đêm liên tục (ví dụ 2 ngày 2 đêm), mỗi đêm sẽ tính 1 lần phí trọn gói riêng, không bị tính trùng hoặc gộp chung."
+      },
       "col": {
         "id": "ID",
         "vehicle": "Loại xe",
