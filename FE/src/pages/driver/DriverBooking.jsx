@@ -1063,7 +1063,7 @@ const DriverBooking = () => {
                             : slot.isAIRec
                               ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.4)] ring-2 ring-yellow-400/50 hover:border-yellow-500 z-10 scale-105'
                               : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:text-blue-500'
-                          }`}
+                        }`}
                       >
                         {slot.SlotCode}
                         {slot.isAIRec && (

@@ -727,17 +727,17 @@ export default function StaffPaymentHistory() {
       <div className="flex bg-white rounded-xl border border-gray-200 shadow-sm p-1 gap-1 mb-6 w-fit">
         <button onClick={() => setTab(0)}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${tab === 0 ? 'bg-orange-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
-            }`}>
+          }`}>
           <AlertCircle size={15} />
           {t('staff.paymentHistory.tabSurcharge')}
           {surchargeCount > 0 && (
             <span className={`text-xs font-black px-2 py-0.5 rounded-full ${tab === 0 ? 'bg-white/20 text-white' : 'bg-orange-100 text-orange-600'
-              }`}>{surchargeCount}</span>
+            }`}>{surchargeCount}</span>
           )}
         </button>
         <button onClick={() => setTab(1)}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${tab === 1 ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
-            }`}>
+          }`}>
           <Clock size={15} /> {t('staff.paymentHistory.tabHistory')}
         </button>
       </div>

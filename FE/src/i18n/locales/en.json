@@ -2814,5 +2814,33 @@
         "update": "Update"
       }
     }
+  },
+  "footer": {
+    "brandName": "ParkingBuilding",
+    "brandDesc": "Smart parking management platform — optimize space and save time for users with automatic license plate recognition technology.",
+    "supportTitle": "Support",
+    "supportAbout": "About us",
+    "supportEmail": "Email support",
+    "supportPrivacy": "Privacy policy",
+    "supportTerms": "Terms & Service",
+    "contactTitle": "Contact",
+    "contactAddress": "Hi-Tech Park, District 9, Ho Chi Minh City",
+    "contactHotline": "Hotline: 1900 6789",
+    "contactEmail": "support@parkingapp.com",
+    "newsletterTitle": "Newsletter",
+    "newsletterDesc": "Subscribe to get notifications about promotions and the latest feature updates",
+    "newsletterPlaceholder": "Your email",
+    "copyright": "© 2024 Parking Building Management System. All rights reserved.",
+    "linkTerms": "Terms of service",
+    "linkPrivacy": "Privacy policy"
+  },
+  "aiChat": {
+    "welcome": "Hello! I am the AI Assistant for the SWP391 parking lot. How can I help you today?",
+    "title": "AI Assistant SWP391",
+    "fallbackReply": "Sorry, I can't process your request right now.",
+    "errorReply": "Sorry, there was a connection error to the AI server.",
+    "thinking": "AI is thinking...",
+    "inputPlaceholder": "Type your question...",
+    "tooltipFloating": "Chat with AI Assistant"
   }
 }

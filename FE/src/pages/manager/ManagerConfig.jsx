@@ -130,7 +130,7 @@ const ManagerConfig = () => {
               return (
                 <button key={b.BuildingID} onClick={() => setSelectedBuildingId(b.BuildingID)}
                   className={`rounded-2xl border px-4 py-3 text-left transition ${active ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-slate-200 bg-white hover:border-blue-200'
-                    }`}>
+                  }`}>
                   <p className={`text-sm font-bold ${active ? 'text-blue-800' : 'text-slate-800'}`}>{b.BuildingName}</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">
                     {t('manager.config.buildingMeta', { floors: b.FloorCount ?? 0, slots: b.SlotCount ?? 0 })}
@@ -196,7 +196,7 @@ const FloorCard = ({ floor, zones, onToggle, onOpenZone }) => {
             <div className="flex items-center gap-2">
               <h3 className="text-lg font-bold text-slate-900">{floor.FloorName}</h3>
               <span className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-[11px] font-semibold border ${floor.IsActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60' : 'bg-slate-100 text-slate-600 border-slate-200'
-                }`}>
+              }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${floor.IsActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                 {floor.IsActive ? t('manager.config.floorActive') : t('manager.config.floorInactive')}
               </span>
@@ -210,7 +210,7 @@ const FloorCard = ({ floor, zones, onToggle, onOpenZone }) => {
           className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${floor.IsActive
             ? 'border-slate-200 text-slate-700 hover:bg-slate-50'
             : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-            }`}>
+          }`}>
           <Power size={15} /> {floor.IsActive ? t('manager.config.turnOffFloor') : t('manager.config.turnOnFloor')}
         </button>
       </div>

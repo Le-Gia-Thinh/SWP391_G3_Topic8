@@ -1,0 +1,79 @@
+[33m41648b7[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mDEV[m[33m)[m HEAD@{0}: revert: Revert "en vi admin and manager"
+[33mb5f8437[m[33m ([m[1;31morigin/DEV[m[33m)[m HEAD@{1}: reset: moving to origin/DEV
+[33m419a63d[m HEAD@{2}: commit: done language swithches
+[33md817811[m HEAD@{3}: commit (merge): Translate drive language to VI AND EN v2
+[33mc307651[m HEAD@{4}: commit: pull DEV
+[33meb9a23d[m HEAD@{5}: pull origin DEV: Merge made by the 'ort' strategy.
+[33m3c83f9c[m[33m ([m[1;32mFE[m[33m)[m HEAD@{6}: merge FE: Fast-forward
+[33m85b2c49[m HEAD@{7}: checkout: moving from FE to DEV
+[33m3c83f9c[m[33m ([m[1;32mFE[m[33m)[m HEAD@{8}: commit: Pull from FE
+[33mcab4ee5[m HEAD@{9}: pull origin FE: Merge made by the 'ort' strategy.
+[33m85b2c49[m HEAD@{10}: merge DEV: Fast-forward
+[33maba2c06[m[33m ([m[1;31morigin/BE[m[33m)[m HEAD@{11}: checkout: moving from DEV to FE
+[33m85b2c49[m HEAD@{12}: commit: Json for switch language
+[33m71b222c[m[33m ([m[1;31morigin/main[m[33m)[m HEAD@{13}: pull origin DEV: Fast-forward
+[33m00badfb[m HEAD@{14}: commit: fix bug admin manager and vi-en deploy v1
+[33m83d9717[m HEAD@{15}: pull origin DEV: Fast-forward
+[33m2e8baaf[m HEAD@{16}: pull origin DEV: Fast-forward
+[33mdd1d74d[m HEAD@{17}: pull origin DEV: Fast-forward
+[33m5d3876b[m HEAD@{18}: pull origin DEV: Fast-forward
+[33m3a6c3c8[m HEAD@{19}: commit (merge): pushing
+[33m1d78c84[m HEAD@{20}: commit: fix sql code
+[33mf04aac9[m HEAD@{21}: pull origin DEV: Merge made by the 'ort' strategy.
+[33m696c138[m HEAD@{22}: pull origin DEV: Merge made by the 'ort' strategy.
+[33m13b28ef[m HEAD@{23}: pull origin DEV: Merge made by the 'ort' strategy.
+[33m66c1ae4[m[33m ([m[1;32mBE[m[33m)[m HEAD@{24}: merge BE: Fast-forward
+[33maba2c06[m[33m ([m[1;31morigin/BE[m[33m)[m HEAD@{25}: checkout: moving from BE to DEV
+[33m66c1ae4[m[33m ([m[1;32mBE[m[33m)[m HEAD@{26}: commit: fix bug manager control vehicle type / version 1 and guest user
+[33m47ae674[m HEAD@{27}: pull origin DEV: Fast-forward
+[33maba2c06[m[33m ([m[1;31morigin/BE[m[33m)[m HEAD@{28}: checkout: moving from FE to BE
+[33maba2c06[m[33m ([m[1;31morigin/BE[m[33m)[m HEAD@{29}: merge DEV: Fast-forward
+[33m19adc69[m HEAD@{30}: checkout: moving from BE to FE
+[33maba2c06[m[33m ([m[1;31morigin/BE[m[33m)[m HEAD@{31}: merge DEV: Fast-forward
+[33md7d20cb[m HEAD@{32}: checkout: moving from DEV to BE
+[33maba2c06[m[33m ([m[1;31morigin/BE[m[33m)[m HEAD@{33}: commit: fix payment between driver and staff
+[33m1d3afcd[m HEAD@{34}: pull origin FE: Fast-forward
+[33m19adc69[m HEAD@{35}: checkout: moving from FE to DEV
+[33m19adc69[m HEAD@{36}: commit: fix sql 3
+[33m72963f2[m HEAD@{37}: pull origin DEV: Fast-forward
+[33m95a5a20[m HEAD@{38}: pull origin DEV: Fast-forward
+[33m0906f99[m HEAD@{39}: pull origin DEV: Fast-forward
+[33md7d20cb[m HEAD@{40}: merge BE: Fast-forward
+[33mc6b1190[m HEAD@{41}: checkout: moving from BE to FE
+[33md7d20cb[m HEAD@{42}: merge recover-commits: Fast-forward
+[33m69b88c0[m HEAD@{43}: pull origin BE --rebase (finish): returning to refs/heads/BE
+[33m69b88c0[m HEAD@{44}: pull origin BE --rebase (start): checkout 69b88c0ab463bc065f3aa2752f79696953bf3302
+[33mc154210[m HEAD@{45}: checkout: moving from d7d20cbe63889fb94fa3328095ed73c9c4da9753 to BE
+[33md7d20cb[m HEAD@{46}: commit (merge): fix api manager and fix bug staff v6
+[33m310fb0f[m HEAD@{47}: pull origin BE: Merge made by the 'ort' strategy.
+[33md6d6668[m HEAD@{48}: commit: do api manager and fix bug staff v6
+[33m8dcbdbd[m HEAD@{49}: commit: do api manager v1
+[33m71d6246[m HEAD@{50}: commit: fix bug staff v4
+[33maddf3ee[m HEAD@{51}: pull origin BE: Merge made by the 'ort' strategy.
+[33ma8db459[m HEAD@{52}: commit: fix staff v3
+[33mc6b1190[m HEAD@{53}: checkout: moving from BE to c6b1190
+[33mc154210[m HEAD@{54}: commit (merge): fix conflict
+[33mc6b1190[m HEAD@{55}: merge FE: Fast-forward
+[33m0d9c297[m HEAD@{56}: checkout: moving from FE to BE
+[33mc6b1190[m HEAD@{57}: commit: fix bug Staff v2
+[33mfe32260[m HEAD@{58}: commit: fix bug staff v2
+[33mb4b77a8[m HEAD@{59}: commit: fix bug staff v1
+[33m6cf9ce6[m HEAD@{60}: commit (merge): fix delete mock data and do dashboard staff and parking map for staff
+[33m0d9c297[m HEAD@{61}: merge BE: Fast-forward
+[33maf108cd[m HEAD@{62}: checkout: moving from BE to FE
+[33m0d9c297[m HEAD@{63}: commit: fix config data
+[33mb3bfc89[m HEAD@{64}: checkout: moving from BE to BE
+[33mb3bfc89[m HEAD@{65}: commit (merge): fix eslint
+[33mfe1b69f[m HEAD@{66}: commit: do api for staff
+[33maf108cd[m HEAD@{67}: merge FE: Fast-forward
+[33m1f65ffc[m HEAD@{68}: checkout: moving from FE to BE
+[33maf108cd[m HEAD@{69}: commit (merge): fix conflict
+[33mc6c108b[m HEAD@{70}: commit: do payment
+[33m028cc9d[m HEAD@{71}: pull origin FE: Merge made by the 'ort' strategy.
+[33maf41edd[m HEAD@{72}: pull origin BE: Fast-forward
+[33m1f65ffc[m HEAD@{73}: merge BE: Fast-forward
+[33m54d6749[m HEAD@{74}: checkout: moving from BE to FE
+[33m1f65ffc[m HEAD@{75}: commit: fix bug login
+[33m386a19d[m HEAD@{76}: pull origin BE: Fast-forward
+[33m54d6749[m HEAD@{77}: checkout: moving from FE to BE
+[33m54d6749[m HEAD@{78}: initial pull

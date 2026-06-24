@@ -1,5 +1,6 @@
 // src/pages/admin/AdminRoles.jsx
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { Search, RefreshCcw, ShieldCheck, Lock, Unlock, KeyRound, Users } from 'lucide-react'
 import { toast } from 'react-toastify'
@@ -21,6 +22,7 @@ const roleBadge = {
 const MANAGED_ROLES = ['Driver', 'Staff', 'Manager']
 
 const AdminRoles = () => {
+  const { t } = useTranslation()
   const [rows, setRows] = useState([])
   const [roles, setRoles] = useState([])
   const [loading, setLoading] = useState(true)
@@ -44,7 +46,7 @@ const AdminRoles = () => {
       // Chỉ giữ Driver/Staff/Manager
       setRows((res.data.data || []).filter((u) => MANAGED_ROLES.includes(u.RoleName)))
     } catch {
-      toast.error('Không thể tải danh sách người dùng')
+      toast.error(t('admin.roles.loadUsersFail'))
     } finally {
       setLoading(false)
       setTimeout(() => setIsLoaded(true), 80)
@@ -60,7 +62,7 @@ const AdminRoles = () => {
       .catch(() => { })
   }, [])
 
-  const applyFilters = () => setTrigger((t) => t + 1)
+  const applyFilters = () => setTrigger((tt) => tt + 1)
 
   // ── Actions ──────────────────────────────────────────────────
   const changeRole = async (user, newRoleId) => {
@@ -72,9 +74,9 @@ const AdminRoles = () => {
       setRows((prev) => prev.map((u) =>
         u.UserID === user.UserID ? { ...u, RoleID: Number(newRoleId), RoleName: newRole?.RoleName || u.RoleName } : u
       ))
-      toast.success(`Đã đổi vai trò "${user.FullName}" → ${newRole?.RoleName}`)
+      toast.success(t('admin.roles.changeRoleSuccess', { name: user.FullName, role: newRole?.RoleName }))
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Không thể đổi vai trò')
+      toast.error(err?.response?.data?.message || t('admin.roles.changeRoleFail'))
     } finally {
       setBusyId(null)
     }
@@ -87,9 +89,9 @@ const AdminRoles = () => {
       setRows((prev) => prev.map((u) =>
         u.UserID === user.UserID ? { ...u, IsActive: u.IsActive ? 0 : 1 } : u
       ))
-      toast.success(user.IsActive ? 'Đã khoá tài khoản' : 'Đã mở khoá tài khoản')
+      toast.success(user.IsActive ? t('admin.roles.lockSuccess') : t('admin.roles.unlockSuccess'))
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Không thể đổi trạng thái tài khoản')
+      toast.error(err?.response?.data?.message || t('admin.roles.toggleStatusFail'))
     } finally {
       setBusyId(null)
     }
@@ -104,10 +106,10 @@ const AdminRoles = () => {
   const submitResetPassword = async (form) => {
     try {
       await resetUserPasswordAPI(resetTarget.UserID, form.NewPassword)
-      toast.success(`Đã đặt lại mật khẩu cho "${resetTarget.FullName}"`)
+      toast.success(t('admin.roles.resetPasswordModal.success', { name: resetTarget.FullName }))
       setResetTarget(null)
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Không thể đặt lại mật khẩu')
+      toast.error(err?.response?.data?.message || t('admin.roles.resetPasswordModal.fail'))
     }
   }
 
@@ -119,19 +121,19 @@ const AdminRoles = () => {
       {/* Header */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-sm border border-slate-200/60">
         <div className="px-2">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">Quản trị / Phân quyền</p>
-          <h1 className="text-2xl font-bold text-slate-900 mt-1">Vai trò & Phân quyền</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('admin.roles.eyebrow')}</p>
+          <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('admin.roles.title')}</h1>
         </div>
         <button onClick={applyFilters}
           className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition self-start">
-          <RefreshCcw size={16} /> Làm mới
+          <RefreshCcw size={16} /> {t('admin.roles.refresh')}
         </button>
       </div>
 
       {USE_MOCK && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-semibold text-amber-700 flex items-center gap-2">
           <ShieldCheck size={18} />
-          Đang dùng dữ liệu mẫu — thao tác phân quyền chỉ lưu tạm trong phiên. Sẽ lưu thật khi backend Admin kết nối.
+          {t('admin.roles.mockNotice')}
         </div>
       )}
 
@@ -141,7 +143,7 @@ const AdminRoles = () => {
           <div key={c.role} className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users size={16} className="text-slate-400" />
-              <Badge variant={roleBadge[c.role]}>{c.role}</Badge>
+              <Badge variant={roleBadge[c.role]}>{t(`roles.${c.role}`, c.role)}</Badge>
             </div>
             <p className="text-2xl font-black text-slate-800">{c.count}</p>
           </div>
@@ -154,13 +156,13 @@ const AdminRoles = () => {
           <div className="relative flex-1 max-w-md">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
-              placeholder="Tìm tên, email, số điện thoại..."
+              placeholder={t('admin.roles.searchPlaceholder')}
               className="w-full rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white dark:focus:bg-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
-          <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setTrigger((t) => t + 1) }}
+          <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setTrigger((tt) => tt + 1) }}
             className="rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
-            <option value="">Tất cả vai trò</option>
-            {roles.map((r) => <option key={r.RoleID} value={r.RoleID}>{r.RoleName}</option>)}
+            <option value="">{t('admin.roles.allRoles')}</option>
+            {roles.map((r) => <option key={r.RoleID} value={r.RoleID}>{t(`roles.${r.RoleName}`, r.RoleName)}</option>)}
           </select>
         </div>
 
@@ -173,17 +175,17 @@ const AdminRoles = () => {
             ) : rows.length === 0 ? (
               <div className="py-16 flex flex-col items-center justify-center text-center text-slate-500">
                 <Search size={44} className="text-slate-300 mb-3" />
-                <p className="font-bold text-slate-700">Không tìm thấy người dùng</p>
-                <p className="text-sm mt-1 text-slate-500">Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm.</p>
+                <p className="font-bold text-slate-700">{t('admin.roles.emptyTitle')}</p>
+                <p className="text-sm mt-1 text-slate-500">{t('admin.roles.emptyHint')}</p>
               </div>
             ) : (
               <table className="min-w-full text-left text-sm text-slate-700">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Người dùng</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Vai trò (đổi quyền)</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Trạng thái</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50 text-right">Thao tác quản trị</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.roles.col.user')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.roles.col.role')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.roles.col.status')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50 text-right">{t('admin.roles.col.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -202,33 +204,33 @@ const AdminRoles = () => {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
-                          <Badge variant={roleBadge[u.RoleName] || 'default'}>{u.RoleName}</Badge>
+                          <Badge variant={roleBadge[u.RoleName] || 'default'}>{t(`roles.${u.RoleName}`, u.RoleName)}</Badge>
                           <select
                             value={u.RoleID}
                             disabled={busyId === u.UserID}
                             onChange={(e) => changeRole(u, e.target.value)}
                             className="rounded-lg bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none border border-slate-200 hover:border-blue-300 focus:border-blue-500 transition disabled:opacity-50"
                           >
-                            {roles.map((r) => <option key={r.RoleID} value={r.RoleID}>{r.RoleName}</option>)}
+                            {roles.map((r) => <option key={r.RoleID} value={r.RoleID}>{t(`roles.${r.RoleName}`, r.RoleName)}</option>)}
                           </select>
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        {u.IsActive ? <Badge variant="success">Hoạt động</Badge> : <Badge variant="danger">Bị khoá</Badge>}
+                        {u.IsActive ? <Badge variant="success">{t('admin.roles.status.active')}</Badge> : <Badge variant="danger">{t('admin.roles.status.locked')}</Badge>}
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => openResetPassword(u)} disabled={busyId === u.UserID} title="Đặt lại mật khẩu"
+                          <button onClick={() => openResetPassword(u)} disabled={busyId === u.UserID} title={t('admin.roles.resetPasswordTitle')}
                             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition disabled:opacity-50">
-                            <KeyRound size={14} /> Đặt lại MK
+                            <KeyRound size={14} /> {t('admin.roles.resetPassword')}
                           </button>
                           <button onClick={() => toggleStatus(u)} disabled={busyId === u.UserID}
-                            title={u.IsActive ? 'Khoá tài khoản' : 'Mở khoá tài khoản'}
+                            title={u.IsActive ? t('admin.roles.lockTitle') : t('admin.roles.unlockTitle')}
                             className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${u.IsActive
                               ? 'border-rose-200 text-rose-600 hover:bg-rose-50'
                               : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
-                              }`}>
-                            {u.IsActive ? <><Lock size={14} /> Khoá</> : <><Unlock size={14} /> Mở khoá</>}
+                            }`}>
+                            {u.IsActive ? <><Lock size={14} /> {t('admin.roles.lock')}</> : <><Unlock size={14} /> {t('admin.roles.unlock')}</>}
                           </button>
                         </div>
                       </td>
@@ -245,36 +247,36 @@ const AdminRoles = () => {
       <Modal
         isOpen={!!resetTarget}
         onClose={() => setResetTarget(null)}
-        title="Đặt lại mật khẩu"
+        title={t('admin.roles.resetPasswordModal.title')}
         footer={(
           <>
-            <Button variant="secondary" onClick={() => setResetTarget(null)} disabled={isSubmitting}>Huỷ</Button>
+            <Button variant="secondary" onClick={() => setResetTarget(null)} disabled={isSubmitting}>{t('admin.roles.resetPasswordModal.cancel')}</Button>
             <Button onClick={handleSubmit(submitResetPassword)} disabled={isSubmitting}>
-              {isSubmitting ? 'Đang lưu...' : 'Đặt lại mật khẩu'}
+              {isSubmitting ? t('admin.roles.resetPasswordModal.saving') : t('admin.roles.resetPasswordModal.submit')}
             </Button>
           </>
         )}
       >
         <form onSubmit={handleSubmit(submitResetPassword)} className="space-y-4">
           <p className="text-sm text-slate-600">
-            Đặt mật khẩu mới cho <span className="font-bold text-slate-900">{resetTarget?.FullName}</span>.
+            {t('admin.roles.resetPasswordModal.description')} <span className="font-bold text-slate-900">{resetTarget?.FullName}</span>.
           </p>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Mật khẩu mới</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.roles.resetPasswordModal.newPasswordLabel')}</label>
             <input type="password" {...register('NewPassword', {
-              required: 'Vui lòng nhập mật khẩu mới',
-              minLength: { value: 6, message: 'Mật khẩu tối thiểu 6 ký tự' }
+              required: t('admin.roles.resetPasswordModal.newPasswordRequired'),
+              minLength: { value: 6, message: t('admin.roles.resetPasswordModal.newPasswordMinLength') }
             })}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.NewPassword && <p className="text-xs text-red-500 mt-1">{errors.NewPassword.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Xác nhận mật khẩu</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.roles.resetPasswordModal.confirmPasswordLabel')}</label>
             <input type="password" {...register('ConfirmPassword', {
-              required: 'Vui lòng xác nhận mật khẩu',
-              validate: (val, formVals) => val === formVals.NewPassword || 'Mật khẩu xác nhận không khớp'
+              required: t('admin.roles.resetPasswordModal.confirmPasswordRequired'),
+              validate: (val, formVals) => val === formVals.NewPassword || t('admin.roles.resetPasswordModal.confirmPasswordMismatch')
             })}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.ConfirmPassword && <p className="text-xs text-red-500 mt-1">{errors.ConfirmPassword.message}</p>}
           </div>
         </form>

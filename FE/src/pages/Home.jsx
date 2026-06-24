@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import guestApi from '../apis/guestApi'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import {
   Box,
   Container,
@@ -21,42 +23,43 @@ import {
 } from '@mui/material'
 import { Users, Car, Bike, ShieldCheck, CheckCircle2 } from 'lucide-react'
 
-const defaultStats = [
-  { label: 'Tổng Sức Chứa', value: '1,200', unit: 'Chỗ trống', icon: <Users className="w-5 h-5 text-gray-400" /> },
-  { label: 'Đang Có Xe', value: '485', unit: 'Chỗ trống', icon: <Car className="w-5 h-5 text-gray-400" /> },
-  { label: 'Đang Trống', value: '612', unit: 'Chỗ trống', icon: <Car className="w-5 h-5 text-green-500" /> },
-  { label: 'Lượt xe hôm nay', value: '105', unit: 'Lượt', icon: <CheckCircle2 className="w-5 h-5 text-gray-400" /> }
-]
-
-const defaultVehicles = [
-  { title: 'Xe Máy', desc: 'Đang tải...', icon: <Bike className="w-6 h-6" />, progress: 0 },
-  { title: 'Ô Tô', desc: 'Đang tải...', icon: <Car className="w-6 h-6" />, progress: 0 },
-  { title: 'Xe Đạp', desc: 'Đang tải...', icon: <Bike className="w-6 h-6" />, progress: 0 }
-]
-
-const pricingRows = [
-  { vehicle: 'Xe Đạp', firstHour: '2,000₫', nextHour: '1,000₫/h', overnight: '20,000₫', monthly: '50,000₫' },
-  { vehicle: 'Xe Máy (Mô tô)', firstHour: '5,000₫', nextHour: '2,000₫/h', overnight: '50,000₫', monthly: '150,000₫' },
-  { vehicle: 'Xe Ô Tô', firstHour: '20,000₫', nextHour: '10,000₫/h', overnight: '150,000₫', monthly: '1,200,000₫' }
-]
-
-const pricingBenefits = [
-  'Thanh toán linh hoạt qua ứng dụng',
-  'Ưu đãi giảm 10% khi đăng ký năm',
-  'Hỗ trợ xuất hóa đơn VAT'
-]
-
-const guidelines = [
-  'Tuân thủ tốc độ tối đa cho phép trong khu vực bãi đỗ xe là 10km/h.',
-  'Đậu xe đúng vạch sơn, không lấn chiếm lối đi chung hoặc cản trở các phương tiện khác.',
-  'Tắt máy xe ngay sau khi đỗ, không để lại các vật liệu dễ cháy nổ trên xe.',
-  'Thanh toán phí dịch vụ gửi xe đúng hạn nếu sử dụng vé tháng, nếu sử dụng vé lượt hãy thanh toán khi ra khỏi bãi.',
-  'Cấm hút thuốc, xả rác và gây mất trật tự an ninh trong toàn bộ khu vực bãi đỗ xe.'
-]
-
 const Home = () => {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { isAuthenticated, user, getRedirectPath, loading } = useAuth()
+
+  const defaultStats = [
+    { label: t('home.stats.totalCapacity'), value: '1,200', unit: t('home.stats.unitSpots'), icon: <Users className="w-5 h-5 text-gray-400" /> },
+    { label: t('home.stats.occupied'), value: '485', unit: t('home.stats.unitSpots'), icon: <Car className="w-5 h-5 text-gray-400" /> },
+    { label: t('home.stats.available'), value: '612', unit: t('home.stats.unitSpots'), icon: <Car className="w-5 h-5 text-green-500" /> },
+    { label: t('home.stats.todayCheckIns'), value: '105', unit: t('home.stats.unitTurns'), icon: <CheckCircle2 className="w-5 h-5 text-gray-400" /> }
+  ]
+
+  const defaultVehicles = [
+    { title: t('home.vehicles.names.motorbike'), desc: t('home.vehicles.loading'), icon: <Bike className="w-6 h-6" />, progress: 0 },
+    { title: t('home.vehicles.names.car'), desc: t('home.vehicles.loading'), icon: <Car className="w-6 h-6" />, progress: 0 },
+    { title: t('home.vehicles.names.bicycle'), desc: t('home.vehicles.loading'), icon: <Bike className="w-6 h-6" />, progress: 0 }
+  ]
+
+  const pricingRows = [
+    { vehicle: t('home.pricing.rows.bicycle'), firstHour: '2,000₫', nextHour: '1,000₫/h', overnight: '20,000₫', monthly: '50,000₫' },
+    { vehicle: t('home.pricing.rows.motorbike'), firstHour: '5,000₫', nextHour: '2,000₫/h', overnight: '50,000₫', monthly: '150,000₫' },
+    { vehicle: t('home.pricing.rows.car'), firstHour: '20,000₫', nextHour: '10,000₫/h', overnight: '150,000₫', monthly: '1,200,000₫' }
+  ]
+
+  const pricingBenefits = [
+    t('home.pricing.benefits.flexiblePayment'),
+    t('home.pricing.benefits.yearlyDiscount'),
+    t('home.pricing.benefits.vatInvoice')
+  ]
+
+  const guidelines = [
+    t('home.guidelines.items.speedLimit'),
+    t('home.guidelines.items.parkingLines'),
+    t('home.guidelines.items.turnOffEngine'),
+    t('home.guidelines.items.payOnTime'),
+    t('home.guidelines.items.noSmoking')
+  ]
 
   const [statsData, setStatsData] = useState(defaultStats)
   const [vehiclesData, setVehiclesData] = useState(defaultVehicles)
@@ -69,10 +72,10 @@ const Home = () => {
           const { overview, vehicles } = res.data
 
           setStatsData([
-            { label: 'Tổng Sức Chứa', value: overview.totalCapacity.toLocaleString(), unit: 'Chỗ trống', icon: <Users className="w-5 h-5 text-gray-400" /> },
-            { label: 'Đang Có Xe', value: overview.occupied.toLocaleString(), unit: 'Chỗ', icon: <Car className="w-5 h-5 text-gray-400" /> },
-            { label: 'Đang Trống', value: overview.available.toLocaleString(), unit: 'Chỗ', icon: <Car className="w-5 h-5 text-green-500" /> },
-            { label: 'Lượt xe hôm nay', value: overview.todayCheckIns.toLocaleString(), unit: 'Lượt', icon: <CheckCircle2 className="w-5 h-5 text-gray-400" /> }
+            { label: t('home.stats.totalCapacity'), value: overview.totalCapacity.toLocaleString(), unit: t('home.stats.unitSpots'), icon: <Users className="w-5 h-5 text-gray-400" /> },
+            { label: t('home.stats.occupied'), value: overview.occupied.toLocaleString(), unit: t('home.stats.unitSpot'), icon: <Car className="w-5 h-5 text-gray-400" /> },
+            { label: t('home.stats.available'), value: overview.available.toLocaleString(), unit: t('home.stats.unitSpot'), icon: <Car className="w-5 h-5 text-green-500" /> },
+            { label: t('home.stats.todayCheckIns'), value: overview.todayCheckIns.toLocaleString(), unit: t('home.stats.unitTurns'), icon: <CheckCircle2 className="w-5 h-5 text-gray-400" /> }
           ])
 
           if (vehicles && vehicles.length > 0) {
@@ -83,7 +86,7 @@ const Home = () => {
 
               return {
                 title: v.name,
-                desc: `${v.available} chỗ trống / ${v.total}`,
+                desc: t('home.vehicles.availableOfTotal', { available: v.available, total: v.total }),
                 icon,
                 progress: v.occupancyRate
               }
@@ -98,7 +101,12 @@ const Home = () => {
   }, [])
 
   return (
-    <Box className="flex flex-col gap-24 py-16">
+    <Box className="flex flex-col gap-24 py-16 relative">
+      {/* Language switcher — góc trên-phải */}
+      <Box sx={{ position: 'absolute', top: 16, right: 24, zIndex: 10 }}>
+        <LanguageSwitcher />
+      </Box>
+
       {/* Hero Section */}
       <Box component="section" className="text-center pt-10">
         <Container maxWidth="lg" className="px-4 sm:px-6 lg:px-8">
@@ -106,20 +114,20 @@ const Home = () => {
             component="h1"
             className="text-5xl md:text-6xl font-extrabold text-blue-600 tracking-tight leading-tight mb-6 max-w-4xl mx-auto"
           >
-            Đỗ Xe Thông Minh
+            {t('home.hero.titleLine1')}
             <br />
-            Cho Tòa Nhà Đa Tầng
+            {t('home.hero.titleLine2')}
           </Box>
 
           <Box component="p" className="text-gray-500 text-lg mb-10 max-w-2xl mx-auto">
-            Giải pháp quản lý tự động, an toàn và hiệu quả cho người quản lý bãi đỗ xe và trải nghiệm gửi xe dễ dàng hơn cho mọi cư dân, nhân viên.
+            {t('home.hero.subtitle')}
           </Box>
 
           <Box className="flex flex-wrap justify-center items-center gap-4 mb-12">
             {loading ? null : isAuthenticated ? (
               <>
                 <Box component="p" className="text-lg text-gray-700 font-medium w-full text-center">
-                  Xin chào, <span className="text-blue-600 font-bold">{user?.fullName}</span> 👋
+                  {t('home.hero.greeting', { name: user?.fullName })}
                 </Box>
                 <Button
                   variant="contained"
@@ -136,7 +144,7 @@ const Home = () => {
                     '&:hover': { bgcolor: '#1d4ed8' }
                   }}
                 >
-                  Vào Dashboard
+                  {t('home.hero.goToDashboard')}
                 </Button>
               </>
             ) : (
@@ -156,7 +164,7 @@ const Home = () => {
                     '&:hover': { bgcolor: '#1d4ed8' }
                   }}
                 >
-                  Đăng Nhập
+                  {t('home.hero.login')}
                 </Button>
                 <Button
                   variant="outlined"
@@ -173,7 +181,7 @@ const Home = () => {
                     '&:hover': { bgcolor: '#eff6ff', borderColor: '#93c5fd' }
                   }}
                 >
-                  Đăng Ký
+                  {t('home.hero.register')}
                 </Button>
                 <Button
                   variant="text"
@@ -188,7 +196,7 @@ const Home = () => {
                     '&:hover': { bgcolor: '#f9fafb' }
                   }}
                 >
-                  Xem Quy Trình
+                  {t('home.hero.viewProcess')}
                 </Button>
                 <Button
                   variant="outlined"
@@ -205,7 +213,7 @@ const Home = () => {
                     '&:hover': { bgcolor: '#d1fae5', borderColor: '#6ee7b7' }
                   }}
                 >
-                  🔍 Tra cứu phiên gửi xe
+                  {t('home.hero.trackSession')}
                 </Button>
               </>
             )}
@@ -228,9 +236,7 @@ const Home = () => {
               <Avatar src="https://i.pravatar.cc/100?img=2" alt="Avatar" />
               <Avatar src="https://i.pravatar.cc/100?img=3" alt="Avatar" />
             </AvatarGroup>
-            <Box component="p" className="text-sm text-gray-500 font-medium">
-              Hơn <span className="text-gray-900 font-bold">2,500</span> lượt ra vào hệ thống mỗi ngày
-            </Box>
+            <Box component="p" className="text-sm text-gray-500 font-medium" dangerouslySetInnerHTML={{ __html: t('home.hero.dailyEntries', { count: '2,500' }) }} />
           </Box>
         </Container>
       </Box>
@@ -240,10 +246,10 @@ const Home = () => {
         <Container maxWidth="lg" className="px-4 sm:px-6 lg:px-8">
           <Box className="text-center mb-12">
             <Box component="h2" className="text-2xl font-bold text-blue-600 mb-2">
-              Tổng Quan Trạng Thái Bãi Đỗ
+              {t('home.stats.title')}
             </Box>
             <Box component="p" className="text-gray-500 text-sm">
-              Hệ thống theo dõi thời gian thực giúp bạn nắm bắt tình trạng hiện tại của tòa nhà đỗ xe.
+              {t('home.stats.subtitle')}
             </Box>
           </Box>
 
@@ -280,10 +286,10 @@ const Home = () => {
         <Container maxWidth="lg" className="px-4 sm:px-6 lg:px-8">
           <Box className="text-center mb-12">
             <Box component="h2" className="text-2xl font-bold text-blue-600 mb-2">
-              Phương Tiện Được Hỗ Trợ
+              {t('home.vehicles.title')}
             </Box>
             <Box component="p" className="text-gray-500 text-sm">
-              Chương trình chuyên biệt được tối ưu cho các loại xe khi đăng ký dùng phương tiện.
+              {t('home.vehicles.subtitle')}
             </Box>
           </Box>
 
@@ -294,7 +300,7 @@ const Home = () => {
                 className="p-8 text-left border-none shadow-xl hover:-translate-y-2 transition-all duration-300 rounded-2xl bg-white"
               >
                 <Chip
-                  label="Cho Phép"
+                  label={t('home.vehicles.allowedBadge')}
                   size="small"
                   sx={{
                     position: 'absolute',
@@ -345,10 +351,10 @@ const Home = () => {
           <Box className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
             <Box className="lg:col-span-1">
               <Box component="h2" className="text-2xl font-bold text-blue-600 mb-4">
-                Bảng Giá Dịch Vụ Niêm Yết
+                {t('home.pricing.title')}
               </Box>
               <Box component="p" className="text-gray-500 text-sm mb-8 leading-relaxed">
-                Đơn vị kinh doanh, không phải bãi đỗ xe giá rẻ. Hệ thống tính giá tự động linh hoạt thời gian theo số giờ/phút qua hệ thống quản lý.
+                {t('home.pricing.subtitle')}
               </Box>
               <Box component="ul" className="space-y-4">
                 {pricingBenefits.map((item, idx) => (
@@ -369,11 +375,11 @@ const Home = () => {
                 <Table className="w-full text-left text-sm">
                   <TableHead className="bg-gray-50/50 border-b border-gray-100">
                     <TableRow>
-                      <TableCell className="px-6 py-4 font-medium text-gray-500">Loại Phương Tiện</TableCell>
-                      <TableCell className="px-6 py-4 font-medium text-gray-500">Giá 1 Giờ Đầu</TableCell>
-                      <TableCell className="px-6 py-4 font-medium text-gray-500">Giá Tiếp Theo</TableCell>
-                      <TableCell className="px-6 py-4 font-medium text-gray-500">Giá Qua Đêm</TableCell>
-                      <TableCell className="px-6 py-4 font-medium text-gray-500 text-right" align="right">Vé Tháng</TableCell>
+                      <TableCell className="px-6 py-4 font-medium text-gray-500">{t('home.pricing.table.vehicleType')}</TableCell>
+                      <TableCell className="px-6 py-4 font-medium text-gray-500">{t('home.pricing.table.firstHour')}</TableCell>
+                      <TableCell className="px-6 py-4 font-medium text-gray-500">{t('home.pricing.table.nextHour')}</TableCell>
+                      <TableCell className="px-6 py-4 font-medium text-gray-500">{t('home.pricing.table.overnight')}</TableCell>
+                      <TableCell className="px-6 py-4 font-medium text-gray-500 text-right" align="right">{t('home.pricing.table.monthly')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody className="divide-y divide-gray-100">
@@ -392,7 +398,7 @@ const Home = () => {
                 </Table>
               </TableContainer>
               <Box component="p" className="text-xs text-gray-400 mt-4">
-                *Giá vé có thể thay đổi tùy thuộc vào dịp Lễ, Tết hoặc thời gian gửi.
+                {t('home.pricing.footnote')}
               </Box>
             </Box>
           </Box>
@@ -409,15 +415,15 @@ const Home = () => {
             <Box className="md:w-1/3 bg-blue-600 p-10 text-white flex flex-col justify-center">
               <ShieldCheck className="w-12 h-12 mb-6 text-blue-200" />
               <Box component="h2" className="text-2xl font-bold mb-4">
-                Quy Định & Hướng Dẫn Vận Hành
+                {t('home.guidelines.title')}
               </Box>
               <Box component="p" className="text-blue-100 text-sm leading-relaxed mb-8">
-                Để đảm bảo an toàn và vận hành thông suốt cho tòa nhà, người sử dụng dịch vụ vui lòng tuân thủ quy định sử dụng bãi đỗ xe...
+                {t('home.guidelines.intro')}
               </Box>
               <Box className="bg-blue-700/50 rounded-xl p-4 flex items-center gap-3">
                 <Box className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center shrink-0">!</Box>
                 <Box component="p" className="text-xs font-medium">
-                  Hệ thống có camera AI giám sát thông minh 24/7 và hệ thống PCCC tự động.
+                  {t('home.guidelines.cameraNotice')}
                 </Box>
               </Box>
             </Box>

@@ -67,7 +67,7 @@ const AdminBuildings = () => {
     buildingName: form.BuildingName,
     address: form.Address || null,
     operatingHours: form.OperatingHours || null,
-    totalFloors: form.TotalFloors === '' || form.TotalFloors === undefined ? null : Number(form.TotalFloors),
+    totalFloors: form.TotalFloors === '' || form.TotalFloors === undefined ? null : Number(form.TotalFloors)
   })
 
   const onSubmit = async (form) => {
@@ -214,7 +214,7 @@ const AdminBuildings = () => {
                   message: t('admin.buildings.modal.operatingHoursPattern')
                 }
               })} placeholder={t('admin.buildings.modal.operatingHoursPlaceholder')}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
               {errors.OperatingHours && <p className="text-xs text-red-500 mt-1">{errors.OperatingHours.message}</p>}
             </div>
             <div>
@@ -222,7 +222,7 @@ const AdminBuildings = () => {
               <input type="number" min="0" {...register('TotalFloors', {
                 min: { value: 0, message: t('admin.buildings.modal.totalFloorsMin') }
               })}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
               {errors.TotalFloors && <p className="text-xs text-red-500 mt-1">{errors.TotalFloors.message}</p>}
             </div>
           </div>

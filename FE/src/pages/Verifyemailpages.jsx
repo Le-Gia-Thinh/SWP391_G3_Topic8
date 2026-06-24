@@ -1,5 +1,6 @@
 // src/pages/VerifyEmailPages.jsx
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { Box, Card, Typography, Button, CircularProgress } from '@mui/material'
 import { CheckCircle, Error, MarkEmailUnread } from '@mui/icons-material'
@@ -8,6 +9,7 @@ import { toast } from 'react-toastify'
 import authorizeAxios from '../utils/authorizeAxios'
 import { checkEmailVerifiedAPI } from '../apis/authApi'
 import { useAuth } from '../contexts/AuthContext'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 async function resendVerifyEmailAPI(email) {
   return authorizeAxios.post('/auth/resend-verify', { email })
@@ -22,9 +24,15 @@ function PageWrapper({ children }) {
         justifyContent: 'center',
         minHeight: '100vh',
         bgcolor: 'grey.100',
-        p: 2
+        p: 2,
+        position: 'relative'
       }}
     >
+      {/* Language switcher — góc trên-phải */}
+      <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+        <LanguageSwitcher />
+      </Box>
+
       <Card
         sx={{
           width: '100%',
@@ -45,6 +53,7 @@ function PageWrapper({ children }) {
 }
 
 export function VerifyEmailPending() {
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(false)
 
@@ -99,7 +108,7 @@ export function VerifyEmailPending() {
 
   async function handleResend() {
     if (!email) {
-      toast.error('Không tìm thấy email cần xác minh, vui lòng đăng ký lại')
+      toast.error(t('auth.verifyEmail.noEmailFound'))
       navigate('/register', { replace: true })
       return
     }
@@ -108,9 +117,9 @@ export function VerifyEmailPending() {
 
     try {
       await resendVerifyEmailAPI(email)
-      toast.success('Đã gửi lại email xác minh!')
+      toast.success(t('auth.verifyEmail.resendSuccess'))
     } catch {
-      toast.error('Gửi lại email thất bại, vui lòng thử lại sau')
+      toast.error(t('auth.verifyEmail.resendFailed'))
     } finally {
       setLoading(false)
     }
@@ -121,7 +130,7 @@ export function VerifyEmailPending() {
       <MarkEmailUnread sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
 
       <Typography variant="h6" fontWeight={700} gutterBottom textAlign="center">
-        Kiểm tra hộp thư của bạn
+        {t('auth.verifyEmail.pendingTitle')}
       </Typography>
 
       <Typography
@@ -129,21 +138,19 @@ export function VerifyEmailPending() {
         color="text.secondary"
         textAlign="center"
         sx={{ mb: 3 }}
-      >
-        Chúng tôi đã gửi link xác minh đến{' '}
-        <strong>{email || 'email của bạn'}</strong>.
-        <br />
-        Vui lòng click vào link để hoàn tất đăng ký.
-      </Typography>
+        dangerouslySetInnerHTML={{
+          __html: t('auth.verifyEmail.pendingBody', { email: email || t('auth.verifyEmail.defaultEmail') })
+        }}
+      />
 
       {checking && (
         <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
-          Đang kiểm tra trạng thái xác minh...
+          {t('auth.verifyEmail.checkingStatus')}
         </Typography>
       )}
 
       <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-        Không nhận được email?
+        {t('auth.verifyEmail.noEmailReceived')}
       </Typography>
 
       <Button
@@ -153,13 +160,14 @@ export function VerifyEmailPending() {
         startIcon={loading ? <CircularProgress size={16} /> : null}
         sx={{ textTransform: 'none' }}
       >
-        {loading ? 'Đang gửi...' : 'Gửi lại email'}
+        {loading ? t('auth.verifyEmail.resendSending') : t('auth.verifyEmail.resendButton')}
       </Button>
     </PageWrapper>
   )
 }
 
 export function VerifyEmailSuccess() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -172,7 +180,7 @@ export function VerifyEmailSuccess() {
       <CheckCircle sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
 
       <Typography variant="h6" fontWeight={700} gutterBottom textAlign="center">
-        Email đã được xác minh!
+        {t('auth.verifyEmail.successTitle')}
       </Typography>
 
       <Typography
@@ -181,7 +189,7 @@ export function VerifyEmailSuccess() {
         textAlign="center"
         sx={{ mb: 3 }}
       >
-        Tài khoản của bạn đã được kích hoạt. Bạn có thể đăng nhập ngay bây giờ.
+        {t('auth.verifyEmail.successBody')}
       </Typography>
 
       <Button
@@ -189,13 +197,14 @@ export function VerifyEmailSuccess() {
         onClick={() => navigate('/login', { replace: true })}
         sx={{ textTransform: 'none', fontWeight: 600 }}
       >
-        Đăng nhập
+        {t('auth.verifyEmail.successLoginButton')}
       </Button>
     </PageWrapper>
   )
 }
 
 export function VerifyEmailError() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
 
@@ -206,7 +215,7 @@ export function VerifyEmailError() {
 
   async function handleResend() {
     if (!email) {
-      toast.error('Không tìm thấy email cần xác minh, vui lòng đăng ký lại')
+      toast.error(t('auth.verifyEmail.noEmailFound'))
       navigate('/register', { replace: true })
       return
     }
@@ -215,10 +224,10 @@ export function VerifyEmailError() {
 
     try {
       await resendVerifyEmailAPI(email)
-      toast.success('Đã gửi lại email xác minh mới!')
+      toast.success(t('auth.verifyEmail.resendSuccessNew'))
       navigate('/verify-email/pending', { replace: true })
     } catch {
-      toast.error('Gửi lại email thất bại, vui lòng thử lại sau')
+      toast.error(t('auth.verifyEmail.resendFailed'))
     } finally {
       setLoading(false)
     }
@@ -229,7 +238,7 @@ export function VerifyEmailError() {
       <Error sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
 
       <Typography variant="h6" fontWeight={700} gutterBottom textAlign="center">
-        Link xác minh không hợp lệ
+        {t('auth.verifyEmail.errorTitle')}
       </Typography>
 
       <Typography
@@ -238,9 +247,7 @@ export function VerifyEmailError() {
         textAlign="center"
         sx={{ mb: 3 }}
       >
-        Link đã hết hạn hoặc đã được sử dụng.
-        <br />
-        Vui lòng yêu cầu gửi lại link mới.
+        {t('auth.verifyEmail.errorBody')}
       </Typography>
 
       <Button
@@ -251,7 +258,7 @@ export function VerifyEmailError() {
         startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
         sx={{ textTransform: 'none', fontWeight: 600 }}
       >
-        {loading ? 'Đang gửi...' : 'Gửi lại email xác minh'}
+        {loading ? t('auth.verifyEmail.resendSending') : t('auth.verifyEmail.resendButton')}
       </Button>
     </PageWrapper>
   )

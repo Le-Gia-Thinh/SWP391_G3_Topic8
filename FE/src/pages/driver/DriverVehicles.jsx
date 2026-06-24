@@ -307,7 +307,7 @@ const DriverVehicles = () => {
                 <div
                   key={vehicle.VehicleID}
                   className={`relative rounded-2xl border bg-white dark:bg-slate-800 p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 ${vehicle.IsDefault ? `${style.border} ring-2 ring-blue-100` : 'border-gray-100 dark:border-slate-700/50'
-                    }`}
+                  }`}
                 >
                   {/* Default Badge */}
                   {vehicle.IsDefault && (

@@ -2814,5 +2814,33 @@
         "update": "Cập nhật"
       }
     }
+  },
+  "footer": {
+    "brandName": "ParkingBuilding",
+    "brandDesc": "Nền tảng quản lý bãi đỗ xe thông minh, tối ưu hóa không gian, tiết kiệm thời gian cho người dùng với công nghệ nhận diện tự động.",
+    "supportTitle": "Hỗ trợ",
+    "supportAbout": "Về chúng tôi",
+    "supportEmail": "Gửi email hỗ trợ",
+    "supportPrivacy": "Chính sách bảo mật",
+    "supportTerms": "Điều khoản & Dịch vụ",
+    "contactTitle": "Liên hệ",
+    "contactAddress": "Khu Công nghệ Cao, Quận 9, TP. Hồ Chí Minh",
+    "contactHotline": "Hotline: 1900 6789",
+    "contactEmail": "support@parkingapp.com",
+    "newsletterTitle": "Bản Tin",
+    "newsletterDesc": "Đăng ký nhận thông báo về các ưu đãi và cập nhật tính năng mới nhất",
+    "newsletterPlaceholder": "Email của bạn",
+    "copyright": "© 2024 Parking Building Management System. Tất cả quyền được bảo lưu.",
+    "linkTerms": "Điều khoản dịch vụ",
+    "linkPrivacy": "Chính sách bảo mật"
+  },
+  "aiChat": {
+    "welcome": "Xin chào! Tôi là AI Trợ lý của bãi đỗ xe SWP391. Tôi có thể giúp gì cho bạn hôm nay?",
+    "title": "Trợ lý AI SWP391",
+    "fallbackReply": "Xin lỗi, tôi không thể xử lý yêu cầu lúc này.",
+    "errorReply": "Xin lỗi, đã có lỗi kết nối đến máy chủ AI.",
+    "thinking": "AI đang nghĩ...",
+    "inputPlaceholder": "Nhập câu hỏi của bạn...",
+    "tooltipFloating": "Chat với AI Trợ lý"
   }
 }

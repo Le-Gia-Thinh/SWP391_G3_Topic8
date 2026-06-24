@@ -45,7 +45,7 @@ const BookingRow = ({ booking, onSelect, isSelected }) => {
       className={`w-full text-left p-4 rounded-xl border transition-all hover:shadow-md ${isSelected
         ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-100 shadow-md'
         : 'border-gray-200 bg-white hover:border-blue-300'
-        }`}
+      }`}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 min-w-0">
@@ -59,7 +59,7 @@ const BookingRow = ({ booking, onSelect, isSelected }) => {
           <span className={`text-xs font-bold shrink-0 px-2 py-0.5 rounded-full ${tr.type === 'error' ? 'bg-red-50 text-red-600' :
             tr.type === 'warning' ? 'bg-yellow-50 text-yellow-600' :
               'bg-gray-50 text-gray-500'
-            }`}>
+          }`}>
             <Clock size={10} className="inline mr-0.5" />{tr.label}
           </span>
         )}
@@ -149,7 +149,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
       <div className={`rounded-xl p-5 border ${isExpired || !isValid
         ? 'bg-red-50 border-red-200'
         : 'bg-blue-600 border-blue-500'
-        }`}>
+      }`}>
         <div className="flex items-start justify-between mb-3">
           <div>
             <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${isExpired || !isValid ? 'text-red-400' : 'text-blue-200'}`}>
@@ -202,7 +202,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded shrink-0 ${item.status === 'ok' ? 'text-green-600 bg-green-50' :
                 item.status === 'warning' ? 'text-yellow-600 bg-yellow-50' :
                   'text-red-600 bg-red-50'
-                }`}>
+              }`}>
                 {item.status === 'ok' ? t('staff.verifyBooking.checks.ok') : item.status === 'warning' ? t('staff.verifyBooking.checks.warning') : t('staff.verifyBooking.checks.invalid')}
               </span>
             </div>
@@ -426,13 +426,13 @@ const StaffVerifyBooking = () => {
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'pending'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                 : 'text-gray-500 hover:bg-gray-50'
-                }`}
+              }`}
             >
               <ListChecks size={15} />
               {t('staff.verifyBooking.tabPending')}
               {pendingList.length > 0 && (
                 <span className={`text-xs font-black px-2 py-0.5 rounded-full ${tab === 'pending' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600'
-                  }`}>
+                }`}>
                   {pendingList.length}
                 </span>
               )}
@@ -442,7 +442,7 @@ const StaffVerifyBooking = () => {
               className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'history'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
                 : 'text-gray-500 hover:bg-gray-50'
-                }`}
+              }`}
             >
               <History size={15} />
               {t('staff.verifyBooking.tabHistory')}

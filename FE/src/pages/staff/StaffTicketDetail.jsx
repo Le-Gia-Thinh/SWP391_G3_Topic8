@@ -169,7 +169,7 @@ const StaffTicketDetail = () => {
                 <div className={`p-4 rounded-2xl shadow-sm text-sm whitespace-pre-wrap ${isStaff
                   ? 'bg-emerald-600 text-white rounded-tr-none'
                   : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-tl-none'
-                  }`}>
+                }`}>
                   {reply.Content}
                 </div>
                 <span className={`text-[10px] text-slate-400 ${isStaff ? 'mr-1' : 'ml-1'}`}>

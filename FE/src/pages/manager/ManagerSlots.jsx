@@ -341,7 +341,7 @@ const ManagerSlots = () => {
             key={k}
             onClick={() => { setFilterStatus(filterStatus === k ? 'all' : k); setPage(1) }}
             className={`rounded-2xl border p-4 text-left transition hover:shadow-md ${filterStatus === k ? 'border-blue-400 bg-blue-50 shadow-md' : 'border-slate-100 bg-white'
-              }`}
+            }`}
           >
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t(`manager.slots.status.${k}`)}</p>
             <div className="flex items-center gap-2 mt-1">

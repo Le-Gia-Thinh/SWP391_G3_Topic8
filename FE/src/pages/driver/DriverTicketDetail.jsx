@@ -136,7 +136,7 @@ const DriverTicketDetail = () => {
                 <div className={`p-4 rounded-2xl shadow-sm text-sm whitespace-pre-wrap ${isMe
                   ? 'bg-blue-600 text-white rounded-tr-none'
                   : 'bg-white dark:bg-slate-800 dark:bg-gray-800 border border-gray-100 dark:border-slate-700/50 dark:border-gray-700 text-gray-800 dark:text-gray-200 dark:text-gray-200 rounded-tl-none'
-                  }`}>
+                }`}>
                   {reply.Content}
                 </div>
                 <span className={`text-[10px] text-gray-400 ${isMe ? 'mr-1' : 'ml-1'}`}>

@@ -212,7 +212,7 @@ const GuestTracking = () => {
               : session.status === 'Completed'
                 ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-xl shadow-blue-600/25'
                 : 'bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-xl shadow-amber-600/25'
-              }`}>
+            }`}>
               <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
               <div className="relative z-10 flex items-start justify-between">
                 <div>

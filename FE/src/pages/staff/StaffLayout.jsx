@@ -69,7 +69,7 @@ const StaffLayout = () => {
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+        }`}
       >
         {/* Logo & Close button */}
         <div className="p-6 flex items-center justify-between border-b border-gray-100 mb-2">
@@ -102,7 +102,7 @@ const StaffLayout = () => {
                 className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${isActive(item.path)
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
                   : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
-                  }`}
+                }`}
               >
                 {item.icon}
                 <span>{item.name}</span>
@@ -121,7 +121,7 @@ const StaffLayout = () => {
                 className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${isActive(item.path)
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
                   : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
-                  }`}
+                }`}
               >
                 {item.icon}
                 <span>{item.name}</span>

@@ -135,7 +135,7 @@ const InfoRow = ({
   return (
     <div
       className={`flex items-center justify-between gap-4 ${border ? 'border-b border-gray-100 dark:border-slate-700/50 pb-2' : ''
-        }`}
+      }`}
     >
       <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
         {icon && <span>{icon}</span>}
@@ -155,11 +155,11 @@ const LocationCard = ({ label, value, active = false }) => {
       className={`rounded-xl border p-4 text-center transition-colors ${active
         ? 'border-blue-100 bg-blue-50/50'
         : 'border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 hover:border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800'
-        }`}
+      }`}
     >
       <div
         className={`mb-1 text-xs font-semibold uppercase ${active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
-          }`}
+        }`}
       >
         {label}
       </div>
@@ -188,13 +188,13 @@ const SessionListItem = ({ session, active, onClick, currentTime }) => {
       className={`w-full rounded-xl border p-4 text-left transition-all ${active
         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm'
         : 'border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 hover:border-blue-100 hover:bg-gray-50 dark:hover:bg-slate-800'
-        }`}
+      }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
           <div
             className={`font-black ${active ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 dark:text-white'
-              }`}
+            }`}
           >
             {getSessionTitle(session)}
           </div>
@@ -208,7 +208,7 @@ const SessionListItem = ({ session, active, onClick, currentTime }) => {
           className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${active
             ? 'bg-blue-600 text-white'
             : 'bg-emerald-50 text-emerald-600'
-            }`}
+          }`}
         >
           {t(getSessionStatusKey(session.SessionStatus))}
         </span>

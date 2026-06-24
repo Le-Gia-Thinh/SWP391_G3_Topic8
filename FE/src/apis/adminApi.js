@@ -64,10 +64,10 @@ export const deleteBuildingAPI = (id) =>
 export const getFloorsAPI = (buildingId) =>
   authorizeAxios.get(`${BASE}/floors`, { params: buildingId ? { buildingId } : {} })
 
-export const createFloorAPI = (data) =>            // { buildingId, floorName, isActive? }
+export const createFloorAPI = (data) => // { buildingId, floorName, isActive? }
   authorizeAxios.post(`${BASE}/floors`, data)
 
-export const updateFloorAPI = (id, data) =>        // { floorName?, isActive? }
+export const updateFloorAPI = (id, data) => // { floorName?, isActive? }
   authorizeAxios.patch(`${BASE}/floors/${id}`, data)
 
 export const deleteFloorAPI = (id) =>
@@ -77,10 +77,10 @@ export const deleteFloorAPI = (id) =>
 export const getZonesAPI = (floorId) =>
   authorizeAxios.get(`${BASE}/zones`, { params: floorId ? { floorId } : {} })
 
-export const createZoneAPI = (data) =>             // { floorId, zoneName, allowedVehicleTypeId, totalSlots }
+export const createZoneAPI = (data) => // { floorId, zoneName, allowedVehicleTypeId, totalSlots }
   authorizeAxios.post(`${BASE}/zones`, data)
 
-export const updateZoneAPI = (id, data) =>         // { zoneName?, allowedVehicleTypeId?, totalSlots? }
+export const updateZoneAPI = (id, data) => // { zoneName?, allowedVehicleTypeId?, totalSlots? }
   authorizeAxios.patch(`${BASE}/zones/${id}`, data)
 
 export const deleteZoneAPI = (id) =>
@@ -91,7 +91,7 @@ export const deleteZoneAPI = (id) =>
 export const getSlotsByZoneAPI = (zoneId) =>
   authorizeAxios.get(`${BASE}/zones/${zoneId}/slots`)
 
-export const createSlotAPI = (data) =>             // { zoneId, slotCode, vehicleTypeId? }
+export const createSlotAPI = (data) => // { zoneId, slotCode, vehicleTypeId? }
   authorizeAxios.post(`${BASE}/slots`, data)
 
 // Thêm nhiều slot theo dải số: { zoneId, prefix, start, end, pad?, vehicleTypeId? }
@@ -99,7 +99,7 @@ export const createSlotAPI = (data) =>             // { zoneId, slotCode, vehicl
 export const createSlotsBulkAPI = (data) =>
   authorizeAxios.post(`${BASE}/slots/bulk`, data)
 
-export const updateSlotAPI = (id, data) =>         // { slotCode?, vehicleTypeId?, slotStatus? }
+export const updateSlotAPI = (id, data) => // { slotCode?, vehicleTypeId?, slotStatus? }
   authorizeAxios.patch(`${BASE}/slots/${id}`, data)
 
 export const deleteSlotAPI = (id) =>

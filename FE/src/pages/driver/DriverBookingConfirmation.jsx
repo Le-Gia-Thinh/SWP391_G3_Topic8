@@ -653,7 +653,7 @@ const DetailRow = ({
   return (
     <div
       className={`flex flex-col justify-between gap-1 py-3 sm:flex-row sm:items-center ${noBorder ? '' : 'border-b border-gray-50'
-        }`}
+      }`}
     >
       <span className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
         {icon}

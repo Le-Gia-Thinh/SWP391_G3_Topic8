@@ -334,9 +334,9 @@ const DriverReport = () => {
                     type="button"
                     onClick={() => setSelectedIssue(issue.id)}
                     className={`rounded-xl border p-3 text-sm font-semibold transition-colors ${active
-                        ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300'
-                        : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
-                      }`}
+                      ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300'
+                      : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
+                    }`}
                   >
                     {getIssueLabel(issue.id)}
                   </button>
@@ -548,9 +548,9 @@ const DriverReport = () => {
 
                 <span
                   className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${isSubmitted
-                      ? 'bg-emerald-100 text-emerald-600'
-                      : 'bg-orange-100 text-orange-600'
-                    }`}
+                    ? 'bg-emerald-100 text-emerald-600'
+                    : 'bg-orange-100 text-orange-600'
+                  }`}
                 >
                   {isSubmitted ? t('driver.report.sumSent') : t('driver.report.sumWaiting')}
                 </span>
@@ -579,9 +579,9 @@ const DriverReport = () => {
                 onClick={handleSubmit}
                 disabled={submitting || selectedRelated?.kind === 'none'}
                 className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors ${submitting || selectedRelated?.kind === 'none'
-                    ? 'cursor-not-allowed bg-blue-400 opacity-70'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
+                  ? 'cursor-not-allowed bg-blue-400 opacity-70'
+                  : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
                 <span>➤</span>
                 {submitting ? t('driver.report.submitting') : t('driver.report.submit')}

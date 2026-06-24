@@ -53,9 +53,9 @@ const StaffFeedback = () => {
             key={star}
             size={16}
             className={`${star <= rating
-                ? 'fill-amber-400 text-amber-400'
-                : 'fill-slate-100 dark:fill-slate-700 text-slate-200 dark:text-slate-600'
-              }`}
+              ? 'fill-amber-400 text-amber-400'
+              : 'fill-slate-100 dark:fill-slate-700 text-slate-200 dark:text-slate-600'
+            }`}
           />
         ))}
       </div>
@@ -111,7 +111,7 @@ const StaffFeedback = () => {
                       <div className="relative flex-1 h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
                         <div
                           className={`absolute left-0 top-0 h-full rounded-full ${star >= 4 ? 'bg-emerald-500' : star === 3 ? 'bg-amber-400' : 'bg-red-500'
-                            }`}
+                          }`}
                           style={{ width: `${percent}%` }}
                         />
                       </div>

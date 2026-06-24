@@ -62,12 +62,12 @@ const fmt = (n) =>
 const getDisplayStatus = (item) => {
   const status = item.ReservationStatus || ''
   switch (status) {
-    case 'Pending': return { statusLabelKey: 'driver.history.statusPending', statusValue: 'Pending' }
-    case 'Prepaid': return { statusLabelKey: 'driver.history.statusPrepaid', statusValue: 'Prepaid' }
-    case 'Reserved': return { statusLabelKey: 'driver.history.statusActive', statusValue: 'active' }
-    case 'Completed': return { statusLabelKey: 'driver.history.statusUsed', statusValue: 'used' }
-    case 'Cancelled': return { statusLabelKey: 'driver.history.statusCancelled', statusValue: 'cancelled' }
-    default: return { statusLabelKey: 'driver.history.statusUnknown', statusValue: 'default' }
+  case 'Pending': return { statusLabelKey: 'driver.history.statusPending', statusValue: 'Pending' }
+  case 'Prepaid': return { statusLabelKey: 'driver.history.statusPrepaid', statusValue: 'Prepaid' }
+  case 'Reserved': return { statusLabelKey: 'driver.history.statusActive', statusValue: 'active' }
+  case 'Completed': return { statusLabelKey: 'driver.history.statusUsed', statusValue: 'used' }
+  case 'Cancelled': return { statusLabelKey: 'driver.history.statusCancelled', statusValue: 'cancelled' }
+  default: return { statusLabelKey: 'driver.history.statusUnknown', statusValue: 'default' }
   }
 }
 

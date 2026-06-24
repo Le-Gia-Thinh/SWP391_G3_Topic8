@@ -1,8 +1,9 @@
-
+import { useTranslation } from 'react-i18next'
 import { Building2, Phone, Mail, MapPin, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const Footer = () => {
+  const { t } = useTranslation()
   return (
     <footer className="bg-white pt-16 pb-8 border-t border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -12,11 +13,11 @@ const Footer = () => {
             <Link to="/" className="flex items-center gap-2 text-blue-600 mb-4">
               <Building2 className="w-6 h-6" />
               <span className="font-bold text-lg text-gray-900 tracking-tight">
-                ParkingBuilding
+                {t('footer.brandName')}
               </span>
             </Link>
             <p className="text-gray-500 text-sm leading-relaxed mb-6">
-              Nền tảng quản lý bãi đỗ xe thông minh, tối ưu hóa không gian, tiết kiệm thời gian cho người dùng với công nghệ nhận diện tự động.
+              {t('footer.brandDesc')}
             </p>
             <div className="flex items-center gap-4 text-gray-400">
               <a href="javascript:void(0)" className="hover:text-blue-600 transition-colors"><div className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center">FB</div></a>
@@ -27,35 +28,35 @@ const Footer = () => {
 
           {/* Hỗ Trợ */}
           <div>
-            <h3 className="font-bold text-gray-900 mb-4">Hỗ trợ</h3>
+            <h3 className="font-bold text-gray-900 mb-4">{t('footer.supportTitle')}</h3>
             <ul className="space-y-3">
-              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Về chúng tôi</a></li>
-              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Gửi email hỗ trợ</a></li>
-              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Chính sách bảo mật</a></li>
-              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">Điều khoản & Dịch vụ</a></li>
+              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">{t('footer.supportAbout')}</a></li>
+              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">{t('footer.supportEmail')}</a></li>
+              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">{t('footer.supportPrivacy')}</a></li>
+              <li><a href="javascript:void(0)" className="text-sm text-gray-500 hover:text-blue-600 transition-colors">{t('footer.supportTerms')}</a></li>
             </ul>
           </div>
 
           {/* Liên Hệ */}
           <div>
-            <h3 className="font-bold text-gray-900 mb-4">Liên hệ</h3>
+            <h3 className="font-bold text-gray-900 mb-4">{t('footer.contactTitle')}</h3>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
                 <span className="text-sm text-gray-500">
-                  Khu Công nghệ Cao, Quận 9, TP. Hồ Chí Minh
+                  {t('footer.contactAddress')}
                 </span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-gray-400 shrink-0" />
                 <span className="text-sm text-gray-500 font-medium text-blue-600">
-                  Hotline: 1900 6789
+                  {t('footer.contactHotline')}
                 </span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-gray-400 shrink-0" />
                 <span className="text-sm text-gray-500">
-                  support@parkingapp.com
+                  {t('footer.contactEmail')}
                 </span>
               </li>
             </ul>
@@ -63,14 +64,14 @@ const Footer = () => {
 
           {/* Bản Tin */}
           <div>
-            <h3 className="font-bold text-gray-900 mb-4">Bản Tin</h3>
+            <h3 className="font-bold text-gray-900 mb-4">{t('footer.newsletterTitle')}</h3>
             <p className="text-sm text-gray-500 mb-4">
-              Đăng ký nhận thông báo về các ưu đãi và cập nhật tính năng mới nhất
+              {t('footer.newsletterDesc')}
             </p>
             <div className="flex gap-2">
               <input
                 type="email"
-                placeholder="Email của bạn"
+                placeholder={t('footer.newsletterPlaceholder')}
                 className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 outline-none"
               />
               <button className="bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center shrink-0">
@@ -82,11 +83,11 @@ const Footer = () => {
 
         <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-gray-400">
-            © 2024 Parking Building Management System. Tất cả quyền được bảo lưu.
+            {t('footer.copyright')}
           </p>
           <div className="flex items-center gap-6 text-xs text-gray-400">
-            <a href="javascript:void(0)" className="hover:text-gray-600">Điều khoản dịch vụ</a>
-            <a href="javascript:void(0)" className="hover:text-gray-600">Chính sách bảo mật</a>
+            <a href="javascript:void(0)" className="hover:text-gray-600">{t('footer.linkTerms')}</a>
+            <a href="javascript:void(0)" className="hover:text-gray-600">{t('footer.linkPrivacy')}</a>
           </div>
         </div>
       </div>

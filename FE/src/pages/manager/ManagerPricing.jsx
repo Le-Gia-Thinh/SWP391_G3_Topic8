@@ -30,7 +30,7 @@ const StatusBadge = ({ isActive }) => {
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold
       ${isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-        : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+      : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
       {isActive ? t('manager.pricing.statusActive') : t('manager.pricing.statusInactive')}
     </span>
@@ -363,7 +363,7 @@ const ManagerPricing = () => {
                             className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-all ${p.IsActive
                               ? 'border-red-200 bg-red-50 text-red-500 hover:bg-red-100'
                               : 'border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                              } disabled:opacity-50`}
+                            } disabled:opacity-50`}
                             title={p.IsActive ? t('manager.pricing.turnOff') : t('manager.pricing.turnOn')}>
                             {p.IsActive ? <X size={14} /> : <CheckCircle size={14} />}
                           </button>
