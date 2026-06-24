@@ -7,6 +7,7 @@ import {
   Phone,
   RefreshCcw,
   User,
+  Wallet,
   XCircle
 } from 'lucide-react'
 import driverApi from '../../apis/driverApi'
@@ -101,6 +102,7 @@ const DriverProfile = () => {
     const isEmailVerified = Boolean(
       getValue(profile, 'IsEmailVerified', 'isEmailVerified')
     )
+    const accountBalance = getValue(profile, 'AccountBalance', 'accountBalance') || 0
 
     return {
       fullName,
@@ -108,7 +110,8 @@ const DriverProfile = () => {
       phoneNumber,
       dateOfBirth,
       avatarUrl,
-      isEmailVerified
+      isEmailVerified,
+      accountBalance
     }
   }, [profile, t])
 
@@ -241,6 +244,13 @@ const DriverProfile = () => {
               label={t('driver.profile.dob')}
               value={formatDate(profileData.dateOfBirth, t('driver.profile.notUpdated'))}
               fallback={t('driver.profile.notUpdated')}
+            />
+
+            <InfoItem
+              icon={<Wallet size={16} />}
+              label={t('driver.profile.accountBalance', 'Số dư tài khoản')}
+              value={new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(profileData.accountBalance)}
+              fallback="0 ₫"
             />
           </div>
 

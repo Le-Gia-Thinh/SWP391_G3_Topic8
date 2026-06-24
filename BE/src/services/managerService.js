@@ -695,7 +695,25 @@ export async function updateIncidentStatus(incidentId, { status, assignedStaffId
       WHERE IncidentID = @IncidentID
     `);
 
-  return getIncidentById(incidentId);
+    const updatedIncident = await getIncidentById(incidentId);
+
+    if (status === 'Resolved' && updatedIncident.DriverID) {
+        await pool.request().query(`
+            INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+            VALUES (
+                ${updatedIncident.DriverID},
+                N'Sự cố đã được giải quyết',
+                N'Sự cố (ID: ${updatedIncident.IncidentID}) của bạn đã được đánh dấu là giải quyết.',
+                'Incident',
+                ${updatedIncident.IncidentID},
+                'Incident',
+                0,
+                GETDATE()
+            )
+        `);
+    }
+
+    return updatedIncident;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -712,23 +730,37 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
   const amountExpr = "ISNULL(p.FinalAmount, p.Amount)";
 
   let dateGroup;
-  if (groupBy === 'month') dateGroup = `FORMAT(${payTimeExpr}, 'yyyy-MM')`;
-  else if (groupBy === 'week') dateGroup = `CONCAT(YEAR(${payTimeExpr}), '-W', RIGHT('0' + CAST(DATEPART(WEEK, ${payTimeExpr}) AS VARCHAR), 2))`;
-  else dateGroup = `CAST(${payTimeExpr} AS DATE)`;
+  if (groupBy === 'month') dateGroup = `FORMAT(t.PayTime, 'yyyy-MM')`;
+  else if (groupBy === 'week') dateGroup = `CONCAT(YEAR(t.PayTime), '-W', RIGHT('0' + CAST(DATEPART(WEEK, t.PayTime) AS VARCHAR), 2))`;
+  else dateGroup = `CAST(t.PayTime AS DATE)`;
 
   const result = await pool.request()
     .input("StartDate", sql.Date, start)
     .input("EndDate", sql.Date, end)
     .query(`
+      WITH AllPayments AS (
+          SELECT 
+              ISNULL(p.FinalAmount, p.Amount) AS Revenue, 
+              ISNULL(p.PaymentTime, p.SurchargePaidAt) AS PayTime,
+              p.PaymentMethod
+          FROM Payments p
+          WHERE p.PaymentStatus IN ('Completed', 'Prepaid') 
+            AND ISNULL(p.PaymentTime, p.SurchargePaidAt) IS NOT NULL
+          UNION ALL
+          SELECT 
+              AmountPaid AS Revenue, 
+              CreatedAt AS PayTime,
+              'Banking' AS PaymentMethod
+          FROM UserSubscriptions
+          WHERE AmountPaid > 0
+      )
       SELECT
         ${dateGroup}          AS Period,
         COUNT(*)              AS TransactionCount,
-        SUM(${amountExpr})    AS TotalRevenue,
-        AVG(${amountExpr})    AS AvgRevenue
-      FROM Payments p
-      WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-        AND ${payTimeExpr} IS NOT NULL
-        AND CAST(${payTimeExpr} AS DATE) BETWEEN @StartDate AND @EndDate
+        SUM(t.Revenue)        AS TotalRevenue,
+        AVG(t.Revenue)        AS AvgRevenue
+      FROM AllPayments t
+      WHERE CAST(t.PayTime AS DATE) BETWEEN @StartDate AND @EndDate
       GROUP BY ${dateGroup}
       ORDER BY Period
     `);
@@ -737,16 +769,30 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
     .input("StartDate", sql.Date, start)
     .input("EndDate", sql.Date, end)
     .query(`
+      WITH AllPayments AS (
+          SELECT 
+              ISNULL(p.FinalAmount, p.Amount) AS Revenue, 
+              ISNULL(p.PaymentTime, p.SurchargePaidAt) AS PayTime,
+              p.PaymentMethod
+          FROM Payments p
+          WHERE p.PaymentStatus IN ('Completed', 'Prepaid') 
+            AND ISNULL(p.PaymentTime, p.SurchargePaidAt) IS NOT NULL
+          UNION ALL
+          SELECT 
+              AmountPaid AS Revenue, 
+              CreatedAt AS PayTime,
+              'Banking' AS PaymentMethod
+          FROM UserSubscriptions
+          WHERE AmountPaid > 0
+      )
       SELECT
         COUNT(*)                                                                  AS TotalTransactions,
-        ISNULL(SUM(${amountExpr}), 0)                                             AS TotalRevenue,
-        ISNULL(AVG(${amountExpr}), 0)                                             AS AvgPerTransaction,
-        SUM(CASE WHEN p.PaymentMethod = 'Cash'    THEN ${amountExpr} ELSE 0 END) AS CashRevenue,
-        SUM(CASE WHEN p.PaymentMethod = 'Banking' THEN ${amountExpr} ELSE 0 END) AS BankingRevenue
-      FROM Payments p
-      WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-        AND ${payTimeExpr} IS NOT NULL
-        AND CAST(${payTimeExpr} AS DATE) BETWEEN @StartDate AND @EndDate
+        ISNULL(SUM(t.Revenue), 0)                                                 AS TotalRevenue,
+        ISNULL(AVG(t.Revenue), 0)                                                 AS AvgPerTransaction,
+        SUM(CASE WHEN t.PaymentMethod = 'Cash'    THEN t.Revenue ELSE 0 END)      AS CashRevenue,
+        SUM(CASE WHEN t.PaymentMethod = 'Banking' THEN t.Revenue ELSE 0 END)      AS BankingRevenue
+      FROM AllPayments t
+      WHERE CAST(t.PayTime AS DATE) BETWEEN @StartDate AND @EndDate
     `);
 
   // Theo loại xe
@@ -1095,4 +1141,21 @@ export async function getUnpaidSessions({ search } = {}) {
       ORDER BY s.EntryTime DESC
     `);
   return result.recordset;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SYSTEM NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────
+export async function broadcastSystemMaintenance(message) {
+  const pool = await getPool();
+  await pool.request()
+    .input("Title", sql.NVarChar(200), 'Bảo trì hệ thống')
+    .input("Message", sql.NVarChar(500), message || 'Hệ thống sẽ tiến hành bảo trì. Vui lòng theo dõi thông báo tiếp theo.')
+    .query(`
+      INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+      SELECT u.UserID, @Title, @Message, 'System', NULL, 'Maintenance', 0, GETDATE()
+      FROM Users u
+      JOIN Roles r ON u.RoleID = r.RoleID
+      WHERE r.RoleName IN ('Driver', 'Staff', 'Admin') AND u.IsActive = 1
+    `);
 }

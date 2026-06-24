@@ -24,9 +24,11 @@ import {
   Smartphone as PhoneIcon,
   History as HistoryIcon,
   TwoWheeler as BikeIcon,
-  LocalShipping as TruckIcon
+  LocalShipping as TruckIcon,
+  AccountBalanceWallet as WalletIcon
 } from '@mui/icons-material'
 import authorizeAxios from '../../utils/authorizeAxios'
+import walletApi from '../../apis/walletApi'
 
 // ── Helpers ──────────────────────────────────────────────────────
 // fmt cần currency để theo i18n; gọi từ component truyền vào
@@ -286,6 +288,7 @@ const DriverPayment = () => {
   const [cancelling, setCancelling] = useState(false)
   const [now, setNow] = useState(new Date())
   const [showPricing, setShowPricing] = useState(false)
+  const [walletBalance, setWalletBalance] = useState(0)
   const pollerRef = useRef(null)
 
   // Clock — cập nhật "đã đỗ" mỗi giây
@@ -293,6 +296,13 @@ const DriverPayment = () => {
     const tm = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(tm)
   }, [])
+
+  // Fetch wallet balance
+  useEffect(() => {
+    walletApi.getBalance().then(res => {
+      if (res.success) setWalletBalance(res.data.balance);
+    }).catch(() => {});
+  }, []);
 
   // ✅ FIX: Xử lý redirect từ PayOS — dùng ref để tránh setState sync trong effect
   const statusHandledRef = useRef(false)
@@ -343,7 +353,9 @@ const DriverPayment = () => {
       })
       setPayment(r.data.data)
       setStep('qr')
-      startPolling(r.data.data.orderCode)
+      if (r.data.data.checkoutUrl !== 'FREE') {
+        startPolling(r.data.data.orderCode)
+      }
     } catch (e) {
       toast.error(e.response?.data?.message || t('driver.payment.toastCreateFail'))
       setPaying(null)
@@ -387,6 +399,23 @@ const DriverPayment = () => {
       setCancelling(false)
       setStep('select')
       loadSessions()
+    }
+  }
+
+  // Thanh toán bằng ví
+  const handlePayByWallet = async () => {
+    try {
+      if (walletBalance < payment.amount) {
+        toast.error('Số dư ví không đủ!')
+        return
+      }
+      const res = await walletApi.payParking(paying.SessionID)
+      if (res.success) {
+        setStep('done')
+        toast.success('Thanh toán bằng ví thành công!')
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Thanh toán bằng ví thất bại')
     }
   }
 
@@ -490,6 +519,13 @@ const DriverPayment = () => {
             <Typography sx={{ fontSize: 40, fontWeight: 900, letterSpacing: -1 }}>
               {fmt(payment.amount, cur)}
             </Typography>
+            {payment.discountPercent > 0 && (
+              <Chip
+                label={`Đã giảm ${payment.discountPercent}% (lượt ${payment.sessionCount}) - Gói ${payment.planId.toUpperCase()}`}
+                size="small"
+                sx={{ mt: 1, bgcolor: 'success.main', color: 'white', fontWeight: 'bold' }}
+              />
+            )}
           </Box>
 
           {payment.expiredAt && (
@@ -503,7 +539,25 @@ const DriverPayment = () => {
           )}
         </Box>
 
-        {/* QR */}
+        {payment.checkoutUrl === 'FREE' ? (
+          <Box sx={{ p: 5, textAlign: 'center' }}>
+            <CheckCircleIcon sx={{ fontSize: 64, color: 'success.main', mb: 2 }} />
+            <Typography variant="h5" fontWeight={800} color="success.main" mb={1}>
+              Miễn phí hoàn toàn!
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={4}>
+              Gói Hội viên của bạn chi trả toàn bộ phí đỗ xe cho lượt này. Vui lòng bấm xác nhận để hoàn tất.
+            </Typography>
+            <Button variant="contained" color="success" onClick={() => {
+              setStep('done');
+              toast.success('Đã thanh toán (Miễn phí)');
+            }} size="large" fullWidth>
+              Xác Nhận Đã Thanh Toán (Miễn Phí)
+            </Button>
+          </Box>
+        ) : (
+          <>
+            {/* QR */}
         <Box sx={{ bgcolor: 'grey.50', display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3, px: 4 }}>
           <Paper elevation={4} sx={{ p: 1.5, borderRadius: 3, bgcolor: '#fff', mb: 2 }}>
             <QRCanvas data={payment.qrCode} size={220} />
@@ -511,13 +565,25 @@ const DriverPayment = () => {
           <Typography variant="caption" color="text.secondary" textAlign="center" mb={1.5}>
             {t('driver.payment.qrHint')}
           </Typography>
-          <Button
-            variant="outlined" size="small"
-            startIcon={<ExternalIcon fontSize="small" />}
-            onClick={() => window.open(payment.checkoutUrl, '_blank', 'noopener')}
-          >
-            {t('driver.payment.openPayos')}
-          </Button>
+          <Stack direction="row" spacing={2} width="100%" justifyContent="center" mt={2}>
+            <Button
+              variant="outlined" size="small"
+              startIcon={<ExternalIcon fontSize="small" />}
+              onClick={() => window.open(payment.checkoutUrl, '_blank', 'noopener')}
+              sx={{ flex: 1 }}
+            >
+              {t('driver.payment.openPayos')}
+            </Button>
+            <Button
+              variant="contained" size="small"
+              color="primary"
+              startIcon={<WalletIcon fontSize="small" />}
+              onClick={handlePayByWallet}
+              sx={{ flex: 1 }}
+            >
+              Thanh toán ví ({fmt(walletBalance)})
+            </Button>
+          </Stack>
         </Box>
 
         {/* Thông tin CK */}
@@ -530,9 +596,9 @@ const DriverPayment = () => {
             {[
               { label: t('driver.payment.accountNumber'), value: payment.accountNumber, mono: true, color: 'inherit', large: true },
               { label: t('driver.payment.accountName'), value: payment.accountName, mono: false, color: 'inherit' },
-              { label: t('driver.payment.amount'), value: fmt(payment.amount, cur), mono: false, color: 'success.main' },
+              { label: payment.discountPercent > 0 ? 'Tổng tiền (đã giảm)' : t('driver.payment.amount'), value: fmt(payment.amount, cur), mono: false, color: 'success.main', original: payment.fee },
               { label: t('driver.payment.transferContent'), value: payment.description, mono: true, color: 'warning.dark' }
-            ].map(({ label, value, mono, color, large }) => (
+            ].map(({ label, value, mono, color, large, original }) => (
               <Paper key={label} variant="outlined" sx={{
                 px: 2, py: 1.5, borderRadius: 2,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -540,6 +606,11 @@ const DriverPayment = () => {
               }}>
                 <Box>
                   <Typography variant="caption" color="text.secondary">{label}</Typography>
+                  {original !== undefined && payment.discountPercent > 0 && (
+                      <Typography variant="caption" sx={{ textDecoration: 'line-through', color: 'text.disabled', ml: 1 }}>
+                        {fmt(original, cur)}
+                      </Typography>
+                  )}
                   <Typography
                     fontWeight={700}
                     fontSize={large ? 18 : 14}
@@ -599,7 +670,6 @@ const DriverPayment = () => {
             </Typography>
           </Stack>
           <LinearProgress sx={{ mt: 1, borderRadius: 1, height: 3 }} />
-
           {/* Lưu ý prepaid */}
           <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }} icon={<ClockIcon />}>
             <AlertTitle>{t('driver.payment.prepayNoteTitle')}</AlertTitle>
@@ -617,6 +687,8 @@ const DriverPayment = () => {
             {t('driver.payment.cancelOrder')}
           </Button>
         </Box>
+      </>
+      )}
 
         {/* Hướng dẫn */}
         <Box mx={3} mb={3}>

@@ -322,3 +322,11 @@ export async function getAuditLogs(req, res, next) {
     return res.status(StatusCodes.OK).json({ success: true, data: result.data, pagination: result.pagination })
   } catch (err) { next(err) }
 }
+
+/* ── SYSTEM NOTIFICATIONS ───────────────────────────────────────── */
+export async function notifyManagers(req, res, next) {
+  try {
+    await infra.notifyManagers(req.body.title, req.body.message);
+    return res.status(StatusCodes.OK).json({ success: true, message: "Đã gửi thông báo đến Manager" });
+  } catch (err) { next(err); }
+}

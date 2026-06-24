@@ -26,6 +26,8 @@ import staffRoutes from "./staffRoutes.js";
 import managerRoutes from './managerRoutes.js'
 import commonRoutes from './commonRoutes.js'
 import adminRoutes from './adminRoutes.js'
+import subscriptionRoutes from './subscriptionRoutes.js';
+import walletRoutes from './walletRoutes.js';
 
 // Import Middlewares dùng để kiểm tra quyền (Authorization)
 import {
@@ -104,6 +106,12 @@ router.get("/vehicle-types", isAuthorized, commonController.getVehicleTypes);
 router.get("/buildings", isAuthorized, commonController.getBuildings);
 router.get("/slots", isAuthorized, commonController.getSlots);
 router.get("/pricing", isAuthorized, commonController.getPricing);
+
+// Common Notifications
+router.get("/notifications", isAuthorized, notificationController.getNotifications);
+router.get("/notifications/unread-count", isAuthorized, notificationController.getUnreadCount);
+router.patch("/notifications/read-all", isAuthorized, notificationController.markAllAsRead);
+router.patch("/notifications/:id/read", isAuthorized, notificationController.markAsRead);
 
 // AI Chat
 router.post("/ai/chat", isAuthorized, aiChatController.processChat);
@@ -353,4 +361,6 @@ router.use("/staff", staffRoutes);
 router.use('/manager', managerRoutes);
 router.use('/common', commonRoutes);
 router.use('/admin', adminRoutes);
+router.use('/driver/subscriptions', subscriptionRoutes);
+router.use('/driver/wallet', walletRoutes);
 export default router;

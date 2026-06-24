@@ -69,6 +69,63 @@ async function calcFee(pool, vehicleTypeId, entryTime) {
     return { fee: Math.max(2000, fee), durationH: parseFloat(diffH.toFixed(2)) }
 }
 
+// ── Tính giảm giá từ gói Hội viên ──────────────────────────────
+async function applySubscriptionDiscount(pool, driverId, baseFee) {
+    // 1. Lấy gói Active hiện tại
+    const subRes = await pool.request()
+        .input('UserID', sql.Int, driverId)
+        .query(`
+            SELECT top 1 PlanID, StartDate, EndDate 
+            FROM UserSubscriptions 
+            WHERE UserID = @UserID AND Status = 'Active' 
+              AND EndDate > GETDATE()
+            ORDER BY EndDate DESC
+        `);
+        
+    if (subRes.recordset.length === 0) {
+        return { finalFee: baseFee, discountPercent: 0, planId: null };
+    }
+
+    const sub = subRes.recordset[0];
+    
+    // 2. Đếm số lượt đã đỗ trong thời gian gói
+    const countRes = await pool.request()
+        .input('DriverID', sql.Int, driverId)
+        .input('StartDate', sql.DateTime, sub.StartDate)
+        .input('EndDate', sql.DateTime, sub.EndDate)
+        .query(`
+            SELECT COUNT(*) as SessionCount
+            FROM ParkingSessions
+            WHERE DriverID = @DriverID 
+              AND EntryTime >= @StartDate
+              AND EntryTime <= @EndDate
+        `);
+        
+    const sessionCount = countRes.recordset[0].SessionCount; // bao gồm cả lượt hiện tại đang Active
+    let discountPercent = 0;
+
+    if (sub.PlanID === 'basic') {
+        if (sessionCount <= 5) discountPercent = 10;
+        else discountPercent = 0;
+    } else if (sub.PlanID === 'pro') {
+        if (sessionCount <= 15) discountPercent = 100;
+        else discountPercent = 25;
+    } else if (sub.PlanID === 'premium') {
+        discountPercent = 100; // Không giới hạn
+    }
+
+    let finalFee = baseFee - (baseFee * discountPercent / 100);
+    if (finalFee > 0 && finalFee < 2000) finalFee = 2000;
+    else if (finalFee < 0) finalFee = 0;
+
+    return { 
+        finalFee: Math.round(finalFee), 
+        discountPercent, 
+        planId: sub.PlanID,
+        sessionCount
+    };
+}
+
 // ── Lấy toàn bộ bảng phí của 1 loại xe ──────────────────────────
 async function getPricingTable(pool, vehicleTypeId) {
     const r = await pool.request()
@@ -169,8 +226,45 @@ export async function createPaymentService(sessionId, driverId) {
     }
 
     // Tính phí hiện tại + lấy bảng giá
-    const { fee: amount, durationH } = await calcFee(pool, session.VehicleTypeID, session.EntryTime)
+    const { fee: baseFee, durationH } = await calcFee(pool, session.VehicleTypeID, session.EntryTime)
     const pricingTable = await getPricingTable(pool, session.VehicleTypeID)
+
+    // Áp dụng giảm giá Member
+    const { finalFee: amount, discountPercent, planId, sessionCount } = await applySubscriptionDiscount(pool, driverId, baseFee);
+
+    if (amount === 0) {
+        // Miễn phí hoàn toàn => Mark prepaid directly without PayOS
+        await pool.request()
+            .input('SessionID', sql.Int, sessionId)
+            .input('OrderCode', sql.BigInt, 0)
+            .input('Amount', sql.Decimal(10, 2), 0)
+            .input('SnapshotH', sql.Decimal(10, 2), durationH)
+            .input('QrCode', sql.NVarChar(sql.MAX), null)
+            .input('CheckoutUrl', sql.NVarChar(500), 'FREE')
+            .execute('sp_CreatePrepayment');
+            
+        await pool.request()
+            .input('OrderCode', sql.BigInt, 0)
+            .input('PaidAt', sql.DateTime, new Date())
+            .execute('sp_MarkPaymentPrepaid');
+            
+        return {
+            qrCode: '',
+            checkoutUrl: 'FREE',
+            accountNumber: '',
+            accountName: '',
+            amount: 0,
+            baseFee,
+            description: 'MIỄN PHÍ HỘI VIÊN',
+            orderCode: 0,
+            fee: baseFee,
+            durationH,
+            pricingTable,
+            discountPercent,
+            planId,
+            sessionCount
+        };
+    }
 
     const orderCode = makeOrderCode(sessionId)
     // description tối đa 25 ký tự, KHÔNG có ký tự đặc biệt
@@ -246,6 +340,7 @@ export async function createPaymentService(sessionId, driverId) {
     return {
         orderCode,
         amount,
+        baseFee,
         description,
         qrCode: pd.qrCode,
         checkoutUrl: pd.checkoutUrl,
@@ -254,9 +349,12 @@ export async function createPaymentService(sessionId, driverId) {
         bankBin: pd.bin,
         currency: 'VND',
         expiredAt: new Date(expiredMs).toISOString(),
+        discountPercent,
+        planId,
+        sessionCount,
         status: 'PENDING',
-        pricingTable,          // ← bảng giá in ra FE
-        durationH,             // ← số giờ snapshot
+        pricingTable,
+        durationH,
         sessionInfo: {
             sessionId: session.SessionID,
             plateNumber: session.PlateNumber,
@@ -422,7 +520,16 @@ export async function handleWebhookService(body) {
 
     const { code, data } = body
     if (code === '00' && data?.orderCode) {
-        await markPrepaid(data.orderCode)
+        const desc = (data.description || '').toUpperCase()
+
+        if (desc.startsWith('TOPUP')) {
+            // Nạp tiền ví
+            const { handleTopupWebhook } = await import('./walletService.js')
+            await handleTopupWebhook(data.orderCode, data.amount)
+        } else {
+            // Thanh toán đỗ xe (PARK...) hoặc các loại khác
+            await markPrepaid(data.orderCode)
+        }
     }
 
     return { received: true }
