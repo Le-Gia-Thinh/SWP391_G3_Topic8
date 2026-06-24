@@ -1,6 +1,6 @@
 // src/pages/admin/AdminParkingConfig.jsx
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import {
@@ -25,12 +25,6 @@ const SLOT_CFG = {
   Maintenance: { key: 'maintenance', dot: 'bg-amber-500', chip: 'bg-amber-50 text-amber-700 border-amber-200/70' },
   Blocked: { key: 'blocked', dot: 'bg-red-500', chip: 'bg-red-50 text-red-700 border-red-200/70' }
 }
-
-// Loại xe thường gặp (fallback nếu chưa load được từ DB). VehicleTypeID khớp seed data.
-const VEHICLE_TYPES = [
-  { VehicleTypeID: 1, VehicleName: 'Xe máy' },
-  { VehicleTypeID: 2, VehicleName: 'Ô tô' }
-]
 
 const AdminParkingConfig = () => {
   const { t } = useTranslation()
@@ -394,14 +388,17 @@ const ZoneCard = ({ zone, onManage, onEdit, onDelete }) => {
   )
 }
 
-// ── Modal thêm/sửa Tầng ──────────────────────────────────────
+/// ── Modal thêm/sửa Tầng ──────────────────────────────────────
 const FloorModal = ({ mode, data, buildingId, onClose, onSaved }) => {
   const { t } = useTranslation()
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+  const [calling, setCalling] = useState(false)
+  const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: { floorName: data?.FloorName || '' }
   })
 
   const onSubmit = async (form) => {
+    if (calling) return
+    setCalling(true)
     try {
       if (mode === 'edit') {
         await updateFloorAPI(data.FloorID, { floorName: form.floorName })
@@ -411,23 +408,29 @@ const FloorModal = ({ mode, data, buildingId, onClose, onSaved }) => {
         toast.success(t('admin.parkingConfig.floorModal.createSuccess'))
       }
       onSaved()
-    } catch (err) {
-      toast.error(err?.response?.data?.message || t('admin.parkingConfig.floorModal.saveFail'))
+    } catch {
+      // interceptor đã toast error rồi → không toast ở đây nữa
+    } finally {
+      setCalling(false)
     }
   }
 
   return (
-    <Modal isOpen onClose={onClose} title={mode === 'edit' ? t('admin.parkingConfig.floorModal.titleEdit') : t('admin.parkingConfig.floorModal.titleCreate')}
+    <Modal isOpen onClose={onClose}
+      title={mode === 'edit' ? t('admin.parkingConfig.floorModal.titleEdit') : t('admin.parkingConfig.floorModal.titleCreate')}
       footer={(
         <>
           <Button variant="secondary" onClick={onClose}>{t('admin.parkingConfig.floorModal.cancel')}</Button>
-          <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>{isSubmitting ? t('admin.parkingConfig.floorModal.saving') : mode === 'edit' ? t('admin.parkingConfig.floorModal.save') : t('admin.parkingConfig.floorModal.create')}</Button>
+          <Button onClick={handleSubmit(onSubmit)} disabled={calling}>
+            {calling ? t('admin.parkingConfig.floorModal.saving') : mode === 'edit' ? t('admin.parkingConfig.floorModal.save') : t('admin.parkingConfig.floorModal.create')}
+          </Button>
         </>
       )}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form className="space-y-4">
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.parkingConfig.floorModal.label')}</label>
-          <input {...register('floorName', { required: t('admin.parkingConfig.floorModal.required') })} placeholder={t('admin.parkingConfig.floorModal.placeholder')}
+          <input {...register('floorName', { required: t('admin.parkingConfig.floorModal.required') })}
+            placeholder={t('admin.parkingConfig.floorModal.placeholder')}
             className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
           {errors.floorName && <p className="text-xs text-red-500 mt-1">{errors.floorName.message}</p>}
         </div>
@@ -439,7 +442,8 @@ const FloorModal = ({ mode, data, buildingId, onClose, onSaved }) => {
 // ── Modal thêm/sửa Khu vực (Zone) ────────────────────────────
 const ZoneModal = ({ mode, data, floorId, onClose, onSaved }) => {
   const { t } = useTranslation()
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+  const [calling, setCalling] = useState(false)
+  const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
       zoneName: data?.ZoneName || '',
       allowedVehicleTypeId: data?.AllowedVehicleTypeID ? String(data.AllowedVehicleTypeID) : '1',
@@ -447,7 +451,14 @@ const ZoneModal = ({ mode, data, floorId, onClose, onSaved }) => {
     }
   })
 
+  const VEHICLE_TYPES = [
+    { VehicleTypeID: 1, VehicleName: t('home.vehicles.names.motorbike') },
+    { VehicleTypeID: 2, VehicleName: t('home.vehicles.names.car') }
+  ]
+
   const onSubmit = async (form) => {
+    if (calling) return
+    setCalling(true)
     const payload = {
       zoneName: form.zoneName,
       allowedVehicleTypeId: Number(form.allowedVehicleTypeId),
@@ -462,23 +473,29 @@ const ZoneModal = ({ mode, data, floorId, onClose, onSaved }) => {
         toast.success(t('admin.parkingConfig.zoneModal.createSuccess'))
       }
       onSaved()
-    } catch (err) {
-      toast.error(err?.response?.data?.message || t('admin.parkingConfig.zoneModal.saveFail'))
+    } catch {
+      // interceptor đã toast error rồi
+    } finally {
+      setCalling(false)
     }
   }
 
   return (
-    <Modal isOpen onClose={onClose} title={mode === 'edit' ? t('admin.parkingConfig.zoneModal.titleEdit') : t('admin.parkingConfig.zoneModal.titleCreate')}
+    <Modal isOpen onClose={onClose}
+      title={mode === 'edit' ? t('admin.parkingConfig.zoneModal.titleEdit') : t('admin.parkingConfig.zoneModal.titleCreate')}
       footer={(
         <>
           <Button variant="secondary" onClick={onClose}>{t('admin.parkingConfig.zoneModal.cancel')}</Button>
-          <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>{isSubmitting ? t('admin.parkingConfig.zoneModal.saving') : mode === 'edit' ? t('admin.parkingConfig.zoneModal.save') : t('admin.parkingConfig.zoneModal.create')}</Button>
+          <Button onClick={handleSubmit(onSubmit)} disabled={calling}>
+            {calling ? t('admin.parkingConfig.zoneModal.saving') : mode === 'edit' ? t('admin.parkingConfig.zoneModal.save') : t('admin.parkingConfig.zoneModal.create')}
+          </Button>
         </>
       )}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form className="space-y-4">
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.parkingConfig.zoneModal.nameLabel')}</label>
-          <input {...register('zoneName', { required: t('admin.parkingConfig.zoneModal.nameRequired') })} placeholder={t('admin.parkingConfig.zoneModal.namePlaceholder')}
+          <input {...register('zoneName', { required: t('admin.parkingConfig.zoneModal.nameRequired') })}
+            placeholder={t('admin.parkingConfig.zoneModal.namePlaceholder')}
             className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
           {errors.zoneName && <p className="text-xs text-red-500 mt-1">{errors.zoneName.message}</p>}
         </div>
@@ -493,7 +510,8 @@ const ZoneModal = ({ mode, data, floorId, onClose, onSaved }) => {
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.parkingConfig.zoneModal.totalSlotsLabel')}</label>
-            <input type="number" min="0" {...register('totalSlots', { min: { value: 0, message: t('admin.parkingConfig.zoneModal.totalSlotsInvalid') } })}
+            <input type="number" min="0"
+              {...register('totalSlots', { min: { value: 0, message: t('admin.parkingConfig.zoneModal.totalSlotsInvalid') } })}
               className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.totalSlots && <p className="text-xs text-red-500 mt-1">{errors.totalSlots.message}</p>}
           </div>
@@ -558,7 +576,7 @@ const SlotPanel = ({ zone, onClose, onChanged }) => {
       const { createdCount, skippedCount } = res.data.data
       toast.success(
         t('admin.parkingConfig.slot.panel.bulkSuccess', { count: createdCount })
-                + (skippedCount ? t('admin.parkingConfig.slot.panel.bulkSkipped', { count: skippedCount }) : '')
+        + (skippedCount ? t('admin.parkingConfig.slot.panel.bulkSkipped', { count: skippedCount }) : '')
       )
       bulkForm.reset({ prefix: form.prefix, start: Number(form.end) + 1, end: Number(form.end) + 10, pad: Number(form.pad) })
       await load(); onChanged?.()
@@ -696,7 +714,7 @@ const SlotPanel = ({ zone, onClose, onChanged }) => {
                   {t('admin.parkingConfig.slot.panel.fullNotice', { actual: cap.actualSlots, total: cap.totalSlots })}
                 </div>
               )}
-              <form onSubmit={addForm.handleSubmit(submitAdd)} className="space-y-4">
+              <form className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('admin.parkingConfig.slot.panel.addCodeLabel')}</label>
                   <input {...addForm.register('slotCode', { required: t('admin.parkingConfig.slot.panel.addCodeRequired') })} placeholder={t('admin.parkingConfig.slot.panel.addCodePlaceholder')}
@@ -720,7 +738,7 @@ const SlotPanel = ({ zone, onClose, onChanged }) => {
                   {t('admin.parkingConfig.slot.panel.fullNoticeShort', { actual: cap.actualSlots, total: cap.totalSlots })}
                 </div>
               )}
-              <form onSubmit={bulkForm.handleSubmit(submitBulk)} className="space-y-4">
+              <form className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('admin.parkingConfig.slot.panel.bulkPrefixLabel')}</label>
                   <input {...bulkForm.register('prefix', { required: t('admin.parkingConfig.slot.panel.bulkPrefixRequired') })} placeholder={t('admin.parkingConfig.slot.panel.bulkPrefixPlaceholder')}

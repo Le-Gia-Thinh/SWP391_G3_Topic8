@@ -608,7 +608,8 @@
     "NO_TOKEN": "Chưa đăng nhập.",
     "FORBIDDEN": "Bạn không có quyền thực hiện thao tác này.",
     "REFRESH_TOKEN_EXPIRED": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
-    "SESSION_EXPIRED": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại."
+    "SESSION_EXPIRED": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
+    "FLOOR_LIMIT_REACHED": "Tòa nhà đã đạt tối đa số tầng. Hãy tăng số tầng trong trang Cơ sở trước."
   },
   "driver": {
     "common": {
@@ -1554,7 +1555,35 @@
         "checkinSuccess": "Check-in thành công!",
         "checkinFailed": "Check-in thất bại",
         "fetchVehicleTypeFailed": "Không tải được danh sách loại xe",
-        "fetchMapFailed": "Không tải được sơ đồ bãi đỗ"
+        "fetchMapFailed": "Không tải được sơ đồ bãi đỗ",
+        "stepGuide": "Các bước chọn chỗ",
+        "stepBuilding": "Chọn tòa nhà",
+        "stepFloor": "Chọn tầng",
+        "stepZone": "Chọn khu vực",
+        "stepSuggest": "Gợi ý slot",
+        "stepConfirm": "Xác nhận & Check-in",
+        "step1Title": "Bước 1 · Chọn tòa nhà",
+        "step2Title": "Bước 2 · Chọn tầng",
+        "step3Title": "Bước 3 · Chọn khu vực",
+        "step4Title": "Bước 4 · Gợi ý slot",
+        "selectBuilding": "Chọn tòa nhà",
+        "selectFloor": "Chọn tầng",
+        "selectZone": "Chọn khu",
+        "totalEmpty": "Trống tổng",
+        "zoneEmpty": "Trống zone",
+        "quickPick": "Chọn nhanh",
+        "quickPickHint": "Slot trống gần nhất · hover để xem vị trí",
+        "densityLow": "Thưa",
+        "densityMed": "Vừa",
+        "densityHigh": "Đông",
+        "zoneCrowded": "🔴 Rất đông",
+        "zoneMed": "🟡 Khá đông",
+        "zoneOk": "🟢 Còn trống",
+        "aiLabel": "Gợi ý thông minh",
+        "aiImproving": "Tính năng AI đang được cải tiến",
+        "location": "Vị trí",
+        "statEmpty": "trống",
+        "statOccupied": "đã đỗ"
       },
       "booking": {
         "searchTitle": "Tìm kiếm Booking",
@@ -1968,7 +1997,10 @@
       "noData": "Chưa có dữ liệu",
       "loadError": "Lỗi tải dữ liệu",
       "noDataShort": "Không có dữ liệu",
-      "clickHint": "Nhấn vào một ô đỗ để xem chi tiết"
+      "clickHint": "Nhấn vào một ô đỗ để xem chi tiết",
+      "loading": "Đang tải bản đồ...",
+      "locationLabel": "Vị trí",
+      "selectZoneHint": "Chọn một Zone từ menu bên trái"
     },
     "paymentConfirm": {
       "breadcrumbStaff": "Nhân viên",
@@ -2777,7 +2809,11 @@
       "detailBtn": "Chi tiết",
       "prev": "← Trước",
       "next": "Tiếp →",
-      "pageOf": "Trang {{page}} / {{total}}"
+      "pageOf": "Trang {{page}} / {{total}}",
+      "locationLabel": "Vị trí",
+      "viewMap": "Bản đồ",
+      "viewList": "Danh sách",
+      "selectZoneHint": "Chọn khu vực từ menu bên trái để xem bản đồ slot"
     },
     "unpaid": {
       "eyebrow": "Giám sát / Công nợ",
@@ -2885,5 +2921,54 @@
     "thinking": "AI đang nghĩ...",
     "inputPlaceholder": "Nhập câu hỏi của bạn...",
     "tooltipFloating": "Chat với AI Trợ lý"
+  },
+  "userProfile": {
+    "tabs": {
+      "profile": "Hồ sơ cá nhân",
+      "settings": "Cài đặt hệ thống",
+      "security": "Bảo mật tài khoản"
+    },
+    "subtitle": "Quản lý tài khoản, cài đặt và tùy chọn bảo mật",
+    "memberLabel": "Thành viên",
+    "personalInfo": "Thông tin cá nhân",
+    "fullName": "Họ và tên",
+    "email": "Email",
+    "phone": "Số điện thoại",
+    "dob": "Ngày sinh",
+    "notUpdated": "Chưa cập nhật",
+    "gateLabel": "Cổng phụ trách",
+    "branch": "Chi nhánh",
+    "balance": "Số dư tài khoản",
+    "recentActivity": "Hoạt động gần đây",
+    "paymentHistory": "Lịch sử thanh toán",
+    "noActivity": "Chưa có hoạt động nào",
+    "noPayment": "Chưa có thanh toán nào",
+    "edit": "Chỉnh sửa",
+    "saveProfile": "Lưu hồ sơ",
+    "saving": "Đang lưu...",
+    "saved": "Đã lưu",
+    "settings": {
+      "appearance": "Giao diện",
+      "colorTheme": "Chủ đề màu sắc",
+      "light": "Sáng",
+      "dark": "Tối",
+      "notifications": "Thông báo",
+      "emailNotif": "Thông báo qua Email",
+      "pushNotif": "Thông báo đẩy (Push)",
+      "soundAlert": "Âm thanh cảnh báo",
+      "saveSettings": "Lưu cài đặt",
+      "saved": "Đã lưu"
+    },
+    "security": {
+      "changePassword": "Đổi mật khẩu",
+      "createPassword": "Tạo mật khẩu",
+      "currentPassword": "Mật khẩu hiện tại",
+      "newPassword": "Mật khẩu mới",
+      "update": "Cập nhật",
+      "updateSuccess": "Cập nhật mật khẩu thành công",
+      "updateFail": "Có lỗi xảy ra",
+      "dangerZone": "Vùng nguy hiểm",
+      "logoutAll": "Đăng xuất thiết bị khác"
+    }
   }
 }
