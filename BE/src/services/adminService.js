@@ -48,9 +48,23 @@ export async function createFloor({ buildingId, floorName, isActive = 1 }) {
 
   const b = await pool.request()
     .input('BuildingID', sql.Int, Number(buildingId))
-    .query('SELECT BuildingID FROM Buildings WHERE BuildingID = @BuildingID')
+    .query('SELECT BuildingID, TotalFloors FROM Buildings WHERE BuildingID = @BuildingID')
   if (!b.recordset.length) throw notFound('Không tìm thấy tòa nhà.', 'BUILDING_NOT_FOUND')
 
+  // ── Check giới hạn số tầng ──────────────────────────────────
+  const building = b.recordset[0]
+  if (building.TotalFloors != null && building.TotalFloors > 0) {
+    const floorCountRes = await pool.request()
+      .input('BuildingID', sql.Int, Number(buildingId))
+      .query('SELECT COUNT(*) AS FloorCount FROM Floors WHERE BuildingID = @BuildingID')
+    const currentCount = floorCountRes.recordset[0].FloorCount
+    if (currentCount >= building.TotalFloors) {
+      throw conflict(
+        `Tòa nhà này chỉ có tối đa ${building.TotalFloors} tầng. Hãy tăng số tầng trong trang Cơ sở trước.`,
+        'FLOOR_LIMIT_REACHED'
+      )
+    }
+  }
   const dup = await pool.request()
     .input('BuildingID', sql.Int, Number(buildingId))
     .input('FloorName', sql.NVarChar(50), name)

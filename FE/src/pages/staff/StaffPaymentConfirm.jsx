@@ -239,7 +239,26 @@ const StaffPaymentConfirm = () => {
     try {
       await staffApi.checkOutSession(paramId, { paymentMethod: 'Cash', confirmedPlate: true })
       toast.success(t('staff.paymentConfirm.toastCashSuccess'))
-      navigate('/staff/checkout-completed', { state: { actionType: 'checkout', sessionId: paramId } })
+      navigate('/staff/checkout-completed', {
+        state: {
+          actionType: 'checkout',
+          sessionCode: sessionData?.session?.SessionCode,
+          session: sessionData?.session,
+          checkoutData: {
+            SessionCode: sessionData?.session?.SessionCode,
+            PlateNumber: sessionData?.session?.PlateNumber,
+            VehicleName: sessionData?.session?.VehicleName,
+            SlotCode: sessionData?.session?.SlotCode,
+            EntryTime: sessionData?.session?.EntryTime,
+            ExitTime: new Date().toISOString(),
+            DurationH: sessionData?.durationH,
+            FinalFee: totalFee,
+            PrepaidAmount: prepaid,
+            SurchargeAmount: surcharge,
+            PaymentMethod: 'Cash'
+          }
+        }
+      })
     } catch (err) {
       toast.error(err?.response?.data?.message || t('staff.paymentConfirm.toastCashFail'))
     } finally {
@@ -267,10 +286,48 @@ const StaffPaymentConfirm = () => {
     try {
       await staffApi.checkOutSession(paramId, { paymentMethod: 'Banking', confirmedPlate: true })
       toast.success(t('staff.paymentConfirm.toastQrSuccess'))
-      navigate('/staff/checkout-completed', { state: { actionType: 'checkout', sessionId: paramId } })
+      navigate('/staff/checkout-completed', {
+        state: {
+          actionType: 'checkout',
+          sessionCode: sessionData?.session?.SessionCode,
+          session: sessionData?.session,
+          checkoutData: {
+            SessionCode: sessionData?.session?.SessionCode,
+            PlateNumber: sessionData?.session?.PlateNumber,
+            VehicleName: sessionData?.session?.VehicleName,
+            SlotCode: sessionData?.session?.SlotCode,
+            EntryTime: sessionData?.session?.EntryTime,
+            ExitTime: new Date().toISOString(),
+            DurationH: sessionData?.durationH,
+            FinalFee: totalFee,
+            PrepaidAmount: prepaid,
+            SurchargeAmount: surcharge,
+            PaymentMethod: 'Banking'
+          }
+        }
+      })
     } catch {
       toast.success(t('staff.paymentConfirm.toastQrConfirmed'))
-      navigate('/staff/checkout-completed', { state: { actionType: 'checkout', sessionId: paramId } })
+      navigate('/staff/checkout-completed', {
+        state: {
+          actionType: 'checkout',
+          sessionCode: sessionData?.session?.SessionCode,
+          session: sessionData?.session,
+          checkoutData: {
+            SessionCode: sessionData?.session?.SessionCode,
+            PlateNumber: sessionData?.session?.PlateNumber,
+            VehicleName: sessionData?.session?.VehicleName,
+            SlotCode: sessionData?.session?.SlotCode,
+            EntryTime: sessionData?.session?.EntryTime,
+            ExitTime: new Date().toISOString(),
+            DurationH: sessionData?.durationH,
+            FinalFee: totalFee,
+            PrepaidAmount: prepaid,
+            SurchargeAmount: surcharge,
+            PaymentMethod: 'Banking'
+          }
+        }
+      })
     }
   }
 

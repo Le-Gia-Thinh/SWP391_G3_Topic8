@@ -14,6 +14,7 @@ const Modal = ({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       document.body.style.overflow = 'unset'
     }

@@ -608,7 +608,8 @@
     "NO_TOKEN": "You are not signed in.",
     "FORBIDDEN": "You don't have permission to perform this action.",
     "REFRESH_TOKEN_EXPIRED": "Your session has expired, please sign in again.",
-    "SESSION_EXPIRED": "Your session has expired, please sign in again."
+    "SESSION_EXPIRED": "Your session has expired, please sign in again.",
+    "FLOOR_LIMIT_REACHED": "Building has reached the maximum number of floors. Please increase the floor limit in Buildings settings first."
   },
   "driver": {
     "common": {
@@ -1554,7 +1555,35 @@
         "checkinSuccess": "Check-in successful!",
         "checkinFailed": "Check-in failed",
         "fetchVehicleTypeFailed": "Failed to load vehicle types",
-        "fetchMapFailed": "Failed to load parking map"
+        "fetchMapFailed": "Failed to load parking map",
+        "stepGuide": "Slot selection steps",
+        "stepBuilding": "Choose building",
+        "stepFloor": "Choose floor",
+        "stepZone": "Choose zone",
+        "stepSuggest": "Slot suggestion",
+        "stepConfirm": "Confirm & Check-in",
+        "step1Title": "Step 1 · Choose building",
+        "step2Title": "Step 2 · Choose floor",
+        "step3Title": "Step 3 · Choose zone",
+        "step4Title": "Step 4 · Slot suggestion",
+        "selectBuilding": "Select building",
+        "selectFloor": "Select floor",
+        "selectZone": "Select zone",
+        "totalEmpty": "Total empty",
+        "zoneEmpty": "Zone empty",
+        "quickPick": "Quick pick",
+        "quickPickHint": "Nearest available slot · hover to see location",
+        "densityLow": "Sparse",
+        "densityMed": "Moderate",
+        "densityHigh": "Crowded",
+        "zoneCrowded": "🔴 Very crowded",
+        "zoneMed": "🟡 Moderately full",
+        "zoneOk": "🟢 Available",
+        "aiLabel": "Smart suggestion",
+        "aiImproving": "AI feature being improved",
+        "location": "Location",
+        "statEmpty": "empty",
+        "statOccupied": "occupied"
       },
       "booking": {
         "searchTitle": "Search Booking",
@@ -1968,7 +1997,10 @@
       "noData": "No data yet",
       "loadError": "Load error",
       "noDataShort": "No data",
-      "clickHint": "Click a slot to view details"
+      "clickHint": "Click a slot to view details",
+      "loading": "Loading map...",
+      "locationLabel": "Location",
+      "selectZoneHint": "Select a zone from the left menu"
     },
     "paymentConfirm": {
       "breadcrumbStaff": "Staff",
@@ -2777,7 +2809,11 @@
       "detailBtn": "Detail",
       "prev": "← Prev",
       "next": "Next →",
-      "pageOf": "Page {{page}} / {{total}}"
+      "pageOf": "Page {{page}} / {{total}}",
+      "locationLabel": "Location",
+      "viewMap": "Map view",
+      "viewList": "List view",
+      "selectZoneHint": "Select a zone from the left menu to view the slot map"
     },
     "unpaid": {
       "eyebrow": "Monitor / Debt",
@@ -2885,5 +2921,54 @@
     "thinking": "AI is thinking...",
     "inputPlaceholder": "Type your question...",
     "tooltipFloating": "Chat with AI Assistant"
+  },
+  "userProfile": {
+    "tabs": {
+      "profile": "Personal Profile",
+      "settings": "System Settings",
+      "security": "Account Security"
+    },
+    "subtitle": "Manage your account, settings and security options",
+    "memberLabel": "Member",
+    "personalInfo": "Personal Information",
+    "fullName": "Full Name",
+    "email": "Email",
+    "phone": "Phone Number",
+    "dob": "Date of Birth",
+    "notUpdated": "Not updated",
+    "gateLabel": "Assigned Gate",
+    "branch": "Branch",
+    "balance": "Account Balance",
+    "recentActivity": "Recent Activity",
+    "paymentHistory": "Payment History",
+    "noActivity": "No activity yet",
+    "noPayment": "No payments yet",
+    "edit": "Edit",
+    "saveProfile": "Save Profile",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "settings": {
+      "appearance": "Appearance",
+      "colorTheme": "Color Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "notifications": "Notifications",
+      "emailNotif": "Email Notifications",
+      "pushNotif": "Push Notifications",
+      "soundAlert": "Sound Alerts",
+      "saveSettings": "Save Settings",
+      "saved": "Saved"
+    },
+    "security": {
+      "changePassword": "Change Password",
+      "createPassword": "Create Password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "update": "Update",
+      "updateSuccess": "Password updated successfully",
+      "updateFail": "An error occurred",
+      "dangerZone": "Danger Zone",
+      "logoutAll": "Logout other devices"
+    }
   }
 }

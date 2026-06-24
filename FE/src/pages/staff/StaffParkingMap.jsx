@@ -211,7 +211,7 @@ const StaffParkingMap = () => {
     <div className="flex min-h-[60vh] items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-        <p className="text-sm text-slate-400 font-medium">Đang tải bản đồ...</p>
+        <p className="text-sm text-slate-400 font-medium">{t('staff.parkingMap.loading')}</p>
       </div>
     </div>
   )
@@ -239,7 +239,7 @@ const StaffParkingMap = () => {
 
         {/* ━━ LEFT SIDEBAR: Building > Floor > Zone ━━ */}
         <aside className="w-56 flex-shrink-0 bg-white rounded-xl border border-slate-100 shadow-sm overflow-y-auto p-2">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1 mb-1">Vị trí</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1 mb-1">{t('staff.parkingMap.locationLabel')}</p>
 
           {hierarchy.map(building => {
             const isExpanded = expandedBuildings[building.id]
@@ -335,11 +335,11 @@ const StaffParkingMap = () => {
 
             {/* Stats + zoom */}
             <div className="flex items-center gap-2 flex-wrap">
-              <StatPill value={counts.total} label="Tổng" color="text-slate-700" />
-              <StatPill value={counts.available} label="Trống" color="text-emerald-600" />
-              <StatPill value={counts.occupied} label="Đã đỗ" color="text-red-600" />
-              <StatPill value={counts.reserved} label="Đặt trước" color="text-amber-600" />
-              {counts.maintenance > 0 && <StatPill value={counts.maintenance} label="Bảo trì" color="text-slate-500" />}
+              <StatPill value={counts.total} label={t('staff.parkingMap.statTotal')} color="text-slate-700" />
+              <StatPill value={counts.available} label={t('staff.parkingMap.statAvailable')} color="text-emerald-600" />F
+              <StatPill value={counts.occupied} label={t('staff.parkingMap.statusOccupied')} color="text-red-600" />
+              <StatPill value={counts.reserved} label={t('staff.parkingMap.statusReserved')} color="text-amber-600" />
+              {counts.maintenance > 0 && <StatPill value={counts.maintenance} label={t('staff.parkingMap.statusMaintenance')} color="text-slate-500" />}
 
               <div className="flex items-center gap-0.5 bg-white border border-slate-200 rounded-lg px-1.5">
                 <button onClick={() => setZoom(z => Math.max(0.6, z - 0.1))} className="p-1 text-slate-400 hover:text-slate-700"><ZoomOut size={14} /></button>
@@ -367,7 +367,7 @@ const StaffParkingMap = () => {
                 <div className="flex items-center justify-center mb-5">
                   <div className="flex items-center gap-3 px-6 py-2 bg-slate-700 rounded-full">
                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                    <span className="text-xs text-white font-bold tracking-widest">{t('staff.parkingMap.gateLabel', 'CỔNG VÀO / RA')}</span>
+                    <span className="text-xs text-white font-bold tracking-widest">{t('staff.parkingMap.gateLabel', t('staff.parkingMap.gateLabel'))}</span>
                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                   </div>
                 </div>
@@ -395,7 +395,7 @@ const StaffParkingMap = () => {
                             </span>
                             {slot.status === 'occupied' && <Car size={11} className="mt-0.5 opacity-80" />}
                             {slot.status === 'available' && <span className="text-[8px] opacity-50 font-bold mt-0.5">OK</span>}
-                            {slot.status === 'reserved' && <span className="text-[8px] font-bold opacity-80 mt-0.5">ĐẶT</span>}
+                            {slot.status === 'reserved' && <span className="text-[8px] font-bold opacity-80 mt-0.5">{t('staff.parkingMap.tagReserved')}</span>}
                             {slot.status === 'maintenance' && <span className="text-[8px] font-bold opacity-70 mt-0.5">BT</span>}
                             {slot.status === 'blocked' && <span className="text-[8px] font-bold opacity-70 mt-0.5">🔒</span>}
                           </button>
@@ -408,7 +408,7 @@ const StaffParkingMap = () => {
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-300">
                 <Grid3X3 size={48} />
-                <p className="text-sm font-medium">Chọn một Zone từ menu bên trái</p>
+                <p className="text-sm font-medium">{t('staff.parkingMap.selectZoneHint')}</p>
               </div>
             )}
           </div>
@@ -441,22 +441,22 @@ const StaffParkingMap = () => {
                   <>
                     {/* Zone path */}
                     <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Vị trí</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">{t('staff.parkingMap.locationLabel')}</p>
                       <p className="text-slate-600 font-medium leading-relaxed">{selectedSlot.zone}</p>
                     </div>
 
                     {/* Session info */}
                     {selectedSlot.type === 'session' && (
                       <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">Phiên gửi xe</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">{t('staff.parkingMap.sessionTitle')}</p>
                         <div className="space-y-1.5">
-                          {selectedSlot.sessionCode && <Row label="Mã phiên" value={selectedSlot.sessionCode} bold />}
-                          {selectedSlot.plateNumber && <Row label="Biển số" value={selectedSlot.plateNumber} bold />}
-                          {selectedSlot.entryTime && <Row label="Vào lúc" value={fmt(selectedSlot.entryTime)} />}
-                          {selectedSlot.paymentStatus && <Row label="Thanh toán" value={selectedSlot.paymentStatus} />}
-                          {selectedSlot.finalAmount != null && <Row label="Thành tiền" value={fmtCurrency(selectedSlot.finalAmount)} bold />}
-                          {selectedSlot.prepaidAmount > 0 && <Row label="Đã trả" value={fmtCurrency(selectedSlot.prepaidAmount)} />}
-                          {selectedSlot.surchargeAmount > 0 && <Row label="Phụ trội" value={fmtCurrency(selectedSlot.surchargeAmount)} />}
+                          {selectedSlot.sessionCode && <Row label={t('staff.parkingMap.sessionCode')} value={selectedSlot.sessionCode} bold />}
+                          {selectedSlot.plateNumber && <Row label={t('staff.parkingMap.plate')} value={selectedSlot.plateNumber} bold />}
+                          {selectedSlot.entryTime && <Row label={t('staff.parkingMap.entryTime')} value={fmt(selectedSlot.entryTime)} />}
+                          {selectedSlot.paymentStatus && <Row label={t('staff.parkingMap.payment')} value={selectedSlot.paymentStatus} />}
+                          {selectedSlot.finalAmount != null && <Row label={t('staff.parkingMap.totalFee')} value={fmtCurrency(selectedSlot.finalAmount)} bold />}
+                          {selectedSlot.prepaidAmount > 0 && <Row label={t('staff.parkingMap.paidAmount')} value={fmtCurrency(selectedSlot.prepaidAmount)} />}
+                          {selectedSlot.surchargeAmount > 0 && <Row label={t('staff.parkingMap.surcharge')} value={fmtCurrency(selectedSlot.surchargeAmount)} />}
                         </div>
                       </div>
                     )}
@@ -464,12 +464,12 @@ const StaffParkingMap = () => {
                     {/* Reservation info */}
                     {selectedSlot.type === 'reservation' && (
                       <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">Đặt chỗ trước</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">{t('staff.parkingMap.reservationTitle')}</p>
                         <div className="space-y-1.5">
-                          {selectedSlot.bookingCode && <Row label="Mã đặt" value={selectedSlot.bookingCode} bold />}
-                          {selectedSlot.startTime && <Row label="Bắt đầu" value={fmt(selectedSlot.startTime)} />}
-                          {selectedSlot.endTime && <Row label="Kết thúc" value={fmt(selectedSlot.endTime)} />}
-                          {selectedSlot.reservationStatus && <Row label="Trạng thái" value={selectedSlot.reservationStatus} />}
+                          {selectedSlot.bookingCode && <Row label={t('staff.parkingMap.bookingCode')} value={selectedSlot.bookingCode} bold />}
+                          {selectedSlot.startTime && <Row label={t('staff.parkingMap.startTime')} value={fmt(selectedSlot.startTime)} />}
+                          {selectedSlot.endTime && <Row label={t('staff.parkingMap.endTime')} value={fmt(selectedSlot.endTime)} />}
+                          {selectedSlot.reservationStatus && <Row label={t('staff.parkingMap.reservationStatus')} value={selectedSlot.reservationStatus} />}
                         </div>
                       </div>
                     )}
@@ -477,11 +477,11 @@ const StaffParkingMap = () => {
                     {/* Driver */}
                     {(selectedSlot.driverName || selectedSlot.driverPhone) && (
                       <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">Khách hàng</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">{t('staff.parkingMap.driverInfo')}</p>
                         <div className="space-y-1.5">
-                          {selectedSlot.driverName && <Row label="Tên" value={selectedSlot.driverName} />}
-                          {selectedSlot.driverPhone && <Row label="SĐT" value={selectedSlot.driverPhone} />}
-                          {selectedSlot.driverEmail && <Row label="Email" value={selectedSlot.driverEmail} />}
+                          {selectedSlot.driverName && <Row label={t('staff.parkingMap.driverName')} value={selectedSlot.driverName} />}
+                          {selectedSlot.driverPhone && <Row label={t('staff.parkingMap.driverPhone')} value={selectedSlot.driverPhone} />}
+                          {selectedSlot.driverEmail && <Row label={t('staff.parkingMap.driverEmail')} value={selectedSlot.driverEmail} />}
                         </div>
                       </div>
                     )}
@@ -494,7 +494,7 @@ const StaffParkingMap = () => {
               <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center">
                 <Info size={22} className="text-slate-300" />
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">{t('staff.parkingMap.clickHint', 'Nhấn vào một ô đỗ để xem chi tiết')}</p>
+              <p className="text-xs text-slate-400 leading-relaxed">{t('staff.parkingMap.clickHint', t('staff.parkingMap.clickHint'))}</p>
             </div>
           )}
         </div>

@@ -135,7 +135,7 @@ const ManagerReports = () => {
       </div>
 
       {loading ? (
-        <div className="flex min-h-75items-center justify-center">
+        <div className="flex min-h-[300px] items-center justify-center">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
         </div>
       ) : (
@@ -196,12 +196,12 @@ const RevenueTab = ({ data, mounted, exportCsv }) => {
                     <div className="absolute -top-10 z-10 scale-0 rounded-lg bg-slate-800 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-all group-hover:scale-100 group-hover:opacity-100 whitespace-nowrap">
                       {fmtVnd(c.TotalRevenue)}
                     </div>
-                    <div className="relative h-[160px w-full max-w-9 rounded-t-lg bg-slate-50 overflow-hidden border border-slate-100">
+                    <div className="relative h-[160px] w-full max-w-9 rounded-t-lg bg-slate-50 overflow-hidden border border-slate-100">
                       <div className="absolute bottom-0 w-full rounded-t-lg bg-linear-to-t from-blue-600 to-sky-400 transition-all duration-700"
                         style={{ height: mounted ? `${Math.max(pct, 2)}%` : '0%' }} />
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 -rotate-45 origin-center whitespace-nowrap mt-1">
-                      {String(c.Period).slice(5)}
+                      {String(c.Period).slice(0, 10).slice(5)}
                     </span>
                   </div>
                 )
@@ -389,7 +389,7 @@ const PeakTab = ({ data }) => {
         </div>
       </div>
       {byVehicle.length === 0 ? <p className="text-sm text-slate-400 text-center py-10">{t('manager.reports.noData')}</p> : (
-        <div className="min-w-190 space-y-3">
+        <div className="min-w-[760px] space-y-3">
           <div className="flex items-center gap-1 pl-28">
             {Array.from({ length: 24 }, (_, h) => (
               <div key={h} className="flex-1 text-center text-[10px] font-bold text-slate-400">{h}</div>
@@ -400,7 +400,7 @@ const PeakTab = ({ data }) => {
               <div className="w-28 text-sm font-bold text-slate-700 truncate pr-2">{v.vehicleName}</div>
               {v.hours.map((n, h) => (
                 <div key={h} title={t('manager.reports.peak.tooltip', { h, n })}
-                  className={`flex-1 aspect-square min-w-5.5 rounded flex items-center justify-center text-[10px] font-bold ${heat(n)}`}>
+                  className={`flex-1 aspect-square min-w-[22px] rounded flex items-center justify-center text-[10px] font-bold ${heat(n)}`}>
                   {n > 0 ? n : ''}
                 </div>
               ))}
