@@ -323,6 +323,7 @@ export async function getDriverProfile(req, res, next) {
           u.AvatarUrl,
           u.IsActive,
           u.IsEmailVerified,
+          u.AccountBalance,
           u.CreatedAt,
           u.UpdatedAt,
           r.RoleName
@@ -426,6 +427,7 @@ export async function updateDriverProfile(req, res, next) {
           u.AvatarUrl,
           u.IsActive,
           u.IsEmailVerified,
+          u.AccountBalance,
           u.CreatedAt,
           u.UpdatedAt,
           r.RoleName
@@ -842,6 +844,19 @@ export async function createDriverReport(req, res, next) {
             GETDATE(),
             GETDATE()
           )
+        `);
+
+      // CREATE NOTIFICATIONS FOR STAFF AND MANAGER
+      await new sql.Request(transaction)
+        .input("IncidentID", sql.Int, incident.IncidentID)
+        .input("Title", sql.NVarChar(200), `Sự cố mới: ${buildReportCode(incident.IncidentID)}`)
+        .input("Message", sql.NVarChar(500), `Có sự cố mới báo cáo từ Driver. Loại: ${issueType}`)
+        .query(`
+          INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+          SELECT u.UserID, @Title, @Message, 'Incident', @IncidentID, 'Incident', 0, GETDATE()
+          FROM Users u
+          JOIN Roles r ON u.RoleID = r.RoleID
+          WHERE r.RoleName IN ('Staff', 'Manager') AND u.IsActive = 1
         `);
 
       await transaction.commit();

@@ -2,7 +2,8 @@
 // Trang redirect từ PayOS về sau khi quét QR
 // Route: /driver/payment-result?sessionId=X&status=success|cancel
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Box, Button, Card, CardContent, CircularProgress,
@@ -17,19 +18,8 @@ import {
 } from '@mui/icons-material'
 import authorizeAxios from '../../utils/authorizeAxios'
 
-const fmt = (n) =>
-  n != null ? new Intl.NumberFormat('vi-VN').format(Number(n)) + ' VNĐ' : '--'
-
-const fmtTime = (val) => {
-  if (!val) return '--'
-  const d = new Date(String(val).replace(/Z$/, ''))
-  return isNaN(d.getTime()) ? '--' : d.toLocaleString('vi-VN', {
-    hour: '2-digit', minute: '2-digit',
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  })
-}
-
 const DriverPaymentResult = () => {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const status = params.get('status') // 'success' | 'cancel'
@@ -39,6 +29,18 @@ const DriverPaymentResult = () => {
   const [loading, setLoading] = useState(true)
 
   const isSuccess = status === 'success'
+
+  const fmt = (n) =>
+    n != null ? new Intl.NumberFormat('vi-VN').format(Number(n)) + ' ' + t('driver.common.currency') : '--'
+
+  const fmtTime = (val) => {
+    if (!val) return '--'
+    const d = new Date(String(val).replace(/Z$/, ''))
+    return isNaN(d.getTime()) ? '--' : d.toLocaleString('vi-VN', {
+      hour: '2-digit', minute: '2-digit',
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    })
+  }
 
   // Lấy thông tin payment của session
   useEffect(() => {
@@ -88,7 +90,7 @@ const DriverPaymentResult = () => {
   if (loading) return (
     <Container maxWidth="sm" sx={{ py: 6, textAlign: 'center' }}>
       <CircularProgress />
-      <Typography mt={2} color="text.secondary">Đang kiểm tra thanh toán...</Typography>
+      <Typography mt={2} color="text.secondary">{t('driver.paymentResult.checking')}</Typography>
     </Container>
   )
 
@@ -114,16 +116,16 @@ const DriverPaymentResult = () => {
             }
           </Box>
           <Typography variant="h5" fontWeight={900} mb={1}>
-            {isSuccess ? 'Thanh toán thành công!' : 'Thanh toán đã huỷ'}
+            {isSuccess ? t('driver.paymentResult.successTitle') : t('driver.paymentResult.cancelTitle')}
           </Typography>
           <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
             {isSuccess
-              ? 'Đã ghi nhận. Vui lòng ra cổng để nhân viên xác nhận.'
-              : 'Đơn thanh toán đã bị huỷ. Bạn có thể thử lại bất cứ lúc nào.'}
+              ? t('driver.paymentResult.successBody')
+              : t('driver.paymentResult.cancelBody')}
           </Typography>
           {isSuccess && (
             <Chip
-              label="Trạng thái: Đã trả trước"
+              label={t('driver.paymentResult.statusPrepaid')}
               size="small"
               sx={{
                 mt: 2, bgcolor: 'rgba(255,255,255,0.2)',
@@ -145,11 +147,11 @@ const DriverPaymentResult = () => {
               }}
             >
               <Typography variant="overline" color="success.dark" fontWeight={800} display="block" mb={1.5}>
-                                Chi tiết giao dịch
+                {t('driver.paymentResult.txDetails')}
               </Typography>
               <Stack spacing={1.5}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body2" color="text.secondary">Số tiền đã trả</Typography>
+                  <Typography variant="body2" color="text.secondary">{t('driver.payment.paidAmount')}</Typography>
                   <Typography fontWeight={800} color="success.main" fontSize={18}>
                     {fmt(info.PrepaidAmount || info.Amount)}
                   </Typography>
@@ -157,36 +159,36 @@ const DriverPaymentResult = () => {
                 <Divider />
                 {info.PlateNumber && (
                   <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">Biển số xe</Typography>
+                    <Typography variant="body2" color="text.secondary">{t('driver.paymentResult.plate')}</Typography>
                     <Typography fontWeight={700} fontFamily="monospace">{info.PlateNumber}</Typography>
                   </Stack>
                 )}
                 {info.SlotCode && (
                   <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">Vị trí gửi</Typography>
+                    <Typography variant="body2" color="text.secondary">{t('driver.paymentResult.slot')}</Typography>
                     <Typography fontWeight={700}>{info.SlotCode}</Typography>
                   </Stack>
                 )}
                 {info.VehicleName && (
                   <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">Loại xe</Typography>
+                    <Typography variant="body2" color="text.secondary">{t('driver.paymentResult.vehicle')}</Typography>
                     <Typography fontWeight={700}>{info.VehicleName}</Typography>
                   </Stack>
                 )}
                 {info.EntryTime && (
                   <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">Vào lúc</Typography>
+                    <Typography variant="body2" color="text.secondary">{t('driver.paymentResult.entryAt')}</Typography>
                     <Typography fontWeight={700}>{fmtTime(info.EntryTime)}</Typography>
                   </Stack>
                 )}
                 <Divider />
                 <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">Thời gian thanh toán</Typography>
+                  <Typography variant="body2" color="text.secondary">{t('driver.payment.paidAt')}</Typography>
                   <Typography fontWeight={700}>{fmtTime(info.PrepaidAt || new Date())}</Typography>
                 </Stack>
                 {info.SnapshotDurationH != null && (
                   <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">Giờ tính phí</Typography>
+                    <Typography variant="body2" color="text.secondary">{t('driver.paymentResult.billedHours')}</Typography>
                     <Typography fontWeight={700}>
                       {Number(info.SnapshotDurationH).toFixed(1)}h
                     </Typography>
@@ -204,10 +206,10 @@ const DriverPaymentResult = () => {
               p: 2, mb: 3
             }}>
               <Typography variant="body2" color="warning.dark" fontWeight={600}>
-                                ⚠️ Lưu ý thanh toán trước
+                {t('driver.paymentResult.prepayNoteTitle')}
               </Typography>
               <Typography variant="body2" color="text.secondary" mt={0.5}>
-                                Phí được tính tại thời điểm thanh toán. Nếu xe ở lại lâu hơn, nhân viên sẽ thu thêm khoản phụ trội khi xe ra cổng.
+                {t('driver.paymentResult.prepayNoteBody')}
               </Typography>
             </Box>
           )}
@@ -222,7 +224,7 @@ const DriverPaymentResult = () => {
                   onClick={() => navigate('/driver/home')}
                   sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}
                 >
-                                    Về trang chủ
+                  {t('driver.common.goHome')}
                 </Button>
                 <Button
                   fullWidth variant="outlined"
@@ -230,7 +232,7 @@ const DriverPaymentResult = () => {
                   onClick={() => navigate('/driver/history')}
                   sx={{ py: 1.25, borderRadius: 2 }}
                 >
-                                    Xem lịch sử giao dịch
+                  {t('driver.common.viewHistory')}
                 </Button>
               </>
             ) : (
@@ -241,7 +243,7 @@ const DriverPaymentResult = () => {
                   onClick={() => navigate('/driver/payment')}
                   sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}
                 >
-                                    Thử lại thanh toán
+                  {t('driver.paymentResult.retry')}
                 </Button>
                 <Button
                   fullWidth variant="outlined"
@@ -249,7 +251,7 @@ const DriverPaymentResult = () => {
                   onClick={() => navigate('/driver/home')}
                   sx={{ py: 1.25, borderRadius: 2 }}
                 >
-                                    Về trang chủ
+                  {t('driver.common.goHome')}
                 </Button>
               </>
             )}

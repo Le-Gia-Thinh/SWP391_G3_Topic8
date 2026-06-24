@@ -1,8 +1,16 @@
-import bcryptjs from "bcryptjs";
+/**
+ * FILE: updateSeedPasswords.js
+ * MÔ TẢ: Script cập nhật mật khẩu mặc định cho một số tài khoản thử nghiệm (seed emails).
+ * Nó cũng cập nhật lại trạng thái kích hoạt, xác thực và đăng ký phương thức đăng nhập 'local'.
+ */
+
+import bcryptjs from "bcryptjs"; // Thư viện để băm (hash) mật khẩu
 import { getPool, sql } from "./db.js";
 
+// Mật khẩu mặc định sẽ được đặt cho các tài khoản seed
 const SEED_PASSWORD = "123456";
 
+// Danh sách các email dùng để test/seed trong hệ thống
 const seedEmails = [
     "alice@email.com",
     "bob@email.com",
@@ -15,9 +23,14 @@ const seedEmails = [
 async function main() {
     try {
         const pool = await getPool();
+        
+        // 1. Mã hóa mật khẩu mặc định (SEED_PASSWORD) với salt round là 10
         const passwordHash = await bcryptjs.hash(SEED_PASSWORD, 10);
 
+        // 2. Lặp qua từng email trong danh sách để cập nhật
         for (const email of seedEmails) {
+            
+            // Cập nhật lại mật khẩu (đã băm), trạng thái IsActive = 1 và IsEmailVerified = 1
             await pool.request()
                 .input("Email", sql.NVarChar(100), email)
                 .input("PasswordHash", sql.NVarChar(256), passwordHash)
@@ -30,6 +43,8 @@ async function main() {
           WHERE Email = @Email
         `);
 
+            // Chèn thêm bản ghi vào UserAuthProviders nếu người dùng này chưa có Provider = 'local'
+            // 'local' là phương thức đăng nhập bằng username/password thông thường
             await pool.request()
                 .input("Email", sql.NVarChar(100), email)
                 .query(`
@@ -55,4 +70,5 @@ async function main() {
     }
 }
 
-main();
+// Chạy hàm chính
+main();

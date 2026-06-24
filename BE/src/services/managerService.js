@@ -514,8 +514,44 @@ export async function getPricingPolicies({ vehicleTypeId, isActive } = {}) {
     `);
   return result.recordset;
 }
+async function checkOverlap(vehicleTypeId, minHours, maxHours, isOvernight, excludePolicyId = null) {
+  const pool = await getPool();
+  if (isOvernight) {
+    // Overnight không check theo range giờ cụ thể, chỉ check trùng overnight khác đã có
+    const result = await pool.request()
+      .input("VehicleTypeID", sql.Int, vehicleTypeId)
+      .input("ExcludeID", sql.Int, excludePolicyId)
+      .query(`
+        SELECT PricingPolicyID FROM PricingPolicies
+        WHERE VehicleTypeID = @VehicleTypeID AND IsActive = 1 AND IsOvernight = 1
+          AND (@ExcludeID IS NULL OR PricingPolicyID <> @ExcludeID)
+      `);
+    return result.recordset;
+  }
+
+  const result = await pool.request()
+    .input("VehicleTypeID", sql.Int, vehicleTypeId)
+    .input("MinHours", sql.Decimal(5, 2), minHours)
+    .input("MaxHours", sql.Decimal(5, 2), maxHours)
+    .input("ExcludeID", sql.Int, excludePolicyId)
+    .query(`
+      SELECT PricingPolicyID, MinHours, MaxHours FROM PricingPolicies
+      WHERE VehicleTypeID = @VehicleTypeID AND IsActive = 1 AND IsOvernight = 0
+        AND (@ExcludeID IS NULL OR PricingPolicyID <> @ExcludeID)
+        AND @MinHours < MaxHours AND @MaxHours > MinHours
+    `);
+  return result.recordset;
+}
 
 export async function createPricingPolicy(data) {
+  const overlaps = await checkOverlap(data.vehicleTypeId, data.minHours, data.maxHours, data.isOvernight ? 1 : 0);
+  if (overlaps.length > 0) {
+    const e = new Error(`Khoảng giờ bị trùng với chính sách #${overlaps[0].PricingPolicyID}` +
+      (overlaps[0].MinHours !== undefined ? ` (${overlaps[0].MinHours}h-${overlaps[0].MaxHours}h)` : ' (đã có chính sách qua đêm)'));
+    e.statusCode = 409;
+    throw e;
+  }
+
   const pool = await getPool();
   const result = await pool.request()
     .input("VehicleTypeID", sql.Int, data.vehicleTypeId)
@@ -534,6 +570,23 @@ export async function createPricingPolicy(data) {
 
 export async function updatePricingPolicy(policyId, data) {
   const pool = await getPool();
+
+  if (data.minHours !== undefined || data.maxHours !== undefined || data.isOvernight !== undefined) {
+    const current = await pool.request()
+      .input("PricingPolicyID", sql.Int, policyId)
+      .query(`SELECT VehicleTypeID, MinHours, MaxHours, IsOvernight FROM PricingPolicies WHERE PricingPolicyID = @PricingPolicyID`);
+    const cur = current.recordset[0];
+    const min = data.minHours ?? cur.MinHours;
+    const max = data.maxHours ?? cur.MaxHours;
+    const overnight = data.isOvernight !== undefined ? (data.isOvernight ? 1 : 0) : cur.IsOvernight;
+
+    const overlaps = await checkOverlap(cur.VehicleTypeID, min, max, overnight, policyId);
+    if (overlaps.length > 0) {
+      const e = new Error(`Khoảng giờ bị trùng với chính sách #${overlaps[0].PricingPolicyID}`);
+      e.statusCode = 409;
+      throw e;
+    }
+  }
 
   // Build dynamic SET clause - chỉ update fields được truyền vào
   const req = pool.request().input("PricingPolicyID", sql.Int, policyId);
@@ -559,7 +612,25 @@ export async function updatePricingPolicy(policyId, data) {
     `);
   return r.recordset[0];
 }
+export async function deletePricingPolicy(policyId) {
+  const pool = await getPool();
 
+  const check = await pool.request()
+    .input("PricingPolicyID", sql.Int, policyId)
+    .query(`SELECT PricingPolicyID FROM PricingPolicies WHERE PricingPolicyID = @PricingPolicyID`);
+
+  if (!check.recordset[0]) {
+    const e = new Error("Chính sách không tồn tại");
+    e.statusCode = 404;
+    throw e;
+  }
+
+  await pool.request()
+    .input("PricingPolicyID", sql.Int, policyId)
+    .query(`DELETE FROM PricingPolicies WHERE PricingPolicyID = @PricingPolicyID`);
+
+  return { deleted: true, policyId };
+}
 // ─────────────────────────────────────────────────────────────
 // INCIDENTS
 // ─────────────────────────────────────────────────────────────
@@ -695,7 +766,25 @@ export async function updateIncidentStatus(incidentId, { status, assignedStaffId
       WHERE IncidentID = @IncidentID
     `);
 
-  return getIncidentById(incidentId);
+  const updatedIncident = await getIncidentById(incidentId);
+
+  if (status === 'Resolved' && updatedIncident.DriverID) {
+    await pool.request().query(`
+            INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+            VALUES (
+                ${updatedIncident.DriverID},
+                N'Sự cố đã được giải quyết',
+                N'Sự cố (ID: ${updatedIncident.IncidentID}) của bạn đã được đánh dấu là giải quyết.',
+                'Incident',
+                ${updatedIncident.IncidentID},
+                'Incident',
+                0,
+                GETDATE()
+            )
+        `);
+  }
+
+  return updatedIncident;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -712,23 +801,37 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
   const amountExpr = "ISNULL(p.FinalAmount, p.Amount)";
 
   let dateGroup;
-  if (groupBy === 'month') dateGroup = `FORMAT(${payTimeExpr}, 'yyyy-MM')`;
-  else if (groupBy === 'week') dateGroup = `CONCAT(YEAR(${payTimeExpr}), '-W', RIGHT('0' + CAST(DATEPART(WEEK, ${payTimeExpr}) AS VARCHAR), 2))`;
-  else dateGroup = `CAST(${payTimeExpr} AS DATE)`;
+  if (groupBy === 'month') dateGroup = `FORMAT(t.PayTime, 'yyyy-MM')`;
+  else if (groupBy === 'week') dateGroup = `CONCAT(YEAR(t.PayTime), '-W', RIGHT('0' + CAST(DATEPART(WEEK, t.PayTime) AS VARCHAR), 2))`;
+  else dateGroup = `CAST(t.PayTime AS DATE)`;
 
   const result = await pool.request()
     .input("StartDate", sql.Date, start)
     .input("EndDate", sql.Date, end)
     .query(`
+      WITH AllPayments AS (
+          SELECT 
+              ISNULL(p.FinalAmount, p.Amount) AS Revenue, 
+              ISNULL(p.PaymentTime, p.SurchargePaidAt) AS PayTime,
+              p.PaymentMethod
+          FROM Payments p
+          WHERE p.PaymentStatus IN ('Completed', 'Prepaid') 
+            AND ISNULL(p.PaymentTime, p.SurchargePaidAt) IS NOT NULL
+          UNION ALL
+          SELECT 
+              AmountPaid AS Revenue, 
+              CreatedAt AS PayTime,
+              'Banking' AS PaymentMethod
+          FROM UserSubscriptions
+          WHERE AmountPaid > 0
+      )
       SELECT
         ${dateGroup}          AS Period,
         COUNT(*)              AS TransactionCount,
-        SUM(${amountExpr})    AS TotalRevenue,
-        AVG(${amountExpr})    AS AvgRevenue
-      FROM Payments p
-      WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-        AND ${payTimeExpr} IS NOT NULL
-        AND CAST(${payTimeExpr} AS DATE) BETWEEN @StartDate AND @EndDate
+        SUM(t.Revenue)        AS TotalRevenue,
+        AVG(t.Revenue)        AS AvgRevenue
+      FROM AllPayments t
+      WHERE CAST(t.PayTime AS DATE) BETWEEN @StartDate AND @EndDate
       GROUP BY ${dateGroup}
       ORDER BY Period
     `);
@@ -737,16 +840,30 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
     .input("StartDate", sql.Date, start)
     .input("EndDate", sql.Date, end)
     .query(`
+      WITH AllPayments AS (
+          SELECT 
+              ISNULL(p.FinalAmount, p.Amount) AS Revenue, 
+              ISNULL(p.PaymentTime, p.SurchargePaidAt) AS PayTime,
+              p.PaymentMethod
+          FROM Payments p
+          WHERE p.PaymentStatus IN ('Completed', 'Prepaid') 
+            AND ISNULL(p.PaymentTime, p.SurchargePaidAt) IS NOT NULL
+          UNION ALL
+          SELECT 
+              AmountPaid AS Revenue, 
+              CreatedAt AS PayTime,
+              'Banking' AS PaymentMethod
+          FROM UserSubscriptions
+          WHERE AmountPaid > 0
+      )
       SELECT
         COUNT(*)                                                                  AS TotalTransactions,
-        ISNULL(SUM(${amountExpr}), 0)                                             AS TotalRevenue,
-        ISNULL(AVG(${amountExpr}), 0)                                             AS AvgPerTransaction,
-        SUM(CASE WHEN p.PaymentMethod = 'Cash'    THEN ${amountExpr} ELSE 0 END) AS CashRevenue,
-        SUM(CASE WHEN p.PaymentMethod = 'Banking' THEN ${amountExpr} ELSE 0 END) AS BankingRevenue
-      FROM Payments p
-      WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-        AND ${payTimeExpr} IS NOT NULL
-        AND CAST(${payTimeExpr} AS DATE) BETWEEN @StartDate AND @EndDate
+        ISNULL(SUM(t.Revenue), 0)                                                 AS TotalRevenue,
+        ISNULL(AVG(t.Revenue), 0)                                                 AS AvgPerTransaction,
+        SUM(CASE WHEN t.PaymentMethod = 'Cash'    THEN t.Revenue ELSE 0 END)      AS CashRevenue,
+        SUM(CASE WHEN t.PaymentMethod = 'Banking' THEN t.Revenue ELSE 0 END)      AS BankingRevenue
+      FROM AllPayments t
+      WHERE CAST(t.PayTime AS DATE) BETWEEN @StartDate AND @EndDate
     `);
 
   // Theo loại xe
@@ -1095,4 +1212,57 @@ export async function getUnpaidSessions({ search } = {}) {
       ORDER BY s.EntryTime DESC
     `);
   return result.recordset;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SYSTEM NOTIFICATIONS
+// ─────────────────────────────────────────────────────────────
+export async function broadcastSystemMaintenance(message) {
+  const pool = await getPool();
+  await pool.request()
+    .input("Title", sql.NVarChar(200), 'Bảo trì hệ thống')
+    .input("Message", sql.NVarChar(500), message || 'Hệ thống sẽ tiến hành bảo trì. Vui lòng theo dõi thông báo tiếp theo.')
+    .query(`
+      INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+      SELECT u.UserID, @Title, @Message, 'System', NULL, 'Maintenance', 0, GETDATE()
+      FROM Users u
+      JOIN Roles r ON u.RoleID = r.RoleID
+      WHERE r.RoleName IN ('Driver', 'Staff', 'Admin') AND u.IsActive = 1
+    `);
+}
+export async function getNightPricingPolicies() {
+  const pool = await getPool();
+  const result = await pool.request().query(`
+    SELECT np.NightPolicyID, np.VehicleTypeID, vt.VehicleName, vt.VehicleCode,
+           CONVERT(VARCHAR(5), np.NightStartTime, 108) AS NightStartTime,
+           CONVERT(VARCHAR(5), np.NightEndTime, 108)   AS NightEndTime,
+           np.NightFee, np.IsActive
+    FROM NightPricingPolicies np
+    JOIN VehicleTypes vt ON vt.VehicleTypeID = np.VehicleTypeID
+    ORDER BY np.VehicleTypeID
+  `);
+  return result.recordset;
+}
+export async function updateNightPricingPolicy(policyId, data) {
+  const pool = await getPool();
+  const req = pool.request().input("NightPolicyID", sql.Int, policyId);
+  const sets = [];
+
+  if (data.nightStartTime !== undefined) { req.input("NightStartTime", sql.VarChar(8), data.nightStartTime); sets.push("NightStartTime = @NightStartTime"); }
+  if (data.nightEndTime !== undefined) { req.input("NightEndTime", sql.VarChar(8), data.nightEndTime); sets.push("NightEndTime = @NightEndTime"); }
+  if (data.nightFee !== undefined) { req.input("NightFee", sql.Decimal(10, 2), data.nightFee); sets.push("NightFee = @NightFee"); }
+  if (data.isActive !== undefined) { req.input("IsActive", sql.Bit, data.isActive ? 1 : 0); sets.push("IsActive = @IsActive"); }
+
+  if (sets.length) {
+    await req.query(`UPDATE NightPricingPolicies SET ${sets.join(", ")} WHERE NightPolicyID = @NightPolicyID`);
+  }
+
+  const r = await pool.request()
+    .input("NightPolicyID", sql.Int, policyId)
+    .query(`
+      SELECT np.*, vt.VehicleName, vt.VehicleCode
+      FROM NightPricingPolicies np JOIN VehicleTypes vt ON vt.VehicleTypeID = np.VehicleTypeID
+      WHERE np.NightPolicyID = @NightPolicyID
+    `);
+  return r.recordset[0];
 }

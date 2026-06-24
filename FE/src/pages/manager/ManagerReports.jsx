@@ -1,5 +1,6 @@
 // src/pages/manager/ManagerReports.jsx
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   FileText, Download, DollarSign, CarFront,
   RefreshCcw, Calendar, Clock, BarChart3, Sparkles
@@ -12,45 +13,13 @@ import {
   getPeakHoursReportAPI
 } from '../../apis/managerApi'
 
-// ── helpers ──────────────────────────────────────────────────
 const fmtVnd = (n) => Number(n || 0).toLocaleString('vi-VN') + 'đ'
 const fmtNum = (n) => Number(n || 0).toLocaleString('vi-VN')
 const todayStr = () => new Date().toISOString().slice(0, 10)
 const daysAgoStr = (d) => new Date(Date.now() - d * 86400000).toISOString().slice(0, 10)
 
-// Xuất CSV từ mảng object (an toàn dấu phẩy/ngoặc kép)
-function exportCsv(filename, rows) {
-  if (!rows || rows.length === 0) {
-    toast.info('Không có dữ liệu để xuất')
-    return
-  }
-  const headers = Object.keys(rows[0])
-  const escape = (v) => {
-    const s = v == null ? '' : String(v)
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-  }
-  const csv = [
-    headers.join(','),
-    ...rows.map(r => headers.map(h => escape(r[h])).join(','))
-  ].join('\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-  toast.success('Đã xuất file CSV')
-}
-
-const TABS = [
-  { key: 'revenue', label: 'Doanh thu', icon: DollarSign },
-  { key: 'sessions', label: 'Lượt xe vào/ra', icon: CarFront },
-  { key: 'occupancy', label: 'Tỷ lệ lấp đầy', icon: BarChart3 },
-  { key: 'peak', label: 'Giờ cao điểm', icon: Clock }
-]
-
 const ManagerReports = () => {
+  const { t } = useTranslation()
   const [tab, setTab] = useState('revenue')
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -62,6 +31,37 @@ const ManagerReports = () => {
   const [sessions, setSessions] = useState(null)
   const [occupancy, setOccupancy] = useState(null)
   const [peak, setPeak] = useState(null)
+
+  const TABS = [
+    { key: 'revenue', label: t('manager.reports.tabs.revenue'), icon: DollarSign },
+    { key: 'sessions', label: t('manager.reports.tabs.sessions'), icon: CarFront },
+    { key: 'occupancy', label: t('manager.reports.tabs.occupancy'), icon: BarChart3 },
+    { key: 'peak', label: t('manager.reports.tabs.peak'), icon: Clock }
+  ]
+
+  const exportCsv = useCallback((filename, rows) => {
+    if (!rows || rows.length === 0) {
+      toast.info(t('manager.reports.exportEmpty'))
+      return
+    }
+    const headers = Object.keys(rows[0])
+    const escape = (v) => {
+      const s = v == null ? '' : String(v)
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+    }
+    const csv = [
+      headers.join(','),
+      ...rows.map(r => headers.map(h => escape(r[h])).join(','))
+    ].join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(t('manager.reports.exportSuccess'))
+  }, [t])
 
   const fetchReport = useCallback(async (which) => {
     setLoading(true)
@@ -81,49 +81,42 @@ const ManagerReports = () => {
         setPeak(res.data.data)
       }
     } catch {
-      toast.error('Không thể tải dữ liệu báo cáo')
+      toast.error(t('manager.reports.loadFail'))
     } finally {
       setLoading(false)
       setTimeout(() => setMounted(true), 80)
     }
-  }, [startDate, endDate])
+  }, [startDate, endDate, t])
 
   useEffect(() => { fetchReport(tab) }, [tab, fetchReport])
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">Quản lý / Báo cáo</p>
-          <h1 className="text-2xl font-bold text-slate-900 mt-1">Báo cáo hệ thống</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('manager.reports.eyebrow')}</p>
+          <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('manager.reports.title')}</h1>
           <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
             <Sparkles size={16} className="text-amber-500 animate-pulse" />
-            Doanh thu, lưu lượng xe, tỷ lệ lấp đầy và khung giờ cao điểm theo dữ liệu thực tế.
+            {t('manager.reports.subtitle')}
           </p>
         </div>
-        <button
-          onClick={() => fetchReport(tab)}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition self-start"
-        >
-          <RefreshCcw size={16} /> Làm mới
+        <button onClick={() => fetchReport(tab)}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition self-start">
+          <RefreshCcw size={16} /> {t('manager.reports.refresh')}
         </button>
       </div>
 
-      {/* Date range + tabs */}
       <div className="rounded-3xl bg-white p-5 shadow-sm border border-slate-100">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4">
           <div className="flex items-center gap-3 flex-wrap">
-            {TABS.map(t => {
-              const Icon = t.icon
-              const active = tab === t.key
+            {TABS.map(tb => {
+              const Icon = tb.icon
+              const active = tab === tb.key
               return (
-                <button
-                  key={t.key}
-                  onClick={() => setTab(t.key)}
-                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${active ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
-                >
-                  <Icon size={15} /> {t.label}
+                <button key={tb.key} onClick={() => setTab(tb.key)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${active ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                  <Icon size={15} /> {tb.label}
                 </button>
               )
             })}
@@ -147,18 +140,18 @@ const ManagerReports = () => {
         </div>
       ) : (
         <>
-          {tab === 'revenue' && <RevenueTab data={revenue} mounted={mounted} />}
-          {tab === 'sessions' && <SessionsTab data={sessions} mounted={mounted} />}
+          {tab === 'revenue' && <RevenueTab data={revenue} mounted={mounted} exportCsv={exportCsv} />}
+          {tab === 'sessions' && <SessionsTab data={sessions} exportCsv={exportCsv} />}
           {tab === 'occupancy' && <OccupancyTab data={occupancy} mounted={mounted} />}
-          {tab === 'peak' && <PeakTab data={peak} mounted={mounted} />}
+          {tab === 'peak' && <PeakTab data={peak} />}
         </>
       )}
     </div>
   )
 }
 
-// ── Tab: Doanh thu ────────────────────────────────────────────
-const RevenueTab = ({ data, mounted }) => {
+const RevenueTab = ({ data, mounted, exportCsv }) => {
+  const { t } = useTranslation()
   if (!data) return <Empty />
   const { summary = {}, chart = [], byVehicle = [] } = data
   const max = Math.max(...chart.map(c => Number(c.TotalRevenue) || 0), 1)
@@ -167,17 +160,19 @@ const RevenueTab = ({ data, mounted }) => {
     <div className="space-y-6">
       <div className="rounded-3xl bg-linear-to-r from-blue-600 to-indigo-600 p-6 text-white shadow-lg shadow-blue-500/20 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-blue-100 mb-1">Tổng doanh thu trong kỳ</p>
+          <p className="text-sm font-semibold text-blue-100 mb-1">{t('manager.reports.revenue.totalLabel')}</p>
           <p className="text-4xl font-black tracking-tight">{fmtVnd(summary.TotalRevenue)}</p>
-          <p className="text-sm text-blue-200 mt-1">{fmtNum(summary.TotalTransactions)} giao dịch • TB {fmtVnd(summary.AvgPerTransaction)}/giao dịch</p>
+          <p className="text-sm text-blue-200 mt-1">
+            {t('manager.reports.revenue.txInfo', { count: fmtNum(summary.TotalTransactions), avg: fmtVnd(summary.AvgPerTransaction) })}
+          </p>
         </div>
         <div className="flex gap-3 text-sm">
           <div className="rounded-2xl bg-white/10 px-4 py-3">
-            <p className="text-blue-200 text-xs">Tiền mặt</p>
+            <p className="text-blue-200 text-xs">{t('manager.reports.revenue.cash')}</p>
             <p className="font-bold">{fmtVnd(summary.CashRevenue)}</p>
           </div>
           <div className="rounded-2xl bg-white/10 px-4 py-3">
-            <p className="text-blue-200 text-xs">Chuyển khoản</p>
+            <p className="text-blue-200 text-xs">{t('manager.reports.revenue.banking')}</p>
             <p className="font-bold">{fmtVnd(summary.BankingRevenue)}</p>
           </div>
         </div>
@@ -186,13 +181,13 @@ const RevenueTab = ({ data, mounted }) => {
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm xl:col-span-2">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-slate-900">Doanh thu theo thời gian</h2>
-            <button onClick={() => exportCsv('doanh-thu.csv', chart)}
+            <h2 className="text-lg font-bold text-slate-900">{t('manager.reports.revenue.chartTitle')}</h2>
+            <button onClick={() => exportCsv(t('manager.reports.revenue.csvName'), chart)}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
-              <Download size={14} /> CSV
+              <Download size={14} /> {t('manager.reports.exportCsv')}
             </button>
           </div>
-          {chart.length === 0 ? <p className="text-sm text-slate-400 text-center py-10">Chưa có dữ liệu</p> : (
+          {chart.length === 0 ? <p className="text-sm text-slate-400 text-center py-10">{t('manager.reports.noData')}</p> : (
             <div className="flex items-end justify-between gap-2 min-h-50">
               {chart.slice(-14).map((c, i) => {
                 const pct = Math.round((Number(c.TotalRevenue) / max) * 100)
@@ -216,14 +211,14 @@ const RevenueTab = ({ data, mounted }) => {
         </div>
 
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900 mb-5">Theo loại xe</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-5">{t('manager.reports.revenue.byVehicleTitle')}</h2>
           <div className="space-y-4">
-            {byVehicle.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">Chưa có dữ liệu</p> :
+            {byVehicle.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">{t('manager.reports.noData')}</p> :
               byVehicle.map((v, i) => (
                 <div key={i} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
                   <div>
                     <p className="font-bold text-slate-800">{v.VehicleName}</p>
-                    <p className="text-xs text-slate-400">{fmtNum(v.TransactionCount)} giao dịch</p>
+                    <p className="text-xs text-slate-400">{t('manager.reports.revenue.txCount', { n: fmtNum(v.TransactionCount) })}</p>
                   </div>
                   <p className="font-black text-slate-900">{fmtVnd(v.TotalRevenue)}</p>
                 </div>
@@ -235,8 +230,8 @@ const RevenueTab = ({ data, mounted }) => {
   )
 }
 
-// ── Tab: Lượt xe ──────────────────────────────────────────────
-const SessionsTab = ({ data }) => {
+const SessionsTab = ({ data, exportCsv }) => {
+  const { t } = useTranslation()
   if (!data) return <Empty />
   const { summary = {}, dailyTrend = [], byVehicle = [] } = data
   const avgMin = Math.round(summary.AvgParkingMinutes || 0)
@@ -245,10 +240,10 @@ const SessionsTab = ({ data }) => {
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-4">
         {[
-          { label: 'Tổng lượt', value: fmtNum(summary.TotalSessions), color: 'from-sky-500 to-blue-600' },
-          { label: 'Đang đỗ', value: fmtNum(summary.ActiveSessions), color: 'from-emerald-500 to-teal-600' },
-          { label: 'Hoàn tất', value: fmtNum(summary.CompletedSessions), color: 'from-violet-500 to-fuchsia-600' },
-          { label: 'TG đỗ TB', value: `${Math.floor(avgMin / 60)}h${avgMin % 60}m`, color: 'from-orange-500 to-amber-600' }
+          { label: t('manager.reports.sessions.total'), value: fmtNum(summary.TotalSessions), color: 'from-sky-500 to-blue-600' },
+          { label: t('manager.reports.sessions.active'), value: fmtNum(summary.ActiveSessions), color: 'from-emerald-500 to-teal-600' },
+          { label: t('manager.reports.sessions.completed'), value: fmtNum(summary.CompletedSessions), color: 'from-violet-500 to-fuchsia-600' },
+          { label: t('manager.reports.sessions.avgDuration'), value: `${Math.floor(avgMin / 60)}h${avgMin % 60}m`, color: 'from-orange-500 to-amber-600' }
         ].map(s => (
           <div key={s.label} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">{s.label}</p>
@@ -260,24 +255,24 @@ const SessionsTab = ({ data }) => {
 
       <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-slate-900">Lượt xe theo loại</h2>
-          <button onClick={() => exportCsv('luot-xe-theo-loai.csv', byVehicle)}
+          <h2 className="text-lg font-bold text-slate-900">{t('manager.reports.sessions.byVehicleTitle')}</h2>
+          <button onClick={() => exportCsv(t('manager.reports.sessions.csvName'), byVehicle)}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
-            <Download size={14} /> CSV
+            <Download size={14} /> {t('manager.reports.exportCsv')}
           </button>
         </div>
         <div className="overflow-hidden rounded-2xl border border-slate-100">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
               <tr>
-                <th className="px-5 py-3 font-bold uppercase text-[11px]">Loại xe</th>
-                <th className="px-5 py-3 font-bold uppercase text-[11px]">Số lượt</th>
-                <th className="px-5 py-3 font-bold uppercase text-[11px]">TG đỗ TB</th>
+                <th className="px-5 py-3 font-bold uppercase text-[11px]">{t('manager.reports.sessions.colVehicle')}</th>
+                <th className="px-5 py-3 font-bold uppercase text-[11px]">{t('manager.reports.sessions.colCount')}</th>
+                <th className="px-5 py-3 font-bold uppercase text-[11px]">{t('manager.reports.sessions.colAvg')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {byVehicle.length === 0 ? (
-                <tr><td colSpan={3} className="px-5 py-8 text-center text-slate-400">Chưa có dữ liệu</td></tr>
+                <tr><td colSpan={3} className="px-5 py-8 text-center text-slate-400">{t('manager.reports.noData')}</td></tr>
               ) : byVehicle.map((v, i) => {
                 const m = Math.round(v.AvgMinutes || 0)
                 return (
@@ -295,14 +290,14 @@ const SessionsTab = ({ data }) => {
 
       {dailyTrend.length > 0 && (
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900 mb-4">Xu hướng theo ngày</h2>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">{t('manager.reports.sessions.trendTitle')}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
                 <tr>
-                  <th className="px-5 py-3 font-bold uppercase text-[11px]">Ngày</th>
-                  <th className="px-5 py-3 font-bold uppercase text-[11px]">Tổng lượt</th>
-                  <th className="px-5 py-3 font-bold uppercase text-[11px]">Hoàn tất</th>
+                  <th className="px-5 py-3 font-bold uppercase text-[11px]">{t('manager.reports.sessions.colDay')}</th>
+                  <th className="px-5 py-3 font-bold uppercase text-[11px]">{t('manager.reports.sessions.colTotal')}</th>
+                  <th className="px-5 py-3 font-bold uppercase text-[11px]">{t('manager.reports.sessions.colCompleted')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -322,17 +317,17 @@ const SessionsTab = ({ data }) => {
   )
 }
 
-// ── Tab: Tỷ lệ lấp đầy ────────────────────────────────────────
 const OccupancyTab = ({ data, mounted }) => {
+  const { t } = useTranslation()
   if (!data) return <Empty />
   const { byFloor = [], byVehicleType = [] } = data
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900 mb-5">Theo tầng</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-5">{t('manager.reports.occupancy.byFloorTitle')}</h2>
         <div className="space-y-5">
-          {byFloor.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">Chưa có dữ liệu</p> :
+          {byFloor.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">{t('manager.reports.noData')}</p> :
             byFloor.map((f, i) => (
               <div key={i}>
                 <div className="flex items-center justify-between text-sm font-semibold text-slate-600 mb-2">
@@ -349,9 +344,9 @@ const OccupancyTab = ({ data, mounted }) => {
       </div>
 
       <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900 mb-5">Theo loại xe</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-5">{t('manager.reports.occupancy.byVehicleTitle')}</h2>
         <div className="space-y-5">
-          {byVehicleType.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">Chưa có dữ liệu</p> :
+          {byVehicleType.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">{t('manager.reports.noData')}</p> :
             byVehicleType.map((v, i) => (
               <div key={i}>
                 <div className="flex items-center justify-between text-sm font-semibold text-slate-600 mb-2">
@@ -370,8 +365,8 @@ const OccupancyTab = ({ data, mounted }) => {
   )
 }
 
-// ── Tab: Giờ cao điểm ─────────────────────────────────────────
 const PeakTab = ({ data }) => {
+  const { t } = useTranslation()
   if (!data) return <Empty />
   const { byVehicle = [] } = data
   const globalMax = Math.max(1, ...byVehicle.flatMap(v => v.hours))
@@ -389,11 +384,11 @@ const PeakTab = ({ data }) => {
     <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm overflow-x-auto">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Khung giờ cao điểm theo loại xe</h2>
-          <p className="text-xs text-slate-500 mt-1">Số lượt check-in theo giờ trong ngày (0–23h)</p>
+          <h2 className="text-lg font-bold text-slate-900">{t('manager.reports.peak.title')}</h2>
+          <p className="text-xs text-slate-500 mt-1">{t('manager.reports.peak.subtitle')}</p>
         </div>
       </div>
-      {byVehicle.length === 0 ? <p className="text-sm text-slate-400 text-center py-10">Chưa có dữ liệu</p> : (
+      {byVehicle.length === 0 ? <p className="text-sm text-slate-400 text-center py-10">{t('manager.reports.noData')}</p> : (
         <div className="min-w-190 space-y-3">
           <div className="flex items-center gap-1 pl-28">
             {Array.from({ length: 24 }, (_, h) => (
@@ -404,7 +399,7 @@ const PeakTab = ({ data }) => {
             <div key={v.vehicleTypeId} className="flex items-center gap-1">
               <div className="w-28 text-sm font-bold text-slate-700 truncate pr-2">{v.vehicleName}</div>
               {v.hours.map((n, h) => (
-                <div key={h} title={`${h}h: ${n} lượt`}
+                <div key={h} title={t('manager.reports.peak.tooltip', { h, n })}
                   className={`flex-1 aspect-square min-w-5.5 rounded flex items-center justify-center text-[10px] font-bold ${heat(n)}`}>
                   {n > 0 ? n : ''}
                 </div>
@@ -417,11 +412,14 @@ const PeakTab = ({ data }) => {
   )
 }
 
-const Empty = () => (
-  <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 py-16 text-center">
-    <FileText size={36} className="text-slate-300 mx-auto mb-3" />
-    <p className="text-slate-500 font-medium">Chưa có dữ liệu báo cáo trong khoảng thời gian này</p>
-  </div>
-)
+const Empty = () => {
+  const { t } = useTranslation()
+  return (
+    <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 py-16 text-center">
+      <FileText size={36} className="text-slate-300 mx-auto mb-3" />
+      <p className="text-slate-500 font-medium">{t('manager.reports.empty')}</p>
+    </div>
+  )
+}
 
 export default ManagerReports

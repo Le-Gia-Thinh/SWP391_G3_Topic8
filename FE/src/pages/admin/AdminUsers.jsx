@@ -1,5 +1,6 @@
 // src/pages/admin/AdminUsers.jsx
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { Search, RefreshCcw, UserPlus, Pencil, Lock, Unlock, ShieldCheck, MailCheck, MailX } from 'lucide-react'
 import { toast } from 'react-toastify'
@@ -31,6 +32,7 @@ const fmtDate = (d) => d
   : '—'
 
 const AdminUsers = () => {
+  const { t } = useTranslation()
   const [rows, setRows] = useState([])
   const [roles, setRoles] = useState([])
   const [loading, setLoading] = useState(true)
@@ -60,7 +62,7 @@ const AdminUsers = () => {
       const res = await getUsersAPI(params)
       setRows(res.data.data || [])
     } catch {
-      toast.error('Không thể tải danh sách người dùng')
+      toast.error(t('admin.users.loadFail'))
     } finally {
       setLoading(false)
       setTimeout(() => setIsLoaded(true), 80)
@@ -74,7 +76,7 @@ const AdminUsers = () => {
     getRolesAPI().then(res => setRoles(res.data.data || [])).catch(() => { })
   }, [])
 
-  const applyFilters = () => setTrigger(t => t + 1)
+  const applyFilters = () => setTrigger(tt => tt + 1)
 
   // Có phải tài khoản hệ thống không
   const isSystemAccount = (u) => u?.Email === SYSTEM_WALKIN_EMAIL
@@ -87,7 +89,7 @@ const AdminUsers = () => {
   }
   const openEdit = (u) => {
     if (isSystemAccount(u)) {
-      toast.info('Đây là tài khoản hệ thống (khách vãng lai), không thể chỉnh sửa.')
+      toast.info(t('admin.users.systemAccountNotice'))
       return
     }
     setEditing(u)
@@ -97,7 +99,7 @@ const AdminUsers = () => {
       PhoneNumber: u.PhoneNumber || '',
       RoleID: String(u.RoleID),
       DateOfBirth: u.DateOfBirth ? u.DateOfBirth.slice(0, 10) : '',
-      HireDate: u.HireDate ? u.HireDate.slice(0, 10) : '',
+      HireDate: u.HireDate ? u.HireDate.slice(0, 10) : ''
     })
     setModalOpen(true)
   }
@@ -106,11 +108,11 @@ const AdminUsers = () => {
     // ── Validate đủ 18 tuổi NGAY tại FE khi là Staff/Manager (Trường hợp A) ──
     if (needsDates) {
       if (!form.DateOfBirth || !form.HireDate) {
-        toast.error('Vai trò Staff/Manager bắt buộc có Ngày sinh và Ngày vào làm.')
+        toast.error(t('admin.users.dateMissingError'))
         return
       }
       if (ageAt(form.DateOfBirth, form.HireDate) < 18) {
-        toast.error('Người dùng phải đủ 18 tuổi tại thời điểm vào làm để giữ vai trò Staff/Manager.')
+        toast.error(t('admin.users.ageError'))
         return
       }
     }
@@ -123,9 +125,9 @@ const AdminUsers = () => {
           phoneNumber: form.PhoneNumber || null,
           roleId: Number(form.RoleID),
           dateOfBirth: form.DateOfBirth || null,
-          hireDate: form.HireDate || null,
+          hireDate: form.HireDate || null
         })
-        toast.success('Cập nhật người dùng thành công')
+        toast.success(t('admin.users.updateSuccess'))
       } else {
         await createUserAPI({
           fullName: form.FullName,
@@ -134,28 +136,28 @@ const AdminUsers = () => {
           phoneNumber: form.PhoneNumber || null,
           roleId: Number(form.RoleID),
           dateOfBirth: form.DateOfBirth || null,
-          hireDate: form.HireDate || null,
+          hireDate: form.HireDate || null
         })
-        toast.success('Tạo người dùng thành công')
+        toast.success(t('admin.users.createSuccess'))
       }
       setModalOpen(false)
       applyFilters()
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Thao tác thất bại')
+      toast.error(err?.response?.data?.message || t('admin.users.saveFail'))
     }
   }
 
   const toggleStatus = async (u) => {
     if (isSystemAccount(u)) {
-      toast.info('Đây là tài khoản hệ thống (khách vãng lai), không thể khóa.')
+      toast.info(t('admin.users.systemAccountLockNotice'))
       return
     }
     try {
       await toggleUserStatusAPI(u.UserID, u.IsActive ? 0 : 1)
-      toast.success(u.IsActive ? 'Đã khoá tài khoản' : 'Đã mở khoá tài khoản')
+      toast.success(u.IsActive ? t('admin.users.lockSuccess') : t('admin.users.unlockSuccess'))
       applyFilters()
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Không thể đổi trạng thái tài khoản')
+      toast.error(err?.response?.data?.message || t('admin.users.toggleStatusFail'))
     }
   }
 
@@ -164,17 +166,17 @@ const AdminUsers = () => {
       {/* Header */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-sm border border-slate-200/60">
         <div className="px-2">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">Quản trị / Người dùng</p>
-          <h1 className="text-2xl font-bold text-slate-900 mt-1">Quản lý người dùng</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('admin.users.eyebrow')}</p>
+          <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('admin.users.title')}</h1>
         </div>
         <div className="flex gap-3">
           <button onClick={applyFilters}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
-            <RefreshCcw size={16} /> Làm mới
+            <RefreshCcw size={16} /> {t('admin.users.refresh')}
           </button>
           <button onClick={openCreate}
             className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:-translate-y-0.5 active:scale-95 transition-all">
-            <UserPlus size={16} /> Thêm người dùng
+            <UserPlus size={16} /> {t('admin.users.addNew')}
           </button>
         </div>
       </div>
@@ -182,7 +184,7 @@ const AdminUsers = () => {
       {USE_MOCK && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-semibold text-amber-700 flex items-center gap-2">
           <ShieldCheck size={18} />
-          Đang dùng dữ liệu mẫu — thao tác chỉ lưu tạm trong phiên. Sẽ lưu thật khi backend Admin kết nối.
+          {t('admin.users.mockNotice')}
         </div>
       )}
 
@@ -192,19 +194,19 @@ const AdminUsers = () => {
           <div className="relative flex-1 max-w-md">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()}
-              placeholder="Tìm tên, email, số điện thoại..."
+              placeholder={t('admin.users.searchPlaceholder')}
               className="w-full rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white dark:focus:bg-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
-          <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setTrigger(t => t + 1) }}
+          <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setTrigger(tt => tt + 1) }}
             className="rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
-            <option value="">Tất cả vai trò</option>
-            {roles.map(r => <option key={r.RoleID} value={r.RoleID}>{r.RoleName}</option>)}
+            <option value="">{t('admin.users.allRoles')}</option>
+            {roles.map(r => <option key={r.RoleID} value={r.RoleID}>{t(`roles.${r.RoleName}`, r.RoleName)}</option>)}
           </select>
-          <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setTrigger(t => t + 1) }}
+          <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setTrigger(tt => tt + 1) }}
             className="rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
-            <option value="">Tất cả trạng thái</option>
-            <option value="1">Đang hoạt động</option>
-            <option value="0">Bị khoá</option>
+            <option value="">{t('admin.users.allStatuses')}</option>
+            <option value="1">{t('admin.users.statusActive')}</option>
+            <option value="0">{t('admin.users.statusLocked')}</option>
           </select>
         </div>
 
@@ -217,20 +219,20 @@ const AdminUsers = () => {
             ) : rows.length === 0 ? (
               <div className="py-16 flex flex-col items-center justify-center text-center text-slate-500">
                 <Search size={44} className="text-slate-300 mb-3" />
-                <p className="font-bold text-slate-700">Không tìm thấy người dùng</p>
-                <p className="text-sm mt-1 text-slate-500">Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm.</p>
+                <p className="font-bold text-slate-700">{t('admin.users.emptyTitle')}</p>
+                <p className="text-sm mt-1 text-slate-500">{t('admin.users.emptyHint')}</p>
               </div>
             ) : (
               <table className="min-w-full text-left text-sm text-slate-700">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Người dùng</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Liên hệ</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Vai trò</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Email</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Trạng thái</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Ngày tạo</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50 text-right">Thao tác</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.user')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.contact')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.role')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.email')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.status')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.createdAt')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50 text-right">{t('admin.users.col.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -251,20 +253,20 @@ const AdminUsers = () => {
                           <p className="text-xs text-slate-400">{u.PhoneNumber || '—'}</p>
                         </td>
                         <td className="px-5 py-4">
-                          <Badge variant={roleBadge[u.RoleName] || 'default'}>{u.RoleName}</Badge>
+                          <Badge variant={roleBadge[u.RoleName] || 'default'}>{t(`roles.${u.RoleName}`, u.RoleName)}</Badge>
                         </td>
                         <td className="px-5 py-4">
                           {u.IsEmailVerified ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><MailCheck size={14} /> Đã xác thực</span>
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600"><MailCheck size={14} /> {t('admin.users.emailVerified')}</span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400"><MailX size={14} /> Chưa</span>
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400"><MailX size={14} /> {t('admin.users.emailUnverified')}</span>
                           )}
                         </td>
                         <td className="px-5 py-4">
                           {u.IsActive ? (
-                            <Badge variant="success">Hoạt động</Badge>
+                            <Badge variant="success">{t('admin.users.statusActive')}</Badge>
                           ) : (
-                            <Badge variant="danger">Bị khoá</Badge>
+                            <Badge variant="danger">{t('admin.users.statusLocked')}</Badge>
                           )}
                         </td>
                         <td className="px-5 py-4 text-slate-500 text-xs">{fmtDate(u.CreatedAt)}</td>
@@ -272,16 +274,16 @@ const AdminUsers = () => {
                           {system ? (
                             <div className="flex items-center justify-end">
                               <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
-                                <ShieldCheck size={13} /> Tài khoản hệ thống
+                                <ShieldCheck size={13} /> {t('admin.users.systemAccountBadge')}
                               </span>
                             </div>
                           ) : (
                             <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => openEdit(u)} title="Chỉnh sửa"
+                              <button onClick={() => openEdit(u)} title={t('admin.users.editTitle')}
                                 className="rounded-lg p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition">
                                 <Pencil size={16} />
                               </button>
-                              <button onClick={() => toggleStatus(u)} title={u.IsActive ? 'Khoá' : 'Mở khoá'}
+                              <button onClick={() => toggleStatus(u)} title={u.IsActive ? t('admin.users.lockTitle') : t('admin.users.unlockTitle')}
                                 className={`rounded-lg p-2 transition ${u.IsActive ? 'text-slate-500 hover:bg-rose-50 hover:text-rose-600' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-600'}`}>
                                 {u.IsActive ? <Lock size={16} /> : <Unlock size={16} />}
                               </button>
@@ -302,61 +304,61 @@ const AdminUsers = () => {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editing ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}
+        title={editing ? t('admin.users.modal.titleEdit') : t('admin.users.modal.titleCreate')}
         footer={(
           <>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>Huỷ</Button>
+            <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('admin.users.modal.cancel')}</Button>
             <Button onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>
-              {isSubmitting ? 'Đang lưu...' : editing ? 'Lưu thay đổi' : 'Tạo mới'}
+              {isSubmitting ? t('admin.users.modal.saving') : editing ? t('admin.users.modal.saveChanges') : t('admin.users.modal.create')}
             </Button>
           </>
         )}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Họ và tên</label>
-            <input {...register('FullName', { required: 'Vui lòng nhập họ tên' })}
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.fullNameLabel')}</label>
+            <input {...register('FullName', { required: t('admin.users.modal.fullNameRequired') })}
               className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.FullName && <p className="text-xs text-red-500 mt-1">{errors.FullName.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Email</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.emailLabel')}</label>
             <input disabled={!!editing} {...register('Email', {
-              required: 'Vui lòng nhập email',
-              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Email không hợp lệ' }
+              required: t('admin.users.modal.emailRequired'),
+              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: t('admin.users.modal.emailInvalid') }
             })}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition disabled:bg-slate-100 disabled:text-slate-400" />
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition disabled:bg-slate-100 disabled:text-slate-400" />
             {errors.Email && <p className="text-xs text-red-500 mt-1">{errors.Email.message}</p>}
-            {editing && <p className="text-xs text-slate-400 mt-1">Không thể đổi email sau khi tạo tài khoản.</p>}
+            {editing && <p className="text-xs text-slate-400 mt-1">{t('admin.users.modal.emailEditHint')}</p>}
           </div>
           {!editing && (
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Mật khẩu</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.passwordLabel')}</label>
               <input type="password" {...register('Password', {
-                required: 'Vui lòng nhập mật khẩu',
-                minLength: { value: 6, message: 'Mật khẩu tối thiểu 6 ký tự' }
+                required: t('admin.users.modal.passwordRequired'),
+                minLength: { value: 6, message: t('admin.users.modal.passwordMinLength') }
               })}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
               {errors.Password && <p className="text-xs text-red-500 mt-1">{errors.Password.message}</p>}
             </div>
           )}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Số điện thoại</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.phoneLabel')}</label>
             <input {...register('PhoneNumber', {
               pattern: {
                 value: /^(0|84)(3|5|7|8|9)[0-9]{8}$/,
-                message: 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0 hoặc 84)'
+                message: t('admin.users.modal.phoneInvalid')
               }
             })}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.PhoneNumber && <p className="text-xs text-red-500 mt-1">{errors.PhoneNumber.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Vai trò</label>
-            <select {...register('RoleID', { required: 'Vui lòng chọn vai trò' })}
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.roleLabel')}</label>
+            <select {...register('RoleID', { required: t('admin.users.modal.roleRequired') })}
               className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
-              <option value="">-- Chọn vai trò --</option>
-              {roles.map(r => <option key={r.RoleID} value={r.RoleID}>{r.RoleName}</option>)}
+              <option value="">{t('admin.users.modal.rolePlaceholder')}</option>
+              {roles.map(r => <option key={r.RoleID} value={r.RoleID}>{t(`roles.${r.RoleName}`, r.RoleName)}</option>)}
             </select>
             {errors.RoleID && <p className="text-xs text-red-500 mt-1">{errors.RoleID.message}</p>}
           </div>
@@ -366,24 +368,24 @@ const AdminUsers = () => {
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Ngày sinh</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.dobLabel')}</label>
                   <input type="date" {...register('DateOfBirth', {
-                    required: needsDates ? 'Bắt buộc với Staff/Manager' : false
+                    required: needsDates ? t('admin.users.modal.dateRequired') : false
                   })}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
                   {errors.DateOfBirth && <p className="text-xs text-red-500 mt-1">{errors.DateOfBirth.message}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Ngày vào làm</label>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.hireDateLabel')}</label>
                   <input type="date" {...register('HireDate', {
-                    required: needsDates ? 'Bắt buộc với Staff/Manager' : false
+                    required: needsDates ? t('admin.users.modal.dateRequired') : false
                   })}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
                   {errors.HireDate && <p className="text-xs text-red-500 mt-1">{errors.HireDate.message}</p>}
                 </div>
               </div>
               <p className="text-[12px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
-                Nhân viên phải đủ 18 tuổi tại thời điểm vào làm. Bạn có thể bấm vào lịch hoặc gõ trực tiếp ngày.
+                {t('admin.users.modal.dateHint')}
               </p>
             </>
           )}

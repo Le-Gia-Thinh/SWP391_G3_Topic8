@@ -29,7 +29,9 @@ router.patch("/slots/:id/status", mc.updateSlotStatus);
 router.get("/pricing", mc.getPricingPolicies);
 router.post("/pricing", mc.createPricingPolicy);
 router.patch("/pricing/:id", mc.updatePricingPolicy);
-
+router.delete('/pricing/:id', mc.deletePricingPolicy);
+router.get('/night-pricing', mc.getNightPricingPolicies);
+router.patch('/night-pricing/:id', mc.updateNightPricingPolicy);
 // Vehicle Types (readonly – dùng cho form pricing)
 router.get("/vehicle-types", mc.getVehicleTypes);
 
@@ -55,5 +57,8 @@ router.get("/unpaid", mc.getUnpaidSessions);
 
 // Staff list
 router.get("/staff", mc.getStaffList);
+
+// System Notifications
+router.post("/system-maintenance", mc.broadcastSystemMaintenance);
 
 export default router;

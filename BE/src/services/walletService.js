@@ -1,0 +1,374 @@
+// src/services/walletService.js
+import crypto from 'crypto';
+import axios from 'axios';
+import { getPool, sql } from '../config/db.js';
+
+const PAYOS_CLIENT_ID = process.env.PAYOS_CLIENT_ID;
+const PAYOS_API_KEY = process.env.PAYOS_API_KEY;
+const PAYOS_CHECKSUM = process.env.PAYOS_CHECKSUM_KEY;
+const PAYOS_BASE_URL = 'https://api-merchant.payos.vn';
+
+function makeSignature({ amount, cancelUrl, description, orderCode, returnUrl }) {
+    const raw = `amount=${amount}&cancelUrl=${cancelUrl}&description=${description}&orderCode=${orderCode}&returnUrl=${returnUrl}`;
+    return crypto.createHmac('sha256', PAYOS_CHECKSUM).update(raw).digest('hex');
+}
+
+// In-memory pending topup orders
+const pendingTopups = new Map();
+setInterval(() => {
+    const now = Date.now();
+    for (const [code, o] of pendingTopups.entries())
+        if (o.expiredAt < now) pendingTopups.delete(code);
+}, 60_000);
+
+function makeTopupOrderCode(userId) {
+    const suffix = Date.now() % 1_000_000;
+    return parseInt(`9${userId}${String(suffix).padStart(6, '0')}`, 10);
+}
+
+// ── Tạo link nạp tiền PayOS ──────────────────────────────────────
+export async function createTopupService(userId, amount) {
+    if (!amount || amount < 10000) {
+        throw Object.assign(new Error('Số tiền nạp tối thiểu là 10,000 VNĐ'), { statusCode: 400 });
+    }
+
+    const pool = await getPool();
+    const userRes = await pool.request()
+        .input('UserID', sql.Int, userId)
+        .query('SELECT FullName, Email FROM Users WHERE UserID = @UserID');
+    const user = userRes.recordset[0];
+    if (!user) throw Object.assign(new Error('User không tồn tại'), { statusCode: 404 });
+
+    const orderCode = makeTopupOrderCode(userId);
+    const description = `TOPUP${userId}T${Date.now() % 10000}`;
+
+    const FE = process.env.FE_ORIGIN || 'http://localhost:5173';
+    const returnUrl = `${FE}/driver/topup-payment?status=success`;
+    const cancelUrl = `${FE}/driver/topup-payment?status=cancel`;
+    const expiredAt = Math.floor((Date.now() + 15 * 60 * 1000) / 1000);
+
+    const payload = {
+        orderCode,
+        amount,
+        description,
+        buyerName: user.FullName || 'Driver',
+        buyerEmail: user.Email || undefined,
+        items: [{ name: `Nap tien vi - ${amount} VND`, quantity: 1, price: amount }],
+        cancelUrl,
+        returnUrl,
+        expiredAt,
+        signature: makeSignature({ amount, cancelUrl, description, orderCode, returnUrl }),
+    };
+
+    let pd;
+    try {
+        const res = await axios.post(`${PAYOS_BASE_URL}/v2/payment-requests`, payload, {
+            headers: {
+                'x-client-id': PAYOS_CLIENT_ID,
+                'x-api-key': PAYOS_API_KEY,
+                'Content-Type': 'application/json',
+            },
+            timeout: 15_000,
+        });
+        if (res.data.code !== '00') {
+            throw Object.assign(new Error(`PayOS lỗi: ${res.data.desc || res.data.code}`), { statusCode: 400 });
+        }
+        pd = res.data.data;
+    } catch (e) {
+        if (e.statusCode) throw e;
+        const msg = e.response?.data?.desc || e.message;
+        throw Object.assign(new Error(`Lỗi kết nối PayOS: ${msg}`), { statusCode: 502 });
+    }
+
+    const expiredMs = expiredAt * 1000;
+    pendingTopups.set(orderCode, {
+        userId, amount, description,
+        status: 'PENDING',
+        expiredAt: expiredMs,
+    });
+
+    return {
+        orderCode,
+        amount,
+        description,
+        qrCode: pd.qrCode,
+        checkoutUrl: pd.checkoutUrl,
+        accountNumber: pd.accountNumber,
+        accountName: pd.accountName,
+        bankBin: pd.bin,
+        currency: 'VND',
+        expiredAt: new Date(expiredMs).toISOString(),
+        status: 'PENDING',
+    };
+}
+
+// ── Polling check trạng thái nạp tiền ─────────────────────────────
+export async function checkTopupStatusService(orderCode) {
+    let payosStatus = 'PENDING';
+    try {
+        const res = await axios.get(`${PAYOS_BASE_URL}/v2/payment-requests/${orderCode}`, {
+            headers: { 'x-client-id': PAYOS_CLIENT_ID, 'x-api-key': PAYOS_API_KEY },
+            timeout: 8_000,
+        });
+        payosStatus = res.data?.data?.status || 'PENDING';
+    } catch { /* mạng lỗi → dùng cache */ }
+
+    if (payosStatus === 'PAID') {
+        // Cộng tiền vào ví
+        const order = pendingTopups.get(Number(orderCode));
+        if (order && order.status !== 'PAID') {
+            order.status = 'PAID';
+            const pool = await getPool();
+            await pool.request()
+                .input('UserID', sql.Int, order.userId)
+                .input('Amount', sql.Decimal(10, 2), order.amount)
+                .input('ReferenceID', sql.NVarChar(100), String(orderCode))
+                .input('Description', sql.NVarChar(200), `Nạp tiền ví - ${order.amount.toLocaleString('vi-VN')} VNĐ`)
+                .execute('sp_TopUpWallet');
+            pendingTopups.delete(Number(orderCode));
+        }
+        return { status: 'PAID', orderCode };
+    }
+
+    if (payosStatus === 'CANCELLED' || payosStatus === 'EXPIRED') {
+        pendingTopups.delete(Number(orderCode));
+        return { status: payosStatus, orderCode };
+    }
+
+    return { status: 'PENDING', orderCode };
+}
+
+// ── Xử lý webhook nạp tiền ────────────────────────────────────────
+export async function handleTopupWebhook(orderCode, amount) {
+    const order = pendingTopups.get(Number(orderCode));
+    if (order && order.status !== 'PAID') {
+        order.status = 'PAID';
+        const pool = await getPool();
+        await pool.request()
+            .input('UserID', sql.Int, order.userId)
+            .input('Amount', sql.Decimal(10, 2), order.amount)
+            .input('ReferenceID', sql.NVarChar(100), String(orderCode))
+            .input('Description', sql.NVarChar(200), `Nạp tiền ví - ${order.amount.toLocaleString('vi-VN')} VNĐ`)
+            .execute('sp_TopUpWallet');
+        pendingTopups.delete(Number(orderCode));
+    }
+}
+
+// ── Lấy số dư ─────────────────────────────────────────────────────
+export async function getBalanceService(userId) {
+    const pool = await getPool();
+    const res = await pool.request()
+        .input('UserID', sql.Int, userId)
+        .query('SELECT ISNULL(AccountBalance, 0) AS balance FROM Users WHERE UserID = @UserID');
+    return res.recordset[0]?.balance || 0;
+}
+
+// ── Lịch sử giao dịch ─────────────────────────────────────────────
+export async function getWalletHistoryService(userId, limit = 20) {
+    const pool = await getPool();
+    const res = await pool.request()
+        .input('UserID', sql.Int, userId)
+        .input('Limit', sql.Int, limit)
+        .query(`
+            SELECT TOP (@Limit) TransactionID, TransactionType as Type, Amount, ReferenceID, Description, CreatedAt, Status
+            FROM WalletTransactions
+            WHERE UserID = @UserID
+            ORDER BY CreatedAt DESC
+        `);
+    return res.recordset;
+}
+
+// ── Thanh toán đỗ xe bằng ví ───────────────────────────────────────
+export async function payParkingByWalletService(sessionId, driverId) {
+    const pool = await getPool();
+
+    // Lấy thông tin session + payment
+    const { recordset } = await pool.request()
+        .input('SessionID', sql.Int, sessionId)
+        .input('DriverID', sql.Int, driverId)
+        .query(`
+            SELECT ps.SessionID, ps.VehicleTypeID, ps.EntryTime, ps.SessionStatus,
+                   p.PaymentStatus, p.Amount
+            FROM ParkingSessions ps
+            JOIN Payments p ON ps.SessionID = p.SessionID
+            WHERE ps.SessionID = @SessionID AND ps.DriverID = @DriverID AND ps.SessionStatus = 'Active'
+        `);
+
+    const session = recordset[0];
+    if (!session) throw Object.assign(new Error('Không tìm thấy phiên đỗ xe'), { statusCode: 404 });
+    if (session.PaymentStatus === 'Completed' || session.PaymentStatus === 'Prepaid')
+        throw Object.assign(new Error('Phiên đã được thanh toán'), { statusCode: 400 });
+
+    // Import calcFee from paymentService to get amount
+    const { getPool: gp, sql: s } = await import('../config/db.js');
+    const diffH = Math.max(0.017, (Date.now() - new Date(session.EntryTime).getTime()) / 3_600_000);
+    const r = await pool.request()
+        .input('VehicleTypeID', sql.Int, session.VehicleTypeID)
+        .input('DurationH', sql.Decimal(10, 2), parseFloat(diffH.toFixed(2)))
+        .query(`
+            SELECT TOP 1 Fee FROM PricingPolicies
+            WHERE VehicleTypeID = @VehicleTypeID AND IsActive = 1
+            AND ((IsOvernight = 1 AND @DurationH > 8) OR (@DurationH BETWEEN MinHours AND MaxHours))
+            ORDER BY IsOvernight DESC, MaxHours
+        `);
+    const baseFee = Math.max(2000, Math.round(Number(r.recordset[0]?.Fee || 2000)));
+
+    // Apply subscription discount
+    const { applySubscriptionDiscount } = await import('./paymentService.js');
+    // We need to dynamically import but applySubscriptionDiscount is not exported. Let's inline it.
+    const subRes = await pool.request()
+        .input('UserID', sql.Int, driverId)
+        .query(`
+            SELECT top 1 PlanID, StartDate, EndDate 
+            FROM UserSubscriptions 
+            WHERE UserID = @UserID AND Status = 'Active' AND EndDate > GETDATE()
+            ORDER BY EndDate DESC
+        `);
+
+    let amount = baseFee;
+    let discountPercent = 0;
+    let planId = null;
+
+    if (subRes.recordset.length > 0) {
+        const sub = subRes.recordset[0];
+        const countRes = await pool.request()
+            .input('DriverID', sql.Int, driverId)
+            .input('StartDate', sql.DateTime, sub.StartDate)
+            .input('EndDate', sql.DateTime, sub.EndDate)
+            .query('SELECT COUNT(*) as SessionCount FROM ParkingSessions WHERE DriverID = @DriverID AND EntryTime >= @StartDate AND EntryTime <= @EndDate');
+        const sessionCount = countRes.recordset[0].SessionCount;
+
+        if (sub.PlanID === 'basic') {
+            discountPercent = sessionCount <= 5 ? 10 : 0;
+        } else if (sub.PlanID === 'pro') {
+            discountPercent = sessionCount <= 15 ? 100 : 25;
+        } else if (sub.PlanID === 'premium') {
+            discountPercent = 100;
+        }
+        planId = sub.PlanID;
+        amount = Math.round(baseFee - (baseFee * discountPercent / 100));
+        if (amount > 0 && amount < 2000) amount = 2000;
+        if (amount < 0) amount = 0;
+    }
+
+    if (amount === 0) {
+        // Miễn phí → giống logic FREE hiện tại
+        const durationH = parseFloat(diffH.toFixed(2));
+        await pool.request()
+            .input('SessionID', sql.Int, sessionId)
+            .input('OrderCode', sql.BigInt, 0)
+            .input('Amount', sql.Decimal(10, 2), 0)
+            .input('SnapshotH', sql.Decimal(10, 2), durationH)
+            .input('QrCode', sql.NVarChar(sql.MAX), null)
+            .input('CheckoutUrl', sql.NVarChar(500), 'FREE')
+            .execute('sp_CreatePrepayment');
+        await pool.request()
+            .input('OrderCode', sql.BigInt, 0)
+            .input('PaidAt', sql.DateTime, new Date())
+            .execute('sp_MarkPaymentPrepaid');
+        return { success: true, amount: 0, newBalance: await getBalanceService(driverId) };
+    }
+
+    // Kiểm tra số dư
+    const balance = await getBalanceService(driverId);
+    if (balance < amount) {
+        throw Object.assign(new Error(`Số dư không đủ. Cần ${amount.toLocaleString('vi-VN')}đ, hiện có ${balance.toLocaleString('vi-VN')}đ`), { statusCode: 400 });
+    }
+
+    // Trừ tiền ví
+    await pool.request()
+        .input('UserID', sql.Int, driverId)
+        .input('Amount', sql.Decimal(10, 2), amount)
+        .input('TransactionType', sql.NVarChar(50), 'PAY_PARKING')
+        .input('ReferenceID', sql.NVarChar(100), String(sessionId))
+        .input('Description', sql.NVarChar(200), `Thanh toán đỗ xe - Session #${sessionId}`)
+        .execute('sp_PayByWallet');
+
+    // Mark payment as prepaid
+    const durationH = parseFloat(diffH.toFixed(2));
+    const orderCode = Date.now(); // unique code for wallet payment
+    await pool.request()
+        .input('SessionID', sql.Int, sessionId)
+        .input('OrderCode', sql.BigInt, orderCode)
+        .input('Amount', sql.Decimal(10, 2), amount)
+        .input('SnapshotH', sql.Decimal(10, 2), durationH)
+        .input('QrCode', sql.NVarChar(sql.MAX), null)
+        .input('CheckoutUrl', sql.NVarChar(500), 'WALLET')
+        .execute('sp_CreatePrepayment');
+
+    await pool.request()
+        .input('OrderCode', sql.BigInt, orderCode)
+        .input('PaidAt', sql.DateTime, new Date())
+        .execute('sp_MarkPaymentPrepaid');
+
+    const newBalance = await getBalanceService(driverId);
+    return { success: true, amount, newBalance };
+}
+
+// ── Mua gói subscription bằng ví ────────────────────────────────────
+export async function paySubscriptionByWalletService(userId, planId, durationMonths) {
+    const pool = await getPool();
+
+    // Validate plan
+    const planResult = await pool.request()
+        .input('PlanID', sql.NVarChar, planId)
+        .query('SELECT * FROM SubscriptionPlans WHERE PlanID = @PlanID AND IsActive = 1');
+    if (planResult.recordset.length === 0)
+        throw Object.assign(new Error('Gói hội viên không tồn tại'), { statusCode: 400 });
+
+    const plan = planResult.recordset[0];
+    const discountMap = { 1: 0, 3: 5, 6: 10, 9: 15, 12: 20 };
+    const discountPercent = discountMap[durationMonths] || 0;
+    const totalBase = plan.BasePrice * durationMonths;
+    const amount = Math.round(totalBase * (1 - discountPercent / 100));
+
+    // Kiểm tra số dư
+    const balance = await getBalanceService(userId);
+    if (balance < amount) {
+        throw Object.assign(new Error(`Số dư không đủ. Cần ${amount.toLocaleString('vi-VN')}đ, hiện có ${balance.toLocaleString('vi-VN')}đ`), { statusCode: 400 });
+    }
+
+    // Trừ tiền
+    await pool.request()
+        .input('UserID', sql.Int, userId)
+        .input('Amount', sql.Decimal(10, 2), amount)
+        .input('TransactionType', sql.NVarChar(50), 'PAY_SUBSCRIPTION')
+        .input('ReferenceID', sql.NVarChar(100), `${planId}_${durationMonths}m`)
+        .input('Description', sql.NVarChar(200), `Mua gói ${plan.Name} - ${durationMonths} tháng`)
+        .execute('sp_PayByWallet');
+
+    // Tạo subscription
+    let startDate = new Date();
+    const existingSub = await pool.request()
+        .input('UserID', sql.Int, userId)
+        .query(`SELECT top 1 EndDate FROM UserSubscriptions WHERE UserID = @UserID AND Status = 'Active' ORDER BY EndDate DESC`);
+    if (existingSub.recordset.length > 0) {
+        const currentEnd = new Date(existingSub.recordset[0].EndDate);
+        if (currentEnd > startDate) startDate = currentEnd;
+    }
+
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + durationMonths);
+
+    const result = await pool.request()
+        .input('UserID', sql.Int, userId)
+        .input('PlanID', sql.NVarChar, planId)
+        .input('StartDate', sql.DateTime, startDate)
+        .input('EndDate', sql.DateTime, endDate)
+        .input('AmountPaid', sql.Decimal(10, 2), amount)
+        .query(`
+            INSERT INTO UserSubscriptions (UserID, PlanID, StartDate, EndDate, AmountPaid, Status)
+            OUTPUT inserted.UserSubscriptionID
+            VALUES (@UserID, @PlanID, @StartDate, @EndDate, @AmountPaid, 'Active')
+        `);
+
+    const newBalance = await getBalanceService(userId);
+    return {
+        success: true,
+        userSubscriptionId: result.recordset[0].UserSubscriptionID,
+        startDate,
+        endDate,
+        amount,
+        newBalance,
+    };
+}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send, Clock, User, ShieldCheck } from 'lucide-react'
 import driverApi from '../../apis/driverApi'
@@ -12,14 +13,15 @@ const STATUS_COLORS = {
   Closed: 'bg-gray-100 text-gray-700 dark:text-gray-300'
 }
 
-const STATUS_LABELS = {
-  Open: 'Mới gửi',
-  Pending: 'Chờ phản hồi',
-  Resolved: 'Đã giải quyết',
-  Closed: 'Đã đóng'
+const STATUS_LABEL_KEYS = {
+  Open: 'driver.ticketDetail.statusOpen',
+  Pending: 'driver.ticketDetail.statusPending',
+  Resolved: 'driver.ticketDetail.statusResolved',
+  Closed: 'driver.ticketDetail.statusClosed'
 }
 
 const DriverTicketDetail = () => {
+  const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -37,7 +39,7 @@ const DriverTicketDetail = () => {
         setTicket(res.data)
       }
     } catch (error) {
-      toast.error('Lỗi khi tải chi tiết yêu cầu')
+      toast.error(t('driver.ticketDetail.loadError'))
       navigate('/driver/support')
     } finally {
       setLoading(false)
@@ -66,14 +68,14 @@ const DriverTicketDetail = () => {
         fetchDetail() // reload to get new message and status
       }
     } catch (error) {
-      toast.error('Lỗi khi gửi phản hồi')
+      toast.error(t('driver.ticketDetail.replyError'))
     } finally {
       setSubmitting(false)
     }
   }
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Đang tải dữ liệu...</div>
+    return <div className="p-8 text-center text-gray-500 dark:text-gray-400">{t('driver.ticketDetail.loading')}</div>
   }
 
   if (!ticket) return null
@@ -93,11 +95,11 @@ const DriverTicketDetail = () => {
         <div className="flex-1">
           <h1 className="text-lg font-bold text-gray-900 dark:text-white dark:text-white line-clamp-1">{ticket.Subject}</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
-            Tạo lúc: {dayjs(ticket.CreatedAt).format('DD/MM/YYYY HH:mm')}
+            {t('driver.ticketDetail.createdAt', { time: dayjs(ticket.CreatedAt).format('DD/MM/YYYY HH:mm') })}
           </p>
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${STATUS_COLORS[ticket.Status]}`}>
-          {STATUS_LABELS[ticket.Status]}
+          {t(STATUS_LABEL_KEYS[ticket.Status] || 'driver.ticketDetail.statusOpen')}
         </span>
       </div>
 
@@ -110,7 +112,7 @@ const DriverTicketDetail = () => {
             <User size={16} className="text-blue-600 dark:text-blue-400" />
           </div>
           <div className="flex flex-col gap-1 items-end">
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">Bạn</span>
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">{t('driver.ticketDetail.you')}</span>
             <div className="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none shadow-sm text-sm whitespace-pre-wrap">
               {ticket.Content}
             </div>
@@ -129,12 +131,11 @@ const DriverTicketDetail = () => {
               </div>
               <div className={`flex flex-col gap-1 ${isMe ? 'items-end' : ''}`}>
                 <span className={`text-xs font-semibold text-gray-500 dark:text-gray-400 ${isMe ? 'mr-1' : 'ml-1'}`}>
-                  {isMe ? 'Bạn' : 'Nhân viên hỗ trợ'}
+                  {isMe ? t('driver.ticketDetail.you') : t('driver.ticketDetail.staff')}
                 </span>
-                <div className={`p-4 rounded-2xl shadow-sm text-sm whitespace-pre-wrap ${
-                  isMe
-                    ? 'bg-blue-600 text-white rounded-tr-none'
-                    : 'bg-white dark:bg-slate-800 dark:bg-gray-800 border border-gray-100 dark:border-slate-700/50 dark:border-gray-700 text-gray-800 dark:text-gray-200 dark:text-gray-200 rounded-tl-none'
+                <div className={`p-4 rounded-2xl shadow-sm text-sm whitespace-pre-wrap ${isMe
+                  ? 'bg-blue-600 text-white rounded-tr-none'
+                  : 'bg-white dark:bg-slate-800 dark:bg-gray-800 border border-gray-100 dark:border-slate-700/50 dark:border-gray-700 text-gray-800 dark:text-gray-200 dark:text-gray-200 rounded-tl-none'
                 }`}>
                   {reply.Content}
                 </div>
@@ -152,14 +153,14 @@ const DriverTicketDetail = () => {
       <div className="p-4 bg-white dark:bg-slate-800 dark:bg-gray-900 border-t border-gray-100 dark:border-slate-700/50 dark:border-gray-800 rounded-b-2xl shrink-0 shadow-sm">
         {isClosed ? (
           <div className="text-center text-sm text-gray-500 dark:text-gray-400 p-2">
-            Yêu cầu này đã được đóng và không thể phản hồi thêm.
+            {t('driver.ticketDetail.closedHint')}
           </div>
         ) : (
           <form onSubmit={handleReply} className="flex gap-2 relative">
             <textarea
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
-              placeholder="Nhập phản hồi của bạn..."
+              placeholder={t('driver.ticketDetail.replyPlaceholder')}
               className="flex-1 max-h-32 min-h-[44px] rounded-2xl border border-gray-200 dark:border-slate-700 dark:border-gray-700 bg-gray-50 dark:bg-slate-900/50 dark:bg-gray-800 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:bg-white dark:bg-slate-800 dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-100 dark:text-white resize-none"
               rows={1}
               onKeyDown={(e) => {

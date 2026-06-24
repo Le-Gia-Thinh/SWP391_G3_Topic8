@@ -4,6 +4,7 @@ import {
   Wrench, Lock, Unlock, Power, Car, ShieldAlert
 } from 'lucide-react'
 import { toast } from 'react-toastify'
+import { useTranslation } from 'react-i18next'
 import {
   getBuildingsAPI,
   getFloorsAPI,
@@ -15,14 +16,15 @@ import {
 
 // ── Cấu hình hiển thị trạng thái slot ─────────────────────────
 const SLOT_CFG = {
-  Available: { label: 'Trống', dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200/60' },
-  Occupied: { label: 'Đang đỗ', dot: 'bg-blue-500', chip: 'bg-blue-50 text-blue-700 border-blue-200/60' },
-  Reserved: { label: 'Đặt trước', dot: 'bg-violet-500', chip: 'bg-violet-50 text-violet-700 border-violet-200/60' },
-  Maintenance: { label: 'Bảo trì', dot: 'bg-amber-500', chip: 'bg-amber-50 text-amber-700 border-amber-200/60' },
-  Blocked: { label: 'Đã khóa', dot: 'bg-red-500', chip: 'bg-red-50 text-red-700 border-red-200/60' }
+  Available: { labelKey: 'manager.config.slotStatus.available', dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 border-emerald-200/60' },
+  Occupied: { labelKey: 'manager.config.slotStatus.occupied', dot: 'bg-blue-500', chip: 'bg-blue-50 text-blue-700 border-blue-200/60' },
+  Reserved: { labelKey: 'manager.config.slotStatus.reserved', dot: 'bg-violet-500', chip: 'bg-violet-50 text-violet-700 border-violet-200/60' },
+  Maintenance: { labelKey: 'manager.config.slotStatus.maintenance', dot: 'bg-amber-500', chip: 'bg-amber-50 text-amber-700 border-amber-200/60' },
+  Blocked: { labelKey: 'manager.config.slotStatus.blocked', dot: 'bg-red-500', chip: 'bg-red-50 text-red-700 border-red-200/60' }
 }
 
 const ManagerConfig = () => {
+  const { t } = useTranslation()
   const [isLoaded, setIsLoaded] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -49,7 +51,7 @@ const ManagerConfig = () => {
         setSelectedBuildingId(bData[0].BuildingID)
       }
     } catch {
-      toast.error('Không thể tải dữ liệu cấu hình')
+      toast.error(t('manager.config.errLoad'))
     } finally {
       setLoading(false)
       setTimeout(() => setIsLoaded(true), 100)
@@ -66,11 +68,11 @@ const ManagerConfig = () => {
         floorName: floor.FloorName,
         isActive: floor.IsActive ? 0 : 1
       })
-      toast.success(`Đã ${floor.IsActive ? 'tắt' : 'bật'} ${floor.FloorName}`)
+      toast.success(floor.IsActive ? t('manager.config.toastFloorOff', { name: floor.FloorName }) : t('manager.config.toastFloorOn', { name: floor.FloorName }))
       const fRes = await getFloorsAPI()
       setFloors(fRes.data.data || [])
     } catch {
-      toast.error('Cập nhật trạng thái tầng thất bại')
+      toast.error(t('manager.config.errFloorToggle'))
     }
   }
 
@@ -92,12 +94,12 @@ const ManagerConfig = () => {
       {/* Header */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-sm border border-slate-200/60">
         <div className="px-2">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">Vận hành / Cấu hình bãi đỗ</p>
-          <h1 className="text-2xl font-bold text-slate-900 mt-1">Cấu hình Bãi đỗ</h1>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('manager.config.eyebrow')}</p>
+          <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('manager.config.title')}</h1>
         </div>
         <button onClick={loadAll}
           className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition self-start">
-          <RefreshCcw size={16} /> Làm mới
+          <RefreshCcw size={16} /> {t('manager.config.refresh')}
         </button>
       </div>
 
@@ -105,8 +107,8 @@ const ManagerConfig = () => {
       <div className="rounded-2xl border border-blue-200 bg-blue-50 px-5 py-3.5 text-sm font-medium text-blue-800 flex items-start gap-2.5">
         <Info size={18} className="shrink-0 mt-0.5" />
         <p>
-          Trang này để <strong>xem cấu trúc bãi đỗ</strong> và <strong>vận hành</strong>: bật/tắt tầng, chuyển slot sang bảo trì hoặc khóa.
-          Việc thêm/sửa/xóa tòa nhà, tầng, khu vực và slot do <strong>Quản trị viên (Admin)</strong> thực hiện.
+          {t('manager.config.scopeNoticePre')} <strong>{t('manager.config.scopeNoticeViewLabel')}</strong> {t('manager.config.scopeNoticeAnd')} <strong>{t('manager.config.scopeNoticeOperateLabel')}</strong>: {t('manager.config.scopeNoticeMid')}
+          {t('manager.config.scopeNoticeAdminPre')} <strong>{t('manager.config.scopeNoticeAdminLabel')}</strong> {t('manager.config.scopeNoticeAdminPost')}
         </p>
       </div>
 
@@ -118,8 +120,8 @@ const ManagerConfig = () => {
               <Building size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Tòa nhà</h2>
-              <p className="text-[12px] font-medium text-slate-500 mt-0.5">Chọn tòa nhà để xem các tầng và khu vực bên trong.</p>
+              <h2 className="text-lg font-bold text-slate-900">{t('manager.config.buildingSection')}</h2>
+              <p className="text-[12px] font-medium text-slate-500 mt-0.5">{t('manager.config.buildingSectionHint')}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2.5">
@@ -128,10 +130,10 @@ const ManagerConfig = () => {
               return (
                 <button key={b.BuildingID} onClick={() => setSelectedBuildingId(b.BuildingID)}
                   className={`rounded-2xl border px-4 py-3 text-left transition ${active ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-slate-200 bg-white hover:border-blue-200'
-                    }`}>
+                  }`}>
                   <p className={`text-sm font-bold ${active ? 'text-blue-800' : 'text-slate-800'}`}>{b.BuildingName}</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    {b.FloorCount ?? 0} tầng · {b.SlotCount ?? 0} slot
+                    {t('manager.config.buildingMeta', { floors: b.FloorCount ?? 0, slots: b.SlotCount ?? 0 })}
                   </p>
                 </button>
               )
@@ -139,8 +141,8 @@ const ManagerConfig = () => {
           </div>
           {selectedBuilding && (
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-slate-500 border-t border-slate-100 pt-3">
-              <span>Địa chỉ: <strong className="text-slate-700">{selectedBuilding.Address || '—'}</strong></span>
-              <span>Giờ hoạt động: <strong className="text-slate-700">{selectedBuilding.OperatingHours || '—'}</strong></span>
+              <span>{t('manager.config.addressLabel')} <strong className="text-slate-700">{selectedBuilding.Address || '—'}</strong></span>
+              <span>{t('manager.config.operatingHoursLabel')} <strong className="text-slate-700">{selectedBuilding.OperatingHours || '—'}</strong></span>
             </div>
           )}
         </div>
@@ -150,8 +152,8 @@ const ManagerConfig = () => {
       {buildingFloors.length === 0 ? (
         <div className="rounded-3xl bg-white p-10 shadow-sm border border-slate-200/60 text-center text-slate-400">
           <Layers size={40} className="mx-auto mb-3 text-slate-300" />
-          <p className="font-semibold text-slate-600">Tòa nhà này chưa có tầng nào</p>
-          <p className="text-sm mt-1">Admin cần tạo tầng trước khi vận hành.</p>
+          <p className="font-semibold text-slate-600">{t('manager.config.noFloorsTitle')}</p>
+          <p className="text-sm mt-1">{t('manager.config.noFloorsHint')}</p>
         </div>
       ) : (
         <div className="space-y-5">
@@ -180,6 +182,7 @@ const ManagerConfig = () => {
 
 // ── Card 1 tầng: header bật/tắt + danh sách zone ──────────────
 const FloorCard = ({ floor, zones, onToggle, onOpenZone }) => {
+  const { t } = useTranslation()
   const inactive = !floor.IsActive
   return (
     <section className={`rounded-3xl bg-white shadow-sm border transition-colors ${inactive ? 'border-slate-200/60 opacity-75' : 'border-slate-200/60 hover:border-blue-200'}`}>
@@ -193,13 +196,13 @@ const FloorCard = ({ floor, zones, onToggle, onOpenZone }) => {
             <div className="flex items-center gap-2">
               <h3 className="text-lg font-bold text-slate-900">{floor.FloorName}</h3>
               <span className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-[11px] font-semibold border ${floor.IsActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60' : 'bg-slate-100 text-slate-600 border-slate-200'
-                }`}>
+              }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${floor.IsActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                {floor.IsActive ? 'Đang hoạt động' : 'Đã tắt'}
+                {floor.IsActive ? t('manager.config.floorActive') : t('manager.config.floorInactive')}
               </span>
             </div>
             <p className="text-[12px] font-medium text-slate-500 mt-0.5">
-              {floor.ZoneCount ?? zones.length} khu vực · {floor.SlotCount ?? 0} slot
+              {t('manager.config.floorMeta', { zones: floor.ZoneCount ?? zones.length, slots: floor.SlotCount ?? 0 })}
             </p>
           </div>
         </div>
@@ -207,15 +210,15 @@ const FloorCard = ({ floor, zones, onToggle, onOpenZone }) => {
           className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${floor.IsActive
             ? 'border-slate-200 text-slate-700 hover:bg-slate-50'
             : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-            }`}>
-          <Power size={15} /> {floor.IsActive ? 'Tắt tầng' : 'Bật tầng'}
+          }`}>
+          <Power size={15} /> {floor.IsActive ? t('manager.config.turnOffFloor') : t('manager.config.turnOnFloor')}
         </button>
       </div>
 
       {/* Danh sách zone */}
       <div className="p-5">
         {zones.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-4">Tầng này chưa có khu vực nào.</p>
+          <p className="text-sm text-slate-400 text-center py-4">{t('manager.config.noZonesInFloor')}</p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {zones.map(zone => (
@@ -230,6 +233,7 @@ const FloorCard = ({ floor, zones, onToggle, onOpenZone }) => {
 
 // ── Card 1 zone: tên, loại xe, thanh sức chứa actual/total ────
 const ZoneCard = ({ zone, onOpen }) => {
+  const { t } = useTranslation()
   const total = zone.TotalSlots ?? 0
   const actual = zone.ActualSlots ?? 0
   const pct = total > 0 ? Math.min(100, Math.round((actual / total) * 100)) : 0
@@ -256,7 +260,7 @@ const ZoneCard = ({ zone, onOpen }) => {
       {/* Thanh sức chứa */}
       <div className="mt-3">
         <div className="flex items-center justify-between text-[11px] font-semibold mb-1">
-          <span className="text-slate-500">Sức chứa</span>
+          <span className="text-slate-500">{t('manager.config.capacityLabel')}</span>
           <span className={full ? 'text-amber-600' : 'text-slate-700'}>
             {actual}<span className="text-slate-400 font-normal"> / {total || '—'}</span>
           </span>
@@ -266,7 +270,7 @@ const ZoneCard = ({ zone, onOpen }) => {
             style={{ width: `${pct}%` }} />
         </div>
         {full && (
-          <p className="text-[10px] text-amber-600 font-medium mt-1">Đã đầy — Admin cần tăng sức chứa để thêm slot</p>
+          <p className="text-[10px] text-amber-600 font-medium mt-1">{t('manager.config.zoneFullHint')}</p>
         )}
       </div>
     </button>
@@ -275,6 +279,7 @@ const ZoneCard = ({ zone, onOpen }) => {
 
 // ── Modal: lưới slot của 1 zone + đổi trạng thái Maintenance/Blocked ──
 const ZoneSlotsModal = ({ zone, onClose }) => {
+  const { t } = useTranslation()
   const [slots, setSlots] = useState([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState(null)
@@ -286,11 +291,11 @@ const ZoneSlotsModal = ({ zone, onClose }) => {
       const res = await getParkingSlotsAPI({ zoneId: zone.ZoneID, limit: 200 })
       setSlots(res.data.data || [])
     } catch {
-      toast.error('Không thể tải danh sách slot')
+      toast.error(t('manager.config.errLoadSlots'))
     } finally {
       setLoading(false)
     }
-  }, [zone.ZoneID])
+  }, [zone.ZoneID, t])
 
   useEffect(() => { load() }, [load])
 
@@ -298,11 +303,15 @@ const ZoneSlotsModal = ({ zone, onClose }) => {
     setBusyId(slot.SlotID)
     try {
       await updateSlotStatusAPI(slot.SlotID, { status: newStatus })
-      const labels = { Available: 'mở lại (Trống)', Maintenance: 'chuyển bảo trì', Blocked: 'khóa' }
-      toast.success(`Đã ${labels[newStatus]} slot ${slot.SlotCode}`)
+      const labels = {
+        Available: t('manager.config.actionLabels.available'),
+        Maintenance: t('manager.config.actionLabels.maintenance'),
+        Blocked: t('manager.config.actionLabels.blocked')
+      }
+      toast.success(t('manager.config.toastSlotChanged', { action: labels[newStatus], code: slot.SlotCode }))
       load()
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Cập nhật thất bại')
+      toast.error(err?.response?.data?.message || t('manager.config.errUpdateSlot'))
     } finally {
       setBusyId(null)
     }
@@ -316,7 +325,7 @@ const ZoneSlotsModal = ({ zone, onClose }) => {
           <div>
             <h3 className="text-lg font-bold text-slate-900">{zone.ZoneName}</h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              {zone.FloorName} · {zone.AllowedVehicleName} · {zone.ActualSlots ?? 0}/{zone.TotalSlots ?? '—'} slot
+              {zone.FloorName} · {zone.AllowedVehicleName} · {zone.ActualSlots ?? 0}/{zone.TotalSlots ?? '—'} {t('manager.config.slotUnit')}
             </p>
           </div>
           <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100 transition"><X size={18} /></button>
@@ -327,7 +336,7 @@ const ZoneSlotsModal = ({ zone, onClose }) => {
           <div className="flex flex-wrap gap-2 mb-5">
             {Object.entries(SLOT_CFG).map(([k, c]) => (
               <span key={k} className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold border ${c.chip}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />{c.label}
+                <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />{t(c.labelKey)}
               </span>
             ))}
           </div>
@@ -339,8 +348,8 @@ const ZoneSlotsModal = ({ zone, onClose }) => {
           ) : slots.length === 0 ? (
             <div className="py-16 text-center text-slate-400">
               <Info size={36} className="mx-auto mb-2 text-slate-300" />
-              <p className="font-semibold text-slate-600">Khu vực này chưa có slot</p>
-              <p className="text-sm mt-1">Admin cần thêm slot vào khu vực này.</p>
+              <p className="font-semibold text-slate-600">{t('manager.config.noSlotsInZone')}</p>
+              <p className="text-sm mt-1">{t('manager.config.noSlotsInZoneHint')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -355,7 +364,7 @@ const ZoneSlotsModal = ({ zone, onClose }) => {
                       <span className="font-black text-slate-900 text-sm">{slot.SlotCode}</span>
                       <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
                     </div>
-                    <p className="text-[11px] font-semibold mt-0.5">{cfg.label}</p>
+                    <p className="text-[11px] font-semibold mt-0.5">{t(cfg.labelKey)}</p>
                     {slot.PlateNumber && (
                       <p className="text-[10px] text-slate-500 mt-1 truncate">🚗 {slot.PlateNumber}</p>
                     )}
@@ -363,26 +372,26 @@ const ZoneSlotsModal = ({ zone, onClose }) => {
                     {/* Hành động: chỉ hiện khi slot rảnh để thao tác */}
                     {locked ? (
                       <p className="mt-2 text-[10px] text-slate-500 flex items-center gap-1">
-                        <ShieldAlert size={11} /> Đang sử dụng
+                        <ShieldAlert size={11} /> {t('manager.config.inUse')}
                       </p>
                     ) : (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {slot.SlotStatus !== 'Available' && (
                           <button disabled={busyId === slot.SlotID} onClick={() => changeStatus(slot, 'Available')}
                             className="inline-flex items-center gap-1 rounded-lg bg-white/70 border border-emerald-200 px-2 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-50 transition disabled:opacity-50">
-                            <Unlock size={11} /> Mở
+                            <Unlock size={11} /> {t('manager.config.openBtn')}
                           </button>
                         )}
                         {slot.SlotStatus !== 'Maintenance' && (
                           <button disabled={busyId === slot.SlotID} onClick={() => changeStatus(slot, 'Maintenance')}
                             className="inline-flex items-center gap-1 rounded-lg bg-white/70 border border-amber-200 px-2 py-1 text-[10px] font-bold text-amber-700 hover:bg-amber-50 transition disabled:opacity-50">
-                            <Wrench size={11} /> Bảo trì
+                            <Wrench size={11} /> {t('manager.config.maintenanceBtn')}
                           </button>
                         )}
                         {slot.SlotStatus !== 'Blocked' && (
                           <button disabled={busyId === slot.SlotID} onClick={() => changeStatus(slot, 'Blocked')}
                             className="inline-flex items-center gap-1 rounded-lg bg-white/70 border border-red-200 px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-50 transition disabled:opacity-50">
-                            <Lock size={11} /> Khóa
+                            <Lock size={11} /> {t('manager.config.blockBtn')}
                           </button>
                         )}
                       </div>

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Car,
   Bike,
@@ -35,6 +36,7 @@ function formatDate(value) {
 }
 
 const DriverVehicles = () => {
+  const { t } = useTranslation()
   const [vehicles, setVehicles] = useState([])
   const [vehicleTypes, setVehicleTypes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -71,11 +73,11 @@ const DriverVehicles = () => {
         setVehicleTypes(typeResult.value?.data || typeResult.value || [])
       }
     } catch {
-      toast.error('Không thể tải danh sách phương tiện.')
+      toast.error(t('driver.vehicles.loadError'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     fetchData()
@@ -101,11 +103,11 @@ const DriverVehicles = () => {
     e.preventDefault()
 
     if (!form.plateNumber.trim()) {
-      toast.error('Vui lòng nhập biển số xe.')
+      toast.error(t('driver.vehicles.validatePlate'))
       return
     }
     if (!form.vehicleTypeId) {
-      toast.error('Vui lòng chọn loại xe.')
+      toast.error(t('driver.vehicles.validateType'))
       return
     }
 
@@ -120,10 +122,10 @@ const DriverVehicles = () => {
 
       if (editingVehicle) {
         await driverApi.updateVehicle(editingVehicle.VehicleID, payload)
-        toast.success('Cập nhật phương tiện thành công.')
+        toast.success(t('driver.vehicles.updateSuccess'))
       } else {
         await driverApi.addVehicle(payload)
-        toast.success('Thêm phương tiện thành công.')
+        toast.success(t('driver.vehicles.addSuccess'))
       }
 
       resetForm()
@@ -138,7 +140,7 @@ const DriverVehicles = () => {
   const handleDelete = async (vehicleId) => {
     try {
       await driverApi.deleteVehicle(vehicleId)
-      toast.success('Đã xóa phương tiện.')
+      toast.success(t('driver.vehicles.deleteSuccess'))
       setDeleteConfirm(null)
       fetchData()
     } catch {
@@ -149,7 +151,7 @@ const DriverVehicles = () => {
   const handleSetDefault = async (vehicleId) => {
     try {
       await driverApi.setDefaultVehicle(vehicleId)
-      toast.success('Đã đặt làm phương tiện mặc định.')
+      toast.success(t('driver.vehicles.setDefaultSuccess'))
       fetchData()
     } catch {
       // authorizeAxios đã toast lỗi
@@ -161,7 +163,7 @@ const DriverVehicles = () => {
       <div className="flex min-h-[500px] items-center justify-center">
         <div className="flex items-center gap-3 rounded-2xl bg-white dark:bg-slate-800 px-6 py-4 text-sm font-semibold text-gray-600 dark:text-gray-400 shadow-sm">
           <Loader2 size={20} className="animate-spin text-blue-600 dark:text-blue-400" />
-          Đang tải phương tiện...
+          {t('driver.vehicles.loading')}
         </div>
       </div>
     )
@@ -172,8 +174,8 @@ const DriverVehicles = () => {
       {/* Header */}
       <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Quản lý phương tiện</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Đăng ký và quản lý xe của bạn để đặt chỗ nhanh hơn.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('driver.vehicles.title')}</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('driver.vehicles.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -181,14 +183,14 @@ const DriverVehicles = () => {
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 shadow-sm transition hover:bg-gray-50 dark:hover:bg-slate-800"
           >
             <RefreshCw size={16} />
-            Làm mới
+            {t('driver.vehicles.refresh')}
           </button>
           <button
             onClick={openAddForm}
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 active:scale-95"
           >
             <Plus size={16} />
-            Thêm xe mới
+            {t('driver.vehicles.addNew')}
           </button>
         </div>
       </section>
@@ -198,7 +200,7 @@ const DriverVehicles = () => {
         <section className="rounded-2xl border border-blue-100 bg-blue-50/30 p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-              {editingVehicle ? 'Cập nhật phương tiện' : 'Thêm phương tiện mới'}
+              {editingVehicle ? t('driver.vehicles.formTitleEdit') : t('driver.vehicles.formTitleAdd')}
             </h2>
             <button onClick={resetForm} className="rounded-lg p-1.5 text-gray-400 hover:bg-white dark:bg-slate-800 hover:text-gray-600 dark:text-gray-400 transition">
               <X size={20} />
@@ -207,24 +209,24 @@ const DriverVehicles = () => {
 
           <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Biển số xe *</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('driver.vehicles.plateLabel')}</label>
               <input
                 type="text"
                 value={form.plateNumber}
                 onChange={(e) => setForm((prev) => ({ ...prev, plateNumber: e.target.value.toUpperCase() }))}
-                placeholder="VD: 29A-12345"
+                placeholder={t('driver.vehicles.platePlaceholder')}
                 className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-medium text-gray-900 dark:text-white transition focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Loại xe *</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('driver.vehicles.typeLabel')}</label>
               <select
                 value={form.vehicleTypeId}
                 onChange={(e) => setForm((prev) => ({ ...prev, vehicleTypeId: e.target.value }))}
                 className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-medium text-gray-900 dark:text-white transition focus:border-blue-500 focus:outline-none"
               >
-                <option value="">-- Chọn loại xe --</option>
+                <option value="">{t('driver.vehicles.typeSelect')}</option>
                 {(Array.isArray(vehicleTypes) ? vehicleTypes : []).map((vt) => (
                   <option key={vt.VehicleTypeID} value={vt.VehicleTypeID}>
                     {vt.VehicleName} ({vt.VehicleCode})
@@ -234,23 +236,23 @@ const DriverVehicles = () => {
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Hãng xe</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('driver.vehicles.brandLabel')}</label>
               <input
                 type="text"
                 value={form.vehicleBrand}
                 onChange={(e) => setForm((prev) => ({ ...prev, vehicleBrand: e.target.value }))}
-                placeholder="VD: Honda, Toyota, Kia..."
+                placeholder={t('driver.vehicles.brandPlaceholder')}
                 className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-medium text-gray-900 dark:text-white transition focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Màu sắc</label>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{t('driver.vehicles.colorLabel')}</label>
               <input
                 type="text"
                 value={form.vehicleColor}
                 onChange={(e) => setForm((prev) => ({ ...prev, vehicleColor: e.target.value }))}
-                placeholder="VD: Đỏ, Trắng, Đen..."
+                placeholder={t('driver.vehicles.colorPlaceholder')}
                 className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-medium text-gray-900 dark:text-white transition focus:border-blue-500 focus:outline-none"
               />
             </div>
@@ -261,7 +263,7 @@ const DriverVehicles = () => {
                 onClick={resetForm}
                 className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-bold text-gray-600 dark:text-gray-400 transition hover:bg-gray-50 dark:hover:bg-slate-800"
               >
-                Hủy
+                {t('driver.vehicles.cancel')}
               </button>
               <button
                 type="submit"
@@ -269,7 +271,7 @@ const DriverVehicles = () => {
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                {editingVehicle ? 'Cập nhật' : 'Thêm xe'}
+                {editingVehicle ? t('driver.vehicles.update') : t('driver.vehicles.add')}
               </button>
             </div>
           </form>
@@ -283,16 +285,16 @@ const DriverVehicles = () => {
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 text-gray-300 shadow-sm border border-gray-100 dark:border-slate-700/50">
               <Car size={32} />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Chưa có phương tiện</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t('driver.vehicles.emptyTitle')}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mb-6">
-              Đăng ký phương tiện để tự động điền biển số khi đặt chỗ.
+              {t('driver.vehicles.emptyHint')}
             </p>
             <button
               onClick={openAddForm}
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 active:scale-95"
             >
               <Plus size={16} />
-              Thêm xe đầu tiên
+              {t('driver.vehicles.addFirst')}
             </button>
           </div>
         ) : (
@@ -304,15 +306,14 @@ const DriverVehicles = () => {
               return (
                 <div
                   key={vehicle.VehicleID}
-                  className={`relative rounded-2xl border bg-white dark:bg-slate-800 p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 ${
-                    vehicle.IsDefault ? `${style.border} ring-2 ring-blue-100` : 'border-gray-100 dark:border-slate-700/50'
+                  className={`relative rounded-2xl border bg-white dark:bg-slate-800 p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 ${vehicle.IsDefault ? `${style.border} ring-2 ring-blue-100` : 'border-gray-100 dark:border-slate-700/50'
                   }`}
                 >
                   {/* Default Badge */}
                   {vehicle.IsDefault && (
                     <div className="absolute -top-2.5 right-4 inline-flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
                       <Star size={10} fill="currentColor" />
-                      Mặc định
+                      {t('driver.vehicles.defaultBadge')}
                     </div>
                   )}
 
@@ -331,18 +332,18 @@ const DriverVehicles = () => {
                   <div className="space-y-2 rounded-xl bg-gray-50 dark:bg-slate-900/50 p-3 text-sm mb-4">
                     {vehicle.VehicleBrand && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Hãng xe</span>
+                        <span className="text-gray-500 dark:text-gray-400">{t('driver.vehicles.brand')}</span>
                         <span className="font-bold text-gray-800 dark:text-gray-200">{vehicle.VehicleBrand}</span>
                       </div>
                     )}
                     {vehicle.VehicleColor && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Màu sắc</span>
+                        <span className="text-gray-500 dark:text-gray-400">{t('driver.vehicles.color')}</span>
                         <span className="font-bold text-gray-800 dark:text-gray-200">{vehicle.VehicleColor}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Ngày thêm</span>
+                      <span className="text-gray-500 dark:text-gray-400">{t('driver.vehicles.createdAt')}</span>
                       <span className="font-bold text-gray-800 dark:text-gray-200">{formatDate(vehicle.CreatedAt)}</span>
                     </div>
                   </div>
@@ -354,7 +355,7 @@ const DriverVehicles = () => {
                         onClick={() => handleSetDefault(vehicle.VehicleID)}
                         className="flex-1 rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-900/20 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 transition hover:bg-blue-100"
                       >
-                        Đặt mặc định
+                        {t('driver.vehicles.setDefault')}
                       </button>
                     )}
                     <button
@@ -375,20 +376,20 @@ const DriverVehicles = () => {
                   {deleteConfirm === vehicle.VehicleID && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl bg-white dark:bg-slate-800/95 backdrop-blur-sm p-6">
                       <AlertCircle size={32} className="text-red-500 mb-2" />
-                      <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Xóa phương tiện?</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 text-center">Xe {vehicle.PlateNumber} sẽ bị xóa khỏi danh sách.</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">{t('driver.vehicles.deleteTitle')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 text-center">{t('driver.vehicles.deleteHint', { plate: vehicle.PlateNumber })}</p>
                       <div className="flex gap-2">
                         <button
                           onClick={() => setDeleteConfirm(null)}
                           className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800"
                         >
-                          Hủy
+                          {t('driver.vehicles.cancel')}
                         </button>
                         <button
                           onClick={() => handleDelete(vehicle.VehicleID)}
                           className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700"
                         >
-                          Xóa
+                          {t('driver.vehicles.delete')}
                         </button>
                       </div>
                     </div>

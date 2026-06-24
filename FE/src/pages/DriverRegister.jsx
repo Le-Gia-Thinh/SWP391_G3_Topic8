@@ -1,5 +1,6 @@
 // src/pages/DriverRegister.jsx
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Alert, Box, Button, Checkbox, FormControl, FormControlLabel,
   IconButton, InputAdornment, MenuItem, Paper, Select, TextField
@@ -12,8 +13,6 @@ import { useAuth } from '../contexts/AuthContext'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VEHICLE_OPTIONS = ['Xe Máy', 'Ô Tô', 'Xe Đạp']
-
 const INITIAL_FORM = {
   fullName: '',
   phoneNumber: '',
@@ -21,18 +20,9 @@ const INITIAL_FORM = {
   password: '',
   confirmPassword: '',
   plateNumber: '',
-  vehicleType: 'Xe Máy',
+  vehicleType: 'motorbike', // key i18n, không phải label
   acceptedTerms: false
 }
-
-const FIELDS = [
-  { name: 'fullName', label: 'Họ và Tên', placeholder: 'Nguyễn Văn A', fullWidth: true, hasUserIcon: true },
-  { name: 'phoneNumber', label: 'Số điện thoại', placeholder: '0901234567' },
-  { name: 'email', label: 'Email', placeholder: 'nguyenvana@gmail.com', type: 'email' },
-  { name: 'password', label: 'Mật khẩu', placeholder: 'Ít nhất 8 ký tự', type: 'password' },
-  { name: 'confirmPassword', label: 'Xác nhận mật khẩu', placeholder: 'Nhập lại mật khẩu', type: 'password' },
-  { name: 'plateNumber', label: 'Biển số xe (Tùy chọn)', placeholder: 'VD: 59A-123.45' }
-]
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -90,26 +80,26 @@ const RE = {
   plate: /^(\d{2}[A-Z]{1,2}-?\d{3}\.?\d{2}|\d{2}[A-Z]{1,2}-?\d{4,5})$/i
 }
 
-function validate(data) {
+function validate(data, t) {
   const errors = {}
   if (!data.fullName.trim())
-    errors.fullName = 'Vui lòng nhập họ và tên'
+    errors.fullName = t('auth.register.fullNameRequired')
   if (!data.phoneNumber.trim())
-    errors.phoneNumber = 'Vui lòng nhập số điện thoại'
+    errors.phoneNumber = t('auth.register.phoneRequired')
   else if (!RE.phone.test(data.phoneNumber.trim()))
-    errors.phoneNumber = 'Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0'
+    errors.phoneNumber = t('auth.register.phoneInvalid')
   if (!data.email.trim())
-    errors.email = 'Vui lòng nhập email'
+    errors.email = t('auth.register.emailRequired')
   else if (!RE.email.test(data.email.trim()))
-    errors.email = 'Email không đúng định dạng'
+    errors.email = t('auth.register.emailInvalid')
   if (!data.password || data.password.length < 8)
-    errors.password = 'Mật khẩu phải chứa ít nhất 8 ký tự'
+    errors.password = t('auth.register.passwordTooShort')
   if (data.password !== data.confirmPassword)
-    errors.confirmPassword = 'Mật khẩu và xác nhận mật khẩu không khớp'
+    errors.confirmPassword = t('auth.register.confirmPasswordMismatch')
   if (data.plateNumber.trim() && !RE.plate.test(data.plateNumber.trim()))
-    errors.plateNumber = 'Biển số xe không đúng định dạng. Ví dụ: 59A-123.45'
+    errors.plateNumber = t('auth.register.plateNumberInvalid')
   if (!data.acceptedTerms)
-    errors.acceptedTerms = 'Vui lòng đồng ý với các điều khoản dịch vụ để tiếp tục'
+    errors.acceptedTerms = t('auth.register.acceptTermsRequired')
   return errors
 }
 
@@ -161,6 +151,7 @@ function FieldItem({ field, value, error, onChange, showPassword, onTogglePasswo
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function DriverRegister() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
 
   // FIX 1: dùng AuthContext để kiểm tra đã login chưa
@@ -177,6 +168,22 @@ export default function DriverRegister() {
     return <Navigate to={getRedirectPath(user?.roleName)} replace />
   }
 
+  // Build FIELDS với t() - vào trong component để có access t
+  const FIELDS = [
+    { name: 'fullName', label: t('auth.register.fullName'), placeholder: t('auth.register.fullNamePlaceholder'), fullWidth: true, hasUserIcon: true },
+    { name: 'phoneNumber', label: t('auth.register.phoneNumber'), placeholder: t('auth.register.phoneNumberPlaceholder') },
+    { name: 'email', label: t('auth.register.email'), placeholder: t('auth.register.emailPlaceholder'), type: 'email' },
+    { name: 'password', label: t('auth.register.password'), placeholder: t('auth.register.passwordPlaceholder'), type: 'password' },
+    { name: 'confirmPassword', label: t('auth.register.confirmPassword'), placeholder: t('auth.register.confirmPasswordPlaceholder'), type: 'password' },
+    { name: 'plateNumber', label: t('auth.register.plateNumber'), placeholder: t('auth.register.plateNumberPlaceholder') }
+  ]
+
+  const VEHICLE_OPTIONS = [
+    { key: 'motorbike', label: t('auth.register.vehicleOptions.motorbike') },
+    { key: 'car', label: t('auth.register.vehicleOptions.car') },
+    { key: 'bicycle', label: t('auth.register.vehicleOptions.bicycle') }
+  ]
+
   const handleChange = ({ target: { name, value, checked, type } }) => {
     setFormData(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
     // Xóa error của field khi user bắt đầu nhập lại
@@ -189,7 +196,7 @@ export default function DriverRegister() {
     e.preventDefault()
     setServerErrors([])
 
-    const errors = validate(formData)
+    const errors = validate(formData, t)
     if (Object.keys(errors).length) {
       setFieldErrors(errors)
       return
@@ -211,12 +218,12 @@ export default function DriverRegister() {
 
       localStorage.setItem('pendingVerifyEmail', formData.email.trim().toLowerCase())
       localStorage.removeItem('emailVerified')
-      toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác minh tài khoản.')
+      toast.success(t('auth.register.registerSuccess'))
       navigate('/verify-email/pending', { replace: true })
     } catch {
       // FIX 5: lỗi từ server đã được authorizeAxios interceptor toast rồi
       // Chỉ cần set serverErrors nếu cần hiển thị thêm chi tiết
-      setServerErrors(['Đăng ký thất bại, vui lòng kiểm tra lại thông tin.'])
+      setServerErrors([t('auth.register.registerFailedDefault')])
     } finally {
       setIsSubmitting(false)
     }
@@ -232,10 +239,10 @@ export default function DriverRegister() {
         {/* Header */}
         <Box className="text-center mb-8">
           <Box component="h1" className="text-2xl font-bold text-gray-900 mb-2">
-            Tạo tài khoản Tài xế mới
+            {t('auth.register.title')}
           </Box>
           <Box component="p" className="text-sm text-gray-500">
-            Bắt đầu tham gia để trải nghiệm dịch vụ đỗ xe thông minh
+            {t('auth.register.subtitle')}
           </Box>
         </Box>
 
@@ -245,9 +252,9 @@ export default function DriverRegister() {
             <User className="w-5 h-5" />
           </Box>
           <Box>
-            <Box component="h2" className="font-bold text-gray-900 text-sm">Thông tin cá nhân</Box>
+            <Box component="h2" className="font-bold text-gray-900 text-sm">{t('auth.register.personalInfoTitle')}</Box>
             <Box component="p" className="text-xs text-gray-500">
-              Vui lòng điền chính xác thông tin để được hỗ trợ tốt nhất
+              {t('auth.register.personalInfoSubtitle')}
             </Box>
           </Box>
         </Box>
@@ -287,7 +294,7 @@ export default function DriverRegister() {
             {/* Vehicle type — hiển thị UI nhưng chưa lưu DB */}
             <Box>
               <Box component="label" className="block text-xs font-bold text-gray-700 mb-1.5">
-                Loại phương tiện mặc định
+                {t('auth.register.vehicleType')}
               </Box>
               <FormControl fullWidth sx={sx.input}>
                 <Select
@@ -297,7 +304,7 @@ export default function DriverRegister() {
                   displayEmpty
                 >
                   {VEHICLE_OPTIONS.map(opt => (
-                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                    <MenuItem key={opt.key} value={opt.key}>{opt.label}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -318,13 +325,13 @@ export default function DriverRegister() {
               }
               label={
                 <Box component="span" className="text-sm text-gray-600 select-none">
-                  Tôi đồng ý với{' '}
+                  {t('auth.register.acceptTermsPrefix')}{' '}
                   <Box component="a" href="#" className="text-blue-600 font-medium hover:underline">
-                    Điều khoản sử dụng
+                    {t('auth.register.termsOfService')}
                   </Box>
-                  {' '}và{' '}
+                  {' '}{t('auth.register.and')}{' '}
                   <Box component="a" href="#" className="text-blue-600 font-medium hover:underline">
-                    Chính sách bảo mật
+                    {t('auth.register.privacyPolicy')}
                   </Box>
                 </Box>
               }
@@ -343,7 +350,7 @@ export default function DriverRegister() {
             disabled={isSubmitting}
             sx={sx.primaryBtn}
           >
-            {isSubmitting ? 'Đang đăng ký...' : 'Đăng ký ngay'}
+            {isSubmitting ? t('auth.register.submitting') : t('auth.register.submit')}
           </Button>
 
           <Box className="text-center">
@@ -352,7 +359,7 @@ export default function DriverRegister() {
               onClick={() => navigate('/login')}
               sx={sx.secondaryBtn}
             >
-              Quay lại Đăng nhập
+              {t('auth.register.backToLogin')}
             </Button>
           </Box>
         </Box>
@@ -363,12 +370,10 @@ export default function DriverRegister() {
             <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <Box>
               <Box component="h3" className="text-sm font-bold text-blue-800 mb-1">
-                Quy Trình Duyệt Tài Khoản
+                {t('auth.register.approvalNoticeTitle')}
               </Box>
               <Box component="p" className="text-xs text-blue-600 leading-relaxed">
-                Tài khoản sau khi đăng ký sẽ được phê duyệt bởi Ban Quản Lý (BQL).
-                Thông báo kết quả sẽ được gửi qua số điện thoại hoặc email.
-                Quá trình xét duyệt có thể mất từ 1 – 2 ngày làm việc.
+                {t('auth.register.approvalNoticeBody')}
               </Box>
             </Box>
           </Box>

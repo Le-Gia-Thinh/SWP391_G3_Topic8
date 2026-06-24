@@ -1,19 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'react-toastify'
 import driverApi from '../../apis/driverApi'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 
+// Bỏ label/severity cứng, chỉ giữ id + severity raw (sẽ i18n hoá qua key)
 const ISSUE_TYPES = [
-  { id: 'not_found', label: 'Không tìm thấy đặt chỗ', severity: 'Trung bình' },
-  { id: 'no_session', label: 'Không thấy phiên hoạt động', severity: 'Cao' },
-  { id: 'wrong_fee', label: 'Sai mức phí', severity: 'Trung bình' },
-  { id: 'no_vehicle', label: 'Không tìm thấy phương tiện', severity: 'Trung bình' },
-  { id: 'occupied', label: 'Vị trí đã bị chiếm', severity: 'Cao' },
-  { id: 'wrong_plate', label: 'Sai biển số xe', severity: 'Trung bình' },
-  { id: 'payment', label: 'Vấn đề thanh toán', severity: 'Cao' },
-  { id: 'other', label: 'Vấn đề khác', severity: 'Thấp' }
+  { id: 'not_found', severity: 'Trung bình' },
+  { id: 'no_session', severity: 'Cao' },
+  { id: 'wrong_fee', severity: 'Trung bình' },
+  { id: 'no_vehicle', severity: 'Trung bình' },
+  { id: 'occupied', severity: 'Cao' },
+  { id: 'wrong_plate', severity: 'Trung bình' },
+  { id: 'payment', severity: 'Cao' },
+  { id: 'other', severity: 'Thấp' }
 ]
 
 function getValue(obj, ...keys) {
@@ -40,21 +42,6 @@ function formatDateTime(value) {
   })
 }
 
-function getStatusLabel(status) {
-  const map = {
-    Active: 'Đang đỗ',
-    Completed: 'Đã hoàn tất',
-    Reserved: 'Đã đặt',
-    Expired: 'Hết hạn',
-    Cancelled: 'Đã hủy',
-    Open: 'Đang mở',
-    InProgress: 'Đang xử lý',
-    Resolved: 'Đã xử lý'
-  }
-
-  return map[status] || status || '—'
-}
-
 function normalizeAttachments(files) {
   return files.map((file) => ({
     id: `${file.name}-${file.lastModified}-${file.size}`,
@@ -65,6 +52,7 @@ function normalizeAttachments(files) {
 }
 
 const DriverReport = () => {
+  const { t } = useTranslation()
   const [selectedIssue, setSelectedIssue] = useState('not_found')
   const [selectedRelatedId, setSelectedRelatedId] = useState('')
   const [description, setDescription] = useState('')
@@ -86,6 +74,15 @@ const DriverReport = () => {
     return ISSUE_TYPES.find((issue) => issue.id === selectedIssue)
   }, [selectedIssue])
 
+  // Helper: lấy label i18n cho issue id
+  const getIssueLabel = (id) => t(`driver.report.issues.${id}`)
+
+  // Helper: lấy label trạng thái sự cố
+  const getStatusLabel = (status) => {
+    if (!status) return '—'
+    return t(`driver.report.incidentStatus.${status}`, status)
+  }
+
   const relatedOptions = useMemo(() => {
     const options = []
 
@@ -95,11 +92,13 @@ const DriverReport = () => {
 
     activeSessions.forEach((session) => {
       const sessionId = getValue(session, 'SessionID', 'sessionId')
+      const code = getValue(session, 'SessionCode', 'sessionCode') || sessionId
+      const plate = getValue(session, 'PlateNumber', 'plateNumber') || t('driver.report.noPlate')
 
       options.push({
         id: `session-${sessionId}`,
         kind: 'session',
-        label: `Phiên hiện tại (${getValue(session, 'SessionCode', 'sessionCode') || sessionId} - ${getValue(session, 'PlateNumber', 'plateNumber') || 'Chưa có biển số'})`,
+        label: t('driver.report.relatedSession', { code, plate }),
         sessionId,
         reservationId: getValue(session, 'ReservationID', 'reservationId') || null,
         bookingCode: getValue(session, 'BookingCode', 'bookingCode') || '',
@@ -109,7 +108,7 @@ const DriverReport = () => {
         buildingName: getValue(session, 'BuildingName', 'buildingName') || '',
         time: getValue(session, 'EntryTime', 'entryTime'),
         status: getValue(session, 'SessionStatus', 'sessionStatus') || 'Active',
-        type: 'Phiên gửi xe hiện tại'
+        type: t('driver.report.relatedTypeSession')
       })
     })
 
@@ -123,10 +122,13 @@ const DriverReport = () => {
 
       if (!reservationId) return
 
+      const code = getValue(reservation, 'BookingCode', 'bookingCode') || `BK-${reservationId}`
+      const plate = getValue(reservation, 'PlateNumber', 'plateNumber') || t('driver.report.noPlate')
+
       options.push({
         id: `reservation-${reservationId}`,
         kind: 'reservation',
-        label: `${getValue(reservation, 'BookingCode', 'bookingCode') || `BK-${reservationId}`} - ${getValue(reservation, 'PlateNumber', 'plateNumber') || 'Chưa check-in'}`,
+        label: t('driver.report.relatedReservation', { code, plate }),
         sessionId: getValue(reservation, 'SessionID', 'sessionId') || null,
         reservationId,
         bookingCode: getValue(reservation, 'BookingCode', 'bookingCode') || '',
@@ -136,7 +138,7 @@ const DriverReport = () => {
         buildingName: getValue(reservation, 'BuildingName', 'buildingName') || '',
         time: getValue(reservation, 'StartTime', 'startTime', 'CreatedAt', 'createdAt'),
         status: getValue(reservation, 'ReservationStatus', 'reservationStatus'),
-        type: 'Đặt chỗ'
+        type: t('driver.report.relatedTypeReservation')
       })
     })
 
@@ -144,7 +146,7 @@ const DriverReport = () => {
       options.push({
         id: 'none',
         kind: 'none',
-        label: 'Không có phiên/đặt chỗ liên quan',
+        label: t('driver.report.relatedNone'),
         sessionId: null,
         reservationId: null,
         bookingCode: '',
@@ -154,12 +156,12 @@ const DriverReport = () => {
         buildingName: '',
         time: '',
         status: '',
-        type: 'Không có dữ liệu liên quan'
+        type: t('driver.report.relatedTypeNoData')
       })
     }
 
     return options
-  }, [context])
+  }, [context, t])
 
   const selectedRelated = useMemo(() => {
     return relatedOptions.find((item) => item.id === selectedRelatedId) || relatedOptions[0]
@@ -214,7 +216,7 @@ const DriverReport = () => {
     })
 
     if (invalidFile) {
-      toast.error('Chỉ chấp nhận ảnh JPG/PNG và mỗi file tối đa 5MB.')
+      toast.error(t('driver.report.attachInvalid'))
       event.target.value = ''
       return
     }
@@ -235,18 +237,18 @@ const DriverReport = () => {
 
   const handleSubmit = async () => {
     if (!selectedIssue) {
-      toast.error('Vui lòng chọn loại sự cố.')
+      toast.error(t('driver.report.validateType'))
       return
     }
 
     if (!description.trim() || description.trim().length < 5) {
-      toast.error('Vui lòng mô tả sự cố rõ hơn, tối thiểu 5 ký tự.')
+      toast.error(t('driver.report.validateDesc'))
       return
     }
 
     const payload = {
       issueType: selectedIssue,
-      issueLabel: selectedIssueData?.label || '',
+      issueLabel: getIssueLabel(selectedIssue),
       sessionId: selectedRelated?.kind === 'session' ? selectedRelated.sessionId : selectedRelated?.sessionId || null,
       reservationId: selectedRelated?.kind === 'reservation' ? selectedRelated.reservationId : selectedRelated?.reservationId || null,
       bookingCode: selectedRelated?.bookingCode || '',
@@ -260,7 +262,7 @@ const DriverReport = () => {
     try {
       const response = await driverApi.createReport(payload)
 
-      toast.success(response.message || 'Gửi báo cáo sự cố thành công.')
+      toast.success(response.message || t('driver.report.submitSuccess'))
       setIsSubmitted(true)
       setDescription('')
       setAttachments([])
@@ -288,7 +290,7 @@ const DriverReport = () => {
     return (
       <div className="flex min-h-[500px] items-center justify-center">
         <div className="rounded-2xl bg-white dark:bg-slate-800 px-6 py-4 text-sm font-bold text-gray-600 dark:text-gray-400 shadow-sm">
-          Đang tải dữ liệu báo cáo...
+          {t('driver.report.loading')}
         </div>
       </div>
     )
@@ -299,18 +301,18 @@ const DriverReport = () => {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Báo cáo sự cố
+            {t('driver.report.title')}
           </h1>
 
           <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span>🏢</span>
-            <span>{selectedRelated?.buildingName || 'Tòa nhà đang sử dụng'}</span>
+            <span>{selectedRelated?.buildingName || t('driver.report.defaultBuilding')}</span>
           </div>
         </div>
 
         {isSubmitted && (
           <div className="rounded-full bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-600">
-            Báo cáo đã được gửi
+            {t('driver.report.submittedBadge')}
           </div>
         )}
       </div>
@@ -319,8 +321,8 @@ const DriverReport = () => {
         <div className="space-y-6 lg:col-span-2">
           <SectionCard
             step="A"
-            title="Chọn loại sự cố"
-            description="Vui lòng chọn danh mục phù hợp nhất với vấn đề bạn đang gặp phải"
+            title={t('driver.report.issuesTitle')}
+            description={t('driver.report.issuesDesc')}
           >
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
               {ISSUE_TYPES.map((issue) => {
@@ -331,13 +333,12 @@ const DriverReport = () => {
                     key={issue.id}
                     type="button"
                     onClick={() => setSelectedIssue(issue.id)}
-                    className={`rounded-xl border p-3 text-sm font-semibold transition-colors ${
-                      active
-                        ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300'
-                        : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
+                    className={`rounded-xl border p-3 text-sm font-semibold transition-colors ${active
+                      ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300'
+                      : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
                     }`}
                   >
-                    {issue.label}
+                    {getIssueLabel(issue.id)}
                   </button>
                 )
               })}
@@ -346,13 +347,13 @@ const DriverReport = () => {
 
           <SectionCard
             step="B"
-            title="Thông tin phiên gửi xe liên quan"
-            description="Chọn phiên hoặc đặt chỗ bị ảnh hưởng bởi sự cố này"
+            title={t('driver.report.relatedTitle')}
+            description={t('driver.report.relatedDesc')}
           >
             <div className="space-y-4">
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Chọn phiên đỗ xe
+                  {t('driver.report.relatedLabel')}
                 </label>
 
                 <select
@@ -377,7 +378,7 @@ const DriverReport = () => {
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-lg font-bold text-gray-900 dark:text-white">
-                        {selectedRelated?.plateNumber || 'Chưa có biển số'}
+                        {selectedRelated?.plateNumber || t('driver.report.noPlate')}
                       </span>
 
                       <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
@@ -386,9 +387,9 @@ const DriverReport = () => {
                     </div>
 
                     <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Mã đặt chỗ:{' '}
+                      {t('driver.report.bookingCode')}{' '}
                       <span className="font-semibold text-gray-700 dark:text-gray-300">
-                        {selectedRelated?.bookingCode || 'Không có'}
+                        {selectedRelated?.bookingCode || t('driver.report.noCode')}
                       </span>
                     </div>
 
@@ -396,11 +397,11 @@ const DriverReport = () => {
                       <span>⏰</span>
                       <span>{formatDateTime(selectedRelated?.time)}</span>
                       <span className="mx-1">•</span>
-                      <span>Loại: {selectedRelated?.type || '—'}</span>
+                      <span>{t('driver.report.type')} {selectedRelated?.type || '—'}</span>
                       {selectedRelated?.slotCode && (
                         <>
                           <span className="mx-1">•</span>
-                          <span>Vị trí: {selectedRelated.slotCode}</span>
+                          <span>{t('driver.report.slot')} {selectedRelated.slotCode}</span>
                         </>
                       )}
                     </div>
@@ -412,7 +413,7 @@ const DriverReport = () => {
                   onClick={loadReportContext}
                   className="w-fit rounded-lg border border-gray-200 dark:border-slate-700 px-3 py-1.5 text-sm font-semibold text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800"
                 >
-                  Làm mới
+                  {t('driver.report.refresh')}
                 </button>
               </div>
             </div>
@@ -420,33 +421,33 @@ const DriverReport = () => {
 
           <SectionCard
             step="C"
-            title="Mô tả sự cố"
-            description="Cung cấp thêm chi tiết để chúng tôi có thể hỗ trợ bạn nhanh hơn"
+            title={t('driver.report.descTitle')}
+            description={t('driver.report.descSub')}
           >
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Chi tiết vấn đề
+                {t('driver.report.descLabel')}
               </label>
 
               <textarea
                 rows={5}
                 maxLength={1000}
-                placeholder="Hãy mô tả vấn đề của bạn ở đây. Ví dụ: Tôi đã thanh toán nhưng cổng không mở, ứng dụng báo sai phí..."
+                placeholder={t('driver.report.descPlaceholder')}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 className="w-full resize-none rounded-xl border border-gray-200 dark:border-slate-700 p-4 text-sm outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
               />
 
               <div className="mt-1 text-right text-xs text-gray-400">
-                {description.length} / 1000 ký tự
+                {t('driver.report.descCount', { n: description.length })}
               </div>
             </div>
           </SectionCard>
 
           <SectionCard
             step="D"
-            title="Hình ảnh đính kèm"
-            description="Tải lên ảnh chụp bằng chứng như biên lai, màn hình lỗi hoặc vị trí xe"
+            title={t('driver.report.attachTitle')}
+            description={t('driver.report.attachSub')}
           >
             <label className="block cursor-pointer rounded-xl border-2 border-dashed border-gray-200 dark:border-slate-700 bg-gray-50/50 p-8 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/30">
               <input
@@ -462,11 +463,11 @@ const DriverReport = () => {
               </div>
 
               <p className="mt-4 text-sm font-bold text-gray-700 dark:text-gray-300">
-                Nhấn để chọn tập tin
+                {t('driver.report.attachClick')}
               </p>
 
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Chấp nhận JPG, PNG. Tối đa 5MB mỗi tệp. Tối đa 5 tệp.
+                {t('driver.report.attachHint')}
               </p>
             </label>
 
@@ -496,7 +497,7 @@ const DriverReport = () => {
             )}
 
             <p className="mt-4 text-xs italic text-gray-500 dark:text-gray-400">
-              * Hiện tại hệ thống lưu tên file đính kèm vào database. Nếu muốn upload ảnh thật, cần thêm API upload file riêng.
+              {t('driver.report.attachNote')}
             </p>
           </SectionCard>
         </div>
@@ -505,54 +506,53 @@ const DriverReport = () => {
           <Card>
             <div className="mb-6 flex items-center justify-between border-b border-gray-100 dark:border-slate-700/50 pb-4">
               <h2 className="text-lg font-bold text-blue-700 dark:text-blue-400">
-                Tóm tắt báo cáo
+                {t('driver.report.summaryTitle')}
               </h2>
 
               <span className="rounded bg-blue-600 px-2.5 py-1 text-xs font-bold text-white">
-                Section 5
+                {t('driver.report.summaryBadge')}
               </span>
             </div>
 
             <div className="space-y-4 text-sm">
               <SummaryRow
-                label="Loại sự cố"
-                value={selectedIssueData?.label || 'Chưa chọn'}
+                label={t('driver.report.sumIssueType')}
+                value={selectedIssueData ? getIssueLabel(selectedIssueData.id) : t('driver.report.sumNotSelected')}
               />
 
               <SummaryRow
-                label="Liên quan"
-                value={selectedRelated?.type || 'Không có'}
+                label={t('driver.report.sumRelated')}
+                value={selectedRelated?.type || t('driver.report.sumNone')}
               />
 
               <SummaryRow
-                label="Mã đặt chỗ"
-                value={selectedRelated?.bookingCode || 'Không có'}
+                label={t('driver.report.sumCode')}
+                value={selectedRelated?.bookingCode || t('driver.report.sumNone')}
               />
 
               <SummaryRow
-                label="Biển số xe"
-                value={selectedRelated?.plateNumber || 'Chưa có'}
+                label={t('driver.report.sumPlate')}
+                value={selectedRelated?.plateNumber || t('driver.report.sumNoPlate')}
               />
 
               <SummaryRow
-                label="Mức độ đề xuất"
-                value={selectedIssueData?.severity || 'Trung bình'}
+                label={t('driver.report.sumPriority')}
+                value={selectedIssueData ? t(`driver.report.severity.${selectedIssueData.severity}`) : t('driver.report.sumPriorityDefault')}
                 border
               />
 
               <div className="flex items-center justify-between pt-2">
                 <span className="font-bold text-gray-800 dark:text-gray-200">
-                  Trạng thái sau gửi:
+                  {t('driver.report.sumStatusAfter')}
                 </span>
 
                 <span
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                    isSubmitted
-                      ? 'bg-emerald-100 text-emerald-600'
-                      : 'bg-orange-100 text-orange-600'
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${isSubmitted
+                    ? 'bg-emerald-100 text-emerald-600'
+                    : 'bg-orange-100 text-orange-600'
                   }`}
                 >
-                  {isSubmitted ? 'Đã gửi' : 'Đang chờ'}
+                  {isSubmitted ? t('driver.report.sumSent') : t('driver.report.sumWaiting')}
                 </span>
               </div>
             </div>
@@ -561,8 +561,7 @@ const DriverReport = () => {
               <span className="mt-0.5 shrink-0">ℹ️</span>
 
               <p className="text-xs leading-relaxed">
-                Báo cáo của bạn sẽ được lưu vào database và gửi đến bộ phận vận hành.
-                Trạng thái ban đầu là Open.
+                {t('driver.report.infoHint')}
               </p>
             </div>
 
@@ -570,7 +569,7 @@ const DriverReport = () => {
               <div className="mt-4 flex gap-3 rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-800">
                 <span className="mt-0.5 shrink-0">⚠️</span>
                 <p className="text-xs font-semibold leading-relaxed">
-                  Bạn cần có ít nhất một phương tiện đang đỗ (phiên hoạt động) hoặc một đặt chỗ để có thể gửi báo cáo sự cố.
+                  {t('driver.report.noneWarning')}
                 </p>
               </div>
             )}
@@ -579,14 +578,13 @@ const DriverReport = () => {
               <Button
                 onClick={handleSubmit}
                 disabled={submitting || selectedRelated?.kind === 'none'}
-                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors ${
-                  submitting || selectedRelated?.kind === 'none'
-                    ? 'cursor-not-allowed bg-blue-400 opacity-70'
-                    : 'bg-blue-600 hover:bg-blue-700'
+                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors ${submitting || selectedRelated?.kind === 'none'
+                  ? 'cursor-not-allowed bg-blue-400 opacity-70'
+                  : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
                 <span>➤</span>
-                {submitting ? 'Đang gửi...' : 'Gửi báo cáo ngay'}
+                {submitting ? t('driver.report.submitting') : t('driver.report.submit')}
               </Button>
 
               <Button
@@ -594,19 +592,19 @@ const DriverReport = () => {
                 variant="secondary"
                 className="w-full"
               >
-                Hủy bỏ
+                {t('driver.report.cancel')}
               </Button>
             </div>
           </Card>
 
           <div className="rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-gray-50/80 p-5">
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Báo cáo gần đây
+              {t('driver.report.recentTitle')}
             </h3>
 
             {context.recentReports.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Bạn chưa có báo cáo nào.
+                {t('driver.report.recentEmpty')}
               </p>
             ) : (
               <div className="space-y-3">
@@ -626,7 +624,7 @@ const DriverReport = () => {
                     </div>
 
                     <p className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
-                      {report.Description || 'Không có mô tả'}
+                      {report.Description || t('driver.report.recentNoDesc')}
                     </p>
 
                     <p className="mt-2 text-[10px] text-gray-400">
@@ -640,17 +638,17 @@ const DriverReport = () => {
 
           <Card className="bg-gray-50/80 p-5">
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Hỗ trợ kỹ thuật
+              {t('driver.report.supportTitle')}
             </h3>
 
             <div className="space-y-2">
-              <SupportRow icon="☎" label="Hotline:" value="1900 88xx" />
-              <SupportRow icon="✉" label="Email:" value="support@parkingsafe.com" />
+              <SupportRow icon="☎" label={t('driver.report.supportHotline')} value="1900 88xx" />
+              <SupportRow icon="✉" label={t('driver.report.supportEmail')} value="support@parkingsafe.com" />
             </div>
 
             <div className="mt-6 flex items-center justify-between border-t border-gray-200 dark:border-slate-700 pt-4 text-[10px] font-semibold text-gray-400">
-              <span>PHIÊN BẢN HỆ THỐNG 2.4.0-RELEASE</span>
-              <span>© 2026 PARKINGSAFE INC.</span>
+              <span>{t('driver.report.versionInfo')}</span>
+              <span>{t('driver.report.copyright')}</span>
             </div>
           </Card>
         </div>
@@ -660,7 +658,7 @@ const DriverReport = () => {
         isOpen={alertModal.isOpen}
         onClose={() => setAlertModal({ isOpen: false, message: '', title: '' })}
         title={alertModal.title}
-        footer={<Button variant="primary" onClick={() => setAlertModal({ isOpen: false, message: '', title: '' })}>Đóng</Button>}
+        footer={<Button variant="primary" onClick={() => setAlertModal({ isOpen: false, message: '', title: '' })}>{t('driver.report.close')}</Button>}
       >
         <p className="text-gray-700 dark:text-gray-300">{alertModal.message}</p>
       </Modal>

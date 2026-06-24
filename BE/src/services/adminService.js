@@ -1142,6 +1142,19 @@ export async function deleteBuilding(buildingId) {
    AUDIT LOGS
    ===================================================================== */
 
+export async function notifyManagers(title, message) {
+  const pool = await getPool();
+  await pool.request()
+    .input("Title", sql.NVarChar(200), title || 'Thông báo từ Admin')
+    .input("Message", sql.NVarChar(500), message || 'Có thông báo mới từ Admin.')
+    .query(`
+      INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+      SELECT u.UserID, @Title, @Message, 'System', NULL, 'AdminBroadcast', 0, GETDATE()
+      FROM Users u
+      JOIN Roles r ON u.RoleID = r.RoleID
+      WHERE r.RoleName = 'Manager' AND u.IsActive = 1
+    `);
+}
 
 export async function getAuditLogs({ userId, action, search, fromDate, toDate, page = 1, pageSize = 50 } = {}) {
   const pool = await getPool()

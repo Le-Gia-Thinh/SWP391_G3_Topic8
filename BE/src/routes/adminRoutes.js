@@ -1,55 +1,68 @@
+/**
+ * FILE: adminRoutes.js
+ * MÔ TẢ: Định nghĩa các đường dẫn API dành riêng cho quyền Admin.
+ * Admin có toàn quyền thao tác trên hệ thống (Quản lý User, Roles, Cơ sở hạ tầng).
+ */
+
 import express from 'express';
 import { isAuthorized, isAdmin } from '../middlewares/authMiddleware.js';
 import * as adminController from '../controllers/adminController.js';
 
 const router = express.Router();
 
+// Bắt buộc tất cả các route trong file này phải đăng nhập (isAuthorized) và có quyền Admin (isAdmin)
 router.use(isAuthorized, isAdmin);
 
-// Stats
+// ================= THỐNG KÊ (STATS) =================
+// API lấy dữ liệu thống kê tổng quan cho Dashboard Admin
 router.get('/stats', adminController.getStats);
 
-// Roles
+// ================= QUẢN LÝ QUYỀN (ROLES) =================
+// API lấy danh sách các Role trong hệ thống
 router.get('/roles', adminController.getRoles);
 
-// Users
-router.get('/users', adminController.getUsers);
-router.post('/users', adminController.createUser);
-router.patch('/users/:id', adminController.updateUser);
-router.patch('/users/:id/status', adminController.toggleUserStatus);
-router.post('/users/:id/reset-password', adminController.resetUserPassword);
+// ================= QUẢN LÝ NGƯỜI DÙNG (USERS) =================
+router.get('/users', adminController.getUsers); // Lấy danh sách người dùng
+router.post('/users', adminController.createUser); // Tạo mới người dùng
+router.patch('/users/:id', adminController.updateUser); // Cập nhật thông tin người dùng
+router.patch('/users/:id/status', adminController.toggleUserStatus); // Khóa/Mở khóa người dùng
+router.post('/users/:id/reset-password', adminController.resetUserPassword); // Reset mật khẩu người dùng
 
-// Permissions
-router.get('/permissions', adminController.getPermissions);
-router.get('/role-permissions', adminController.getRolePermissions);
-router.put('/roles/:id/permissions', adminController.updateRolePermissions);
+// ================= PHÂN QUYỀN (PERMISSIONS) =================
+router.get('/permissions', adminController.getPermissions); // Lấy danh sách tất cả permission
+router.get('/role-permissions', adminController.getRolePermissions); // Lấy mapping Role - Permission
+router.put('/roles/:id/permissions', adminController.updateRolePermissions); // Cập nhật permission cho 1 role
 
-// Buildings
+// ================= CƠ SỞ HẠ TẦNG: BUILDINGS =================
 router.get('/buildings', adminController.getBuildings);
 router.post('/buildings', adminController.createBuilding);
 router.patch('/buildings/:id', adminController.updateBuilding);
 router.delete('/buildings/:id', adminController.deleteBuilding);
 
-// ── Infrastructure: Floors ────────────────────────────────────
-router.get('/floors', adminController.getFloors);            // ?buildingId=
+// ── Cơ sở hạ tầng: Floors (Tầng) ────────────────────────────────────
+router.get('/floors', adminController.getFloors);            // Có thể filter theo ?buildingId=
 router.post('/floors', adminController.createFloor);
 router.patch('/floors/:id', adminController.updateFloor);
 router.delete('/floors/:id', adminController.deleteFloor);
 
-// ── Infrastructure: Zones ─────────────────────────────────────
-router.get('/zones', adminController.getZones);              // ?floorId=
+// ── Cơ sở hạ tầng: Zones (Khu vực) ─────────────────────────────────────
+router.get('/zones', adminController.getZones);              // Có thể filter theo ?floorId=
 router.post('/zones', adminController.createZone);
 router.patch('/zones/:id', adminController.updateZone);
 router.delete('/zones/:id', adminController.deleteZone);
 
-// ── Infrastructure: Slots ─────────────────────────────────────
-router.get('/zones/:zoneId/slots', adminController.getSlotsByZone); // danh sách slot + sức chứa
-router.post('/slots', adminController.createSlot);
-router.post('/slots/bulk', adminController.createSlotsBulk);
-router.patch('/slots/:id', adminController.updateSlot);
-router.delete('/slots/:id', adminController.deleteSlot);
+// ── Cơ sở hạ tầng: Slots (Chỗ đỗ xe) ─────────────────────────────────────
+router.get('/zones/:zoneId/slots', adminController.getSlotsByZone); // Lấy danh sách slot + sức chứa theo Zone
+router.post('/slots', adminController.createSlot); // Tạo 1 slot
+router.post('/slots/bulk', adminController.createSlotsBulk); // Tạo nhiều slot cùng lúc
+router.patch('/slots/:id', adminController.updateSlot); // Cập nhật slot
+router.delete('/slots/:id', adminController.deleteSlot); // Xóa slot
 
-// Audit Logs
+// ================= NHẬT KÝ HỆ THỐNG (AUDIT LOGS) =================
+// API lấy lịch sử hoạt động của người dùng (chỉ Admin được xem)
 router.get('/audit-logs', adminController.getAuditLogs);
 
-export default router;
+// ================= THÔNG BÁO HỆ THỐNG =================
+router.post('/notify-manager', adminController.notifyManagers); // Gửi thông báo đến Manager
+
+export default router;

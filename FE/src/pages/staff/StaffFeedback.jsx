@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Star, MessageSquare, Car, MapPin, TrendingUp, Sparkles
 } from 'lucide-react'
@@ -11,6 +12,7 @@ dayjs.extend(relativeTime)
 dayjs.locale('vi')
 
 const StaffFeedback = () => {
+  const { t } = useTranslation()
   const [summary, setSummary] = useState(null)
   const [feedbacks, setFeedbacks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -50,10 +52,9 @@ const StaffFeedback = () => {
           <Star
             key={star}
             size={16}
-            className={`${
-              star <= rating
-                ? 'fill-amber-400 text-amber-400'
-                : 'fill-slate-100 dark:fill-slate-700 text-slate-200 dark:text-slate-600'
+            className={`${star <= rating
+              ? 'fill-amber-400 text-amber-400'
+              : 'fill-slate-100 dark:fill-slate-700 text-slate-200 dark:text-slate-600'
             }`}
           />
         ))}
@@ -74,11 +75,11 @@ const StaffFeedback = () => {
       <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-            Tổng hợp Đánh giá
+            {t('staff.feedback.title')}
           </h1>
           <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent drop-shadow-sm">
             <Sparkles size={16} className="text-amber-500 animate-pulse" />
-            Xem và phân tích phản hồi từ tài xế về chất lượng dịch vụ
+            {t('staff.feedback.subtitle')}
           </p>
         </div>
       </div>
@@ -89,13 +90,13 @@ const StaffFeedback = () => {
           <div className="sticky top-6 space-y-4">
             <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-6 shadow-sm">
               <div className="text-center">
-                <p className="mb-2 text-sm font-bold uppercase tracking-widest text-slate-400">Điểm Trung Bình</p>
+                <p className="mb-2 text-sm font-bold uppercase tracking-widest text-slate-400">{t('staff.feedback.averageRating')}</p>
                 <div className="flex items-center justify-center gap-3">
                   <h2 className="text-6xl font-black text-slate-900 dark:text-white">{summary?.averageRating?.toFixed(1) || '0.0'}</h2>
                   <Star className="h-10 w-10 fill-amber-400 text-amber-400" />
                 </div>
                 <p className="mt-3 text-sm font-medium text-slate-500 dark:text-slate-400">
-                  Dựa trên <span className="font-bold text-slate-900 dark:text-white">{summary?.totalFeedbacks}</span> lượt đánh giá
+                  {t('staff.feedback.basedOn')} <span className="font-bold text-slate-900 dark:text-white">{summary?.totalFeedbacks}</span> {t('staff.feedback.ratingsCount')}
                 </p>
               </div>
 
@@ -109,8 +110,7 @@ const StaffFeedback = () => {
                       </div>
                       <div className="relative flex-1 h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
                         <div
-                          className={`absolute left-0 top-0 h-full rounded-full ${
-                            star >= 4 ? 'bg-emerald-500' : star === 3 ? 'bg-amber-400' : 'bg-red-500'
+                          className={`absolute left-0 top-0 h-full rounded-full ${star >= 4 ? 'bg-emerald-500' : star === 3 ? 'bg-amber-400' : 'bg-red-500'
                           }`}
                           style={{ width: `${percent}%` }}
                         />
@@ -130,9 +130,9 @@ const StaffFeedback = () => {
                   <TrendingUp className="text-blue-600 dark:text-blue-400" size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-blue-900 dark:text-blue-100">Góc nhìn Tổng quan</h3>
+                  <h3 className="font-bold text-blue-900 dark:text-blue-100">{t('staff.feedback.overviewTitle')}</h3>
                   <p className="mt-1 text-sm font-medium leading-relaxed text-blue-700/80 dark:text-blue-300/80">
-                    Phần lớn khách hàng hài lòng với dịch vụ. Hãy tiếp tục duy trì chất lượng phục vụ và hỗ trợ tài xế nhé!
+                    {t('staff.feedback.overviewBody')}
                   </p>
                 </div>
               </div>
@@ -143,7 +143,7 @@ const StaffFeedback = () => {
         {/* Cột phải: Danh sách đánh giá */}
         <div className="md:col-span-8">
           <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <h3 className="text-lg font-black text-slate-900 dark:text-white">Phản hồi gần đây</h3>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">{t('staff.feedback.recentTitle')}</h3>
 
             <div className="min-w-[160px]">
               <select
@@ -151,10 +151,10 @@ const StaffFeedback = () => {
                 onChange={(e) => setFilter(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50"
               >
-                <option value="all">Tất cả đánh giá</option>
-                <option value="positive">Đánh giá tốt (4-5 sao)</option>
-                <option value="negative">Cần cải thiện (1-3 sao)</option>
-                <option value="with_comment">Có bình luận</option>
+                <option value="all">{t('staff.feedback.filterAll')}</option>
+                <option value="positive">{t('staff.feedback.filterPositive')}</option>
+                <option value="negative">{t('staff.feedback.filterNegative')}</option>
+                <option value="with_comment">{t('staff.feedback.filterWithComment')}</option>
               </select>
             </div>
           </div>
@@ -163,9 +163,9 @@ const StaffFeedback = () => {
             {filteredFeedbacks.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-transparent p-12 text-center">
                 <MessageSquare className="mx-auto mb-3 h-12 w-12 text-slate-300 dark:text-slate-600" />
-                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">Chưa có đánh giá nào</h3>
+                <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">{t('staff.feedback.emptyTitle')}</h3>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Chưa có dữ liệu đánh giá phù hợp với bộ lọc hiện tại.
+                  {t('staff.feedback.emptyHint')}
                 </p>
               </div>
             ) : (

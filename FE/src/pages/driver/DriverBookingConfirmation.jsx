@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   CheckCircle2,
   MapPin,
@@ -26,13 +27,13 @@ import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 
 
-const VEHICLE_LABELS = {
-  CAR: 'Ô tô',
-  MOTO: 'Xe máy',
-  MOTORBIKE: 'Xe máy',
-  TRUCK: 'Xe tải',
-  car: 'Ô tô',
-  bike: 'Xe máy'
+// Map code xe → key i18n driver.vehicle.*  (thay cho VEHICLE_LABELS cứng)
+const vehicleLabelKey = (code) => {
+  const c = String(code || '').toUpperCase()
+  if (c === 'CAR') return 'driver.vehicle.car'
+  if (c === 'MOTO' || c === 'MOTORBIKE' || c === 'BIKE') return 'driver.vehicle.motorbike'
+  if (c === 'TRUCK') return 'driver.vehicle.truck'
+  return null
 }
 
 const STATUS_CLASSES = {
@@ -62,7 +63,7 @@ function splitDateTimeText(value) {
   }
 }
 
-function calculateDurationLabel(startTimeText, endTimeText) {
+function calculateDurationLabel(startTimeText, endTimeText, t) {
   const start = splitDateTimeText(startTimeText)
   const end = splitDateTimeText(endTimeText)
 
@@ -90,10 +91,10 @@ function calculateDurationLabel(startTimeText, endTimeText) {
   const hours = Math.floor(diffMinutes / 60)
   const minutes = diffMinutes % 60
 
-  return `${hours} Giờ ${String(minutes).padStart(2, '0')} Phút`
+  return t('driver.common.durationHM', { h: hours, m: String(minutes).padStart(2, '0') })
 }
 
-function mapReservationToBooking(reservation, stateBooking) {
+function mapReservationToBooking(reservation, stateBooking, t) {
   if (!reservation && !stateBooking) return null
 
   const source = reservation || {}
@@ -118,6 +119,14 @@ function mapReservationToBooking(reservation, stateBooking) {
     source.reservationId ||
     stateBooking?.reservationId
 
+  const vehicleCode =
+    source.VehicleCode ||
+    source.vehicleCode ||
+    stateBooking?.vehicleType ||
+    'CAR'
+
+  const vKey = vehicleLabelKey(vehicleCode)
+
   return {
     reservationId,
 
@@ -127,13 +136,13 @@ function mapReservationToBooking(reservation, stateBooking) {
       stateBooking?.bookingCode ||
       (reservationId
         ? `BK-${String(reservationId).padStart(4, '0')}`
-        : 'Không có mã'),
+        : t('driver.bookingConfirm.noCode')),
 
     driverName:
       source.DriverName ||
       source.driverName ||
       stateBooking?.driverName ||
-      'Driver',
+      t('driver.bookingConfirm.defaultDriver'),
 
     parkingName:
       source.BuildingName ||
@@ -151,21 +160,15 @@ function mapReservationToBooking(reservation, stateBooking) {
       source.PlateNumber ||
       source.plateNumber ||
       stateBooking?.licensePlate ||
-      'Chưa check-in',
+      t('driver.bookingConfirm.notCheckedIn'),
 
-    vehicleType:
-      source.VehicleCode ||
-      source.vehicleCode ||
-      stateBooking?.vehicleType ||
-      'CAR',
+    vehicleType: vehicleCode,
 
     vehicleName:
       source.VehicleName ||
       source.vehicleName ||
       stateBooking?.vehicleName ||
-      VEHICLE_LABELS[source.VehicleCode] ||
-      VEHICLE_LABELS[stateBooking?.vehicleType] ||
-      'Ô tô',
+      (vKey ? t(vKey) : vehicleCode),
 
     floor:
       source.FloorName ||
@@ -203,7 +206,7 @@ function mapReservationToBooking(reservation, stateBooking) {
     startDate: start.date,
     endDate: end.date,
 
-    durationLabel: calculateDurationLabel(startTimeText, endTimeText),
+    durationLabel: calculateDurationLabel(startTimeText, endTimeText, t),
 
     temporaryPrice: stateBooking?.temporaryPrice || 0,
 
@@ -217,7 +220,7 @@ function mapReservationToBooking(reservation, stateBooking) {
       source.StatusLabel ||
       source.statusLabel ||
       stateBooking?.statusLabel ||
-      'Đang hoạt động',
+      '',
 
     reservationStatus:
       source.ReservationStatus ||
@@ -227,6 +230,7 @@ function mapReservationToBooking(reservation, stateBooking) {
 }
 
 const DriverBookingConfirmation = () => {
+  const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -258,7 +262,7 @@ const DriverBookingConfirmation = () => {
 
       const message =
         error.response?.data?.message ||
-        'Không thể tải chi tiết đặt chỗ. Vui lòng thử lại.'
+        t('driver.bookingConfirm.loadFail')
 
       setErrorMessage(message)
     } finally {
@@ -284,7 +288,7 @@ const DriverBookingConfirmation = () => {
 
         const message =
           error.response?.data?.message ||
-          'Không thể tải chi tiết đặt chỗ. Vui lòng thử lại.'
+          t('driver.bookingConfirm.loadFail')
 
         if (!cancelled) {
           setErrorMessage(message)
@@ -301,24 +305,27 @@ const DriverBookingConfirmation = () => {
     return () => {
       cancelled = true
     }
-  }, [reservationId])
+  }, [reservationId, t])
 
   const booking = useMemo(() => {
-    return mapReservationToBooking(reservation, location.state)
-  }, [reservation, location.state])
+    return mapReservationToBooking(reservation, location.state, t)
+  }, [reservation, location.state, t])
 
   const statusClassName =
     STATUS_CLASSES[booking?.statusValue] || STATUS_CLASSES.active
 
   const canCancel = booking?.statusValue === 'active'
 
-  const fullSlotName = `${booking?.floor || '--'} / Khu ${booking?.zone || '--'
-  } / Slot ${booking?.selectedSlot || '--'}`
+  const fullSlotName = t('driver.bookingConfirm.slotPattern', {
+    floor: booking?.floor || '--',
+    zone: booking?.zone || '--',
+    slot: booking?.selectedSlot || '--'
+  })
 
+  const vKey = vehicleLabelKey(booking?.vehicleType)
   const vehicleLabel =
     booking?.vehicleName ||
-    VEHICLE_LABELS[booking?.vehicleType] ||
-    booking?.vehicleType ||
+    (vKey ? t(vKey) : booking?.vehicleType) ||
     '--'
 
   const handleCopyBookingCode = async () => {
@@ -343,7 +350,7 @@ const DriverBookingConfirmation = () => {
       navigate('/driver/history')
     } catch (error) {
       console.error('Cancel reservation failed:', error)
-      const message = error.response?.data?.message || 'Hủy đặt chỗ thất bại. Vui lòng thử lại.'
+      const message = error.response?.data?.message || t('driver.bookingConfirm.cancelFail')
       setAlertModal({ isOpen: true, message })
     }
   }
@@ -352,7 +359,7 @@ const DriverBookingConfirmation = () => {
     return (
       <div className="rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-10 text-center shadow-sm">
         <p className="font-bold text-gray-700 dark:text-gray-300">
-          Đang tải chi tiết đặt chỗ...
+          {t('driver.bookingConfirm.loading')}
         </p>
       </div>
     )
@@ -371,7 +378,7 @@ const DriverBookingConfirmation = () => {
           className="mt-4"
           icon={RefreshCcw}
         >
-          Thử lại
+          {t('driver.common.retry')}
         </Button>
       </div>
     )
@@ -381,18 +388,18 @@ const DriverBookingConfirmation = () => {
     return (
       <div className="rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-10 text-center shadow-sm">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-          Không có dữ liệu đặt chỗ
+          {t('driver.bookingConfirm.noData')}
         </h2>
 
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Vui lòng quay lại lịch sử đặt chỗ để chọn một booking.
+          {t('driver.bookingConfirm.noDataHint')}
         </p>
 
         <Link
           to="/driver/history"
           className="mt-5 inline-flex rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
         >
-          Về lịch sử đặt chỗ
+          {t('driver.bookingConfirm.backToHistory')}
         </Link>
       </div>
     )
@@ -402,7 +409,7 @@ const DriverBookingConfirmation = () => {
     <div className="mx-auto max-w-6xl animate-in fade-in pb-24 duration-500">
       <div className="mb-6 flex items-center gap-4 border-b border-gray-100 dark:border-slate-700/50 pb-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Xác nhận đặt chỗ
+          {t('driver.bookingConfirm.title')}
         </h1>
 
         <div className="h-4 w-px bg-gray-300" />
@@ -421,18 +428,20 @@ const DriverBookingConfirmation = () => {
 
           <div>
             <h2 className="text-lg font-bold text-green-800">
-              Vị trí của bạn đã được giữ chỗ thành công!
+              {t('driver.bookingConfirm.successBanner')}
             </h2>
 
             <p className="mt-1 text-sm text-green-700 dark:text-green-400">
-              Vui lòng kiểm tra thông tin chi tiết bên dưới.
+              {t('driver.bookingConfirm.successBannerHint')}
             </p>
           </div>
         </div>
 
-        <span className={`rounded-xl border px-4 py-2 text-sm font-bold shadow-sm ${statusClassName}`}>
-          {booking.statusLabel}
-        </span>
+        {booking.statusLabel && (
+          <span className={`rounded-xl border px-4 py-2 text-sm font-bold shadow-sm ${statusClassName}`}>
+            {booking.statusLabel}
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -440,38 +449,38 @@ const DriverBookingConfirmation = () => {
           <div className="rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-6 shadow-sm md:p-8">
             <h3 className="mb-6 flex items-center gap-2 text-base font-bold text-gray-900 dark:text-white">
               <CalendarDays className="text-blue-500" size={20} />
-              Thông tin chi tiết đặt chỗ
+              {t('driver.bookingConfirm.detailTitle')}
             </h3>
 
             <div className="space-y-4">
-              <DetailRow icon={<User size={16} />} label="Tên tài xế" value={booking.driverName} bold />
-              <DetailRow icon={<Car size={16} />} label="Biển số xe" value={booking.licensePlate} bold />
-              <DetailRow icon={<Car size={16} />} label="Loại phương tiện" value={vehicleLabel} />
-              <DetailRow icon={<Building size={16} />} label="Tòa nhà đỗ xe" value={booking.parkingName} />
+              <DetailRow icon={<User size={16} />} label={t('driver.bookingConfirm.driverName')} value={booking.driverName} bold />
+              <DetailRow icon={<Car size={16} />} label={t('driver.bookingConfirm.plate')} value={booking.licensePlate} bold />
+              <DetailRow icon={<Car size={16} />} label={t('driver.bookingConfirm.vehicleType')} value={vehicleLabel} />
+              <DetailRow icon={<Building size={16} />} label={t('driver.bookingConfirm.building')} value={booking.parkingName} />
 
               <DetailRow
                 icon={<MapPin size={16} />}
-                label="Vị trí đỗ"
+                label={t('driver.bookingConfirm.slot')}
                 value={fullSlotName}
                 valueClassName="rounded-lg border border-blue-100 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 font-bold text-blue-600 dark:text-blue-400"
               />
 
               <DetailRow
                 icon={<Clock size={16} />}
-                label="Thời gian bắt đầu"
+                label={t('driver.bookingConfirm.startTime')}
                 value={`${booking.startClock} - ${booking.startDate}`}
                 bold
               />
 
               <DetailRow
                 icon={<Clock size={16} />}
-                label="Thời gian dự kiến"
+                label={t('driver.bookingConfirm.estDuration')}
                 value={booking.durationLabel}
               />
 
               <DetailRow
                 icon={<Clock size={16} />}
-                label="Thời gian hết hạn"
+                label={t('driver.bookingConfirm.expireTime')}
                 value={`${booking.endClock} - ${booking.endDate}`}
                 valueClassName="font-bold text-red-600"
                 noBorder
@@ -481,7 +490,7 @@ const DriverBookingConfirmation = () => {
 
           <div>
             <h3 className="mb-4 flex items-center gap-2 text-base font-bold text-gray-900 dark:text-white">
-              Lưu ý quan trọng
+              {t('driver.bookingConfirm.notesTitle')}
             </h3>
 
             <div className="space-y-4">
@@ -489,33 +498,33 @@ const DriverBookingConfirmation = () => {
                 icon={<AlertCircle size={20} />}
                 iconClassName="text-orange-500"
                 className="border-orange-100 bg-orange-50/50"
-                title="Thời gian hiệu lực"
+                title={t('driver.bookingConfirm.note1Title')}
                 titleClassName="text-orange-800"
                 contentClassName="text-orange-700"
               >
-                Booking chỉ hết hạn khi thời gian hết hạn nhỏ hơn giờ hiện tại của SQL Server.
+                {t('driver.bookingConfirm.note1Body')}
               </NoteCard>
 
               <NoteCard
                 icon={<ShieldCheck size={20} />}
                 iconClassName="text-blue-500"
                 className="border-blue-100 bg-blue-50/50"
-                title="Quy trình vào cổng"
+                title={t('driver.bookingConfirm.note2Title')}
                 titleClassName="text-blue-800"
                 contentClassName="text-blue-700 dark:text-blue-400"
               >
-                Khi đến bãi xe, cung cấp biển số xe hoặc mã đặt chỗ cho nhân viên để được check-in.
+                {t('driver.bookingConfirm.note2Body')}
               </NoteCard>
 
               <NoteCard
                 icon={<Ban size={20} />}
                 iconClassName="text-gray-500 dark:text-gray-400"
                 className="border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50"
-                title="Chính sách hủy"
+                title={t('driver.bookingConfirm.note3Title')}
                 titleClassName="text-gray-700 dark:text-gray-300"
                 contentClassName="text-gray-600 dark:text-gray-400"
               >
-                Bạn chỉ có thể hủy booking đang hoạt động và chưa được staff check-in.
+                {t('driver.bookingConfirm.note3Body')}
               </NoteCard>
             </div>
           </div>
@@ -524,7 +533,7 @@ const DriverBookingConfirmation = () => {
         <div className="space-y-6">
           <div className="rounded-2xl border-2 border-blue-100 bg-white dark:bg-slate-800 p-6 text-center shadow-sm">
             <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Mã đặt chỗ của bạn
+              {t('driver.bookingConfirm.yourCode')}
             </p>
 
             <button
@@ -542,11 +551,11 @@ const DriverBookingConfirmation = () => {
             </button>
 
             <p className="mb-6 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-              Cung cấp biển số xe{' '}
+              {t('driver.bookingConfirm.codeHintPre')}{' '}
               <span className="font-bold text-gray-900 dark:text-white">
                 {booking.licensePlate}
               </span>{' '}
-              hoặc mã này cho nhân viên tại cổng vào.
+              {t('driver.bookingConfirm.codeHintPost')}
             </p>
 
             <Link
@@ -554,7 +563,7 @@ const DriverBookingConfirmation = () => {
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700"
             >
               <Eye size={16} />
-              Xem lịch sử đặt chỗ
+              {t('driver.bookingConfirm.viewBookingHistory')}
             </Link>
           </div>
         </div>
@@ -567,7 +576,7 @@ const DriverBookingConfirmation = () => {
               Parking Building Management System
             </p>
             <p className="text-xs text-gray-400">
-              Driver booking confirmation
+              {t('driver.bookingConfirm.footerSub')}
             </p>
           </div>
 
@@ -578,21 +587,21 @@ const DriverBookingConfirmation = () => {
               disabled={!canCancel}
               className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold text-red-500 transition-colors hover:bg-red-50 dark:bg-red-900/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Hủy đặt chỗ này
+              {t('driver.bookingConfirm.cancelThis')}
             </button>
 
             <Link
               to="/driver/booking"
               className="flex-1 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 py-2.5 text-center text-sm font-bold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800 sm:flex-none"
             >
-              Đặt thêm chỗ mới
+              {t('driver.bookingConfirm.bookMore')}
             </Link>
 
             <Link
               to="/driver/session"
               className="flex-1 rounded-xl bg-blue-600 px-6 py-2.5 text-center text-sm font-bold text-white shadow-md shadow-blue-200 transition-colors hover:bg-blue-700 sm:flex-none"
             >
-              Xem phiên gửi hiện tại
+              {t('driver.bookingConfirm.viewSession')}
             </Link>
           </div>
         </div>
@@ -601,23 +610,27 @@ const DriverBookingConfirmation = () => {
       <Modal
         isOpen={confirmModal.isOpen}
         onClose={() => setConfirmModal({ isOpen: false })}
-        title="Xác nhận hủy đặt chỗ"
+        title={t('driver.bookingConfirm.cancelModalTitle')}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setConfirmModal({ isOpen: false })}>Quay lại</Button>
-            <Button variant="danger" onClick={confirmCancel}>Xác nhận hủy</Button>
+            <Button variant="secondary" onClick={() => setConfirmModal({ isOpen: false })}>{t('common.back')}</Button>
+            <Button variant="danger" onClick={confirmCancel}>{t('driver.bookingConfirm.confirmCancel')}</Button>
           </>
         }
       >
-        <p className="text-gray-600 dark:text-gray-400">Bạn có chắc chắn muốn hủy đặt chỗ <span className="font-bold text-gray-900 dark:text-white">{booking?.bookingCode}</span> không?</p>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Lưu ý: Thao tác này không thể hoàn tác.</p>
+        <p className="text-gray-600 dark:text-gray-400">
+          {t('driver.bookingConfirm.cancelConfirmPre')}{' '}
+          <span className="font-bold text-gray-900 dark:text-white">{booking?.bookingCode}</span>{' '}
+          {t('driver.bookingConfirm.cancelConfirmPost')}
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{t('driver.bookingConfirm.cancelConfirmNote')}</p>
       </Modal>
 
       <Modal
         isOpen={alertModal.isOpen}
         onClose={() => setAlertModal({ isOpen: false, message: '' })}
-        title="Thông báo"
-        footer={<Button variant="primary" onClick={() => setAlertModal({ isOpen: false, message: '' })}>Đóng</Button>}
+        title={t('driver.bookingConfirm.alertTitle')}
+        footer={<Button variant="primary" onClick={() => setAlertModal({ isOpen: false, message: '' })}>{t('driver.bookingConfirm.close')}</Button>}
       >
         <p className="text-gray-700 dark:text-gray-300">{alertModal.message}</p>
       </Modal>

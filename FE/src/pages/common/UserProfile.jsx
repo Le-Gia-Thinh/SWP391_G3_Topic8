@@ -101,6 +101,14 @@ const ProfileContent = ({ user, editing, formData, onChange, recentActivity, rec
                 <p className="text-sm font-semibold text-gray-800 px-3 py-2 bg-gray-50 rounded-lg">SmartPark District 1</p>
               </div>
             )}
+            {isDriver && (
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-400 uppercase flex items-center gap-1.5"><CreditCard size={16} className="text-teal-500" /> Số dư tài khoản</label>
+                <p className="text-sm font-semibold text-gray-800 px-3 py-2 bg-gray-50 rounded-lg">
+                  {new Intl.NumberFormat('vi-VN').format(user?.accountBalance || 0)} VNĐ
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

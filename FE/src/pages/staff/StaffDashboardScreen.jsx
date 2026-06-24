@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Car, Grid, LogOut, CreditCard, Clock, ChevronRight,
   Search, AlertTriangle, Map, ArrowRightLeft, RefreshCcw, Loader2
@@ -49,6 +50,7 @@ const AlertItem = ({ title, time, type }) => {
 
 // ── Main Component ────────────────────────────────────────────
 export default function StaffDashboardScreen() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState({ stats: {}, recentCheckIns: [], alerts: [] })
@@ -62,7 +64,7 @@ export default function StaffDashboardScreen() {
         const res = await staffApi.getDashboard()
         if (!cancelled && res.success) setData(res.data)
       } catch {
-        if (!cancelled) toast.error('Không thể tải dữ liệu dashboard')
+        if (!cancelled) toast.error(t('staff.dashboard.error') /* TRANSLATED: Không thể tải dữ liệu dashboard */)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -85,70 +87,61 @@ export default function StaffDashboardScreen() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <Grid size={20} className="text-blue-500" /> Tóm tắt vận hành
+                <Grid size={20} className="text-blue-500" /> {t('staff.dashboard.summary.title')} {/* TRANSLATED: Tóm tắt vận hành */}
               </h3>
               <button
                 onClick={handleRefresh}
                 disabled={loading}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-800 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} /> Làm mới
+                <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} /> {t('staff.dashboard.summary.refresh')} {/* TRANSLATED: Làm mới */}
               </button>
             </div>
             <div className="grid grid-cols-3 xl:grid-cols-6 gap-4">
-              <StatCard loading={loading} title="Xe trong bãi" value={stats.occupiedSlots} icon={<Car size={18} className="text-blue-600" />} colorClass="bg-blue-50" borderColorClass="border-blue-500" />
-              <StatCard loading={loading} title="Chỗ trống" value={stats.availableSlots} icon={<Grid size={18} className="text-green-600" />} colorClass="bg-green-50" borderColorClass="border-green-500" />
-              <StatCard loading={loading} title="Check-in hôm nay" value={stats.todayCheckIns} icon={<ArrowRightLeft size={18} className="text-purple-600" />} colorClass="bg-purple-50" borderColorClass="border-purple-500" />
-              <StatCard loading={loading} title="Check-out hôm nay" value={stats.todayCheckOuts} icon={<LogOut size={18} className="text-orange-600" />} colorClass="bg-orange-50" borderColorClass="border-orange-500" />
-              <StatCard loading={loading} title="Sự cố đang mở" value={stats.openIncidents} icon={<AlertTriangle size={18} className="text-red-600" />} colorClass="bg-red-50" borderColorClass="border-red-500" />
-              <StatCard loading={loading} title="Lượt đặt trước" value={stats.pendingBookings} icon={<Clock size={18} className="text-indigo-600" />} colorClass="bg-indigo-50" borderColorClass="border-indigo-500" />
+              <StatCard loading={loading} title={t('staff.dashboard.stats.occupied') /* TRANSLATED: Xe trong bãi */} value={stats.occupiedSlots} icon={<Car size={18} className="text-blue-600" />} colorClass="bg-blue-50" borderColorClass="border-blue-500" />
+              <StatCard loading={loading} title={t('staff.dashboard.stats.available') /* TRANSLATED: Chỗ trống */} value={stats.availableSlots} icon={<Grid size={18} className="text-green-600" />} colorClass="bg-green-50" borderColorClass="border-green-500" />
+              <StatCard loading={loading} title={t('staff.dashboard.stats.todayCheckin') /* TRANSLATED: Check-in hôm nay */} value={stats.todayCheckIns} icon={<ArrowRightLeft size={18} className="text-purple-600" />} colorClass="bg-purple-50" borderColorClass="border-purple-500" />
+              <StatCard loading={loading} title={t('staff.dashboard.stats.todayCheckout') /* TRANSLATED: Check-out hôm nay */} value={stats.todayCheckOuts} icon={<LogOut size={18} className="text-orange-600" />} colorClass="bg-orange-50" borderColorClass="border-orange-500" />
+              <StatCard loading={loading} title={t('staff.dashboard.stats.openIncidents') /* TRANSLATED: Sự cố đang mở */} value={stats.openIncidents} icon={<AlertTriangle size={18} className="text-red-600" />} colorClass="bg-red-50" borderColorClass="border-red-500" />
+              <StatCard loading={loading} title={t('staff.dashboard.stats.pendingBookings') /* TRANSLATED: Lượt đặt trước */} value={stats.pendingBookings} icon={<Clock size={18} className="text-indigo-600" />} colorClass="bg-indigo-50" borderColorClass="border-indigo-500" />
             </div>
           </div>
 
           {/* Quick Actions */}
           <div>
             <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <ArrowRightLeft size={20} className="text-blue-500" /> Thao tác nhanh
+              <ArrowRightLeft size={20} className="text-blue-500" /> {t('staff.dashboard.quickActions.title')} {/* TRANSLATED: Thao tác nhanh */}
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <QuickActionCard title="Nhận xe vãng lai" desc="Nhập biển số cho xe không có đặt trước" icon={<Car size={20} className="text-blue-600" />} iconColorClass="bg-blue-50" onClick={() => navigate('/staff/checkin')} />
-              <QuickActionCard title="Nhận xe đặt trước" desc="Quét mã hoặc nhập mã đặt chỗ" icon={<Clock size={20} className="text-purple-600" />} iconColorClass="bg-purple-50" onClick={() => navigate('/staff/checkin?tab=booking')} />
-              <QuickActionCard title="Thanh toán & Trả xe" desc="Tính tiền và xác nhận xe ra" icon={<LogOut size={20} className="text-orange-600" />} iconColorClass="bg-orange-50" onClick={() => navigate('/staff/checkout')} />
-              <QuickActionCard title="Tra cứu phiên" desc="Tìm kiếm lịch sử vào/ra theo biển số" icon={<Search size={20} className="text-indigo-600" />} iconColorClass="bg-indigo-50" onClick={() => navigate('/staff/search-session')} />
-              <QuickActionCard title="Tạo sự cố" desc="Báo cáo mất thẻ, hỏng thiết bị, va chạm" icon={<AlertTriangle size={20} className="text-red-600" />} iconColorClass="bg-red-50" onClick={() => navigate('/staff/create-incident')} />
-              <QuickActionCard title="Xem sơ đồ chỗ" desc="Kiểm tra chi tiết vị trí các ô đỗ" icon={<Map size={20} className="text-green-600" />} iconColorClass="bg-green-50" onClick={() => navigate('/staff/parking-map')} />
+              <QuickActionCard title={t('staff.layout.mainMenu.checkinWalkin')} desc={t('staff.dashboard.quickActions.walkinDesc')} /* TRANSLATED: Nhận xe vãng lai */ icon={<Car size={20} className="text-blue-600" />} iconColorClass="bg-blue-50" onClick={() => navigate('/staff/checkin')} />
+              <QuickActionCard title={t('staff.layout.mainMenu.checkinBooking')} desc={t('staff.dashboard.quickActions.bookingDesc')} /* TRANSLATED: Nhận xe đặt trước */ icon={<Clock size={20} className="text-purple-600" />} iconColorClass="bg-purple-50" onClick={() => navigate('/staff/checkin?tab=booking')} />
+              <QuickActionCard title={t('staff.layout.mainMenu.checkout')} desc={t('staff.dashboard.quickActions.checkoutDesc')} /* TRANSLATED: Thanh toán & Trả xe */ icon={<LogOut size={20} className="text-orange-600" />} iconColorClass="bg-orange-50" onClick={() => navigate('/staff/checkout')} />
             </div>
           </div>
 
-          {/* Recent Check-ins Table */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <div>
-                <h3 className="text-lg font-bold text-gray-800">Lượt vào gần đây</h3>
-                <p className="text-xs text-gray-500">8 phiên nhận xe mới nhất</p>
-              </div>
-              <button onClick={() => navigate('/staff/search-session')} className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
-                Xem tất cả
-              </button>
-            </div>
-            <div className="overflow-x-auto">
+          {/* Recent Check-ins */}
+          <div>
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Clock size={20} className="text-blue-500" /> {t('staff.dashboard.recentCheckins.title')}
+            </h3>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               {loading ? (
-                <div className="flex items-center justify-center p-12 gap-3 text-gray-400">
-                  <Loader2 className="animate-spin" size={20} /> Đang tải...
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="animate-spin text-blue-500" size={28} />
                 </div>
               ) : recentCheckIns.length === 0 ? (
-                <p className="text-center text-gray-400 py-10 text-sm">Chưa có phiên nào hôm nay</p>
+                <p className="text-sm text-gray-400 text-center py-8">{t('staff.dashboard.recentCheckins.empty')}</p>
               ) : (
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-50/50 text-gray-500 font-medium">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-gray-50 text-gray-500 uppercase text-xs">
                     <tr>
-                      <th className="py-3 px-5">ID Phiên</th>
-                      <th className="py-3 px-5">Biển số</th>
-                      <th className="py-3 px-5">Loại xe</th>
-                      <th className="py-3 px-5">Thời gian vào</th>
-                      <th className="py-3 px-5">Ô đỗ</th>
-                      <th className="py-3 px-5">Khu vực</th>
-                      <th className="py-3 px-5">Trạng thái</th>
+                      <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.sessionId')}</th>
+                      <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.plate')}</th>
+                      <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.vehicle')} {/* TRANSLATED: Loại xe */}</th>
+                      <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.time')} {/* TRANSLATED: Thời gian vào */}</th>
+                      <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.slot')} {/* TRANSLATED: Ô đỗ */}</th>
+                      <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.zone')} {/* TRANSLATED: Khu vực */}</th>
+                      <th className="py-3 px-5">{t('staff.dashboard.recentCheckins.headers.status')} {/* TRANSLATED: Trạng thái */}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -176,16 +169,16 @@ export default function StaffDashboardScreen() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
-                <AlertTriangle size={18} className="text-red-500" /> Thông báo & Cảnh báo
+                <AlertTriangle size={18} className="text-red-500" /> {t('staff.dashboard.alerts.title')}
               </h3>
-              {alerts.length > 0 && <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-md">{alerts.length} Mới</span>}
+              {alerts.length > 0 && <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-md">{alerts.length} {t('staff.dashboard.alerts.new')} {/* TRANSLATED: Mới */}</span>}
             </div>
             {loading ? (
               <div className="space-y-2">
                 {[1, 2, 3].map(i => <div key={i} className="h-16 bg-gray-100 animate-pulse rounded-xl" />)}
               </div>
             ) : alerts.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-6">Không có cảnh báo nào</p>
+              <p className="text-sm text-gray-400 text-center py-6">{t('staff.dashboard.alerts.empty')} {/* TRANSLATED: Không có cảnh báo nào */}</p>
             ) : (
               <div className="space-y-1">
                 {alerts.map(alert => (
@@ -194,33 +187,33 @@ export default function StaffDashboardScreen() {
               </div>
             )}
             <button onClick={() => navigate('/staff/incidents')} className="w-full mt-4 py-2 text-sm font-bold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center gap-2">
-              XEM TẤT CẢ <ChevronRight size={16} />
+              {t('staff.dashboard.alerts.viewAll')} {/* TRANSLATED: XEM TẤT CẢ */} <ChevronRight size={16} />
             </button>
           </div>
 
           {/* Quick Search */}
           <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
-            <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2 uppercase"><Search size={16} /> Tra cứu nhanh biển số</h3>
+            <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2 uppercase"><Search size={16} /> {t('staff.dashboard.quickSearch.title')} {/* TRANSLATED: Tra cứu nhanh biển số */}</h3>
             <div className="relative">
               <input
                 type="text"
                 value={quickSearch}
                 onChange={e => setQuickSearch(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') navigate(`/staff/search-session?keyword=${encodeURIComponent(quickSearch.trim())}`) }}
-                placeholder="Nhập biển số xe, Enter để tìm..."
+                placeholder={t('staff.dashboard.quickSearch.placeholder')} /* TRANSLATED: Nhập biển số xe, Enter để tìm... */
                 className="w-full py-2.5 pl-4 pr-10 rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
               />
               <Search size={18} className="absolute right-3 top-2.5 text-blue-400" />
             </div>
-            <p className="text-xs text-blue-600 mt-2">Nhấn Enter để tìm kiếm</p>
+            <p className="text-xs text-blue-600 mt-2">{t('staff.dashboard.quickSearch.hint')} {/* TRANSLATED: Nhấn Enter để tìm kiếm */}</p>
           </div>
 
           {/* Today Revenue */}
           {!loading && stats && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-              <h3 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2"><CreditCard size={16} className="text-green-600" /> Doanh thu hôm nay</h3>
+              <h3 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2"><CreditCard size={16} className="text-green-600" /> {t('staff.dashboard.revenue.title')} {/* TRANSLATED: Doanh thu hôm nay */}</h3>
               <p className="text-2xl font-black text-green-600">{Number(stats.todayRevenue || 0).toLocaleString('vi-VN')}₫</p>
-              <p className="text-xs text-gray-400 mt-1">Đã thanh toán hoàn tất</p>
+              <p className="text-xs text-gray-400 mt-1">{t('staff.dashboard.revenue.desc')} {/* TRANSLATED: Đã thanh toán hoàn tất */}</p>
             </div>
           )}
         </div>

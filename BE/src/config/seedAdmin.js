@@ -1,16 +1,27 @@
+/**
+ * FILE: seedAdmin.js
+ * MÔ TẢ: Script chạy một lần để khởi tạo (seed) dữ liệu ban đầu cho hệ thống.
+ * Cụ thể: Tạo Role Admin, Cập nhật Constraint (Ràng buộc) cho Users, 
+ * Tạo tài khoản Admin mặc định, và tạo bảng AuditLogs.
+ */
+
 import { getPool, sql } from "./db.js";
 
 async function main() {
     try {
+        // 1. Lấy kết nối từ database
         const pool = await getPool();
         
-        // Check if Admin role exists
+        // ================= XỬ LÝ ROLE ADMIN =================
+        // 2. Kiểm tra xem Role "Admin" đã tồn tại trong bảng Roles chưa
         const roleResult = await pool.request().query("SELECT RoleID FROM Roles WHERE RoleName = 'Admin'");
         let roleId;
         if (roleResult.recordset.length > 0) {
+            // Nếu đã tồn tại, lấy ID
             roleId = roleResult.recordset[0].RoleID;
             console.log("Admin role already exists with ID:", roleId);
         } else {
+            // Nếu chưa tồn tại, chèn mới Role "Admin"
             const insertRole = await pool.request()
                 .input("RoleName", sql.NVarChar(50), "Admin")
                 .input("Description", sql.NVarChar(200), "Quản trị hệ thống")
@@ -23,7 +34,9 @@ async function main() {
             console.log("Created Admin role with ID:", roleId);
         }
 
-        // Fix Constraint CK_Users_MinAge to allow RoleID = 4
+        // ================= CẬP NHẬT RÀNG BUỘC (CONSTRAINT) =================
+        // 3. Sửa ràng buộc độ tuổi (CK_Users_MinAge) trong bảng Users.
+        // RoleID 4 là Admin. Sửa để cho phép Admin (và RoleID 1) không bị ràng buộc tuổi gắt gao.
         await pool.request().query(`
             IF OBJECT_ID('CK_Users_MinAge', 'C') IS NOT NULL
                 ALTER TABLE Users DROP CONSTRAINT CK_Users_MinAge;
@@ -43,11 +56,13 @@ async function main() {
             );
         `);
 
-        // Check if Admin user exists
+        // ================= TẠO TÀI KHOẢN ADMIN =================
+        // 4. Kiểm tra xem user Admin (admin@parking.com) đã có chưa
         const userResult = await pool.request().query("SELECT UserID FROM Users WHERE Email = 'admin@parking.com'");
         if (userResult.recordset.length > 0) {
             console.log("Admin user already exists with ID:", userResult.recordset[0].UserID);
         } else {
+            // 5. Nếu chưa có, tạo tài khoản Admin mới
             const insertUser = await pool.request()
                 .input("FullName", sql.NVarChar(100), "Grace Admin")
                 .input("Email", sql.NVarChar(100), "admin@parking.com")
@@ -62,7 +77,9 @@ async function main() {
             console.log("Created Admin user with ID:", insertUser.recordset[0].UserID);
         }
 
-        // Create AuditLogs table if not exists
+        // ================= TẠO BẢNG AUDIT LOGS =================
+        // 6. Kiểm tra và tạo bảng AuditLogs nếu nó chưa tồn tại.
+        // Bảng này dùng để lưu lại lịch sử các hành động quan trọng (nhật ký hệ thống).
         await pool.request().query(`
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='AuditLogs' and xtype='U')
             BEGIN
@@ -86,11 +103,14 @@ async function main() {
             END
         `);
         
+        // Thành công, thoát process
         process.exit(0);
     } catch (err) {
+        // Bắt lỗi và in ra nếu quá trình thất bại
         console.error("❌ Failed:", err.message);
         process.exit(1);
     }
 }
 
+// Gọi hàm main để chạy script
 main();

@@ -1,65 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
-  LayoutGrid,
-  MapPin,
-  Sliders,
-  DollarSign,
-  AlertCircle,
-  FileText,
-  LogOut,
-  Bell,
-  ChevronDown,
-  Search,
-  Calendar,
-  Car,
-  Menu,
-  X
+  LayoutGrid, MapPin, Sliders, DollarSign, AlertCircle, FileText,
+  LogOut, Bell, ChevronDown, Search, Calendar, Car, Menu, X
 } from 'lucide-react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-
-const LOCATIONS = [
-  'District 1 Parking Tower',
-  'District 3 Parking Center',
-  'District 7 Parking Building',
-  'Bình Thạnh Smart Parking'
-]
-
-const MENU_ITEMS = [
-  { icon: LayoutGrid, label: 'Bảng điều khiển', path: '/manager' },
-  { icon: Sliders, label: 'Cấu hình bãi đỗ', path: '/manager/config' },
-  { icon: MapPin, label: 'Quản lý vị trí (Slots)', path: '/manager/positions' },
-  { icon: DollarSign, label: 'Bảng giá & Phí', path: '/manager/pricing' },
-  { icon: AlertCircle, label: 'Sự cố & Khiếu nại', path: '/manager/incidents' },
-  { icon: FileText, label: 'Báo cáo hệ thống', path: '/manager/reports' }
-]
-
-const notificationsData = [
-  {
-    id: 1,
-    title: 'Tầng B1 đạt 95% công suất',
-    message: 'Khuyến nghị mở thêm vùng đỗ tạm thời.',
-    time: '10 phút trước',
-    type: 'warning',
-    unread: true
-  },
-  {
-    id: 2,
-    title: '8 hóa đơn chưa thanh toán',
-    message: 'Tổng 450.000đ cần được xử lý.',
-    time: '30 phút trước',
-    type: 'error',
-    unread: true
-  },
-  {
-    id: 3,
-    title: 'Bảo trì hệ thống',
-    message: 'Bãi Bình Thạnh sẽ tạm đóng 2-4h sáng mai.',
-    time: '1 giờ trước',
-    type: 'info',
-    unread: false
-  }
-]
 
 const NotificationPill = ({ type }) => {
   const classes = {
@@ -79,9 +25,32 @@ const getInitials = (name) => {
 }
 
 const ManagerLayout = () => {
+  const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+
+  const LOCATIONS = [
+    t('manager.layout.locations.d1'),
+    t('manager.layout.locations.d3'),
+    t('manager.layout.locations.d7'),
+    t('manager.layout.locations.bt')
+  ]
+
+  const MENU_ITEMS = [
+    { icon: LayoutGrid, label: t('manager.layout.menu.dashboard'), path: '/manager' },
+    { icon: Sliders, label: t('manager.layout.menu.config'), path: '/manager/config' },
+    { icon: MapPin, label: t('manager.layout.menu.positions'), path: '/manager/positions' },
+    { icon: DollarSign, label: t('manager.layout.menu.pricing'), path: '/manager/pricing' },
+    { icon: AlertCircle, label: t('manager.layout.menu.incidents'), path: '/manager/incidents' },
+    { icon: FileText, label: t('manager.layout.menu.reports'), path: '/manager/reports' }
+  ]
+
+  const notificationsData = [
+    { id: 1, title: t('manager.layout.notif.n1Title'), message: t('manager.layout.notif.n1Msg'), time: t('manager.layout.notif.n1Time'), type: 'warning', unread: true },
+    { id: 2, title: t('manager.layout.notif.n2Title'), message: t('manager.layout.notif.n2Msg'), time: t('manager.layout.notif.n2Time'), type: 'error', unread: true },
+    { id: 3, title: t('manager.layout.notif.n3Title'), message: t('manager.layout.notif.n3Msg'), time: t('manager.layout.notif.n3Time'), type: 'info', unread: false }
+  ]
 
   const profileRef = useRef(null)
   const locationRef = useRef(null)
@@ -99,11 +68,11 @@ const ManagerLayout = () => {
     [notifications]
   )
 
-  const displayName = user?.fullName || 'Manager'
-  const displayEmail = user?.email || 'manager@smartpark.com'
-  const displayRole = user?.roleName === 'Manager' ? 'Quản lý SmartPark' : user?.roleName || 'Quản lý'
-  const appName = 'PBMS'
-  const appSubtitle = 'Parking Building System'
+  const displayName = user?.fullName || t('manager.layout.defaultManager')
+  const displayEmail = user?.email || t('manager.layout.defaultEmail')
+  const displayRole = user?.roleName === 'Manager' ? t('manager.layout.roleManager') : user?.roleName || t('manager.layout.roleDefault')
+  const appName = t('manager.layout.appName')
+  const appSubtitle = t('manager.layout.appSubtitle')
 
   const handleLogout = async () => {
     setIsProfileOpen(false)
@@ -135,19 +104,11 @@ const ManagerLayout = () => {
 
   return (
     <div className="flex min-h-screen bg-[#f7f9fb] text-gray-900">
-      {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 flex-col border-r border-gray-200 bg-white px-4 py-6 shadow-xl transition-transform duration-300 ${
-          sidebarOpen ? 'translate-x-0 flex' : '-translate-x-full hidden'
-        }`}
-      >
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 flex-col border-r border-gray-200 bg-white px-4 py-6 shadow-xl transition-transform duration-300 ${sidebarOpen ? 'translate-x-0 flex' : '-translate-x-full hidden'}`}>
         <div className="mb-10 flex items-center justify-between">
           <Link to="/manager" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-sky-100 text-sky-600 shadow-sm">
@@ -158,10 +119,7 @@ const ManagerLayout = () => {
               <p className="text-xs text-gray-500">{appSubtitle}</p>
             </div>
           </Link>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="p-2 rounded-xl text-gray-400 hover:bg-gray-50"
-          >
+          <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-xl text-gray-400 hover:bg-gray-50">
             <X size={20} />
           </button>
         </div>
@@ -170,15 +128,8 @@ const ManagerLayout = () => {
           {MENU_ITEMS.map((item) => {
             const Icon = item.icon
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${isActive(item.path)
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'
-                }`}
-              >
+              <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${isActive(item.path) ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Icon size={18} />
                 <span>{item.label}</span>
               </Link>
@@ -194,12 +145,9 @@ const ManagerLayout = () => {
               <p className="text-xs text-gray-500">{displayRole}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100"
-          >
-            <LogOut size={16} /> Đăng xuất
+          <button type="button" onClick={handleLogout}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100">
+            <LogOut size={16} /> {t('manager.layout.logout')}
           </button>
         </div>
       </aside>
@@ -209,11 +157,8 @@ const ManagerLayout = () => {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSidebarOpen(true)}
-                  className="flex items-center justify-center p-2 rounded-xl text-gray-500 hover:bg-gray-50"
-                >
+                <button type="button" onClick={() => setSidebarOpen(true)}
+                  className="flex items-center justify-center p-2 rounded-xl text-gray-500 hover:bg-gray-50">
                   <Menu size={24} />
                 </button>
 
@@ -233,7 +178,7 @@ const ManagerLayout = () => {
               <div className="relative hidden md:block">
                 <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  placeholder="Tìm kiếm phiên, biển số..."
+                  placeholder={t('manager.layout.searchPlaceholder')}
                   className="w-72 rounded-3xl border border-gray-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-700 outline-none transition focus:border-blue-500"
                 />
               </div>
@@ -244,24 +189,18 @@ const ManagerLayout = () => {
                 <Calendar size={16} className="mr-2 inline" /> 24/05/2024
               </div>
               <div className="relative" ref={notificationRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsNotificationsOpen((prev) => !prev)}
-                  className="relative inline-flex h-11 w-11 items-center justify-center rounded-3xl border border-gray-200 bg-white text-slate-600 transition hover:bg-slate-50"
-                >
+                <button type="button" onClick={() => setIsNotificationsOpen((prev) => !prev)}
+                  className="relative inline-flex h-11 w-11 items-center justify-center rounded-3xl border border-gray-200 bg-white text-slate-600 transition hover:bg-slate-50">
                   <Bell size={18} />
                   {unreadCount > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500" />}
                 </button>
                 {isNotificationsOpen && (
                   <div className="absolute right-0 z-50 mt-3 w-80 rounded-3xl border border-gray-200 bg-white p-4 shadow-xl">
                     <div className="flex items-center justify-between pb-3">
-                      <p className="text-sm font-semibold text-slate-900">Thông báo</p>
-                      <button
-                        type="button"
-                        onClick={handleMarkAllRead}
-                        className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-                      >
-                        Đánh dấu đã đọc
+                      <p className="text-sm font-semibold text-slate-900">{t('manager.layout.notificationsTitle')}</p>
+                      <button type="button" onClick={handleMarkAllRead}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-700">
+                        {t('manager.layout.markAllRead')}
                       </button>
                     </div>
                     <div className="space-y-3">
@@ -283,11 +222,8 @@ const ManagerLayout = () => {
               </div>
 
               <div className="relative" ref={profileRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsProfileOpen((prev) => !prev)}
-                  className="inline-flex items-center gap-3 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
+                <button type="button" onClick={() => setIsProfileOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-3 rounded-3xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white">{getInitials(displayName)}</div>
                   <div className="hidden text-left sm:block">
                     <p className="text-sm font-semibold">{displayName}</p>
@@ -299,23 +235,17 @@ const ManagerLayout = () => {
                   <div className="absolute right-0 z-50 mt-3 w-72 rounded-3xl border border-gray-200 bg-white p-4 shadow-xl">
                     <div className="space-y-3">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Tài khoản</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">{t('manager.layout.accountLabel')}</p>
                         <p className="mt-2 font-semibold text-slate-900">{displayName}</p>
                         <p className="text-xs text-slate-500">{displayEmail}</p>
                       </div>
-                      <Link
-                        to="/manager/profile"
-                        onClick={() => setIsProfileOpen(false)}
-                        className="block rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                      >
-                        Hồ sơ cá nhân
+                      <Link to="/manager/profile" onClick={() => setIsProfileOpen(false)}
+                        className="block rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                        {t('manager.layout.profile')}
                       </Link>
-                      <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="w-full rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-100"
-                      >
-                        Đăng xuất
+                      <button type="button" onClick={handleLogout}
+                        className="w-full rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-100">
+                        {t('manager.layout.logout')}
                       </button>
                     </div>
                   </div>

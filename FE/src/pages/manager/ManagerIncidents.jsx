@@ -1,5 +1,6 @@
 // src/pages/manager/ManagerIncidents.jsx
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   AlertTriangle, Filter, Search, SearchX, CheckCircle, Clock,
   ShieldAlert, X, Eye, RefreshCcw, Image as ImageIcon, User, Car, MapPin
@@ -12,17 +13,16 @@ import {
   getStaffListAPI
 } from '../../apis/managerApi'
 
-// ── Config trạng thái (khớp DB: Open / InProgress / Resolved) ──
-const STATUS_CONFIG = {
-  Open: { label: 'Đang chờ xử lý', icon: <Clock size={14} />, color: 'bg-amber-50 text-amber-600 border border-amber-200/60' },
-  InProgress: { label: 'Đang xử lý', icon: <AlertTriangle size={14} />, color: 'bg-blue-50 text-blue-600 border border-blue-200/60' },
-  Resolved: { label: 'Đã giải quyết', icon: <CheckCircle size={14} />, color: 'bg-emerald-50 text-emerald-600 border border-emerald-200/60' }
+const STATUS_META = {
+  Open: { icon: <Clock size={14} />, color: 'bg-amber-50 text-amber-600 border border-amber-200/60' },
+  InProgress: { icon: <AlertTriangle size={14} />, color: 'bg-blue-50 text-blue-600 border border-blue-200/60' },
+  Resolved: { icon: <CheckCircle size={14} />, color: 'bg-emerald-50 text-emerald-600 border border-emerald-200/60' }
 }
 
-const PRIORITY_CONFIG = {
-  Low: { label: 'Thấp', color: 'text-slate-600 bg-slate-100/70' },
-  Normal: { label: 'Bình thường', color: 'text-blue-600 bg-blue-50' },
-  High: { label: 'Khẩn cấp', color: 'text-red-600 bg-red-50 font-bold' }
+const PRIORITY_COLOR = {
+  Low: 'text-slate-600 bg-slate-100/70',
+  Normal: 'text-blue-600 bg-blue-50',
+  High: 'text-red-600 bg-red-50 font-bold'
 }
 
 const fmtDate = (d) => d ? new Date(d).toLocaleString('vi-VN', {
@@ -30,21 +30,23 @@ const fmtDate = (d) => d ? new Date(d).toLocaleString('vi-VN', {
 }) : '—'
 
 const StatusBadge = ({ status }) => {
-  const c = STATUS_CONFIG[status] || { label: status, icon: null, color: 'bg-slate-100 text-slate-600' }
+  const { t } = useTranslation()
+  const c = STATUS_META[status] || { icon: null, color: 'bg-slate-100 text-slate-600' }
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${c.color}`}>
-      {c.icon}{c.label}
+      {c.icon}{t(`manager.incidents.status.${status}`, status)}
     </span>
   )
 }
 
 const PriorityBadge = ({ priority }) => {
-  const c = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.Normal
-  return <span className={`inline-block px-2 py-1 rounded-md text-[11px] ${c.color}`}>{c.label}</span>
+  const { t } = useTranslation()
+  const cls = PRIORITY_COLOR[priority] || PRIORITY_COLOR.Normal
+  return <span className={`inline-block px-2 py-1 rounded-md text-[11px] ${cls}`}>{t(`manager.incidents.priority.${priority}`, priority)}</span>
 }
 
-// ── Detail Modal ──────────────────────────────────────────────
 const IncidentModal = ({ incidentId, staffList, onClose, onUpdated }) => {
+  const { t } = useTranslation()
   const [incident, setIncident] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -64,14 +66,14 @@ const IncidentModal = ({ incidentId, staffList, onClose, onUpdated }) => {
         setStatus(data.IncidentStatus || 'Open')
         setAssignedStaffId(data.AssignedStaffID ? String(data.AssignedStaffID) : '')
       } catch {
-        if (!cancelled) { toast.error('Không tải được chi tiết sự cố'); onClose() }
+        if (!cancelled) { toast.error(t('manager.incidents.modal.loadFail')); onClose() }
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
     run()
     return () => { cancelled = true }
-  }, [incidentId, onClose])
+  }, [incidentId, onClose, t])
 
   const handleSave = async () => {
     setSaving(true)
@@ -80,11 +82,11 @@ const IncidentModal = ({ incidentId, staffList, onClose, onUpdated }) => {
         status,
         assignedStaffId: assignedStaffId ? Number(assignedStaffId) : undefined
       })
-      toast.success('Cập nhật sự cố thành công')
+      toast.success(t('manager.incidents.modal.updateSuccess'))
       onUpdated()
       onClose()
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Cập nhật thất bại')
+      toast.error(err?.response?.data?.message || t('manager.incidents.modal.updateFail'))
     } finally {
       setSaving(false)
     }
@@ -98,7 +100,7 @@ const IncidentModal = ({ incidentId, staffList, onClose, onUpdated }) => {
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2">
             <ShieldAlert size={20} className="text-blue-600" />
-            <h3 className="text-lg font-bold text-slate-900">Chi tiết sự cố #{incidentId}</h3>
+            <h3 className="text-lg font-bold text-slate-900">{t('manager.incidents.modal.title', { id: incidentId })}</h3>
           </div>
           <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100 transition"><X size={18} /></button>
         </div>
@@ -118,12 +120,12 @@ const IncidentModal = ({ incidentId, staffList, onClose, onUpdated }) => {
 
               <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4">
                 {[
-                  { icon: AlertTriangle, label: 'Mã phiên', value: incident.SessionCode || '—' },
-                  { icon: User, label: 'Tài xế', value: incident.DriverName || '—' },
-                  { icon: Car, label: 'Biển số', value: incident.PlateNumber || '—' },
-                  { icon: User, label: 'SĐT', value: incident.DriverPhone || '—' },
-                  { icon: MapPin, label: 'Nhân viên xử lý', value: incident.AssignedStaffName || 'Chưa giao' },
-                  { icon: Clock, label: 'Tạo lúc', value: fmtDate(incident.CreatedAt) }
+                  { icon: AlertTriangle, label: t('manager.incidents.modal.sessionCode'), value: incident.SessionCode || '—' },
+                  { icon: User, label: t('manager.incidents.modal.driver'), value: incident.DriverName || '—' },
+                  { icon: Car, label: t('manager.incidents.modal.plate'), value: incident.PlateNumber || '—' },
+                  { icon: User, label: t('manager.incidents.modal.phone'), value: incident.DriverPhone || '—' },
+                  { icon: MapPin, label: t('manager.incidents.modal.assignedStaff'), value: incident.AssignedStaffName || t('manager.incidents.modal.unassigned') },
+                  { icon: Clock, label: t('manager.incidents.modal.createdAt'), value: fmtDate(incident.CreatedAt) }
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-start gap-2">
                     <Icon size={14} className="text-slate-400 mt-0.5 shrink-0" />
@@ -136,7 +138,7 @@ const IncidentModal = ({ incidentId, staffList, onClose, onUpdated }) => {
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-slate-500 mb-1.5">Mô tả</p>
+                <p className="text-xs font-semibold text-slate-500 mb-1.5">{t('manager.incidents.modal.description')}</p>
                 <div className="rounded-xl border border-slate-200 p-3 whitespace-pre-wrap text-sm text-slate-700">
                   {incident.Description || '—'}
                 </div>
@@ -146,7 +148,7 @@ const IncidentModal = ({ incidentId, staffList, onClose, onUpdated }) => {
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <ImageIcon size={15} className="text-slate-400" />
-                    <p className="text-xs font-semibold text-slate-500">Ảnh đính kèm ({images.length})</p>
+                    <p className="text-xs font-semibold text-slate-500">{t('manager.incidents.modal.attachments', { count: images.length })}</p>
                   </div>
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                     {images.map((src, i) => (
@@ -159,22 +161,22 @@ const IncidentModal = ({ incidentId, staffList, onClose, onUpdated }) => {
               )}
 
               <div className="border-t border-slate-100 pt-4 space-y-4">
-                <p className="text-sm font-bold text-slate-700">Xử lý sự cố</p>
+                <p className="text-sm font-bold text-slate-700">{t('manager.incidents.modal.handleTitle')}</p>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <label className="block">
-                    <span className="text-xs font-semibold text-slate-600 mb-1.5 block">Trạng thái</span>
+                    <span className="text-xs font-semibold text-slate-600 mb-1.5 block">{t('manager.incidents.modal.statusLabel')}</span>
                     <select value={status} onChange={e => setStatus(e.target.value)}
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500">
-                      <option value="Open">Đang chờ xử lý</option>
-                      <option value="InProgress">Đang xử lý</option>
-                      <option value="Resolved">Đã giải quyết</option>
+                      <option value="Open">{t('manager.incidents.status.Open')}</option>
+                      <option value="InProgress">{t('manager.incidents.status.InProgress')}</option>
+                      <option value="Resolved">{t('manager.incidents.status.Resolved')}</option>
                     </select>
                   </label>
                   <label className="block">
-                    <span className="text-xs font-semibold text-slate-600 mb-1.5 block">Giao cho nhân viên</span>
+                    <span className="text-xs font-semibold text-slate-600 mb-1.5 block">{t('manager.incidents.modal.assignLabel')}</span>
                     <select value={assignedStaffId} onChange={e => setAssignedStaffId(e.target.value)}
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500">
-                      <option value="">— Chưa giao —</option>
+                      <option value="">{t('manager.incidents.modal.assignNone')}</option>
                       {staffList.map(s => (
                         <option key={s.UserID} value={s.UserID}>{s.FullName} ({s.RoleName})</option>
                       ))}
@@ -187,10 +189,10 @@ const IncidentModal = ({ incidentId, staffList, onClose, onUpdated }) => {
         </div>
 
         <div className="px-6 py-4 border-t border-slate-100 flex gap-3 shrink-0">
-          <button onClick={onClose} className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Đóng</button>
+          <button onClick={onClose} className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">{t('manager.incidents.modal.close')}</button>
           <button onClick={handleSave} disabled={saving || loading}
             className="flex-1 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60 transition flex items-center justify-center gap-2">
-            {saving ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Đang lưu...</> : 'Lưu thay đổi'}
+            {saving ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> {t('manager.incidents.modal.saving')}</> : t('manager.incidents.modal.save')}
           </button>
         </div>
       </div>
@@ -204,8 +206,8 @@ const IncidentModal = ({ incidentId, staffList, onClose, onUpdated }) => {
   )
 }
 
-// ── Main Page ─────────────────────────────────────────────────
 const ManagerIncidents = () => {
+  const { t } = useTranslation()
   const [incidents, setIncidents] = useState([])
   const [staffList, setStaffList] = useState([])
   const [loading, setLoading] = useState(true)
@@ -217,30 +219,27 @@ const ManagerIncidents = () => {
   const [searchTrigger, setSearchTrigger] = useState(0)
   const [selectedId, setSelectedId] = useState(null)
 
-  // refs để effect đọc filter mới nhất mà không phải dep
   const fetchData = useCallback(async (params) => {
     setLoading(true)
     try {
       const res = await getIncidentsAPI(params)
       setIncidents(res.data.data || [])
     } catch {
-      toast.error('Không thể tải danh sách sự cố')
+      toast.error(t('manager.incidents.loadFail'))
     } finally {
       setLoading(false)
       setTimeout(() => setIsLoaded(true), 80)
     }
-  }, [])
+  }, [t])
 
-  // Load 1 lần: staff list
   useEffect(() => {
     let cancelled = false
     getStaffListAPI()
       .then(res => { if (!cancelled) setStaffList(res.data.data || []) })
-      .catch(() => { /* bỏ qua */ })
+      .catch(() => { })
     return () => { cancelled = true }
   }, [])
 
-  // Load incidents theo bộ lọc server-side
   useEffect(() => {
     const params = {}
     if (filterStatus !== 'all') params.status = filterStatus
@@ -250,9 +249,8 @@ const ManagerIncidents = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTrigger, fetchData])
 
-  const handleSearch = () => setSearchTrigger(t => t + 1)
+  const handleSearch = () => setSearchTrigger(tt => tt + 1)
 
-  // Lọc nhanh client-side trên kết quả đã tải (theo searchTerm tức thời)
   const filtered = incidents.filter(item => {
     if (!searchTerm.trim()) return true
     const s = searchTerm.toLowerCase()
@@ -271,17 +269,16 @@ const ManagerIncidents = () => {
 
   return (
     <div className={`space-y-6 pb-12 transition-all duration-700 ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-      {/* Header */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-sm border border-slate-200/60">
         <div className="flex items-center gap-4 px-2">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">Giám sát / Sự cố</p>
-            <h1 className="text-2xl font-bold text-slate-900 mt-1">Sự cố & Khiếu nại</h1>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('manager.incidents.eyebrow')}</p>
+            <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('manager.incidents.title')}</h1>
           </div>
         </div>
         <button onClick={handleSearch}
           className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition self-start">
-          <RefreshCcw size={16} /> Làm mới
+          <RefreshCcw size={16} /> {t('manager.incidents.refresh')}
         </button>
       </div>
 
@@ -292,27 +289,26 @@ const ManagerIncidents = () => {
               <ShieldAlert size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Danh sách Sự cố</h2>
-              <p className="text-[12px] font-medium text-slate-500 mt-0.5">Theo dõi và xử lý các sự cố trong khu vực bãi đỗ xe.</p>
+              <h2 className="text-lg font-bold text-slate-900">{t('manager.incidents.listTitle')}</h2>
+              <p className="text-[12px] font-medium text-slate-500 mt-0.5">{t('manager.incidents.listDesc')}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(STATUS_CONFIG).map(([k, c]) => counts[k] ? (
+            {Object.entries(STATUS_META).map(([k, c]) => counts[k] ? (
               <button key={k} onClick={() => { setFilterStatus(k); handleSearch() }}
                 className={`text-xs font-bold px-2.5 py-1 rounded-lg ${c.color}`}>
-                {c.label}: {counts[k]}
+                {t(`manager.incidents.status.${k}`)}: {counts[k]}
               </button>
             ) : null)}
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Tìm mã, loại sự cố, tài xế, biển số..."
+              placeholder={t('manager.incidents.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -321,27 +317,26 @@ const ManagerIncidents = () => {
           </div>
           <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 bg-slate-50">
             <Filter size={16} className="text-slate-400" />
-            <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setSearchTrigger(t => t + 1) }}
+            <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setSearchTrigger(tt => tt + 1) }}
               className="bg-transparent text-sm font-semibold text-slate-700 py-2.5 outline-none cursor-pointer">
-              <option value="all">Tất cả trạng thái</option>
-              <option value="Open">Đang chờ xử lý</option>
-              <option value="InProgress">Đang xử lý</option>
-              <option value="Resolved">Đã giải quyết</option>
+              <option value="all">{t('manager.incidents.filterAllStatus')}</option>
+              <option value="Open">{t('manager.incidents.status.Open')}</option>
+              <option value="InProgress">{t('manager.incidents.status.InProgress')}</option>
+              <option value="Resolved">{t('manager.incidents.status.Resolved')}</option>
             </select>
           </div>
           <div className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 bg-slate-50">
             <Filter size={16} className="text-slate-400" />
-            <select value={filterPriority} onChange={(e) => { setFilterPriority(e.target.value); setSearchTrigger(t => t + 1) }}
+            <select value={filterPriority} onChange={(e) => { setFilterPriority(e.target.value); setSearchTrigger(tt => tt + 1) }}
               className="bg-transparent text-sm font-semibold text-slate-700 py-2.5 outline-none cursor-pointer">
-              <option value="all">Tất cả mức độ</option>
-              <option value="High">Khẩn cấp</option>
-              <option value="Normal">Bình thường</option>
-              <option value="Low">Thấp</option>
+              <option value="all">{t('manager.incidents.filterAllPriority')}</option>
+              <option value="High">{t('manager.incidents.priority.High')}</option>
+              <option value="Normal">{t('manager.incidents.priority.Normal')}</option>
+              <option value="Low">{t('manager.incidents.priority.Low')}</option>
             </select>
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-hidden rounded-xl border border-slate-200">
           <div className="overflow-x-auto overflow-y-auto max-h-115">
             {loading ? (
@@ -352,13 +347,13 @@ const ManagerIncidents = () => {
               <table className="min-w-full text-left text-sm text-slate-700">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Mã SC</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Loại / Mô tả</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Tài xế / Biển số</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Ảnh</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Mức độ</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">Trạng thái</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50 text-right">Thao tác</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.incidents.col.id')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.incidents.col.typeDesc')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.incidents.col.driverPlate')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.incidents.col.image')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.incidents.col.priority')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.incidents.col.status')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50 text-right">{t('manager.incidents.col.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -394,7 +389,7 @@ const ManagerIncidents = () => {
                         <td className="px-5 py-4 text-right">
                           <button onClick={() => setSelectedId(item.IncidentID)}
                             className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 active:scale-95">
-                            <Eye size={13} /> Chi tiết
+                            <Eye size={13} /> {t('manager.incidents.viewDetail')}
                           </button>
                         </td>
                       </tr>
@@ -405,8 +400,8 @@ const ManagerIncidents = () => {
             ) : (
               <div className="py-16 flex flex-col items-center justify-center text-center text-slate-500 bg-slate-50/50">
                 <SearchX size={48} className="text-slate-300 mb-4" />
-                <p className="font-bold text-slate-700 text-base">Không tìm thấy sự cố nào</p>
-                <p className="text-sm mt-1.5 text-slate-500">Thử thay đổi từ khóa hoặc bộ lọc.</p>
+                <p className="font-bold text-slate-700 text-base">{t('manager.incidents.emptyTitle')}</p>
+                <p className="text-sm mt-1.5 text-slate-500">{t('manager.incidents.emptyHint')}</p>
               </div>
             )}
           </div>

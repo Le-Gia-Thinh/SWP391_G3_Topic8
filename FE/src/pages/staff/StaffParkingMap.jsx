@@ -1,253 +1,515 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import axios from '../../utils/authorizeAxios'
-import { Map, RefreshCcw, Car, Info, ZoomIn, ZoomOut } from 'lucide-react'
+import {
+  Map, RefreshCcw, Car, Info, ZoomIn, ZoomOut,
+  Building2, Layers, Grid3X3, ChevronRight, X
+} from 'lucide-react'
 
+/* ─── Status config ─────────────────────────────────────────── */
 const STATUS_CONFIG = {
-  available: { label: 'Trống', bg: 'bg-green-50', border: 'border-green-300', text: 'text-green-700' },
-  occupied: { label: 'Đã đỗ', bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700' },
-  reserved: { label: 'Đã đặt', bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-700' },
-  maintenance: { label: 'Bảo trì', bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-500' },
-  blocked: { label: 'Khóa', bg: 'bg-gray-800', border: 'border-gray-800', text: 'text-white' }
+  available: { labelKey: 'staff.parkingMap.statusAvailable', bg: 'bg-emerald-50', border: 'border-emerald-300', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+  occupied: { labelKey: 'staff.parkingMap.statusOccupied', bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', dot: 'bg-red-400' },
+  reserved: { labelKey: 'staff.parkingMap.statusReserved', bg: 'bg-amber-50', border: 'border-amber-300', text: 'text-amber-700', dot: 'bg-amber-400' },
+  maintenance: { labelKey: 'staff.parkingMap.statusMaintenance', bg: 'bg-slate-100', border: 'border-slate-300', text: 'text-slate-500', dot: 'bg-slate-400' },
+  blocked: { labelKey: 'staff.parkingMap.statusBlocked', bg: 'bg-slate-800', border: 'border-slate-800', text: 'text-white', dot: 'bg-slate-600' },
 }
 
-function buildZones(slots) {
-  const zoneMap = {}
+/* ─── Build hierarchy: building → floor → zone ──────────────── */
+function buildHierarchy(slots) {
+  const buildings = {}
+
   slots.forEach(slot => {
-    const key = slot.ZoneID
-    if (!zoneMap[key]) {
-      zoneMap[key] = {
-        id: slot.ZoneID,
-        label: `${slot.BuildingName} · ${slot.FloorName} · ${slot.ZoneName}`,
-        statuses: {},
-        slotCodes: []
+    const bKey = slot.BuildingID
+    const fKey = slot.FloorID
+    const zKey = slot.ZoneID
+
+    if (!buildings[bKey]) {
+      buildings[bKey] = {
+        id: bKey,
+        name: slot.BuildingName,
+        floors: {}
       }
     }
-    zoneMap[key].statuses[slot.SlotCode] = (slot.SlotStatus || 'Available').toLowerCase()
-    zoneMap[key].slotCodes.push(slot.SlotCode)
+
+    const floors = buildings[bKey].floors
+    if (!floors[fKey]) {
+      floors[fKey] = {
+        id: fKey,
+        name: slot.FloorName,
+        zones: {}
+      }
+    }
+
+    const zones = floors[fKey].zones
+    if (!zones[zKey]) {
+      zones[zKey] = {
+        id: zKey,
+        name: slot.ZoneName,
+        slots: []
+      }
+    }
+
+    zones[zKey].slots.push({
+      code: slot.SlotCode,
+      status: (slot.SlotStatus || 'Available').toLowerCase(),
+      sessionId: slot.SessionID,
+      reservationId: slot.ReservationID,
+    })
   })
-  return Object.values(zoneMap).map(zone => {
-    const codes = [...new Set(zone.slotCodes)].sort()
-    const rows = []
-    for (let i = 0; i < codes.length; i += 10) rows.push(codes.slice(i, i + 10))
-    return { ...zone, rows }
-  })
+
+  return Object.values(buildings).map(b => ({
+    ...b,
+    floors: Object.values(b.floors).map(f => ({
+      ...f,
+      zones: Object.values(f.zones)
+    }))
+  }))
 }
 
+/* ─── Stat pill ─────────────────────────────────────────────── */
+function StatPill({ value, label, color }) {
+  return (
+    <div className="flex items-center gap-2 bg-white rounded-lg border border-slate-100 px-3 py-1.5 shadow-sm">
+      <span className={`text-lg font-black ${color}`}>{value}</span>
+      <span className="text-xs text-slate-400 font-medium">{label}</span>
+    </div>
+  )
+}
+
+/* ─── Sidebar nav item ──────────────────────────────────────── */
+function NavItem({ icon: Icon, label, active, onClick, count, indent = 0 }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all text-sm
+        ${indent === 1 ? 'pl-6' : indent === 2 ? 'pl-9' : ''}
+        ${active
+          ? 'bg-blue-600 text-white shadow-sm shadow-blue-200 font-semibold'
+          : 'text-slate-600 hover:bg-slate-100 font-medium'}`}
+    >
+      <Icon size={14} className={active ? 'text-blue-100' : 'text-slate-400'} />
+      <span className="flex-1 truncate">{label}</span>
+      {count !== undefined && (
+        <span className={`text-xs rounded-full px-1.5 py-0.5 font-bold
+          ${active ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+          {count}
+        </span>
+      )}
+    </button>
+  )
+}
+
+/* ─── Main component ────────────────────────────────────────── */
 const StaffParkingMap = () => {
-  const [zones, setZones] = useState([])
-  const [activeZone, setActiveZone] = useState(null)
+  const { t } = useTranslation()
+  const [hierarchy, setHierarchy] = useState([])
+  const [selectedBuilding, setSelectedBuilding] = useState(null)
+  const [selectedFloor, setSelectedFloor] = useState(null)
+  const [selectedZone, setSelectedZone] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [zoom, setZoom] = useState(1)
   const [loading, setLoading] = useState(true)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [expandedBuildings, setExpandedBuildings] = useState({})
+  const [expandedFloors, setExpandedFloors] = useState({})
 
-  // ✅ inline effect + cancelled flag
   useEffect(() => {
     let cancelled = false
-    const run = async () => {
-      setLoading(true)
-      try {
-        const res = await axios.get('/staff/parking-map')
-        if (cancelled) return
-        const flatSlots = res.data?.data || []
-        const built = buildZones(flatSlots)
-        setZones(built)
-        setActiveZone(prev => built.find(z => z.id === prev) ? prev : (built[0]?.id ?? null))
-      } catch {
-        if (!cancelled) {
-          setZones([])
+      ; (async () => {
+        setLoading(true)
+        try {
+          const res = await axios.get('/staff/parking-map')
+          if (cancelled) return
+          const slots = res.data?.data || []
+          const tree = buildHierarchy(slots)
+          setHierarchy(tree)
+
+          // Auto-select first building/floor/zone
+          if (tree.length > 0) {
+            const b = tree[0]
+            setSelectedBuilding(b.id)
+            setExpandedBuildings({ [b.id]: true })
+            if (b.floors.length > 0) {
+              const f = b.floors[0]
+              setSelectedFloor(f.id)
+              setExpandedFloors({ [f.id]: true })
+              if (f.zones.length > 0) setSelectedZone(f.zones[0].id)
+            }
+          }
+        } catch {
+          if (!cancelled) setHierarchy([])
+        } finally {
+          if (!cancelled) setLoading(false)
         }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    run()
+      })()
     return () => { cancelled = true }
   }, [refreshTrigger])
 
-  const handleRefresh = () => setRefreshTrigger(t => t + 1)
+  const handleRefresh = () => {
+    setSelectedSlot(null)
+    setRefreshTrigger(t => t + 1)
+  }
 
-  const zone = zones.find(z => z.id === activeZone)
-  const getStatus = (slotCode) => zone?.statuses[slotCode] || 'available'
-  const totalSlots = zone ? Object.keys(zone.statuses).length : 0
-  const availableCount = zone ? Object.values(zone.statuses).filter(s => s === 'available').length : 0
-  const occupiedCount = zone ? Object.values(zone.statuses).filter(s => s === 'occupied').length : 0
-  const reservedCount = zone ? Object.values(zone.statuses).filter(s => s === 'reserved').length : 0
+  /* ── Derived zone data ── */
+  const activeZoneData = useMemo(() => {
+    if (!selectedBuilding || !selectedFloor || !selectedZone) return null
+    const b = hierarchy.find(b => b.id === selectedBuilding)
+    if (!b) return null
+    const f = b.floors.find(f => f.id === selectedFloor)
+    if (!f) return null
+    return f.zones.find(z => z.id === selectedZone) || null
+  }, [hierarchy, selectedBuilding, selectedFloor, selectedZone])
 
-  const handleSelectSlot = async (slotCode) => {
+  const slots = activeZoneData?.slots || []
+  const rows = useMemo(() => {
+    const sorted = [...slots].sort((a, b) => a.code.localeCompare(b.code))
+    const out = []
+    for (let i = 0; i < sorted.length; i += 10) out.push(sorted.slice(i, i + 10))
+    return out
+  }, [slots])
+
+  const counts = useMemo(() => ({
+    total: slots.length,
+    available: slots.filter(s => s.status === 'available').length,
+    occupied: slots.filter(s => s.status === 'occupied').length,
+    reserved: slots.filter(s => s.status === 'reserved').length,
+    maintenance: slots.filter(s => s.status === 'maintenance').length,
+  }), [slots])
+
+  /* ── Select slot ── */
+  const handleSelectSlot = async (slot) => {
+    if (selectedSlot?.id === slot.code) { setSelectedSlot(null); return }
     try {
-      const res = await axios.get(`/staff/slots/${slotCode}`)
-      const slotData = res.data?.data
-      if (!slotData) {
-        setSelectedSlot({ id: slotCode, status: getStatus(slotCode), zone: zone?.label, details: null, error: 'Không có dữ liệu' })
-        return
-      }
+      const res = await axios.get(`/staff/slots/${slot.code}`)
+      const data = res.data?.data
       setSelectedSlot({
-        id: slotCode, status: getStatus(slotCode), zone: zone?.label,
-        type: slotData.type,
-        details: {
-          sessionCode: slotData.sessionCode, bookingCode: slotData.bookingCode,
-          sessionId: slotData.sessionId, reservationId: slotData.reservationId,
-          driverName: slotData.driverName, driverEmail: slotData.driverEmail, driverPhone: slotData.driverPhone,
-          entryTime: slotData.entryTime, exitTime: slotData.exitTime,
-          startTime: slotData.startTime, endTime: slotData.endTime,
-          plateNumber: slotData.plateNumber, paymentStatus: slotData.paymentStatus,
-          amount: slotData.amount, finalAmount: slotData.finalAmount,
-          prepaidAmount: slotData.prepaidAmount, surchargeAmount: slotData.surchargeAmount,
-          paymentMethod: slotData.paymentMethod, reservationStatus: slotData.reservationStatus
-        }
+        id: slot.code,
+        status: slot.status,
+        zone: activeZoneData?.name,
+        ...(data || {}),
+        error: !data ? t('staff.parkingMap.noDataShort') : null
       })
     } catch {
-      setSelectedSlot({ id: slotCode, status: getStatus(slotCode), zone: zone?.label, details: null, error: 'Lỗi tải dữ liệu' })
+      setSelectedSlot({ id: slot.code, status: slot.status, zone: activeZoneData?.name, error: t('staff.parkingMap.loadError') })
     }
   }
 
-  const formatDateTime = (ds) => {
-    if (!ds) return 'N/A'
-    try { return new Date(ds).toLocaleString('vi-VN') } catch { return ds }
+  const fmt = (ds) => { try { return new Date(ds).toLocaleString('vi-VN') } catch { return ds || 'N/A' } }
+  const fmtCurrency = (v) => v != null ? Number(v).toLocaleString('vi-VN') + ' ₫' : '—'
+
+  /* ── Toggle helpers ── */
+  const toggleBuilding = (id) => {
+    setExpandedBuildings(prev => ({ ...prev, [id]: !prev[id] }))
   }
-  const formatCurrency = (v) => {
-    if (v === null || v === undefined) return '0 VND'
-    return Number(v).toLocaleString('vi-VN') + ' VND'
+  const toggleFloor = (id) => {
+    setExpandedFloors(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
+  /* ── Loading ── */
   if (loading) return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        <p className="text-sm text-slate-400 font-medium">Đang tải bản đồ...</p>
+      </div>
     </div>
   )
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <header className="flex justify-between items-center mb-6">
+    <div className="flex flex-col h-full bg-slate-50 gap-4">
+
+      {/* ── Header ── */}
+      <header className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><Map size={24} className="text-blue-600" /> Sơ đồ bãi đỗ xe</h1>
-          <p className="text-sm text-gray-500 mt-1">Xem trạng thái theo thời gian thực của từng ô đỗ</p>
+          <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <Map size={20} className="text-blue-600" />
+            {t('staff.parkingMap.title')}
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">{t('staff.parkingMap.subtitle')}</p>
         </div>
-        <button onClick={handleRefresh} disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm">
-          <RefreshCcw size={15} /> Làm mới
+        <button onClick={handleRefresh}
+          className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors shadow-sm">
+          <RefreshCcw size={13} /> {t('staff.parkingMap.refresh')}
         </button>
       </header>
 
-      <div className="flex gap-6 flex-1 min-h-0">
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex gap-2 mb-4 flex-wrap items-center">
-            {zones.map(z => (
-              <button key={`zone-${z.id}`} onClick={() => { setActiveZone(z.id); setSelectedSlot(null) }}
-                className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${activeZone === z.id ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300'}`}>
-                {z.label}
-              </button>
-            ))}
-            <div className="ml-auto flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2">
-              <button onClick={() => setZoom(z => Math.max(0.7, z - 0.1))} className="p-1.5 text-gray-500 hover:text-gray-800"><ZoomOut size={16} /></button>
-              <span className="text-xs font-semibold text-gray-600 w-10 text-center">{Math.round(zoom * 100)}%</span>
-              <button onClick={() => setZoom(z => Math.min(1.5, z + 0.1))} className="p-1.5 text-gray-500 hover:text-gray-800"><ZoomIn size={16} /></button>
+      {/* ── Body: sidebar + map + detail ── */}
+      <div className="flex gap-3 flex-1 min-h-0">
+
+        {/* ━━ LEFT SIDEBAR: Building > Floor > Zone ━━ */}
+        <aside className="w-56 flex-shrink-0 bg-white rounded-xl border border-slate-100 shadow-sm overflow-y-auto p-2">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1 mb-1">Vị trí</p>
+
+          {hierarchy.map(building => {
+            const isExpanded = expandedBuildings[building.id]
+            const bFloorCount = building.floors.reduce((acc, f) => acc + f.zones.length, 0)
+
+            return (
+              <div key={building.id} className="mb-1">
+                <NavItem
+                  icon={Building2}
+                  label={building.name.replace(/Toa [A-Z] - /, '').split(' - ')[0] || building.name}
+                  active={selectedBuilding === building.id && !expandedBuildings[building.id]}
+                  count={bFloorCount}
+                  onClick={() => {
+                    setSelectedBuilding(building.id)
+                    toggleBuilding(building.id)
+                  }}
+                />
+
+                {isExpanded && building.floors.map(floor => {
+                  const isFloorExpanded = expandedFloors[floor.id]
+
+                  return (
+                    <div key={floor.id}>
+                      <NavItem
+                        icon={Layers}
+                        label={floor.name}
+                        active={selectedFloor === floor.id && !isFloorExpanded}
+                        count={floor.zones.length}
+                        indent={1}
+                        onClick={() => {
+                          setSelectedBuilding(building.id)
+                          setSelectedFloor(floor.id)
+                          toggleFloor(floor.id)
+                        }}
+                      />
+
+                      {isFloorExpanded && floor.zones.map(zone => (
+                        <NavItem
+                          key={zone.id}
+                          icon={Grid3X3}
+                          label={zone.name.split(' ').slice(-2).join(' ')}
+                          active={selectedZone === zone.id}
+                          count={zone.slots.filter(s => s.status === 'available').length}
+                          indent={2}
+                          onClick={() => {
+                            setSelectedBuilding(building.id)
+                            setSelectedFloor(floor.id)
+                            setSelectedZone(zone.id)
+                            setSelectedSlot(null)
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </aside>
+
+        {/* ━━ CENTER: Map ━━ */}
+        <div className="flex-1 flex flex-col min-w-0 gap-3">
+
+          {/* Breadcrumb + stats */}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-1 text-xs text-slate-500">
+              {selectedBuilding && (
+                <>
+                  <Building2 size={12} className="text-blue-500" />
+                  <span className="font-semibold text-slate-700">
+                    {hierarchy.find(b => b.id === selectedBuilding)?.name?.split(' - ')[0]}
+                  </span>
+                </>
+              )}
+              {selectedFloor && (
+                <>
+                  <ChevronRight size={12} />
+                  <Layers size={12} className="text-blue-500" />
+                  <span className="font-medium">
+                    {hierarchy.find(b => b.id === selectedBuilding)?.floors.find(f => f.id === selectedFloor)?.name}
+                  </span>
+                </>
+              )}
+              {activeZoneData && (
+                <>
+                  <ChevronRight size={12} />
+                  <Grid3X3 size={12} className="text-blue-500" />
+                  <span className="font-medium">{activeZoneData.name}</span>
+                </>
+              )}
+            </div>
+
+            {/* Stats + zoom */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatPill value={counts.total} label="Tổng" color="text-slate-700" />
+              <StatPill value={counts.available} label="Trống" color="text-emerald-600" />
+              <StatPill value={counts.occupied} label="Đã đỗ" color="text-red-600" />
+              <StatPill value={counts.reserved} label="Đặt trước" color="text-amber-600" />
+              {counts.maintenance > 0 && <StatPill value={counts.maintenance} label="Bảo trì" color="text-slate-500" />}
+
+              <div className="flex items-center gap-0.5 bg-white border border-slate-200 rounded-lg px-1.5">
+                <button onClick={() => setZoom(z => Math.max(0.6, z - 0.1))} className="p-1 text-slate-400 hover:text-slate-700"><ZoomOut size={14} /></button>
+                <span className="text-xs font-bold text-slate-600 w-9 text-center">{Math.round(zoom * 100)}%</span>
+                <button onClick={() => setZoom(z => Math.min(1.8, z + 0.1))} className="p-1 text-slate-400 hover:text-slate-700"><ZoomIn size={14} /></button>
+              </div>
             </div>
           </div>
 
-          <div className="flex gap-3 mb-4">
-            {[
-              { label: 'Tổng ô', value: totalSlots, color: 'text-gray-800' },
-              { label: 'Trống', value: availableCount, color: 'text-green-600' },
-              { label: 'Đã đỗ', value: occupiedCount, color: 'text-red-600' },
-              { label: 'Đã đặt', value: reservedCount, color: 'text-orange-500' }
-            ].map(item => (
-              <div key={item.label} className="bg-white rounded-lg border border-gray-100 px-4 py-2 text-center shadow-sm flex-1">
-                <p className={`text-xl font-black ${item.color}`}>{item.value}</p>
-                <p className="text-xs text-gray-500 font-semibold">{item.label}</p>
+          {/* Legend */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+              <div key={key} className="flex items-center gap-1.5">
+                <span className={`w-2.5 h-2.5 rounded-sm ${cfg.dot}`} />
+                <span className="text-[11px] text-slate-500 font-medium">{t(cfg.labelKey)}</span>
               </div>
             ))}
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex-1 overflow-auto">
-            <div className="h-6 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center mb-4">
-              <span className="text-xs text-gray-400 font-semibold tracking-widest">◀ LỐI VÀO / RA ▶</span>
-            </div>
-            <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', transition: 'transform 0.2s' }}>
-              {zone?.rows.map((row, ri) => (
-                <div key={`row-${ri}`} className="flex gap-2 mb-2 justify-center">
-                  {row.map(slotCode => {
-                    const st = getStatus(slotCode)
-                    const cfg = STATUS_CONFIG[st] || STATUS_CONFIG.available
-                    const isSelected = selectedSlot?.id === slotCode
-                    return (
-                      <button key={`slot-${slotCode}`} onClick={() => handleSelectSlot(slotCode)}
-                        className={`w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center transition-all hover:scale-110 hover:shadow-md ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110' : `${cfg.bg} ${cfg.border} ${cfg.text}`}`}
-                        title={`${slotCode} – ${cfg.label}`}>
-                        <span className="font-bold text-xs">{slotCode}</span>
-                        {st === 'occupied' && <Car size={10} className="mt-0.5 opacity-70" />}
-                        {st === 'available' && <span className="text-[8px] opacity-50 font-semibold">TRỐNG</span>}
-                        {st === 'reserved' && <span className="text-[8px] font-bold opacity-70">ĐẶT</span>}
-                        {st === 'maintenance' && <span className="text-[8px] font-bold opacity-70">BT</span>}
-                        {st === 'blocked' && <span className="text-[8px] font-bold opacity-70">KH</span>}
-                      </button>
-                    )
-                  })}
+          {/* Map canvas */}
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex-1 overflow-auto p-5">
+            {activeZoneData ? (
+              <>
+                {/* Gate indicator */}
+                <div className="flex items-center justify-center mb-5">
+                  <div className="flex items-center gap-3 px-6 py-2 bg-slate-700 rounded-full">
+                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                    <span className="text-xs text-white font-bold tracking-widest">{t('staff.parkingMap.gateLabel', 'CỔNG VÀO / RA')}</span>
+                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  </div>
                 </div>
-              ))}
-            </div>
+
+                <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}>
+                  {rows.map((row, ri) => (
+                    <div key={ri} className="flex gap-2 mb-2 justify-center">
+                      {row.map(slot => {
+                        const cfg = STATUS_CONFIG[slot.status] || STATUS_CONFIG.available
+                        const isSelected = selectedSlot?.id === slot.code
+                        return (
+                          <button
+                            key={slot.code}
+                            onClick={() => handleSelectSlot(slot)}
+                            title={`${slot.code} – ${t(cfg.labelKey)}`}
+                            className={`w-14 h-14 rounded-xl border-2 flex flex-col items-center justify-center
+                              transition-all duration-150 hover:scale-110 hover:shadow-lg hover:z-10 relative
+                              ${isSelected
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-300 scale-110 z-10'
+                                : `${cfg.bg} ${cfg.border} ${cfg.text}`
+                              }`}
+                          >
+                            <span className="font-bold text-[10px] leading-tight text-center px-0.5">
+                              {slot.code.split('-').slice(-1)[0]}
+                            </span>
+                            {slot.status === 'occupied' && <Car size={11} className="mt-0.5 opacity-80" />}
+                            {slot.status === 'available' && <span className="text-[8px] opacity-50 font-bold mt-0.5">OK</span>}
+                            {slot.status === 'reserved' && <span className="text-[8px] font-bold opacity-80 mt-0.5">ĐẶT</span>}
+                            {slot.status === 'maintenance' && <span className="text-[8px] font-bold opacity-70 mt-0.5">BT</span>}
+                            {slot.status === 'blocked' && <span className="text-[8px] font-bold opacity-70 mt-0.5">🔒</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-300">
+                <Grid3X3 size={48} />
+                <p className="text-sm font-medium">Chọn một Zone từ menu bên trái</p>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="w-64 flex flex-col gap-4">
-          {selectedSlot && !selectedSlot.error ? (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-left max-h-[calc(100vh-300px)] overflow-y-auto">
-              <h3 className="text-sm font-bold text-gray-600 uppercase mb-4 border-b pb-2">Chi tiết ô đỗ</h3>
-              <div className="text-center mb-4">
-                <div className="text-4xl font-black text-blue-600">{selectedSlot.id}</div>
-                <div className="text-xs text-gray-400 mt-1">{selectedSlot.zone}</div>
-              </div>
-              <div className={`text-center py-2 px-3 rounded-lg font-bold text-sm mb-4 ${STATUS_CONFIG[selectedSlot.status]?.bg} ${STATUS_CONFIG[selectedSlot.status]?.text} border ${STATUS_CONFIG[selectedSlot.status]?.border}`}>
-                {STATUS_CONFIG[selectedSlot.status]?.label.toUpperCase()}
-              </div>
-              {selectedSlot.details ? (
-                <div className="text-xs text-gray-600 space-y-2">
-                  {selectedSlot.type === 'session' && (
-                    <>
-                      <p className="font-bold text-gray-700 border-b pb-2">Phiên gửi xe</p>
-                      {selectedSlot.details.sessionCode && <p><strong>Mã phiên:</strong> {selectedSlot.details.sessionCode}</p>}
-                      {selectedSlot.details.plateNumber && <p><strong>Biển số:</strong> {selectedSlot.details.plateNumber}</p>}
-                      {selectedSlot.details.entryTime && <p><strong>Vào lúc:</strong> {formatDateTime(selectedSlot.details.entryTime)}</p>}
-                    </>
-                  )}
-                  {selectedSlot.type === 'reservation' && (
-                    <>
-                      <p className="font-bold text-gray-700 border-b pb-2">Đặt chỗ</p>
-                      {selectedSlot.details.bookingCode && <p><strong>Mã booking:</strong> {selectedSlot.details.bookingCode}</p>}
-                      {selectedSlot.details.startTime && <p><strong>Bắt đầu:</strong> {formatDateTime(selectedSlot.details.startTime)}</p>}
-                      {selectedSlot.details.endTime && <p><strong>Dự kiến ra:</strong> {formatDateTime(selectedSlot.details.endTime)}</p>}
-                      {selectedSlot.details.reservationStatus && <p><strong>Trạng thái:</strong> {selectedSlot.details.reservationStatus}</p>}
-                    </>
-                  )}
-                  <div className="border-t pt-2 mt-2">
-                    <p className="font-bold text-gray-700 mb-1">Thông tin tài xế</p>
-                    {selectedSlot.details.driverName && <p><strong>Tên:</strong> {selectedSlot.details.driverName}</p>}
-                    {selectedSlot.details.driverEmail && <p><strong>Email:</strong> {selectedSlot.details.driverEmail}</p>}
-                    {selectedSlot.details.driverPhone && <p><strong>Điện thoại:</strong> {selectedSlot.details.driverPhone}</p>}
-                  </div>
-                  {selectedSlot.details.paymentStatus && (
-                    <div className="border-t pt-2 mt-2">
-                      <p className="font-bold text-gray-700 mb-1">Thanh toán</p>
-                      <p><strong>Trạng thái:</strong> {selectedSlot.details.paymentStatus}</p>
-                      {selectedSlot.details.finalAmount != null && <p><strong>Tổng phí:</strong> {formatCurrency(selectedSlot.details.finalAmount)}</p>}
-                      {selectedSlot.details.prepaidAmount && <p><strong>Đã thanh toán:</strong> {formatCurrency(selectedSlot.details.prepaidAmount)}</p>}
-                      {selectedSlot.details.surchargeAmount > 0 && <p><strong>Phụ trội:</strong> {formatCurrency(selectedSlot.details.surchargeAmount)}</p>}
-                    </div>
-                  )}
+        {/* ━━ RIGHT: Slot detail panel ━━ */}
+        <div className="w-60 flex-shrink-0">
+          {selectedSlot ? (
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden h-full flex flex-col">
+              {/* Panel header */}
+              <div className={`px-4 py-3 flex items-center justify-between
+                ${STATUS_CONFIG[selectedSlot.status]?.bg} border-b ${STATUS_CONFIG[selectedSlot.status]?.border}`}>
+                <div>
+                  <p className={`text-lg font-black ${STATUS_CONFIG[selectedSlot.status]?.text}`}>{selectedSlot.id}</p>
+                  <p className={`text-[10px] font-bold uppercase tracking-wide ${STATUS_CONFIG[selectedSlot.status]?.text} opacity-70`}>
+                    {t(STATUS_CONFIG[selectedSlot.status]?.labelKey)}
+                  </p>
                 </div>
-              ) : (
-                <p className="text-center text-gray-400 text-xs">Chưa có dữ liệu</p>
-              )}
+                <button onClick={() => setSelectedSlot(null)}
+                  className="p-1 rounded-lg hover:bg-black/10 transition-colors">
+                  <X size={14} className={STATUS_CONFIG[selectedSlot.status]?.text} />
+                </button>
+              </div>
+
+              {/* Panel body */}
+              <div className="flex-1 overflow-y-auto p-4 text-xs space-y-4">
+                {selectedSlot.error ? (
+                  <p className="text-center text-slate-400 py-4">{selectedSlot.error}</p>
+                ) : (
+                  <>
+                    {/* Zone path */}
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Vị trí</p>
+                      <p className="text-slate-600 font-medium leading-relaxed">{selectedSlot.zone}</p>
+                    </div>
+
+                    {/* Session info */}
+                    {selectedSlot.type === 'session' && (
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">Phiên gửi xe</p>
+                        <div className="space-y-1.5">
+                          {selectedSlot.sessionCode && <Row label="Mã phiên" value={selectedSlot.sessionCode} bold />}
+                          {selectedSlot.plateNumber && <Row label="Biển số" value={selectedSlot.plateNumber} bold />}
+                          {selectedSlot.entryTime && <Row label="Vào lúc" value={fmt(selectedSlot.entryTime)} />}
+                          {selectedSlot.paymentStatus && <Row label="Thanh toán" value={selectedSlot.paymentStatus} />}
+                          {selectedSlot.finalAmount != null && <Row label="Thành tiền" value={fmtCurrency(selectedSlot.finalAmount)} bold />}
+                          {selectedSlot.prepaidAmount > 0 && <Row label="Đã trả" value={fmtCurrency(selectedSlot.prepaidAmount)} />}
+                          {selectedSlot.surchargeAmount > 0 && <Row label="Phụ trội" value={fmtCurrency(selectedSlot.surchargeAmount)} />}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Reservation info */}
+                    {selectedSlot.type === 'reservation' && (
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">Đặt chỗ trước</p>
+                        <div className="space-y-1.5">
+                          {selectedSlot.bookingCode && <Row label="Mã đặt" value={selectedSlot.bookingCode} bold />}
+                          {selectedSlot.startTime && <Row label="Bắt đầu" value={fmt(selectedSlot.startTime)} />}
+                          {selectedSlot.endTime && <Row label="Kết thúc" value={fmt(selectedSlot.endTime)} />}
+                          {selectedSlot.reservationStatus && <Row label="Trạng thái" value={selectedSlot.reservationStatus} />}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Driver */}
+                    {(selectedSlot.driverName || selectedSlot.driverPhone) && (
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-2">Khách hàng</p>
+                        <div className="space-y-1.5">
+                          {selectedSlot.driverName && <Row label="Tên" value={selectedSlot.driverName} />}
+                          {selectedSlot.driverPhone && <Row label="SĐT" value={selectedSlot.driverPhone} />}
+                          {selectedSlot.driverEmail && <Row label="Email" value={selectedSlot.driverEmail} />}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 text-center">
-              <Info size={32} className="text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">{selectedSlot?.error || 'Nhấn vào một ô đỗ để xem chi tiết'}</p>
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-3 p-6 h-full text-center">
+              <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center">
+                <Info size={22} className="text-slate-300" />
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">{t('staff.parkingMap.clickHint', 'Nhấn vào một ô đỗ để xem chi tiết')}</p>
             </div>
           )}
         </div>
+
       </div>
+    </div>
+  )
+}
+
+/* ─── Helper row ───────────────────────────────────────────── */
+function Row({ label, value, bold }) {
+  return (
+    <div className="flex justify-between gap-2">
+      <span className="text-slate-400 flex-shrink-0">{label}</span>
+      <span className={`text-right text-slate-700 ${bold ? 'font-bold' : 'font-medium'} break-all`}>{value}</span>
     </div>
   )
 }

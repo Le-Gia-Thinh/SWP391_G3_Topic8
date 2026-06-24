@@ -100,16 +100,21 @@ async function getDefaultDriverId(pool) {
     return user.UserID
 }
 
-async function calcParkingFee(pool, vehicleTypeId, durationH) {
+async function calcParkingFee(pool, vehicleTypeId, entryTime, exitTime) {
     const request = pool.request()
 
     request.input('VehicleTypeID', sql.Int, Number(vehicleTypeId))
-    request.input('DurationH', sql.Decimal(10, 2), Number(durationH))
+    request.input('EntryTime', sql.DateTime, entryTime)
+    request.input('ExitTime', sql.DateTime, exitTime)
     request.output('Fee', sql.Decimal(10, 2))
+    request.output('Breakdown', sql.NVarChar(sql.MAX))
 
-    const result = await request.execute('sp_CalcParkingFee')
+    const result = await request.execute('sp_CalcParkingFeeV2')
 
-    return Number(result.output.Fee || 0)
+    return {
+        fee: Number(result.output.Fee || 0),
+        breakdown: result.output.Breakdown || null
+    }
 }
 
 export async function getDashboard() {
@@ -692,13 +697,16 @@ export async function getCheckoutPreview(sessionId) {
     const now = new Date()
     const entry = new Date(session.EntryTime)
     const durationH = Math.max(0.01, (now.getTime() - entry.getTime()) / 1000 / 60 / 60)
-    const fee = await calcParkingFee(pool, session.VehicleTypeID, durationH)
+
+    // ← sửa chỗ này: dùng entry/now thật thay vì chỉ truyền durationH
+    const { fee, breakdown } = await calcParkingFee(pool, session.VehicleTypeID, entry, now)
 
     return {
         session,
         checkoutTime: now,
         durationH,
         estimatedFee: fee,
+        feeBreakdown: breakdown,   // ← thêm field mới, FE có thể hiển thị chi tiết từng đoạn ngày/đêm nếu muốn
         prepaidAmount: Number(session.PrepaidAmount || 0),
         surchargeAmount: Math.max(0, fee - Number(session.PrepaidAmount || 0))
     }
@@ -965,6 +973,22 @@ export async function updateIncidentStatus(incidentId, { status, note, attachmen
 
     const incident = result.recordset[0]
     if (!incident) throw notFound('Không tìm thấy sự cố.', 'INCIDENT_NOT_FOUND')
+
+    if (status === 'Resolved' && incident.DriverID) {
+        await request.query(`
+            INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+            VALUES (
+                ${incident.DriverID},
+                N'Sự cố đã được giải quyết',
+                N'Sự cố (ID: ${incident.IncidentID}) của bạn đã được đánh dấu là giải quyết.',
+                'Incident',
+                ${incident.IncidentID},
+                'Incident',
+                0,
+                GETDATE()
+            )
+        `);
+    }
 
     return {
         ...incident,

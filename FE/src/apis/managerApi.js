@@ -53,8 +53,17 @@ export const createPricingPolicyAPI = (data) =>
 export const updatePricingPolicyAPI = (id, data) =>
   authorizeAxios.patch(`${BASE}/pricing/${id}`, data)
 
+export const deletePricingPolicyAPI = (id) =>
+  authorizeAxios.delete(`${BASE}/pricing/${id}`)
+
 export const deactivatePricingPolicyAPI = (id) =>
   authorizeAxios.patch(`${BASE}/pricing/${id}`, { isActive: 0 })
+
+export const getNightPricingPoliciesAPI = () =>
+  authorizeAxios.get(`${BASE}/night-pricing`)
+
+export const updateNightPricingPolicyAPI = (id, data) =>
+  authorizeAxios.patch(`${BASE}/night-pricing/${id}`, data)
 
 // ── Vehicle Types ─────────────────────────────────────────────
 // Dropdown form: chỉ Active

@@ -1,5 +1,12 @@
+/**
+ * FILE: index.js (Routes)
+ * MÔ TẢ: Điểm tập trung tất cả các route (đường dẫn API) của ứng dụng Backend.
+ * File này import các controller, middleware xác thực, và kết nối chúng với các endpoint cụ thể.
+ */
+
 import express from "express";
 
+// Import các Controllers (nơi chứa logic xử lý request)
 import * as authController from "../controllers/authController.js";
 import * as commonController from "../controllers/commonController.js";
 import * as sessionController from "../controllers/sessionController.js";
@@ -13,18 +20,24 @@ import * as supportController from "../controllers/supportController.js";
 import * as guestController from "../controllers/guestController.js";
 import * as aiChatController from "../controllers/aiChatController.js";
 
+// Import các sub-routers (các file route được chia nhỏ theo chức năng/đối tượng)
 import paymentRoutes from "./paymentRoutes.js";
 import staffRoutes from "./staffRoutes.js";
 import managerRoutes from './managerRoutes.js'
 import commonRoutes from './commonRoutes.js'
 import adminRoutes from './adminRoutes.js'
+import subscriptionRoutes from './subscriptionRoutes.js';
+import walletRoutes from './walletRoutes.js';
+
+// Import Middlewares dùng để kiểm tra quyền (Authorization)
 import {
-  isAuthorized,
-  isManager,
-  isStaffOrManager,
-  isDriver,
+  isAuthorized,        // Kiểm tra xem đã đăng nhập chưa
+  isManager,           // Kiểm tra xem có quyền Quản lý không
+  isStaffOrManager,    // Kiểm tra xem có quyền Nhân viên hoặc Quản lý không
+  isDriver,            // Kiểm tra xem có phải là Tài xế (người dùng cuối) không
 } from "../middlewares/authMiddleware.js";
 
+// Import Middlewares để xác thực dữ liệu đầu vào (Validation)
 import {
   validateRegister,
   validateLogin,
@@ -38,6 +51,11 @@ import {
 
 const router = express.Router();
 
+/**
+ * @route   GET /health
+ * @desc    API kiểm tra trạng thái hoạt động của server
+ * @access  Public (Ai cũng có thể gọi)
+ */
 router.get("/health", (req, res) =>
   res.json({
     success: true,
@@ -88,6 +106,12 @@ router.get("/vehicle-types", isAuthorized, commonController.getVehicleTypes);
 router.get("/buildings", isAuthorized, commonController.getBuildings);
 router.get("/slots", isAuthorized, commonController.getSlots);
 router.get("/pricing", isAuthorized, commonController.getPricing);
+
+// Common Notifications
+router.get("/notifications", isAuthorized, notificationController.getNotifications);
+router.get("/notifications/unread-count", isAuthorized, notificationController.getUnreadCount);
+router.patch("/notifications/read-all", isAuthorized, notificationController.markAllAsRead);
+router.patch("/notifications/:id/read", isAuthorized, notificationController.markAsRead);
 
 // AI Chat
 router.post("/ai/chat", isAuthorized, aiChatController.processChat);
@@ -337,4 +361,6 @@ router.use("/staff", staffRoutes);
 router.use('/manager', managerRoutes);
 router.use('/common', commonRoutes);
 router.use('/admin', adminRoutes);
+router.use('/driver/subscriptions', subscriptionRoutes);
+router.use('/driver/wallet', walletRoutes);
 export default router;

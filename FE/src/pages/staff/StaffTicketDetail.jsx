@@ -4,6 +4,7 @@ import { ArrowLeft, Send, User, ShieldCheck, CheckCircle, XCircle } from 'lucide
 import staffApi from '../../apis/staffApi'
 import { toast } from 'react-toastify'
 import dayjs from 'dayjs'
+import { useTranslation } from 'react-i18next'
 
 const STATUS_COLORS = {
   Open: 'bg-blue-100 text-blue-700',
@@ -12,14 +13,8 @@ const STATUS_COLORS = {
   Closed: 'bg-slate-100 text-slate-700'
 }
 
-const STATUS_LABELS = {
-  Open: 'Mới gửi',
-  Pending: 'Đang xử lý',
-  Resolved: 'Đã giải quyết',
-  Closed: 'Đã đóng'
-}
-
 const StaffTicketDetail = () => {
+  const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
   const [ticket, setTicket] = useState(null)
@@ -27,6 +22,13 @@ const StaffTicketDetail = () => {
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const endOfMessagesRef = useRef(null)
+
+  const STATUS_LABELS = {
+    Open: t('staff.ticketDetail.statusOpen'),
+    Pending: t('staff.ticketDetail.statusPending'),
+    Resolved: t('staff.ticketDetail.statusResolved'),
+    Closed: t('staff.ticketDetail.statusClosed')
+  }
 
   const fetchDetail = async () => {
     try {
@@ -36,7 +38,7 @@ const StaffTicketDetail = () => {
         setTicket(res.data)
       }
     } catch (error) {
-      toast.error('Lỗi khi tải chi tiết yêu cầu')
+      toast.error(t('staff.ticketDetail.loadError'))
       navigate('/staff/support')
     } finally {
       setLoading(false)
@@ -65,28 +67,28 @@ const StaffTicketDetail = () => {
         fetchDetail()
       }
     } catch (error) {
-      toast.error('Lỗi khi gửi phản hồi')
+      toast.error(t('staff.ticketDetail.replyError'))
     } finally {
       setSubmitting(false)
     }
   }
 
   const handleStatusChange = async (newStatus) => {
-    if (!window.confirm(`Xác nhận chuyển trạng thái thành: ${STATUS_LABELS[newStatus]}?`)) return
+    if (!window.confirm(t('staff.ticketDetail.confirmStatusChange', { status: STATUS_LABELS[newStatus] }))) return
 
     try {
       const res = await staffApi.updateTicketStatus(id, newStatus)
       if (res.success) {
-        toast.success('Đã cập nhật trạng thái')
+        toast.success(t('staff.ticketDetail.updateSuccess'))
         fetchDetail()
       }
     } catch (error) {
-      toast.error('Lỗi khi cập nhật trạng thái')
+      toast.error(t('staff.ticketDetail.updateError'))
     }
   }
 
   if (loading) {
-    return <div className="p-8 text-center text-slate-500">Đang tải dữ liệu...</div>
+    return <div className="p-8 text-center text-slate-500">{t('staff.ticketDetail.loading')}</div>
   }
 
   if (!ticket) return null
@@ -105,7 +107,7 @@ const StaffTicketDetail = () => {
           <div>
             <h1 className="text-lg font-bold text-slate-900 dark:text-white line-clamp-1">{ticket.Subject}</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Tài xế: <span className="font-semibold text-slate-700 dark:text-slate-300">{ticket.DriverName}</span> ({ticket.DriverPhone})
+              {t('staff.ticketDetail.driverLabel')} <span className="font-semibold text-slate-700 dark:text-slate-300">{ticket.DriverName}</span> ({ticket.DriverPhone})
             </p>
           </div>
           <span className={`hidden sm:inline-block ml-2 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${STATUS_COLORS[ticket.Status]}`}>
@@ -120,7 +122,7 @@ const StaffTicketDetail = () => {
               onClick={() => handleStatusChange('Resolved')}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-xs font-bold hover:bg-green-100 dark:hover:bg-green-900/50 transition"
             >
-              <CheckCircle size={14} /> Giải quyết
+              <CheckCircle size={14} /> {t('staff.ticketDetail.resolveBtn')}
             </button>
           )}
           {ticket.Status !== 'Closed' && (
@@ -128,7 +130,7 @@ const StaffTicketDetail = () => {
               onClick={() => handleStatusChange('Closed')}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
             >
-              <XCircle size={14} /> Đóng
+              <XCircle size={14} /> {t('staff.ticketDetail.closeBtn')}
             </button>
           )}
         </div>
@@ -143,7 +145,7 @@ const StaffTicketDetail = () => {
             <User size={16} className="text-blue-600 dark:text-blue-400" />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-slate-500 ml-1">{ticket.DriverName} (Tài xế)</span>
+            <span className="text-xs font-semibold text-slate-500 ml-1">{ticket.DriverName} ({t('staff.ticketDetail.driverTag')})</span>
             <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-sm whitespace-pre-wrap">
               {ticket.Content}
             </div>
@@ -162,12 +164,11 @@ const StaffTicketDetail = () => {
               </div>
               <div className={`flex flex-col gap-1 ${isStaff ? 'items-end' : ''}`}>
                 <span className={`text-xs font-semibold text-slate-500 ${isStaff ? 'mr-1' : 'ml-1'}`}>
-                  {!isStaff ? ticket.DriverName : 'Bạn'}
+                  {!isStaff ? ticket.DriverName : t('staff.ticketDetail.youLabel')}
                 </span>
-                <div className={`p-4 rounded-2xl shadow-sm text-sm whitespace-pre-wrap ${
-                  isStaff
-                    ? 'bg-emerald-600 text-white rounded-tr-none'
-                    : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-tl-none'
+                <div className={`p-4 rounded-2xl shadow-sm text-sm whitespace-pre-wrap ${isStaff
+                  ? 'bg-emerald-600 text-white rounded-tr-none'
+                  : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-tl-none'
                 }`}>
                   {reply.Content}
                 </div>
@@ -185,14 +186,14 @@ const StaffTicketDetail = () => {
       <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl shrink-0 shadow-sm">
         {ticket.Status === 'Closed' ? (
           <div className="text-center text-sm text-slate-500 p-2">
-            Ticket này đã bị đóng.
+            {t('staff.ticketDetail.closedNotice')}
           </div>
         ) : (
           <form onSubmit={handleReply} className="flex gap-2 relative">
             <textarea
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
-              placeholder="Nhập phản hồi hỗ trợ tài xế..."
+              placeholder={t('staff.ticketDetail.replyPlaceholder')}
               className="flex-1 max-h-32 min-h-[44px] rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-100 dark:text-white resize-none"
               rows={1}
               onKeyDown={(e) => {
