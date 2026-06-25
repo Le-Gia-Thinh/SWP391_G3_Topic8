@@ -435,15 +435,9 @@ const StaffPaymentConfirm = () => {
                   <span className="font-bold text-green-600">− {formatVND(prepaid)}</span>
                 </div>
               )}
-              {surcharge > 0 && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">{t('staff.paymentConfirm.feeSurcharge')}</span>
-                  <span className="font-bold text-orange-600">+ {formatVND(surcharge)}</span>
-                </div>
-              )}
               <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                 <span className="font-bold text-gray-800">{prepaid > 0 ? t('staff.paymentConfirm.feeRemain') : t('staff.paymentConfirm.feeTotal')}</span>
-                <span className="font-black text-blue-700 text-xl">{formatVND(prepaid > 0 ? amountDue + surcharge : totalFee)}</span>
+                <span className="font-black text-blue-700 text-xl">{formatVND(prepaid > 0 ? amountDue : totalFee)}</span>
               </div>
             </div>
             {isPaid && (
@@ -512,7 +506,7 @@ const StaffPaymentConfirm = () => {
 
               <div className="bg-blue-600 rounded-xl p-5 text-white">
                 <p className="text-xs font-bold text-blue-200 uppercase tracking-wider mb-1">{t('staff.paymentConfirm.toCollect')}</p>
-                <p className="text-3xl font-black mb-1">{formatVND(prepaid > 0 ? amountDue + surcharge : totalFee)}</p>
+                <p className="text-3xl font-black mb-1">{formatVND(prepaid > 0 ? amountDue : totalFee)}</p>
                 <p className="text-xs text-blue-200">{paymentMethod === 'cash' ? t('staff.paymentConfirm.cashHint') : t('staff.paymentConfirm.qrHint')}</p>
               </div>
 
