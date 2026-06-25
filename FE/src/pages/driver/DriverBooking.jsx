@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverBooking.jsx
+ * MÔ TẢ: Trang Đặt chỗ đỗ xe dành cho Driver.
+ * Cho phép tài xế chọn tòa nhà, phương tiện, thời gian bắt đầu, thời lượng
+ * và chọn ô đỗ (tự động hoặc thủ công) để tạo mới một lượt đặt chỗ (booking).
+ */
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CalendarDays,

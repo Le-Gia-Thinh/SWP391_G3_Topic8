@@ -1,3 +1,9 @@
+/**
+ * FILE: apiError.js
+ * MÔ TẢ: Tiện ích xử lý và dịch thông báo lỗi trả về từ API backend.
+ * Tích hợp i18next để đa ngôn ngữ hóa thông báo lỗi dựa trên error code.
+ */
+
 // src/utils/apiError.js
 //
 // Hai cách dùng:

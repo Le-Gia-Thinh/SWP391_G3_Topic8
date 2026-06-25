@@ -1,3 +1,9 @@
+/**
+ * FILE: StaffLogin.jsx
+ * MÔ TẢ: Trang Đăng nhập dành cho nhân viên (Staff).
+ * Cung cấp giao diện đăng nhập bảo mật và chuyển hướng đến trang phù hợp sau khi đăng nhập thành công.
+ */
+
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react'

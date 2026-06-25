@@ -1,3 +1,9 @@
+/**
+ * FILE: Card.jsx
+ * MÔ TẢ: Component Thẻ (Card) vùng chứa cơ bản với viền cong, nền trắng/tối và đổ bóng.
+ * Thường dùng làm khung bao bọc cho các thành phần nội dung (Biểu đồ, Bảng, Form).
+ */
+
 import React from 'react'
 
 const Card = ({ children, className = '', noPadding = false, ...props }) => {

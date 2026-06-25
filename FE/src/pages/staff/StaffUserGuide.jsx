@@ -1,3 +1,9 @@
+/**
+ * FILE: StaffUserGuide.jsx
+ * MÔ TẢ: Trang Tài liệu Hướng dẫn Sử dụng (User Guide) dành cho Staff.
+ * Hiển thị các quy trình thao tác cơ bản như Check-in, Check-out, xử lý sự cố.
+ */
+
 import { BookOpen, ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useTranslation, Trans } from 'react-i18next'

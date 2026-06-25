@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverPayment.jsx
+ * MÔ TẢ: Trang Thanh toán phí đỗ xe dành cho Driver.
+ * Cho phép tài xế chọn phiên đỗ xe đang diễn ra, xem chi tiết phí dự kiến, 
+ * tạo mã QR thanh toán (PayOS) hoặc thanh toán bằng ví, đồng thời hỗ trợ polling trạng thái giao dịch.
+ */
+
 // src/pages/driver/DriverPayment.jsx
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'

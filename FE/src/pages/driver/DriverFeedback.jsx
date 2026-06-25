@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverFeedback.jsx
+ * MÔ TẢ: Trang Đánh giá & Phản hồi (Feedback) dành cho Driver.
+ * Cho phép tài xế đánh giá các phiên đỗ xe đã hoàn tất (chấm sao, chọn thẻ nhanh, viết bình luận)
+ * và xem lại lịch sử các đánh giá đã gửi.
+ */
+
 import React, { useCallback, useEffect, useState } from 'react'
 import {
   Star, MessageSquare, Loader2, AlertCircle, Send, X, Clock, MapPin, ThumbsUp, CheckCircle2

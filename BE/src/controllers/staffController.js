@@ -1,6 +1,21 @@
-import { StatusCodes } from 'http-status-codes'
-import * as staffService from '../services/staffService.js'
-import * as sessionService from '../services/sessionService.js';
+/**
+ * FILE: staffController.js
+ * MÔ TẢ: Controller xử lý các chức năng tác nghiệp trực tiếp tại bãi đỗ xe dành cho Staff.
+ * 
+ * Chức năng:
+ * - Xem Dashboard & Sơ đồ bãi đỗ (Parking Map)
+ * - Cập nhật trạng thái chỗ đỗ thủ công
+ * - Check-in xe (khách walk-in hoặc có đặt trước)
+ * - Tra cứu phiên gửi xe & Check-out xe (bao gồm tính phí, phụ thu)
+ * - Quản lý sự cố (Tạo và cập nhật sự cố tại bãi đỗ)
+ * - Lịch sử thanh toán & các khoản chờ thanh toán
+ * 
+ * @access Staff only
+ */
+
+import { StatusCodes } from 'http-status-codes' // Mã HTTP status chuẩn
+import * as staffService from '../services/staffService.js' // Service xử lý logic staff
+import * as sessionService from '../services/sessionService.js'; // Service xử lý logic phiên xe
 
 
 const getUserId = (req) =>

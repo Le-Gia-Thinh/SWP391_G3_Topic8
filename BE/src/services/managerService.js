@@ -1,4 +1,10 @@
-// src/services/managerService.js
+/**
+ * FILE: managerService.js
+ * MÔ TẢ: Service cung cấp các nghiệp vụ dành cho Quản lý (Manager).
+ * Chức năng: Thống kê Dashboard, Cấu hình cơ sở vật chất (Tòa nhà, Tầng, Khu vực, Vị trí),
+ * Cấu hình chính sách giá, Quản lý sự cố, và Xem báo cáo doanh thu/lưu lượng.
+ */
+
 import { getPool, sql } from "../config/db.js";
 
 // ─────────────────────────────────────────────────────────────

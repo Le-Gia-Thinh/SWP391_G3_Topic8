@@ -1,3 +1,10 @@
+/**
+ * FILE: staffService.js
+ * MÔ TẢ: Service xử lý nghiệp vụ cho Nhân viên (Staff).
+ * Chức năng: Dashboard nhân viên, Check-in khách walk-in/đặt trước, 
+ * Check-out (tính phí/phụ thu), xem Sơ đồ bãi đỗ, và Tạo/Quản lý Sự cố.
+ */
+
 import { getPool, sql } from '../config/db.js'
 
 function createHttpError(statusCode, message, code) {
@@ -276,7 +283,7 @@ export async function getBookings({ status, keyword }) {
         request.input('keyword', sql.NVarChar(100), `%${keyword}%`)
         where += `
         AND (
-            CAST(r.ReservationID AS NVARCHAR(50)) LIKE @keyword
+            CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) LIKE @keyword
             OR u.FullName LIKE @keyword
             OR u.PhoneNumber LIKE @keyword
             OR sl.SlotCode LIKE @keyword
@@ -314,7 +321,7 @@ export async function getBookings({ status, keyword }) {
         LEFT JOIN Floors f ON z.FloorID = f.FloorID
         LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
         ${where}
-        ORDER BY r.StartTime ASC
+        ORDER BY r.CreatedAt DESC
     `)
 
     return result.recordset
@@ -491,7 +498,7 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
             where += ` AND (
                 u.FullName LIKE @keyword
                 OR sl.SlotCode LIKE @keyword
-                OR CAST(r.ReservationID AS NVARCHAR) LIKE @keyword
+                OR CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) LIKE @keyword
             )`
         }
 
@@ -530,7 +537,7 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
             LEFT JOIN Floors f ON z.FloorID = f.FloorID
             LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
             ${where}
-            ORDER BY r.StartTime ASC
+            ORDER BY r.CreatedAt DESC
         `)
 
         return result.recordset
@@ -544,7 +551,7 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
         request.input('keyword', sql.NVarChar(100), `%${keyword}%`)
         where += `
         AND (
-            CAST(ps.SessionID AS NVARCHAR(50)) LIKE @keyword
+            CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) LIKE @keyword
             OR ps.PlateNumber LIKE @keyword
             OR u.FullName LIKE @keyword
             OR sl.SlotCode LIKE @keyword

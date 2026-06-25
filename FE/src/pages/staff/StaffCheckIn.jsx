@@ -1,3 +1,9 @@
+/**
+ * FILE: StaffCheckIn.jsx
+ * MÔ TẢ: Trang Nhận xe (Check-in) dành cho Staff.
+ * Hỗ trợ nhận xe vãng lai (nhập biển số, gợi ý ô đỗ) và nhận xe đặt trước (tìm booking).
+ */
+
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   Info, Search, CheckCircle2, MapPin, FileText, Calendar,

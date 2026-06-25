@@ -1,4 +1,10 @@
-// src/apis/staffApi.js
+/**
+ * FILE: staffApi.js
+ * MÔ TẢ: Tập hợp các API dành cho quyền Nhân viên (Staff).
+ * Bao gồm: Quản lý bãi đỗ thực tế, Check-in/Check-out, Thu phí phụ trội, 
+ * Ghi nhận sự cố và Phản hồi hỗ trợ khách hàng.
+ */
+
 import authorizedAxiosInstance from '../utils/authorizeAxios'
 
 const STAFF_BASE = '/staff'

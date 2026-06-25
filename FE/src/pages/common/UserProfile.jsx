@@ -1,3 +1,10 @@
+/**
+ * FILE: UserProfile.jsx
+ * MÔ TẢ: Trang Hồ Sơ Người Dùng (Profile) dùng chung cho mọi Role.
+ * Hiển thị thông tin cá nhân, cài đặt hệ thống (ngôn ngữ, giao diện, thông báo)
+ * và quản lý bảo mật (đổi mật khẩu). Driver có thêm lịch sử hoạt động và thanh toán.
+ */
+
 import React, { useState, useEffect } from 'react'
 import {
   User, Mail, Phone, MapPin, Calendar, Edit3, Camera, Shield,

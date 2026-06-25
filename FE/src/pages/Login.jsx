@@ -1,3 +1,9 @@
+/**
+ * FILE: Login.jsx
+ * MÔ TẢ: Trang Đăng Nhập cho tất cả người dùng (Admin, Manager, Staff, Driver).
+ * Hỗ trợ đăng nhập bằng Email/Password (truyền thống) và tích hợp đăng nhập qua Google, Facebook.
+ */
+
 // src/pages/Login.jsx
 import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'

@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffSupport.jsx
+ * MÔ TẢ: Trang Hỗ trợ (Support) dành cho nhân viên.
+ * Cung cấp thông tin liên hệ khẩn cấp (Hotline), liên kết tài liệu hướng dẫn sử dụng,
+ * và các câu hỏi thường gặp (FAQ) liên quan đến nghiệp vụ Staff.
+ */
+
 import { useTranslation } from 'react-i18next'
 import { Headphones, AlertTriangle, BookOpen, ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'

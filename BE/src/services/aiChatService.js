@@ -1,5 +1,10 @@
-import { GoogleGenAI } from '@google/genai';
+/**
+ * FILE: aiChatService.js
+ * MÔ TẢ: Service kết nối với Google Gemini API để hỗ trợ người dùng chat tự động.
+ * Trả lời các câu hỏi về dịch vụ bãi đỗ xe, bảng giá, hướng dẫn sử dụng.
+ */
 
+import { GoogleGenAI } from '@google/genai';
 const systemInstruction = `
 Bạn là AI trợ lý thông minh của hệ thống quản lý bãi đỗ xe SWP391.
 Nhiệm vụ của bạn là hỗ trợ người dùng (tài xế, nhân viên, quản lý) giải đáp thắc mắc về các dịch vụ đỗ xe, cách sử dụng hệ thống, quy định bãi đỗ, và giá cả.

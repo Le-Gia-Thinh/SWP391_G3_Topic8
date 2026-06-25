@@ -1,3 +1,9 @@
+/**
+ * FILE: DriverTerms.jsx
+ * MÔ TẢ: Trang Điều khoản Sử dụng dành cho Driver.
+ * Hiển thị các điều khoản chung, quyền và trách nhiệm của tài xế khi sử dụng hệ thống.
+ */
+
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { FileText, ChevronLeft } from 'lucide-react'

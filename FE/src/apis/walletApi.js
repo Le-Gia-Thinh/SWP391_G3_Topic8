@@ -1,3 +1,9 @@
+/**
+ * FILE: walletApi.js
+ * MÔ TẢ: Tập hợp API xử lý Ví điện tử (Wallet).
+ * Hỗ trợ nạp tiền, kiểm tra số dư, xem lịch sử giao dịch và thanh toán trực tiếp.
+ */
+
 import authorizeAxios from '../utils/authorizeAxios'
 
 const unwrap = (response) => response.data

@@ -1,3 +1,9 @@
+/**
+ * FILE: DriverTopUp.jsx
+ * MÔ TẢ: Trang Nạp tiền vào Ví dành cho Driver.
+ * Cung cấp giao diện để tài xế chọn các mệnh giá nạp tiền có sẵn hoặc nhập số tiền tùy ý.
+ */
+
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Wallet, CreditCard, ArrowRight, CheckCircle2, History, Banknote, ShieldCheck } from 'lucide-react'

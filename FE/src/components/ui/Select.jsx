@@ -1,3 +1,9 @@
+/**
+ * FILE: Select.jsx
+ * MÔ TẢ: Component Select (Dropdown) tùy chỉnh (Custom) thay thế cho thẻ <select> mặc định.
+ * Hỗ trợ giao diện đồng bộ, hiển thị danh sách thả xuống mượt mà bằng React + TailwindCSS.
+ */
+
 import React, { useState, useRef, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
 

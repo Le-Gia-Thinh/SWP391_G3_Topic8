@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverSubscriptionPayment.jsx
+ * MÔ TẢ: Trang Thanh toán Gói hội viên dành cho Driver.
+ * Xử lý việc tạo mã QR thanh toán (PayOS) cho gói hội viên đã chọn,
+ * hỗ trợ thanh toán qua Ví nội bộ và polling trạng thái thanh toán.
+ */
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';

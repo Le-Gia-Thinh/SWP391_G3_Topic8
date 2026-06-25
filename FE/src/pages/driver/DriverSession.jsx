@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverSession.jsx
+ * MÔ TẢ: Trang Quản lý Phiên đỗ xe (Session) hiện tại dành cho Driver.
+ * Hiển thị danh sách các phiên đỗ xe đang diễn ra, xem chi tiết (thời gian, vị trí, biển số),
+ * tính toán phí dự kiến (real-time) và chuyển tiếp đến trang Thanh toán hoặc Báo cáo sự cố.
+ */
+
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'

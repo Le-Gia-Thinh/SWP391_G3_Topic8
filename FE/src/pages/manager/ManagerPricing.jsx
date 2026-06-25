@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerPricing.jsx
+ * MÔ TẢ: Trang Quản lý Bảng giá (Pricing Policies) dành cho Manager.
+ * Quản lý các block giá ban ngày, giá qua đêm theo loại xe. Cung cấp hướng dẫn trực quan (PricingGuide) cho người thiết lập.
+ */
+
 // src/pages/manager/ManagerPricing.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'

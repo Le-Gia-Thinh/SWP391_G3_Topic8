@@ -1,3 +1,9 @@
+/**
+ * FILE: reservationService.js
+ * MÔ TẢ: Service xử lý nghiệp vụ đặt chỗ (Reservation).
+ * Chức năng: Tìm vị trí trống (tích hợp AI gợi ý), Tạo/Hủy đặt chỗ, Lấy danh sách đặt chỗ của tài xế.
+ */
+
 import { getPool, sql } from "../config/db.js";
 import { syncParkingSlotStatuses } from "./slotSyncService.js";
 import {
@@ -329,6 +335,7 @@ export async function createReservation(req) {
   const reservationDate = req.body.reservationDate || req.body.bookingDate;
   const startTime = req.body.startTime;
   const durationHours = getDurationHours(req.body.duration);
+  const licensePlate = req.body.licensePlate ? req.body.licensePlate.trim().toUpperCase() : null;
 
   const start = buildDateTime(reservationDate, startTime);
   const end = req.body.endTime
@@ -366,6 +373,25 @@ export async function createReservation(req) {
   const pool = await getPool();
 
   await expireOverdueReservations(pool);
+
+  if (licensePlate) {
+    const existingBooking = await pool.request()
+      .input("PlateNumber", sql.NVarChar(20), licensePlate)
+      .query(`
+        SELECT TOP 1 1 
+        FROM Reservations 
+        WHERE PlateNumber = @PlateNumber 
+          AND ReservationStatus = 'Reserved' 
+          AND EndTime > GETDATE()
+      `);
+      
+    if (existingBooking.recordset.length > 0) {
+      throw createHttpError(
+        400,
+        "Bạn đã có slot đặt chỗ rồi."
+      );
+    }
+  }
 
   const slotRequest = pool.request()
     .input("BuildingID", sql.Int, buildingId)
@@ -433,6 +459,7 @@ export async function createReservation(req) {
     .input("ReservationDate", sql.Date, reservationDate)
     .input("StartTime", sql.DateTime, start)
     .input("EndTime", sql.DateTime, end)
+    .input("PlateNumber", sql.NVarChar(20), licensePlate)
     .execute("sp_CreateReservation");
 
   const newestReservation = await pool.request()

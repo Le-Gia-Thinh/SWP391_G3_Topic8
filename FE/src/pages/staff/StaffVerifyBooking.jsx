@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffVerifyBooking.jsx
+ * MÔ TẢ: Trang Xác thực Đặt chỗ (Verify Booking).
+ * Kiểm tra các booking đặt trước, xác thực biển số xe thực tế và tiến hành check-in
+ * dựa trên booking đã được hệ thống ghi nhận.
+ */
+
 import { useState, useEffect, useCallback } from 'react'
 import {
   ChevronLeft, ChevronRight, Calendar, Search, ShieldCheck,
@@ -295,7 +302,7 @@ const StaffVerifyBooking = () => {
   const [selectedBooking, setSelected] = useState(null)
   const [checking, setChecking] = useState(false)
   const [searchId, setSearchId] = useState('')
-  const [setSearchResult] = useState(null)
+  const [searchResult, setSearchResult] = useState(null)
   const [searching, setSearching] = useState(false)
 
   // Fetch lists

@@ -1,4 +1,9 @@
-// src/apis/authApi.js
+/**
+ * FILE: authApi.js
+ * MÔ TẢ: Tập hợp các API liên quan đến xác thực người dùng (Authentication).
+ * Bao gồm: Đăng nhập (Local/Google/Facebook), Đăng ký, Quên mật khẩu, Refresh token.
+ */
+
 import authorizeAxios from '../utils/authorizeAxios'
 
 export const loginAPI = (data) => authorizeAxios.post('/auth/login', data)

@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerDashboard.jsx
+ * MÔ TẢ: Trang Bảng điều khiển (Dashboard) chính của Manager.
+ * Thống kê doanh thu, tỷ lệ lấp đầy, sức chứa hiện tại và danh sách xe đang trong bãi theo thời gian thực.
+ */
+
 // src/pages/manager/ManagerDashboard.jsx
 import { ArrowUpRight, Download, CarFront, RefreshCcw, Sparkles } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'

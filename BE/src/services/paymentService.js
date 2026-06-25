@@ -1,4 +1,9 @@
-// src/services/paymentService.js
+/**
+ * FILE: paymentService.js
+ * MÔ TẢ: Service xử lý nghiệp vụ thanh toán (PayOS, tiền mặt, phụ phí).
+ * Tính toán phí gửi xe, áp dụng giảm giá gói hội viên, sinh mã QR PayOS và xử lý Webhook.
+ */
+
 import crypto from 'crypto'
 import axios from 'axios'
 import { getPool, sql } from '../config/db.js'

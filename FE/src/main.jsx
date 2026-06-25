@@ -1,3 +1,10 @@
+/**
+ * FILE: main.jsx
+ * MÔ TẢ: File entry point chính của ứng dụng React.
+ * Cấu hình các Provider cốt lõi: Theme (MUI), Route (react-router-dom), AuthContext,
+ * AppThemeContext, đa ngôn ngữ (i18n), và Toast Notification.
+ */
+
 // src/main.jsx
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'

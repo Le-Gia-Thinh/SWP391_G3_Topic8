@@ -1,4 +1,12 @@
-// src/components/ProtectedRoute.jsx
+/**
+ * FILE: ProtectedRoute.jsx
+ * MÔ TẢ: Các component HOC (Higher-Order Components) để bảo vệ các tuyến đường (Routes).
+ * Cung cấp:
+ * - ProtectedRoute: Chỉ cho phép người dùng đã đăng nhập.
+ * - GuestRoute: Chỉ cho phép người chưa đăng nhập (ngăn việc quay lại trang login khi đã login).
+ * - RoleRoute: Chỉ cho phép các vai trò nhất định truy cập (VD: chỉ Admin, Manager...).
+ */
+
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 

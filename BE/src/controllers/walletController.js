@@ -1,5 +1,19 @@
-// src/controllers/walletController.js
-import { StatusCodes } from 'http-status-codes';
+/**
+ * FILE: walletController.js
+ * MÔ TẢ: Controller xử lý ví điện tử (Wallet) cho Driver.
+ * 
+ * Chức năng:
+ * - createTopup: Tạo link nạp tiền qua PayOS
+ * - checkTopupStatus: Kiểm tra trạng thái nạp tiền
+ * - getBalance: Lấy số dư ví hiện tại
+ * - getHistory: Lấy lịch sử giao dịch ví
+ * - payParkingByWallet: Thanh toán phí đỗ xe bằng ví
+ * - paySubscriptionByWallet: Mua gói hội viên bằng ví
+ * 
+ * @access Driver only
+ */
+
+import { StatusCodes } from 'http-status-codes'; // Mã HTTP status chuẩn
 import {
     createTopupService,
     checkTopupStatusService,
@@ -7,9 +21,9 @@ import {
     getWalletHistoryService,
     payParkingByWalletService,
     paySubscriptionByWalletService,
-} from '../services/walletService.js';
+} from '../services/walletService.js'; // Service xử lý logic ví
 
-// POST /api/driver/wallet/create-topup
+/** @route POST /api/driver/wallet/create-topup - Tạo link nạp tiền vào ví */
 export async function createTopup(req, res, next) {
     try {
         const userId = req.user?.UserID;

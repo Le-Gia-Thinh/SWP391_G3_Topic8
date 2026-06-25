@@ -1,3 +1,9 @@
+/**
+ * FILE: App.css
+ * MÔ TẢ: File chứa các styles CSS toàn cục bổ sung và các lớp tiện ích không dùng Tailwind.
+ * Bao gồm các animation, hero section styles và định dạng đặc biệt.
+ */
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;

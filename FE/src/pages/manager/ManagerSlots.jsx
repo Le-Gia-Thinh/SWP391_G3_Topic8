@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerSlots.jsx
+ * MÔ TẢ: Trang Quản lý Ô đỗ (Slots) dành cho Manager.
+ * Xem sơ đồ ô đỗ theo dạng bản đồ/danh sách, tìm kiếm, khóa/mở khóa/bảo trì ô đỗ và xem lịch sử sử dụng chi tiết.
+ */
+
 // src/pages/manager/ManagerSlots.jsx
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

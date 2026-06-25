@@ -1,4 +1,10 @@
-// src/utils/authorizeAxios.js
+/**
+ * FILE: authorizeAxios.js
+ * MÔ TẢ: Khởi tạo instance Axios có đính kèm cấu hình interceptors.
+ * Tự động gắn kèm Credentials (Cookies) cho mọi request.
+ * Tự động xử lý Refresh Token khi gặp lỗi 401 (TOKEN_EXPIRED) bằng cơ chế Queue.
+ */
+
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import { translateError } from './apiError' // ← THÊM

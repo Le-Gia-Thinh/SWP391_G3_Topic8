@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverPrivacy.jsx
+ * MÔ TẢ: Trang Chính sách Bảo mật dành cho Driver.
+ * Hiển thị các thông tin chi tiết về chính sách thu thập, sử dụng và bảo mật dữ liệu
+ * của hệ thống đối với tài xế đỗ xe.
+ */
+
 import React from 'react'
 import { ShieldAlert, ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'

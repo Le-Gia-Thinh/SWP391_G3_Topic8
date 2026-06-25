@@ -1,3 +1,9 @@
+/**
+ * FILE: ScrollToTopButton.jsx
+ * MÔ TẢ: Component nút cuộn lên đầu trang (Scroll to Top).
+ * Tự động theo dõi vùng cuộn và chỉ hiển thị khi cuộn xuống một khoảng nhất định.
+ */
+
 // src/components/common/ScrollToTopButton.jsx
 import { useState, useEffect, useRef } from 'react'
 import { ArrowUp } from 'lucide-react'

@@ -1,3 +1,9 @@
+/**
+ * FILE: DriverTopUpPayment.jsx
+ * MÔ TẢ: Trang Thanh toán Nạp tiền Ví dành cho Driver.
+ * Gọi API PayOS để tạo mã QR nạp tiền và liên tục kiểm tra (polling) trạng thái thanh toán.
+ */
+
 import React, { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'

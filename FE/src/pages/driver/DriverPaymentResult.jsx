@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverPaymentResult.jsx
+ * MÔ TẢ: Trang Kết quả Thanh toán dành cho Driver.
+ * Đây là trang redirect từ cổng thanh toán PayOS trả về, hiển thị chi tiết kết quả
+ * giao dịch (Thành công/Hủy) cùng với các thông tin thanh toán (biển số, ô đỗ, số tiền...).
+ */
+
 // src/pages/driver/DriverPaymentResult.jsx
 // Trang redirect từ PayOS về sau khi quét QR
 // Route: /driver/payment-result?sessionId=X&status=success|cancel

@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverReport.jsx
+ * MÔ TẢ: Trang Báo cáo Sự cố dành cho Driver.
+ * Cho phép tài xế báo cáo các vấn đề (không tìm thấy xe, bị chiếm chỗ, tính phí sai...)
+ * liên kết với các phiên đỗ xe / đặt chỗ hiện tại, đính kèm hình ảnh và xem lại các báo cáo gần đây.
+ */
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'react-toastify'

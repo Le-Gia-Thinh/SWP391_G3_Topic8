@@ -1,3 +1,9 @@
+/**
+ * FILE: StaffDashboardScreen.jsx
+ * MÔ TẢ: Trang Tổng quan (Dashboard) dành cho Staff.
+ * Hiển thị tóm tắt vận hành (số chỗ trống, xe trong bãi, lượt xe hôm nay) và thao tác nhanh.
+ */
+
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {

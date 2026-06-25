@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffSupportManager.jsx
+ * MÔ TẢ: Trang Quản lý Yêu cầu Hỗ trợ (Tickets) dành cho Staff.
+ * Hiển thị danh sách các ticket được gửi từ Driver, hỗ trợ lọc theo trạng thái
+ * (Open, Pending, Resolved, Closed) và chuyển hướng tới trang chi tiết ticket.
+ */
+
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { MessageSquare, Clock, Search, Filter } from 'lucide-react'

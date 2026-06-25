@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerLayout.jsx
+ * MÔ TẢ: Layout chung cho giao diện Manager.
+ * Chứa Sidebar điều hướng các chức năng quản lý, Header với thanh tìm kiếm và Menu thông báo/hồ sơ.
+ */
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
