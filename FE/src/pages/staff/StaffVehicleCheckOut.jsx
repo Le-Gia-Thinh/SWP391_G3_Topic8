@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffVehicleCheckOut.jsx
+ * MÔ TẢ: Trang Quản lý Xe ra (Check-out) dành cho Staff.
+ * Tìm kiếm các phiên đỗ xe đang Active (trong bãi), lọc/sắp xếp danh sách
+ * và hỗ trợ thanh toán hoặc xử lý sự cố khi xe ra.
+ */
+
 // src/pages/staff/StaffVehicleCheckOut.jsx
 import { useState, useEffect, useRef } from 'react'
 import {

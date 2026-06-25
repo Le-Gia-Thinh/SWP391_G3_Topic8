@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffActionSuccess.jsx
+ * MÔ TẢ: Trang Thông báo Thành công dành cho Staff.
+ * Hiển thị kết quả sau khi thực hiện Check-in (Vãng lai/Đặt trước) hoặc Check-out.
+ * Cho phép in hóa đơn và gợi ý các bước tiếp theo.
+ */
+
 // src/pages/Staff/StaffActionSuccess.jsx
 import {
   CheckCircle2, ChevronRight, MapPin, ArrowRight, ShieldCheck, Home, Printer, AlertTriangle,

@@ -1,3 +1,9 @@
+/**
+ * FILE: StaffCreateIncident.jsx
+ * MÔ TẢ: Trang Báo cáo Sự cố dành cho Staff.
+ * Tạo sự cố mới (tìm kiếm theo mã phiên, biển số) và xem/cập nhật lịch sử sự cố.
+ */
+
 import { useState, useEffect, useRef } from 'react'
 import {
   Box, Typography, Button, TextField, Select, MenuItem,

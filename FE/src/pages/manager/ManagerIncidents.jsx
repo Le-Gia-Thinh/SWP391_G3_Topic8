@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerIncidents.jsx
+ * MÔ TẢ: Trang Quản lý Sự cố dành cho Manager.
+ * Cho phép xem chi tiết sự cố (kèm hình ảnh), chuyển trạng thái (Open, InProgress, Resolved) và phân công Staff xử lý.
+ */
+
 // src/pages/manager/ManagerIncidents.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'

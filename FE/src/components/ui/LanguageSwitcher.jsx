@@ -1,3 +1,9 @@
+/**
+ * FILE: LanguageSwitcher.jsx
+ * MÔ TẢ: Nút chuyển đổi ngôn ngữ (Việt ⇄ Anh) nằm trên thanh Navbar hoặc Header.
+ * Gọi trực tiếp API thay đổi ngôn ngữ của i18next khi người dùng tương tác.
+ */
+
 // src/components/ui/LanguageSwitcher.jsx
 // Nút chuyển nhanh Việt ⇄ Anh. Đặt ở header/topbar.
 import { useTranslation } from 'react-i18next'

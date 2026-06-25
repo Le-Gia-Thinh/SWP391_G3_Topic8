@@ -1,3 +1,9 @@
+/**
+ * FILE: StaffFeedback.jsx
+ * MÔ TẢ: Trang Xem Đánh giá (Feedback) dành cho Staff.
+ * Xem tổng quan điểm đánh giá và danh sách phản hồi từ khách hàng.
+ */
+
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {

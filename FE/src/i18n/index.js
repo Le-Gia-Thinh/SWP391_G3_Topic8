@@ -1,4 +1,9 @@
-// src/i18n/index.js
+/**
+ * FILE: index.js (i18n)
+ * MÔ TẢ: Cấu hình thư viện đa ngôn ngữ (react-i18next).
+ * Load các file ngôn ngữ (vi, en) và tự động đồng bộ ngôn ngữ đang chọn với LocalStorage.
+ */
+
 // Khởi tạo react-i18next. Import file này MỘT LẦN ở main.jsx (trước khi render App).
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'

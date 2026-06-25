@@ -1,3 +1,11 @@
+/**
+ * FILE: DriverHistory.jsx
+ * MÔ TẢ: Trang Lịch sử Đặt chỗ & Thanh toán dành cho Driver.
+ * Chia làm 2 tab:
+ * 1. Booking: Lịch sử đặt chỗ (tìm kiếm, lọc theo trạng thái, loại xe, ngày).
+ * 2. Payment: Lịch sử giao dịch thanh toán.
+ */
+
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {

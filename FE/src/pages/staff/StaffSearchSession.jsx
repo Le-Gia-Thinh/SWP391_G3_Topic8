@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffSearchSession.jsx
+ * MÔ TẢ: Trang Tìm kiếm Phiên đỗ xe (Search Session).
+ * Hỗ trợ lọc theo trạng thái (Active, Completed, Reserved), loại (Walk-in, Booking),
+ * xe, ô đỗ và ngày. Hiển thị thông tin chi tiết phiên bên phải màn hình.
+ */
+
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Search, XCircle, Car, Clock, MapPin, CheckCircle2, AlertTriangle, Calendar, User, Hash, Tag } from 'lucide-react'
 import staffApi from '../../apis/staffApi'

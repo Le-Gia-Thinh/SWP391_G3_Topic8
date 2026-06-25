@@ -1,3 +1,9 @@
+/**
+ * FILE: DriverSupport.jsx
+ * MÔ TẢ: Trang Hỗ trợ Kỹ thuật (Ticket) dành cho Driver.
+ * Liệt kê các ticket hỗ trợ đã tạo, và cung cấp form để tạo ticket mới.
+ */
+
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'

@@ -1,3 +1,9 @@
+/**
+ * FILE: Header.jsx
+ * MÔ TẢ: Component Header (đầu trang) hiển thị trên các trang giao diện công khai (như trang chủ).
+ * Chứa Logo, các menu điều hướng nhanh, Nút chuyển đổi ngôn ngữ, và nút Đăng nhập / Đăng ký.
+ */
+
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Building2, ChevronLeft } from 'lucide-react'

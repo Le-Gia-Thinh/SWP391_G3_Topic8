@@ -1,6 +1,22 @@
-// src/controllers/managerController.js
-import { StatusCodes } from "http-status-codes";
-import * as managerService from "../services/managerService.js";
+/**
+ * FILE: managerController.js
+ * MÔ TẢ: Controller xử lý các chức năng quản lý vận hành dành cho Manager.
+ * 
+ * Chức năng:
+ * - Xem Dashboard (Thống kê hoạt động)
+ * - Quản lý bãi đỗ xe (Cập nhật Buildings, Floors, Zones, Slots)
+ * - Quản lý chính sách giá (Pricing Policies)
+ * - Quản lý loại phương tiện (Vehicle Types)
+ * - Quản lý sự cố (Incidents)
+ * - Xem các báo cáo: Doanh thu, Tỷ lệ lấp đầy, Lưu lượng xe, Khung giờ cao điểm
+ * - Gửi thông báo hệ thống
+ * 
+ * @access Manager only
+ */
+
+import { StatusCodes } from "http-status-codes"; // Mã HTTP status chuẩn
+import * as managerService from "../services/managerService.js"; // Service xử lý logic manager
+
 
 // ── Dashboard ─────────────────────────────────────────────────
 export async function getDashboard(req, res, next) {

@@ -1,3 +1,10 @@
+/**
+ * FILE: Navbar.jsx
+ * MÔ TẢ: Component Navbar (Thanh điều hướng ngang) nằm phía trên cùng của DashboardLayout.
+ * Hiển thị nút Toggle Sidebar, thanh tìm kiếm, chế độ Light/Dark, đa ngôn ngữ,
+ * chuông thông báo và thông tin người dùng (Avatar).
+ */
+
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Menu, Search, Bell, Moon, Sun, Clock, CalendarDays, Wallet, AlertTriangle, CheckCheck, Info } from 'lucide-react'

@@ -1,5 +1,11 @@
 import crypto from 'crypto';
 import axios from 'axios';
+/**
+ * FILE: subscriptionService.js
+ * MÔ TẢ: Service xử lý nghiệp vụ Gói hội viên (Subscriptions).
+ * Chức năng: Mua gói, kiểm tra trạng thái gói, xử lý thanh toán gói qua PayOS/Ví.
+ */
+
 import { getPool, sql } from "../config/db.js";
 
 const PAYOS_CLIENT_ID = process.env.PAYOS_CLIENT_ID;

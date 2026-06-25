@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverTicketDetail.jsx
+ * MÔ TẢ: Trang Chi tiết Hỗ trợ (Ticket) dành cho Driver.
+ * Hiển thị nội dung chi tiết của một ticket và lịch sử phản hồi giữa tài xế và nhân viên,
+ * đồng thời cho phép tài xế gửi phản hồi mới (nếu ticket chưa đóng).
+ */
+
 import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'

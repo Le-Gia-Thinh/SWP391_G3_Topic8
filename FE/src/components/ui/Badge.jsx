@@ -1,3 +1,9 @@
+/**
+ * FILE: Badge.jsx
+ * MÔ TẢ: Component Badge (nhãn dán) dùng để hiển thị trạng thái hoặc số lượng (VD: Đang hoạt động, Lỗi).
+ * Hỗ trợ nhiều biến thể màu sắc (primary, success, danger, warning, info, default).
+ */
+
 import React from 'react'
 
 const Badge = ({ children, variant = 'default', className = '' }) => {

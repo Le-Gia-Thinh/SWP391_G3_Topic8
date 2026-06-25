@@ -1,3 +1,11 @@
+/**
+ * FILE: StaffPaymentHistory.jsx
+ * MÔ TẢ: Trang Lịch sử Thanh toán & Quản lý Phụ trội.
+ * Gồm 2 tab:
+ * 1. Chờ thu phụ trội: Xử lý các giao dịch phát sinh phí phụ trội (VD: quá giờ gửi).
+ * 2. Lịch sử thanh toán: Xem, tìm kiếm và in hóa đơn các giao dịch đã hoàn tất.
+ */
+
 // src/pages/staff/StaffPaymentHistory.jsx
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'

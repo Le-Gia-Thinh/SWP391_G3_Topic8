@@ -1,3 +1,9 @@
+/**
+ * FILE: AdminAuditLog.jsx
+ * MÔ TẢ: Trang Quản lý Nhật ký Hệ thống (Audit Log) dành cho Admin.
+ * Hiển thị danh sách các hoạt động (Login, Create, Update, Delete) của người dùng để dễ dàng theo dõi và truy vết.
+ */
+
 // src/pages/admin/AdminAuditLog.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'

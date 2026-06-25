@@ -1,4 +1,21 @@
-import * as guestService from '../services/guestService.js';
+/**
+ * FILE: guestController.js
+ * MÔ TẢ: Controller xử lý các API dành cho khách vãng lai (Guest - chưa đăng nhập).
+ * 
+ * Chức năng:
+ * - trackSession: Tra cứu phiên gửi xe bằng biển số hoặc mã phiên
+ * - getHomeStats: Lấy thống kê hiển thị trên trang chủ (công khai)
+ */
+
+import * as guestService from '../services/guestService.js'; // Service xử lý logic Guest
+
+/**
+ * Tra cứu phiên gửi xe.
+ * Cho phép người dùng chưa đăng nhập kiểm tra trạng thái xe bằng biển số hoặc mã phiên.
+ * 
+ * @route GET /api/guest/track-session?searchTerm=...
+ * @access Public (không cần đăng nhập)
+ */
 
 export const trackSession = async (req, res) => {
   try {
@@ -30,6 +47,13 @@ export const trackSession = async (req, res) => {
   }
 };
 
+/**
+ * Lấy thống kê tổng quan hiển thị trên trang chủ.
+ * Bao gồm: tổng chỗ đỗ, số chỗ trống, số tòa nhà, v.v.
+ * 
+ * @route GET /api/guest/home-stats
+ * @access Public (không cần đăng nhập)
+ */
 export const getHomeStats = async (req, res) => {
   try {
     const stats = await guestService.getHomeStats();

@@ -1,3 +1,9 @@
+/**
+ * FILE: AdminBuildings.jsx
+ * MÔ TẢ: Trang Quản lý Tòa nhà dành cho Admin.
+ * Cho phép xem danh sách, thêm mới, chỉnh sửa thông tin (Tên, Địa chỉ, Số tầng) và xóa tòa nhà.
+ */
+
 // src/pages/admin/AdminBuildings.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'

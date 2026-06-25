@@ -1,3 +1,9 @@
+/**
+ * FILE: DriverVehicles.jsx
+ * MÔ TẢ: Trang Quản lý Phương tiện dành cho Driver.
+ * Hiển thị danh sách xe của tài xế, cho phép thêm mới, chỉnh sửa, xóa và thiết lập xe mặc định.
+ */
+
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {

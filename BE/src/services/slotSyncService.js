@@ -1,3 +1,10 @@
+/**
+ * FILE: slotSyncService.js
+ * MÔ TẢ: Service đồng bộ trạng thái Vị trí đỗ xe (Parking Slots).
+ * Chức năng: Cập nhật trạng thái Slot dựa trên các phiên gửi xe (Sessions) đang hoạt động 
+ * và các đặt chỗ (Reservations) đã hết hạn.
+ */
+
 import { getPool } from "../config/db.js";
 
 let backgroundSyncRunning = false;

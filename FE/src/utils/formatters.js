@@ -1,3 +1,9 @@
+/**
+ * FILE: formatters.js
+ * MÔ TẢ: Các hàm hỗ trợ định dạng dữ liệu phía giao diện (Frontend).
+ * Bao gồm hàm chuẩn hóa định dạng biển số xe.
+ */
+
 export function formatPlateNumber(value) {
   if (!value) return ''
 

@@ -1,3 +1,10 @@
+/**
+ * FILE: Sidebar.jsx
+ * MÔ TẢ: Component Sidebar (Thanh bên) nằm bên trái màn hình trong DashboardLayout.
+ * Render danh sách menu chức năng dựa theo quyền của người dùng (Admin/Manager/Staff/Driver).
+ * Có hỗ trợ thu gọn (collapse) trên Desktop và trượt ra (drawer) trên Mobile.
+ */
+
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'

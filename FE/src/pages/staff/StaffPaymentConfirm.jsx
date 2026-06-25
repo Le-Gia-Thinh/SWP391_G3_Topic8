@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffPaymentConfirm.jsx
+ * MÔ TẢ: Trang Xác nhận Thanh toán dành cho nhân viên.
+ * Cho phép nhân viên xác nhận biển số, chọn phương thức thanh toán (Tiền mặt / Chuyển khoản QR)
+ * khi khách hàng lấy xe ra khỏi bãi đỗ.
+ */
+
 // src/pages/Staff/StaffPaymentConfirm.jsx
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'

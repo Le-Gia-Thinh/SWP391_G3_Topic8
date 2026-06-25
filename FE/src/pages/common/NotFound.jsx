@@ -1,3 +1,9 @@
+/**
+ * FILE: NotFound.jsx
+ * MÔ TẢ: Trang Lỗi 404 (Not Found) hiển thị khi người dùng truy cập
+ * vào một đường dẫn không tồn tại trên hệ thống.
+ */
+
 import { AlertTriangle, Home } from 'lucide-react'
 import { Link } from 'react-router-dom'
 

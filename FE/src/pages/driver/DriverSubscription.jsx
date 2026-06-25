@@ -1,3 +1,11 @@
+/**
+ * FILE: DriverSubscription.jsx
+ * MÔ TẢ: Trang Đăng ký / Quản lý Gói hội viên (Subscription) dành cho Driver.
+ * Hiển thị 2 tab:
+ * 1. Các gói hiện có để mua (Basic, Pro, Premium) kèm chiết khấu theo số tháng.
+ * 2. Trạng thái Gói hiện tại của tài xế (nếu có).
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Crown, CheckCircle2, Star, Zap, Shield, ChevronRight, Calendar, Clock, CreditCard, AlertCircle } from 'lucide-react';

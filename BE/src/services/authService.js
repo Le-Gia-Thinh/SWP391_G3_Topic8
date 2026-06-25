@@ -1,3 +1,15 @@
+/**
+ * FILE: authService.js
+ * MÔ TẢ: Service cung cấp các logic xử lý nghiệp vụ xác thực người dùng.
+ * 
+ * Chức năng:
+ * - Đăng ký (register), Đăng nhập (login), Refresh Token
+ * - Gửi email xác minh và xử lý xác minh email
+ * - Khôi phục mật khẩu (Quên mật khẩu / Đặt lại mật khẩu)
+ * - Đăng nhập bằng mạng xã hội (Google, Facebook)
+ * - Đổi mật khẩu
+ */
+
 import ms from "ms";
 import crypto from "crypto";
 import bcryptjs from "bcryptjs";

@@ -1,5 +1,21 @@
-import { getPool, sql } from "../config/db.js";
+/**
+ * FILE: driverController.js
+ * MÔ TẢ: Controller xử lý các tính năng chính dành cho tài xế (Driver).
+ * 
+ * Chức năng:
+ * - getDriverHome: Trang chủ tài xế (thống kê tổng quan, phiên hiện tại, đặt chỗ sắp tới)
+ * - getDriverProfile / updateDriverProfile: Xem/Cập nhật thông tin cá nhân
+ * - getDriverReportContext: Lấy dữ liệu ngữ cảnh cho việc báo cáo sự cố (phiên, đặt chỗ gần đây)
+ * - createDriverReport: Tạo báo cáo sự cố
+ * 
+ * @access Driver only
+ */
 
+import { getPool, sql } from "../config/db.js"; // Kết nối database
+
+/**
+ * Hàm helper: Lấy UserID từ request.
+ */
 function getUserIdFromToken(req) {
   return req.user?.UserID || req.user?.userId || req.user?.id;
 }

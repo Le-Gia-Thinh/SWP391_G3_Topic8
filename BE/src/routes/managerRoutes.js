@@ -1,4 +1,9 @@
-// src/routes/managerRoutes.js
+/**
+ * FILE: managerRoutes.js
+ * MÔ TẢ: Định nghĩa các đường dẫn API dành riêng cho quyền Manager.
+ * Quản lý hoạt động bãi đỗ xe, chính sách giá, báo cáo doanh thu và nhân sự.
+ */
+
 import express from "express";
 import * as mc from "../controllers/managerController.js";
 

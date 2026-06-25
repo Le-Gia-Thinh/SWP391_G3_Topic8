@@ -1,7 +1,20 @@
-import { StatusCodes } from 'http-status-codes'
-import { getPool } from '../config/db.js'
-import { logAudit } from '../utils/auditLogger.js'
-import * as infra from '../services/adminService.js'
+/**
+ * FILE: adminController.js
+ * MÔ TẢ: Controller xử lý các chức năng quản trị hệ thống dành cho Admin.
+ * 
+ * Chức năng:
+ * - Quản lý cơ sở hạ tầng bãi đỗ xe: Tòa nhà (Buildings), Tầng (Floors), Khu vực (Zones), Vị trí đỗ (Slots)
+ * - Quản lý người dùng: Tạo, cập nhật, khóa/mở khóa tài khoản, đặt lại mật khẩu, phân quyền (Roles & Permissions)
+ * - Quản lý thống kê (Stats)
+ * - Xem nhật ký hoạt động (Audit Logs)
+ * 
+ * @access Admin only
+ */
+
+import { StatusCodes } from 'http-status-codes' // Mã HTTP status chuẩn
+import { getPool } from '../config/db.js'       // Kết nối database
+import { logAudit } from '../utils/auditLogger.js' // Hàm ghi log hệ thống
+import * as infra from '../services/adminService.js' // Service xử lý logic admin
 
 // Ghi audit log "best-effort" (không chặn response nếu lỗi)
 async function audit(req, action, target, description) {

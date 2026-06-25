@@ -1,9 +1,34 @@
-import { StatusCodes } from "http-status-codes";
-import * as authService from "../services/authService.js";
-import JwtProvider from "../providers/JwtProvider.js";
+/**
+ * FILE: authController.js
+ * MÔ TẢ: Controller xử lý xác thực người dùng (Authentication).
+ * 
+ * Chức năng:
+ * - register: Đăng ký tài khoản mới
+ * - login: Đăng nhập bằng email/password
+ * - googleLogin / facebookLogin: Đăng nhập bằng mạng xã hội
+ * - verifyEmail: Xác minh email
+ * - resendVerifyEmail: Gửi lại email xác minh
+ * - refreshToken: Làm mới access token
+ * - logout: Đăng xuất
+ * - forgotPassword / resetPassword: Khôi phục mật khẩu
+ * - changePassword: Đổi mật khẩu
+ * - getMe: Lấy thông tin user hiện tại
+ * - checkEmailVerifyStatus: Kiểm tra trạng thái xác minh email
+ */
 
+import { StatusCodes } from "http-status-codes"; // Mã HTTP status chuẩn
+import * as authService from "../services/authService.js"; // Service xử lý logic xác thực
+import JwtProvider from "../providers/JwtProvider.js"; // Module quản lý JWT
+
+// ========================= BIẾN CẤU HÌNH =========================
+
+/** Thời gian hết hạn Access Token (từ .env) */
 const ACCESS_TOKEN_EXPIRES = process.env.ACCESS_TOKEN_EXPIRES;
+
+/** Thời gian hết hạn Refresh Token (từ .env) */
 const REFRESH_TOKEN_EXPIRES = process.env.REFRESH_TOKEN_EXPIRES;
+
+/** Kiểm tra môi trường production để bật secure cookie */
 const IS_PROD = process.env.NODE_ENV === "production";
 
 const baseCookieOptions = {

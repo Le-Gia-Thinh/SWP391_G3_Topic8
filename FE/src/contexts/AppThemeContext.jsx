@@ -1,3 +1,9 @@
+/**
+ * FILE: AppThemeContext.jsx
+ * MÔ TẢ: Cung cấp Context để quản lý chế độ giao diện (Dark/Light Mode).
+ * Lưu trạng thái Theme vào LocalStorage và áp dụng class 'dark' lên thẻ HTML root khi bật Dark Mode.
+ */
+
 import React, { createContext, useContext, useEffect, useState } from 'react'
 
 const AppThemeContext = createContext()

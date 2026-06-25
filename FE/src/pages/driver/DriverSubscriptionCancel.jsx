@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverSubscriptionCancel.jsx
+ * MÔ TẢ: Trang Hủy gia hạn Gói hội viên dành cho Driver.
+ * Hiển thị xác nhận việc hủy tự động gia hạn gói cước, thông báo các quyền lợi sẽ mất,
+ * và thu thập lý do hủy (nếu có).
+ */
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, XCircle } from 'lucide-react';

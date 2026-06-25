@@ -1,5 +1,22 @@
-import { getPool } from "../config/db.js";
+/**
+ * FILE: reportController.js
+ * MÔ TẢ: Controller xử lý báo cáo tổng quan (Dashboard) cho Manager.
+ * Truy vấn song song nhiều bảng để lấy thống kê: chỗ đỗ, phiên, doanh thu, sự cố.
+ */
 
+import { getPool } from "../config/db.js"; // Kết nối database
+
+/**
+ * Lấy dữ liệu Dashboard tổng quan.
+ * Thực hiện 4 truy vấn song song (Promise.all) để tối ưu tốc độ:
+ * - Slots: Thống kê trạng thái chỗ đỗ (Available, Occupied, Reserved, ...)
+ * - Sessions: Thống kê trạng thái phiên đỗ xe (Active, Completed, Cancelled, ...)
+ * - Revenue: Tổng doanh thu từ thanh toán và gói hội viên
+ * - Incidents: Thống kê trạng thái sự cố (Open, InProgress, Resolved, ...)
+ * 
+ * @route GET /api/reports/dashboard
+ * @access Manager only
+ */
 export async function dashboard(req, res, next) {
   try {
     const pool = await getPool();

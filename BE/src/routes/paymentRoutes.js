@@ -1,4 +1,9 @@
-// src/routes/paymentRoutes.js
+/**
+ * FILE: paymentRoutes.js
+ * MÔ TẢ: Định nghĩa các đường dẫn API liên quan đến thanh toán.
+ * Bao gồm: Webhook PayOS, thanh toán qua cổng điện tử, và xác nhận thu tiền mặt.
+ */
+
 // ── Thêm import và sử dụng trong src/routes/index.js ─────────────
 // import paymentRoutes from './paymentRoutes.js'
 // router.use('/', paymentRoutes)

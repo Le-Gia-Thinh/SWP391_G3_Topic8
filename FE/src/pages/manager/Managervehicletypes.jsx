@@ -1,3 +1,9 @@
+/**
+ * FILE: Managervehicletypes.jsx
+ * MÔ TẢ: Trang Quản lý Loại xe (Vehicle Types) dành cho Manager.
+ * CRUD các loại hình xe (Xe số, Xe tay ga, Ô tô 4 chỗ,...) để áp dụng cho Bảng giá và Quy hoạch bãi đỗ.
+ */
+
 // src/pages/manager/ManagerVehicleTypes.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'

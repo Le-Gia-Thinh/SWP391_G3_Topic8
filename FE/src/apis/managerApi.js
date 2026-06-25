@@ -1,4 +1,10 @@
-// src/apis/managerApi.js
+/**
+ * FILE: managerApi.js
+ * MÔ TẢ: Tập hợp các API dành cho Quản lý (Manager).
+ * Bao gồm: Dashboard tổng quan, Quản lý chính sách giá, Quản lý sự cố, 
+ * và Báo cáo chi tiết (Doanh thu, Lưu lượng, Giờ cao điểm).
+ */
+
 import authorizeAxios from '../utils/authorizeAxios'
 
 // LƯU Ý: authorizeAxios đã có baseURL kết thúc bằng /api → ở đây KHÔNG thêm /api.

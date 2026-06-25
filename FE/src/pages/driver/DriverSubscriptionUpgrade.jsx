@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverSubscriptionUpgrade.jsx
+ * MÔ TẢ: Trang Nâng cấp Gói hội viên dành cho Driver.
+ * Cho phép tài xế xem thông tin gói cao cấp hơn, chọn thời hạn nâng cấp
+ * và chuyển hướng đến trang thanh toán.
+ */
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Crown, CheckCircle2, ChevronRight, Zap } from 'lucide-react';

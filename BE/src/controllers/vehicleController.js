@@ -1,5 +1,22 @@
-import { getPool, sql } from "../config/db.js";
+/**
+ * FILE: vehicleController.js
+ * MÔ TẢ: Controller xử lý quản lý phương tiện (Vehicles) của Driver.
+ * 
+ * Chức năng:
+ * - getDriverVehicles: Lấy danh sách phương tiện của tài xế.
+ * - addDriverVehicle: Thêm phương tiện mới.
+ * - updateDriverVehicle: Cập nhật thông tin phương tiện.
+ * - deleteDriverVehicle: Xóa phương tiện (soft delete: IsActive = 0).
+ * - setDefaultVehicle: Thiết lập một phương tiện làm mặc định.
+ * 
+ * @access Driver only
+ */
 
+import { getPool, sql } from "../config/db.js"; // Kết nối database
+
+/**
+ * Hàm helper: Lấy UserID từ request.
+ */
 function getUserIdFromToken(req) {
   return req.user?.UserID || req.user?.userId || req.user?.id;
 }

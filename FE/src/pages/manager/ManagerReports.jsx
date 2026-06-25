@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerReports.jsx
+ * MÔ TẢ: Trang Báo cáo Thống kê dành cho Manager.
+ * Xem báo cáo doanh thu, lượt xe vào/ra, tỷ lệ lấp đầy (theo tầng/loại xe) và mật độ sử dụng theo giờ. Hỗ trợ xuất CSV.
+ */
+
 // src/pages/manager/ManagerReports.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'

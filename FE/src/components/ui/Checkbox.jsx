@@ -1,3 +1,9 @@
+/**
+ * FILE: Checkbox.jsx
+ * MÔ TẢ: Component Checkbox tùy chỉnh (Custom) được xây dựng bằng React và TailwindCSS.
+ * Thay thế cho thẻ <input type="checkbox"> mặc định để dễ đồng bộ giao diện Dark/Light mode.
+ */
+
 import React from 'react'
 import { Check } from 'lucide-react'
 
