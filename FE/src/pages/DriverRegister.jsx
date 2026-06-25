@@ -16,6 +16,7 @@ import { useNavigate, Navigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { registerAPI } from '../apis/authApi'
 import { useAuth } from '../contexts/AuthContext'
+import { formatPlateNumber } from '../utils/formatters'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -191,8 +192,8 @@ export default function DriverRegister() {
   ]
 
   const handleChange = ({ target: { name, value, checked, type } }) => {
-    setFormData(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
-    // Xóa error của field khi user bắt đầu nhập lại
+    const cooked = type === 'checkbox' ? checked : name === 'plateNumber' ? formatPlateNumber(value) : value
+    setFormData(f => ({ ...f, [name]: cooked }))
     if (fieldErrors[name]) setFieldErrors(e => ({ ...e, [name]: '' }))
   }
 

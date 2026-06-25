@@ -42,6 +42,7 @@ router.post('/check-in/walk-in', staffController.checkInWalkIn)
 router.get('/bookings', staffController.getBookings)
 router.get('/bookings/:reservationId', staffController.getBookingDetail)
 router.post('/bookings/:reservationId/check-in', staffController.checkInBooking)
+router.post('/bookings/:reservationId/cancel-and-walkin', staffController.cancelAndWalkIn)
 
 // Sessions / checkout
 router.get('/sessions', staffController.searchSessions)

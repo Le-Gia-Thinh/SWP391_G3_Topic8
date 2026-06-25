@@ -24,20 +24,15 @@ import { useTranslation } from 'react-i18next'
 // Dùng được cả trong interceptor lẫn component.
 export function translateError(err) {
   const code = err?.response?.data?.code
-  const beMessage = err?.response?.data?.message
 
-  // 1) Có error code → tìm bản dịch trong errors.*
+  // Ưu tiên dịch theo error code trong errors.*
   if (code) {
     const key = `errors.${code}`
     const translated = i18next.t(key)
-    // i18next trả lại key nguyên nếu không tìm thấy → bỏ qua
     if (translated !== key) return translated
   }
 
-  // 2) Fallback: message từ BE (luôn là tiếng Việt)
-  if (beMessage) return beMessage
-
-  // 3) Cuối cùng: câu mặc định theo ngôn ngữ hiện tại
+  // Không dùng beMessage làm fallback vì BE luôn trả tiếng Việt
   return i18next.t('errors.DEFAULT')
 }
 

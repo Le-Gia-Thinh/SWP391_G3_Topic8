@@ -9,8 +9,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, XCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 const DriverSubscriptionCancel = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [reason, setReason] = useState('');
@@ -20,7 +22,7 @@ const DriverSubscriptionCancel = () => {
     // Simulate API call
     setTimeout(() => {
       setLoading(false);
-      toast.success('Hủy gia hạn thành công. Bạn vẫn có thể sử dụng gói đến hết chu kỳ.');
+      toast.success(t('driver.membershipPage.cancelSuccess'));
       navigate('/driver/subscription', { state: { activeTab: 'status' } });
     }, 1500);
   };

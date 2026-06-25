@@ -375,21 +375,42 @@ export async function createReservation(req) {
   await expireOverdueReservations(pool);
 
   if (licensePlate) {
-    const existingBooking = await pool.request()
+    // Chặn trùng giờ: cùng biển số, cùng khoảng thời gian (overlap) → không cho đặt
+    // Cho phép: cùng biển số, 2 khung giờ liên tiếp không chồng nhau (gia hạn)
+    const overlapCheck = await pool.request()
+      .input("PlateNumber", sql.NVarChar(20), licensePlate)
+      .input("StartTime", sql.DateTime, start)
+      .input("EndTime", sql.DateTime, end)
+      .query(`
+        SELECT TOP 1 1
+        FROM Reservations
+        WHERE PlateNumber = @PlateNumber
+          AND ReservationStatus = 'Reserved'
+          AND @StartTime < EndTime
+          AND @EndTime > StartTime
+      `);
+
+    if (overlapCheck.recordset.length > 0) {
+      const err = createHttpError(409, "Xe này đã có đặt chỗ trùng khung giờ.")
+      err.code = 'PLATE_ALREADY_BOOKED'
+      throw err
+    }
+
+    // Chặn nếu xe đang trong bãi (Active session) → không thể đặt thêm
+    const activeSessionCheck = await pool.request()
       .input("PlateNumber", sql.NVarChar(20), licensePlate)
       .query(`
-        SELECT TOP 1 1 
-        FROM Reservations 
-        WHERE PlateNumber = @PlateNumber 
-          AND ReservationStatus = 'Reserved' 
-          AND EndTime > GETDATE()
+        SELECT TOP 1 1
+        FROM ParkingSessions
+        WHERE PlateNumber = @PlateNumber
+          AND SessionStatus = 'Active'
+          AND ExitTime IS NULL
       `);
-      
-    if (existingBooking.recordset.length > 0) {
-      throw createHttpError(
-        400,
-        "Bạn đã có slot đặt chỗ rồi."
-      );
+
+    if (activeSessionCheck.recordset.length > 0) {
+      const err = createHttpError(409, "Xe này đang trong bãi, không thể đặt chỗ khi đang đỗ.")
+      err.code = 'PLATE_ALREADY_PARKED'
+      throw err
     }
   }
 

@@ -609,7 +609,23 @@
     "FORBIDDEN": "You don't have permission to perform this action.",
     "REFRESH_TOKEN_EXPIRED": "Your session has expired, please sign in again.",
     "SESSION_EXPIRED": "Your session has expired, please sign in again.",
-    "FLOOR_LIMIT_REACHED": "Building has reached the maximum number of floors. Please increase the floor limit in Buildings settings first."
+    "FLOOR_LIMIT_REACHED": "Building has reached the maximum number of floors. Please increase the floor limit in Buildings settings first.",
+    "PLATE_ALREADY_BOOKED": "This vehicle already has a reservation overlapping with the selected time window.",
+    "PLATE_ALREADY_PARKED": "This vehicle is currently inside the parking lot and cannot check in again.",
+    "PLATE_REQUIRED": "Please enter the license plate number.",
+    "SLOT_REQUIRED": "Please select a parking slot.",
+    "VEHICLE_TYPE_REQUIRED": "Please select a vehicle type.",
+    "BOOKING_NOT_FOUND": "Booking not found.",
+    "BOOKING_NOT_RESERVED": "This booking is no longer in Reserved status.",
+    "BOOKING_EXPIRED": "This booking has expired.",
+    "BOOKING_SLOT_NOT_AVAILABLE": "The booking slot is no longer available.",
+    "CHECKIN_TOO_EARLY": "Too early to check in. The check-in window opens 1 hour before start time.",
+    "CHECKIN_NO_SHOW": "Check-in window has closed. Booking marked as expired (no-show).",
+    "NO_SLOTS_AVAILABLE": "No available slots matching this vehicle type. The lot may be full.",
+    "SLOT_CONFLICT": "This slot is occupied or has an upcoming booking. Please choose another slot.",
+    "NOT_ELIGIBLE_FOR_WALK_IN_OVERRIDE": "This booking is already within the check-in window. Use the standard check-in instead.",
+    "CHECK_IN_FAILED": "Could not create parking session.",
+    "SESSION_NOT_ACTIVE": "This session is no longer active."
   },
   "driver": {
     "common": {
@@ -1347,7 +1363,11 @@
       "doneNoteTitle": "Note",
       "doneNoteBody": "This is a prepayment confirmation. If the vehicle stays longer, staff will collect a surcharge on exit.",
       "failTitle": "Payment failed",
-      "failBody": "The order was cancelled or expired after 15 minutes."
+      "failBody": "The order was cancelled or expired after 15 minutes.",
+      "walletInsufficient": "Insufficient wallet balance!",
+      "walletSuccess": "Wallet payment successful!",
+      "walletFail": "Wallet payment failed",
+      "freeSuccess": "Payment complete (Free)"
     },
     "paymentResult": {
       "checking": "Checking payment...",
@@ -1365,6 +1385,18 @@
       "prepayNoteTitle": "⚠️ Prepayment note",
       "prepayNoteBody": "The fee is calculated at the time of payment. If the vehicle stays longer, staff will collect a surcharge on exit.",
       "retry": "Retry payment"
+    },
+    "subscriptionPayment": {
+      "copied": "Copied",
+      "createFail": "Could not create payment code",
+      "cancelledOrExpired": "Transaction was cancelled or expired",
+      "activateSuccess": "Membership plan activated successfully!",
+      "paymentNotCompleted": "Transaction payment not completed",
+      "walletFail": "Wallet payment failed"
+    },
+    "membershipPage": {
+      "loadError": "Could not load membership plan info",
+      "cancelSuccess": "Auto-renewal cancelled. You can still use the plan until the end of the current cycle."
     }
   },
   "sidebar": {
@@ -2372,6 +2404,47 @@
       "createIncidentFull": "Create Incident Report",
       "expiredNotice": "This booking has expired. Cannot check in.",
       "invalidStatusNotice": "Status \"{{status}}\" — cannot check in.",
+      "checkin": {
+        "tooEarlyStatus": "Too Early",
+        "earlyFeeStatus": "Early (Fee Applies)",
+        "gracePeriodStatus": "On Time",
+        "earlyWindowStatus": "Early Arrival",
+        "onTimeStatus": "On Time",
+        "lateWindowStatus": "Late Arrival",
+        "noShowStatus": "No-show",
+        "tooEarlyMsg": "Too early to check in. The check-in window opens in {{n}} more minutes (1 hour before start time).",
+        "earlyFeeMsg": "Arrived {{n}} min early — outside the 15-min on-time window. A flat fee of {{fee}} will be added to the checkout bill.",
+        "gracePeriodMsg": "Arrived {{n}} min early — within the 15-min on-time window. No extra charge.",
+        "earlyWindowMsg": "{{n}} minutes early. Still within the allowed window — check-in allowed.",
+        "onTimeMsg": "On time. Ready to check in.",
+        "lateWindowMsg": "{{n}} minutes late. Still within the allowed window (max 1 hour late).",
+        "noShowMsg": "Check-in window has closed. Driver is considered a no-show. Booking will be marked expired.",
+        "waitTitle": "Option 1: Wait for the check-in window",
+        "waitDesc": "The check-in window opens at {{time}} ({{n}} minutes from now). Ask the customer to wait and return.",
+        "walkInNowTitle": "Option 2: Walk-in check-in now",
+        "walkInNowDesc": "Cancel the pre-booking and check in immediately as a walk-in. The customer enters the lot right away — no waiting.",
+        "walkInNowBtn": "Proceed with walk-in check-in",
+        "walkInConfirmTitle": "Confirm Walk-in Check-in",
+        "walkInConfirmWarning": "Booking {{code}} will be CANCELLED. The customer will be checked in as a walk-in right now on the same slot. This action cannot be undone.",
+        "walkInConfirmBtn": "Confirm & Check-in",
+        "walkInCancelBtn": "Keep pre-booking",
+        "walkInSuccess": "Walk-in check-in successful. Booking {{code}} has been cancelled."
+      },
+      "timeFilter": {
+        "label": "Arrival window",
+        "all": "All",
+        "1h": "Next 1 hr",
+        "2h": "Next 2 hrs",
+        "4h": "Next 4 hrs"
+      },
+      "dateFilter": {
+        "label": "Filter by date",
+        "today": "Today",
+        "1d": "Yesterday",
+        "3d": "3 days",
+        "7d": "7 days",
+        "30d": "30 days"
+      },
       "checkinSuccess": "Check-in {{code}} successful!",
       "checkinFailed": "Check-in failed",
       "autoFlowLabel": "Automated process:",
@@ -2795,6 +2868,7 @@
       "loadFail": "Could not load slot list",
       "loadDetailFail": "Could not load slot detail",
       "updateFail": "Update failed",
+      "updateSuccess": "Slot {{code}} updated to {{status}}",
       "toastMaintenance": "Slot {{code}} switched to maintenance",
       "toastBlocked": "Slot {{code}} blocked",
       "toastUnlocked": "Slot {{code}} unlocked",

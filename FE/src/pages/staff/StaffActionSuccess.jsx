@@ -14,7 +14,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 const formatVND = (v) => Number(v || 0).toLocaleString('vi-VN')
-const formatDT = (dt) => dt ? new Date(dt).toLocaleString('vi-VN') : '—'
+const formatDT = (dt) => dt ? new Date(dt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'
 
 const StaffActionSuccess = () => {
   const navigate = useNavigate()

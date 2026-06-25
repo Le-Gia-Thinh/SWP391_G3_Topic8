@@ -11,6 +11,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Crown, CheckCircle2, Star, Zap, Shield, ChevronRight, Calendar, Clock, CreditCard, AlertCircle } from 'lucide-react';
 import { subscriptionApi } from '../../apis/subscriptionApi';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 // Frontend UI configs for plans
 const planConfigs = {
@@ -67,6 +68,7 @@ const durations = [
 ];
 
 const DriverSubscription = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('plans'); // 'plans' or 'status'
@@ -120,7 +122,7 @@ const DriverSubscription = () => {
             setCurrentSubscription({ active: false });
         }
     } catch (error) {
-        toast.error("Không thể tải thông tin gói hội viên");
+        toast.error(t('driver.membershipPage.loadError'));
     } finally {
         setLoading(false);
     }

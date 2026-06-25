@@ -21,6 +21,10 @@ import { useTranslation } from 'react-i18next'
 
 const formatVND = (v) => Number(v || 0).toLocaleString('vi-VN') + ' đ'
 
+// Vietnam is UTC+7, no DST — shift trick: add offset then use UTC accessors
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000
+const toVN = (dt) => new Date(new Date(dt).getTime() + VN_OFFSET_MS)
+
 const calcDurationMinutes = (entryTime) => {
   if (!entryTime) return 0
   return Math.max(0, Math.floor((Date.now() - new Date(entryTime).getTime()) / 60000))
@@ -36,21 +40,24 @@ const DAY_BRACKETS = {
 const NIGHT_FEE = { 1: 12000, 2: 120000, 3: 200000 }
 
 // Tách khoảng [start, end] thành các segment ngày (06:00-22:00) và đêm (22:00-06:00)
+// Sử dụng giờ Việt Nam (UTC+7) để xác định ngày/đêm
 const splitDayNightSegments = (start, end) => {
   const segs = []
   let cur = new Date(start.getTime())
   while (cur < end) {
-    const h = cur.getHours()
+    const vnCur = new Date(cur.getTime() + VN_OFFSET_MS)
+    const h = vnCur.getUTCHours()
     const isDay = h >= 6 && h < 22
-    let next = new Date(cur)
+    const nextVN = new Date(vnCur)
     if (isDay) {
-      next.setHours(22, 0, 0, 0)
+      nextVN.setUTCHours(22, 0, 0, 0)
     } else if (h >= 22) {
-      next.setDate(next.getDate() + 1)
-      next.setHours(6, 0, 0, 0)
+      nextVN.setUTCDate(nextVN.getUTCDate() + 1)
+      nextVN.setUTCHours(6, 0, 0, 0)
     } else {
-      next.setHours(6, 0, 0, 0)
+      nextVN.setUTCHours(6, 0, 0, 0)
     }
+    let next = new Date(nextVN.getTime() - VN_OFFSET_MS)
     if (next > end) next = new Date(end)
     const mins = Math.floor((next - cur) / 60000)
     if (mins > 0) segs.push({ type: isDay ? 'day' : 'night', minutes: mins })
@@ -141,8 +148,8 @@ function sortSessions(list, key) {
 
 const fmtModalTime = (dt) => {
   if (!dt) return '—'
-  const d = new Date(dt)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} — ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
+  const d = toVN(dt)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} — ${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}`
 }
 
 const FeeBreakdownModal = ({ session, onClose }) => {
@@ -411,8 +418,8 @@ const SessionCard = ({ session, onCheckout, onShowFee }) => {
 
   const formatTime = (dt) => {
     if (!dt) return '—'
-    const d = new Date(dt)
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} — ${d.getDate()} ${t('staff.checkout.time.month')}${d.getMonth() + 1}`
+    const d = toVN(dt)
+    return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} — ${d.getUTCDate()} ${t('staff.checkout.time.month')}${d.getUTCMonth() + 1}`
   }
 
   const bookingCode = getBookingCode(session)
@@ -424,8 +431,8 @@ const SessionCard = ({ session, onCheckout, onShowFee }) => {
   const feeDisplay = getDisplayFee(session)
   const surcharge = Number(session.SurchargeAmount ?? 0)
   // Qua đêm = vào ngày khác hoặc đã đỗ hơn 16h (chắc chắn qua khung đêm)
-  const isOvernight = new Date(session.EntryTime).toDateString() !== new Date().toDateString()
-    || durationMin >= 16 * 60
+  const vnDay = (dt) => { const d = toVN(dt); return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}` }
+  const isOvernight = vnDay(session.EntryTime) !== vnDay(new Date()) || durationMin >= 16 * 60
 
   return (
     <div className={`bg-white border rounded-xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col gap-3 ${isOverdue ? 'border-orange-200 hover:border-orange-400' : 'border-gray-100 hover:border-blue-200'}`}>

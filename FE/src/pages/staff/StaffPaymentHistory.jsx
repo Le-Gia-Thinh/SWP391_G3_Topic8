@@ -22,10 +22,11 @@ import staffApi from '../../apis/staffApi'
 // ── Helpers ───────────────────────────────────────────────────
 const formatVND = (v) => Number(v || 0).toLocaleString('vi-VN') + ' ₫'
 
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 const formatDateTime = (dt) => {
   if (!dt) return '—'
-  const d = new Date(dt)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
+  const d = new Date(new Date(dt).getTime() + VN_OFFSET_MS)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} · ${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}`
 }
 
 const formatDuration = (entry, exit, minuteLabel) => {
@@ -58,7 +59,7 @@ const printInvoice = (session, t) => {
     <div class="center">
       <div class="bold">${inv('brand')}</div>
       <div class="title">${inv('title')}</div>
-      <div>${new Date().toLocaleString('vi-VN')}</div>
+      <div>${new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</div>
     </div>
     <div class="divider"></div>
     <div class="row"><span>${inv('sessionCode')}</span><span class="bold">${session.SessionCode || '—'}</span></div>

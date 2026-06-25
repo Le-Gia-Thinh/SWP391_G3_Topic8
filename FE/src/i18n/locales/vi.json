@@ -609,7 +609,23 @@
     "FORBIDDEN": "Bạn không có quyền thực hiện thao tác này.",
     "REFRESH_TOKEN_EXPIRED": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
     "SESSION_EXPIRED": "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.",
-    "FLOOR_LIMIT_REACHED": "Tòa nhà đã đạt tối đa số tầng. Hãy tăng số tầng trong trang Cơ sở trước."
+    "FLOOR_LIMIT_REACHED": "Tòa nhà đã đạt tối đa số tầng. Hãy tăng số tầng trong trang Cơ sở trước.",
+    "PLATE_ALREADY_BOOKED": "Xe này đã có đặt chỗ trùng khung giờ được chọn.",
+    "PLATE_ALREADY_PARKED": "Xe này đang trong bãi, không thể đặt chỗ hoặc check-in thêm.",
+    "PLATE_REQUIRED": "Vui lòng nhập biển số xe.",
+    "SLOT_REQUIRED": "Vui lòng chọn ô đỗ.",
+    "VEHICLE_TYPE_REQUIRED": "Vui lòng chọn loại phương tiện.",
+    "BOOKING_NOT_FOUND": "Không tìm thấy đặt chỗ.",
+    "BOOKING_NOT_RESERVED": "Booking này không còn ở trạng thái Reserved.",
+    "BOOKING_EXPIRED": "Booking đã hết hạn.",
+    "BOOKING_SLOT_NOT_AVAILABLE": "Slot của booking không còn khả dụng.",
+    "CHECKIN_TOO_EARLY": "Quá sớm để check-in. Cửa sổ check-in mở 1 giờ trước giờ bắt đầu.",
+    "CHECKIN_NO_SHOW": "Đã quá giờ check-in. Booking bị đánh dấu hết hạn (no-show).",
+    "NO_SLOTS_AVAILABLE": "Không còn slot trống phù hợp loại xe. Bãi có thể đã đầy.",
+    "SLOT_CONFLICT": "Slot đã bị chiếm hoặc có booking sắp đến. Vui lòng chọn slot khác.",
+    "NOT_ELIGIBLE_FOR_WALK_IN_OVERRIDE": "Booking đã trong khung giờ check-in, dùng check-in thường.",
+    "CHECK_IN_FAILED": "Không tạo được phiên gửi xe.",
+    "SESSION_NOT_ACTIVE": "Phiên này không còn hoạt động."
   },
   "driver": {
     "common": {
@@ -1347,7 +1363,11 @@
       "doneNoteTitle": "Lưu ý",
       "doneNoteBody": "Đây là xác nhận trả trước. Nếu xe ở lại lâu hơn, nhân viên sẽ thu thêm khoản phụ trội khi xe ra cổng.",
       "failTitle": "Thanh toán thất bại",
-      "failBody": "Đơn hàng đã bị huỷ hoặc hết hạn 15 phút."
+      "failBody": "Đơn hàng đã bị huỷ hoặc hết hạn 15 phút.",
+      "walletInsufficient": "Số dư ví không đủ!",
+      "walletSuccess": "Thanh toán bằng ví thành công!",
+      "walletFail": "Thanh toán bằng ví thất bại",
+      "freeSuccess": "Đã thanh toán (Miễn phí)"
     },
     "paymentResult": {
       "checking": "Đang kiểm tra thanh toán...",
@@ -1365,6 +1385,18 @@
       "prepayNoteTitle": "⚠️ Lưu ý thanh toán trước",
       "prepayNoteBody": "Phí được tính tại thời điểm thanh toán. Nếu xe ở lại lâu hơn, nhân viên sẽ thu thêm khoản phụ trội khi xe ra cổng.",
       "retry": "Thử lại thanh toán"
+    },
+    "subscriptionPayment": {
+      "copied": "Đã sao chép",
+      "createFail": "Không thể tạo mã thanh toán",
+      "cancelledOrExpired": "Giao dịch đã bị huỷ hoặc hết hạn",
+      "activateSuccess": "Kích hoạt gói hội viên thành công!",
+      "paymentNotCompleted": "Giao dịch chưa được thanh toán thành công",
+      "walletFail": "Thanh toán bằng ví thất bại"
+    },
+    "membershipPage": {
+      "loadError": "Không thể tải thông tin gói hội viên",
+      "cancelSuccess": "Hủy gia hạn thành công. Bạn vẫn có thể sử dụng gói đến hết chu kỳ."
     }
   },
   "sidebar": {
@@ -2372,6 +2404,47 @@
       "createIncidentFull": "Tạo Báo cáo Sự cố",
       "expiredNotice": "Booking đã hết hạn. Không thể check-in.",
       "invalidStatusNotice": "Trạng thái \"{{status}}\" — không thể check-in.",
+      "checkin": {
+        "tooEarlyStatus": "Quá sớm",
+        "earlyFeeStatus": "Đến sớm (Có phụ phí)",
+        "gracePeriodStatus": "Đúng hạn",
+        "earlyWindowStatus": "Đến sớm",
+        "onTimeStatus": "Đúng giờ",
+        "lateWindowStatus": "Đến trễ",
+        "noShowStatus": "No-show",
+        "tooEarlyMsg": "Quá sớm để check-in. Cửa sổ check-in sẽ mở sau {{n}} phút nữa (1 giờ trước giờ bắt đầu).",
+        "earlyFeeMsg": "Đến sớm {{n}} phút — ngoài khung 15 phút đúng hạn. Phụ phí cố định {{fee}} sẽ được cộng vào hóa đơn khi checkout.",
+        "gracePeriodMsg": "Đến sớm {{n}} phút — trong khung 15 phút cho phép. Miễn phí, tính như đến đúng giờ.",
+        "earlyWindowMsg": "Đến sớm {{n}} phút. Vẫn trong khung cho phép, có thể check-in.",
+        "onTimeMsg": "Đúng giờ. Sẵn sàng check-in.",
+        "lateWindowMsg": "Đến trễ {{n}} phút so với giờ bắt đầu. Vẫn trong khung cho phép (tối đa 1 giờ trễ).",
+        "noShowMsg": "Đã quá thời gian cho phép. Driver được coi là no-show. Booking sẽ bị hết hạn.",
+        "waitTitle": "Lựa chọn 1: Đợi đến khung giờ",
+        "waitDesc": "Cửa sổ check-in mở lúc {{time}} (còn {{n}} phút). Nhờ khách ngồi đợi và quay lại.",
+        "walkInNowTitle": "Lựa chọn 2: Check-in vãng lai ngay",
+        "walkInNowDesc": "Hủy đặt trước và check-in ngay bây giờ dưới dạng vãng lai. Khách sẽ được vào bãi ngay, không cần đợi.",
+        "walkInNowBtn": "Tiến hành check-in vãng lai",
+        "walkInConfirmTitle": "Xác nhận Check-in Vãng lai",
+        "walkInConfirmWarning": "Booking {{code}} sẽ bị HỦY. Khách sẽ được check-in vãng lai ngay bây giờ trên cùng chỗ đỗ. Thao tác này không thể hoàn tác.",
+        "walkInConfirmBtn": "Xác nhận & Check-in",
+        "walkInCancelBtn": "Để lại đặt trước",
+        "walkInSuccess": "Check-in vãng lai thành công. Đặt trước {{code}} đã hủy."
+      },
+      "timeFilter": {
+        "label": "Lọc khung giờ đến",
+        "all": "Tất cả",
+        "1h": "1 giờ tới",
+        "2h": "2 giờ tới",
+        "4h": "4 giờ tới"
+      },
+      "dateFilter": {
+        "label": "Lọc theo ngày",
+        "today": "Hôm nay",
+        "1d": "Hôm qua",
+        "3d": "3 ngày",
+        "7d": "7 ngày",
+        "30d": "30 ngày"
+      },
       "checkinSuccess": "Check-in {{code}} thành công!",
       "checkinFailed": "Check-in thất bại",
       "autoFlowLabel": "Quy trình tự động:",
@@ -2795,6 +2868,7 @@
       "loadFail": "Không thể tải danh sách slots",
       "loadDetailFail": "Không thể tải chi tiết slot",
       "updateFail": "Cập nhật thất bại",
+      "updateSuccess": "Đã cập nhật slot {{code}} → {{status}}",
       "toastMaintenance": "Đã chuyển sang bảo trì slot {{code}}",
       "toastBlocked": "Đã khóa slot {{code}}",
       "toastUnlocked": "Đã mở khóa slot {{code}}",

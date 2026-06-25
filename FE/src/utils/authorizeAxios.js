@@ -118,10 +118,9 @@ authorizeAxios.interceptors.response.use(
     // Login sai nên toast ở AdminLogin.jsx catch để tránh /auth/me tự báo lỗi khi app init.
     const isRefreshRequest = original?.url?.includes('/auth/refresh')
 
-    if (status !== 401 && !isRefreshRequest) {
-      // Dùng translateError: ưu tiên dịch theo error code trong errors.*,  ← THAY ĐỔI
-      // fallback về message BE, fallback về errors.DEFAULT
-      toast.error(translateError(error)) // ← THAY ĐỔI
+    // _noToast: true → component tự xử lý toast, interceptor không toast thêm
+    if (status !== 401 && !isRefreshRequest && !original._noToast) {
+      toast.error(translateError(error))
     }
 
     return Promise.reject(error)

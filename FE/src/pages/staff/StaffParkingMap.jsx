@@ -202,7 +202,7 @@ const StaffParkingMap = () => {
     }
   }
 
-  const fmt = (ds) => { try { return new Date(ds).toLocaleString('vi-VN') } catch { return ds || 'N/A' } }
+  const fmt = (ds) => { try { return new Date(ds).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) } catch { return ds || 'N/A' } }
   const fmtCurrency = (v) => v != null ? Number(v).toLocaleString('vi-VN') + ' ₫' : '—'
 
   /* ── Toggle helpers ── */

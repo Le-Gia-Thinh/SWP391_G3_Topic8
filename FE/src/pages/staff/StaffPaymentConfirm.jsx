@@ -20,10 +20,11 @@ import ScrollToTopButton from '../common/ScrollToTopButton'
 
 const formatVND = (v) => Number(v || 0).toLocaleString('vi-VN') + ' ₫'
 
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 const formatTime = (dt) => {
   if (!dt) return '—'
-  const d = new Date(dt)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
+  const d = new Date(new Date(dt).getTime() + VN_OFFSET_MS)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} · ${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}`
 }
 
 const calcDuration = (entryTime, minuteLabel) => {
@@ -375,7 +376,7 @@ const StaffPaymentConfirm = () => {
     </div>
   )
 
-  const { session, estimatedFee = 0, surchargeAmount = 0, prepaidAmount = 0, checkoutTime, durationH } = sessionData
+  const { session, estimatedFee = 0, surchargeAmount = 0, prepaidAmount = 0, checkoutTime, durationH, durationMin, isEarlyExit } = sessionData
   const totalFee = Number(estimatedFee)
   const surcharge = Number(surchargeAmount)
   const prepaid = Number(prepaidAmount)
@@ -428,6 +429,21 @@ const StaffPaymentConfirm = () => {
               ))}
             </div>
           </div>
+
+          {isEarlyExit && (
+            <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                <AlertCircle size={16} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-amber-800 mb-1">Khách ra sớm — miễn phụ phí đến sớm</p>
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  Khách đỗ <strong>{durationMin ?? '—'} phút</strong> và ra trước giờ booking bắt đầu.
+                  Phụ phí đến sớm 5.000đ đã được <strong>miễn</strong> — chỉ thu phí đỗ thực tế.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-base font-bold text-gray-800 mb-5">{t('staff.paymentConfirm.feeTitle')}</h3>

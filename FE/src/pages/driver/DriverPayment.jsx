@@ -606,16 +606,16 @@ const DriverPayment = () => {
   const handlePayByWallet = async () => {
     try {
       if (walletBalance < payment.amount) {
-        toast.error('Số dư ví không đủ!')
+        toast.error(t('driver.payment.walletInsufficient'))
         return
       }
       const res = await walletApi.payParking(paying.SessionID)
       if (res.success) {
         setStep('done')
-        toast.success('Thanh toán bằng ví thành công!')
+        toast.success(t('driver.payment.walletSuccess'))
       }
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Thanh toán bằng ví thất bại')
+      toast.error(t('driver.payment.walletFail'))
     }
   }
 
@@ -750,7 +750,7 @@ const DriverPayment = () => {
             </Typography>
             <Button variant="contained" color="success" onClick={() => {
               setStep('done');
-              toast.success('Đã thanh toán (Miễn phí)');
+              toast.success(t('driver.payment.freeSuccess'));
             }} size="large" fullWidth>
               Xác Nhận Đã Thanh Toán (Miễn Phí)
             </Button>

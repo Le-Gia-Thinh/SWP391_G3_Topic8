@@ -89,10 +89,26 @@ export async function getBookingDetail(req, res, next) {
 export async function checkInBooking(req, res, next) {
     try {
         const { reservationId } = req.params
-        const data = await staffService.checkInBooking(reservationId)
+        const { plateNumber } = req.body
+        const data = await staffService.checkInBooking(reservationId, plateNumber)
         res.status(StatusCodes.CREATED).json({
             success: true,
             message: 'Check-in booking thành công.',
+            data
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+export async function cancelAndWalkIn(req, res, next) {
+    try {
+        const { reservationId } = req.params
+        const { plateNumber, slotId } = req.body
+        const data = await staffService.cancelAndWalkIn(reservationId, plateNumber, slotId)
+        res.status(StatusCodes.CREATED).json({
+            success: true,
+            message: 'Check-in vãng lai thành công. Đặt trước đã được hủy.',
             data
         })
     } catch (error) {

@@ -41,12 +41,12 @@ const staffApi = {
 
   // ── Booking ──────────────────────────────────────────────────
   getBookingQueue: async (params = {}) => {
-    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/bookings`, { params })
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/bookings`, { params, _noToast: true })
     return res.data
   },
 
   getBookingDetail: async (reservationId) => {
-    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/bookings/${reservationId}`)
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/bookings/${reservationId}`, { _noToast: true })
     return res.data
   },
 
@@ -54,6 +54,14 @@ const staffApi = {
     const res = await authorizedAxiosInstance.post(
       `${STAFF_BASE}/bookings/${reservationId}/check-in`,
       { plateNumber }
+    )
+    return res.data
+  },
+
+  cancelAndWalkIn: async (reservationId, plateNumber, slotId) => {
+    const res = await authorizedAxiosInstance.post(
+      `${STAFF_BASE}/bookings/${reservationId}/cancel-and-walkin`,
+      { plateNumber, slotId }
     )
     return res.data
   },

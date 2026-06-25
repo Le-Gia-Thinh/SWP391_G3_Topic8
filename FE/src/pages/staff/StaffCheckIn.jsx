@@ -794,10 +794,10 @@ const BookingContent = () => {
                       <p className="text-xs text-slate-400">{item.ZoneName}</p>
                     </td>
                     <td className="py-3 px-4 text-slate-500 text-xs">
-                      {item.StartTime ? new Date(item.StartTime).toLocaleString('vi-VN') : '—'}
+                      {item.StartTime ? new Date(item.StartTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'}
                     </td>
                     <td className="py-3 px-4 text-slate-500 text-xs">
-                      {item.EndTime ? new Date(item.EndTime).toLocaleString('vi-VN') : '—'}
+                      {item.EndTime ? new Date(item.EndTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'}
                     </td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${STATUS_BADGE[item.ReservationStatus] || 'bg-slate-100 text-slate-600'}`}>

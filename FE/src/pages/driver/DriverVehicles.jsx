@@ -6,6 +6,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { formatPlateNumber } from '../../utils/formatters'
 import {
   Car,
   Bike,
@@ -219,7 +220,7 @@ const DriverVehicles = () => {
               <input
                 type="text"
                 value={form.plateNumber}
-                onChange={(e) => setForm((prev) => ({ ...prev, plateNumber: e.target.value.toUpperCase() }))}
+                onChange={(e) => setForm((prev) => ({ ...prev, plateNumber: formatPlateNumber(e.target.value) }))}
                 placeholder={t('driver.vehicles.platePlaceholder')}
                 className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-medium text-gray-900 dark:text-white transition focus:border-blue-500 focus:outline-none"
               />

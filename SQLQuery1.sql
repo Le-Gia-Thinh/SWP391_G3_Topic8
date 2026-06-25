@@ -1,7 +1,5 @@
 /* =====================================================================
    PARKING MANAGEMENT DB - COMPLETE FINAL
-   = V2 GỐC (Alice/Bob/Carol/data cũ) + ADDON V4 (3 tòa hầm + night pricing)
-   Chạy 1 lần từ đầu đến cuối trên DB mới.
    ===================================================================== */
 
 USE master;
@@ -277,14 +275,16 @@ CREATE TABLE ParkingSlots (
 GO
 
 CREATE TABLE ParkingSessions (
-    SessionID     INT IDENTITY(1,1) PRIMARY KEY,
-    SlotID        INT NOT NULL,
-    DriverID      INT NULL,
-    PlateNumber   NVARCHAR(20) NOT NULL,
-    VehicleTypeID INT NOT NULL,
-    EntryTime     DATETIME DEFAULT GETDATE(),
-    ExitTime      DATETIME NULL,
-    SessionStatus NVARCHAR(20) DEFAULT 'Active',
+    SessionID        INT IDENTITY(1,1) PRIMARY KEY,
+    SlotID           INT NOT NULL,
+    DriverID         INT NULL,
+    PlateNumber      NVARCHAR(20) NOT NULL,
+    VehicleTypeID    INT NOT NULL,
+    EntryTime        DATETIME DEFAULT GETDATE(),
+    ExitTime         DATETIME NULL,
+    SessionStatus    NVARCHAR(20) DEFAULT 'Active',
+    EarlyFeeAmount   INT NOT NULL DEFAULT 0,
+    BookingStartTime DATETIME NULL,
     FOREIGN KEY (SlotID)        REFERENCES ParkingSlots(SlotID),
     FOREIGN KEY (DriverID)      REFERENCES Users(UserID),
     FOREIGN KEY (VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
@@ -636,7 +636,7 @@ CREATE PROCEDURE sp_SyncParkingSlotStatuses AS BEGIN
     UPDATE Reservations SET ReservationStatus='Expired' WHERE ReservationStatus='Reserved' AND EndTime<GETDATE();
     UPDATE ps SET ps.SlotStatus=CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus
         WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active' AND s.ExitTime IS NULL) THEN 'Occupied'
-        WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved' AND r.EndTime>=GETDATE()) THEN 'Reserved'
+        WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved' AND r.EndTime>=GETDATE() AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved'
         ELSE 'Available' END
     FROM ParkingSlots ps WHERE ps.SlotStatus IN('Available','Occupied','Reserved');
 END
@@ -683,16 +683,16 @@ AS BEGIN
         driver.FullName AS DriverName,driver.Email AS DriverEmail,driver.PhoneNumber AS DriverPhone,
         CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus
              WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied'
-             WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus IN('Reserved','Completed')) THEN 'Reserved'
+             WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus IN('Reserved','Completed') AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved'
              ELSE 'Available' END AS SlotStatus
     FROM ParkingSlots ps
     JOIN VehicleTypes vt ON ps.VehicleTypeID=vt.VehicleTypeID
     JOIN Zones z ON ps.ZoneID=z.ZoneID JOIN Floors f ON z.FloorID=f.FloorID
     LEFT JOIN (SELECT TOP 1 WITH TIES SlotID,SessionID,PlateNumber,EntryTime,SessionStatus FROM ParkingSessions WHERE SessionStatus='Active' ORDER BY ROW_NUMBER() OVER(PARTITION BY SlotID ORDER BY EntryTime DESC)) sess ON sess.SlotID=ps.SlotID
-    LEFT JOIN (SELECT * FROM Reservations WHERE ReservationStatus IN('Reserved','Completed')) rsv ON rsv.SlotID=ps.SlotID
+    LEFT JOIN (SELECT * FROM Reservations WHERE ReservationStatus IN('Reserved','Completed') AND StartTime<=DATEADD(HOUR,8,GETDATE())) rsv ON rsv.SlotID=ps.SlotID
     LEFT JOIN Users driver ON driver.UserID=rsv.DriverID
     WHERE f.IsActive=1 AND (@buildingId IS NULL OR f.BuildingID=@buildingId) AND (@floorId IS NULL OR z.FloorID=@floorId) AND (@vehicleTypeId IS NULL OR ps.VehicleTypeID=@vehicleTypeId)
-    AND (@status IS NULL OR CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus IN('Reserved','Completed')) THEN 'Reserved' ELSE 'Available' END=@status)
+    AND (@status IS NULL OR CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus IN('Reserved','Completed') AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved' ELSE 'Available' END=@status)
     ORDER BY z.ZoneID,ps.SlotCode;
 END
 GO
@@ -874,12 +874,12 @@ GO
 CREATE TRIGGER TRG_ValidateExitTime ON ParkingSessions AFTER INSERT,UPDATE AS BEGIN SET NOCOUNT ON; IF EXISTS(SELECT 1 FROM inserted i WHERE i.ExitTime IS NOT NULL AND i.ExitTime<=i.EntryTime) BEGIN RAISERROR('ExitTime must be greater than EntryTime.',16,1); ROLLBACK TRANSACTION; RETURN; END END
 GO
 CREATE TRIGGER TRG_UpdateSlotStatus ON ParkingSessions AFTER INSERT,UPDATE AS BEGIN SET NOCOUNT ON;
-    UPDATE ps SET ps.SlotStatus=CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved') THEN 'Reserved' ELSE 'Available' END
+    UPDATE ps SET ps.SlotStatus=CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved' AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved' ELSE 'Available' END
     FROM ParkingSlots ps WHERE ps.SlotID IN(SELECT DISTINCT i.SlotID FROM inserted i WHERE i.SlotID IS NOT NULL);
 END
 GO
 CREATE TRIGGER TRG_RecalculateSlotStatus_OnReservation ON Reservations AFTER INSERT,UPDATE AS BEGIN SET NOCOUNT ON;
-    UPDATE ps SET ps.SlotStatus=CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved') THEN 'Reserved' ELSE 'Available' END
+    UPDATE ps SET ps.SlotStatus=CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved' AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved' ELSE 'Available' END
     FROM ParkingSlots ps WHERE ps.SlotID IN(SELECT DISTINCT i.SlotID FROM inserted i WHERE i.SlotID IS NOT NULL);
 END
 GO
@@ -927,6 +927,20 @@ SELECT b.BuildingID,b.BuildingName,f.FloorID,f.FloorName,z.ZoneID,z.ZoneName,vt.
 FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID=z.ZoneID JOIN Floors f ON z.FloorID=f.FloorID
 JOIN Buildings b ON f.BuildingID=b.BuildingID JOIN VehicleTypes vt ON z.AllowedVehicleTypeID=vt.VehicleTypeID
 WHERE f.IsActive=1 GROUP BY b.BuildingID,b.BuildingName,f.FloorID,f.FloorName,z.ZoneID,z.ZoneName,vt.VehicleName;
+GO
+
+/* =====================================================================
+   PHẦN G: MIGRATIONS — chạy cho DB đang chạy (idempotent)
+   ===================================================================== */
+
+-- EarlyFeeAmount: phụ phí đến sớm cố định (5.000đ nếu đến trước 15-60 phút)
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ParkingSessions') AND name = 'EarlyFeeAmount')
+    ALTER TABLE ParkingSessions ADD EarlyFeeAmount INT NOT NULL DEFAULT 0;
+GO
+
+-- BookingStartTime: thời điểm booking bắt đầu (lưu để phát hiện "vào sớm ra sớm")
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ParkingSessions') AND name = 'BookingStartTime')
+    ALTER TABLE ParkingSessions ADD BookingStartTime DATETIME NULL;
 GO
 
 CREATE TRIGGER TRG_NotifyOnPaymentComplete ON Payments AFTER INSERT,UPDATE AS BEGIN SET NOCOUNT ON;
@@ -1199,7 +1213,7 @@ GO
 UPDATE ps SET ps.SlotStatus =
     CASE WHEN ps.SlotStatus IN ('Maintenance','Blocked') THEN ps.SlotStatus
          WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied'
-         WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved') THEN 'Reserved'
+         WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved' AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved'
          ELSE 'Available' END
 FROM ParkingSlots ps;
 GO
@@ -3790,8 +3804,3 @@ FROM ParkingSlots ps
 JOIN Zones z ON ps.ZoneID=z.ZoneID JOIN Floors f ON z.FloorID=f.FloorID JOIN Buildings b ON f.BuildingID=b.BuildingID
 GROUP BY b.BuildingName ORDER BY b.BuildingName;
 GO
-
-PRINT '==== ADD-ON v4 HOAN TAT ====';
-PRINT 'Da them: 3 toa ham moi (C/D/E), ~1045 slot, 16 users moi';
-PRINT 'Data cu (Alice, Bob, Carol...) KHONG bi anh huong';
-GO  

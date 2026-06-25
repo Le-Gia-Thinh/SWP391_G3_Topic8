@@ -39,11 +39,11 @@ function normalizeRow(s) {
     vehicle: s.VehicleName || '',
     vehicleCode: s.VehicleCode || '',
     gate: s.SlotCode || '',
-    checkIn: s.EntryTime ? new Date(s.EntryTime).toLocaleString('vi-VN')
-      : s.StartTime ? new Date(s.StartTime).toLocaleString('vi-VN') : '',
-    checkOut: s.ExitTime ? new Date(s.ExitTime).toLocaleString('vi-VN')
+    checkIn: s.EntryTime ? new Date(s.EntryTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+      : s.StartTime ? new Date(s.StartTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '',
+    checkOut: s.ExitTime ? new Date(s.ExitTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
       : s.EndTime && status !== 'active' && status !== 'reserved'
-        ? new Date(s.EndTime).toLocaleString('vi-VN') : null,
+        ? new Date(s.EndTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : null,
     staff: s.DriverName || '',
     phone: s.PhoneNumber || '',
     _rawCheckIn: s.EntryTime || s.StartTime || ''
