@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffParkingMap.jsx
+ * MÔ TẢ: Bản đồ hiển thị tình trạng bãi đỗ xe theo thời gian thực (Staff).
+ * Phân cấp theo Tòa nhà > Tầng > Khu vực. Cho phép xem chi tiết trạng thái từng ô đỗ, 
+ * phiên đỗ xe hiện tại, hoặc thông tin đặt chỗ trước.
+ */
+
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios from '../../utils/authorizeAxios'
@@ -195,7 +202,7 @@ const StaffParkingMap = () => {
     }
   }
 
-  const fmt = (ds) => { try { return new Date(ds).toLocaleString('vi-VN') } catch { return ds || 'N/A' } }
+  const fmt = (ds) => { try { return new Date(ds).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) } catch { return ds || 'N/A' } }
   const fmtCurrency = (v) => v != null ? Number(v).toLocaleString('vi-VN') + ' ₫' : '—'
 
   /* ── Toggle helpers ── */

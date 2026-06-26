@@ -1,3 +1,9 @@
+/**
+ * FILE: Home.jsx
+ * MÔ TẢ: Trang Chủ (Landing Page) hiển thị cho người dùng chưa đăng nhập.
+ * Giới thiệu về hệ thống bãi đỗ xe thông minh, các bảng giá, tính năng nổi bật và liên kết đăng ký/đăng nhập.
+ */
+
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'

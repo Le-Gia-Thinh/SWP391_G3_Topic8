@@ -1,4 +1,9 @@
-// src/routes/staffRoutes.js
+/**
+ * FILE: staffRoutes.js
+ * MÔ TẢ: Định nghĩa các đường dẫn API dành riêng cho quyền Staff.
+ * Nhân viên dùng các API này để quản lý check-in/out, thu tiền, và xử lý sự cố.
+ */
+
 import express from 'express'
 import * as staffController from '../controllers/staffController.js'
 import * as supportController from '../controllers/supportController.js'
@@ -37,6 +42,7 @@ router.post('/check-in/walk-in', staffController.checkInWalkIn)
 router.get('/bookings', staffController.getBookings)
 router.get('/bookings/:reservationId', staffController.getBookingDetail)
 router.post('/bookings/:reservationId/check-in', staffController.checkInBooking)
+router.post('/bookings/:reservationId/cancel-and-walkin', staffController.cancelAndWalkIn)
 
 // Sessions / checkout
 router.get('/sessions', staffController.searchSessions)

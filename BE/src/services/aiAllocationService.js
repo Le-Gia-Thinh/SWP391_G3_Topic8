@@ -1,8 +1,9 @@
 /**
- * aiAllocationService.js
+ * FILE: aiAllocationService.js
+ * MÔ TẢ: Dịch vụ AI (Heuristic Recommendation Engine) để tối ưu hóa việc phân bổ chỗ đỗ xe.
  * 
- * Dịch vụ AI (Heuristic Recommendation Engine) để tối ưu hóa việc phân bổ chỗ đỗ xe.
  * Mục tiêu: Giảm thời gian tìm kiếm của tài xế và Tăng tỷ lệ sử dụng của bãi đỗ xe.
+ * Logic: Chấm điểm dựa trên Tầng thấp, Khu vực đang sử dụng, Vị trí gần cửa.
  */
 
 export function recommendOptimalSlot(slots) {

@@ -1,3 +1,10 @@
+/**
+ * FILE: sessionService.js
+ * MÔ TẢ: Service xử lý nghiệp vụ cho phiên gửi xe (Parking Session).
+ * Chức năng: Check-in xe, Check-out xe ( với các ràng buộc về đặt chỗ và slot),
+ * lấy thông tin phiên đang hoạt động.
+ */
+
 import { getPool, sql } from "../config/db.js";
 import { getUserIdFromToken } from "../utils/requestUser.js";
 import {

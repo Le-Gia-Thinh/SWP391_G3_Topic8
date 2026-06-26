@@ -1,3 +1,9 @@
+/**
+ * FILE: StaffLayout.jsx
+ * MÔ TẢ: Layout chính cho Staff.
+ * Bao gồm thanh điều hướng bên trái (Sidebar) và thanh công cụ phía trên.
+ */
+
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'

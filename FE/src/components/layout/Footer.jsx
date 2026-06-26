@@ -1,3 +1,9 @@
+/**
+ * FILE: Footer.jsx
+ * MÔ TẢ: Component Footer (chân trang) dành cho các trang giao diện khách (Guest/Home).
+ * Hiển thị thông tin liên hệ, liên kết hỗ trợ, mạng xã hội và đăng ký nhận bản tin.
+ */
+
 import { useTranslation } from 'react-i18next'
 import { Building2, Phone, Mail, MapPin, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'

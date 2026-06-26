@@ -1,3 +1,11 @@
+/**
+ * FILE: StaffPaymentHistory.jsx
+ * MÔ TẢ: Trang Lịch sử Thanh toán & Quản lý Phụ trội.
+ * Gồm 2 tab:
+ * 1. Chờ thu phụ trội: Xử lý các giao dịch phát sinh phí phụ trội (VD: quá giờ gửi).
+ * 2. Lịch sử thanh toán: Xem, tìm kiếm và in hóa đơn các giao dịch đã hoàn tất.
+ */
+
 // src/pages/staff/StaffPaymentHistory.jsx
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -14,10 +22,11 @@ import staffApi from '../../apis/staffApi'
 // ── Helpers ───────────────────────────────────────────────────
 const formatVND = (v) => Number(v || 0).toLocaleString('vi-VN') + ' ₫'
 
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 const formatDateTime = (dt) => {
   if (!dt) return '—'
-  const d = new Date(dt)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
+  const d = new Date(new Date(dt).getTime() + VN_OFFSET_MS)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} · ${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}`
 }
 
 const formatDuration = (entry, exit, minuteLabel) => {
@@ -50,7 +59,7 @@ const printInvoice = (session, t) => {
     <div class="center">
       <div class="bold">${inv('brand')}</div>
       <div class="title">${inv('title')}</div>
-      <div>${new Date().toLocaleString('vi-VN')}</div>
+      <div>${new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</div>
     </div>
     <div class="divider"></div>
     <div class="row"><span>${inv('sessionCode')}</span><span class="bold">${session.SessionCode || '—'}</span></div>

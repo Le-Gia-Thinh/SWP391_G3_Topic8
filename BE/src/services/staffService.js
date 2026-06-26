@@ -1,3 +1,10 @@
+/**
+ * FILE: staffService.js
+ * MÔ TẢ: Service xử lý nghiệp vụ cho Nhân viên (Staff).
+ * Chức năng: Dashboard nhân viên, Check-in khách walk-in/đặt trước, 
+ * Check-out (tính phí/phụ thu), xem Sơ đồ bãi đỗ, và Tạo/Quản lý Sự cố.
+ */
+
 import { getPool, sql } from '../config/db.js'
 
 function createHttpError(statusCode, message, code) {
@@ -237,6 +244,14 @@ export async function checkInWalkIn({ driverId, plateNumber, licensePlate, vehic
         throw badRequest('Vui lòng chọn slot.', 'SLOT_REQUIRED')
     }
 
+    // Chặn cùng biển số check-in 2 slot cùng lúc
+    const activeCheck = await pool.request()
+        .input('plate', sql.NVarChar(20), finalPlate.trim().toUpperCase())
+        .query(`SELECT 1 FROM ParkingSessions WHERE PlateNumber = @plate AND SessionStatus = 'Active' AND ExitTime IS NULL`)
+    if (activeCheck.recordset.length > 0) {
+        throw badRequest('Xe này đang trong bãi, không thể check-in lại.', 'PLATE_ALREADY_PARKED')
+    }
+
     const request = pool.request()
 
     request.input('DriverID', sql.Int, finalDriverId)
@@ -261,7 +276,12 @@ export async function checkInWalkIn({ driverId, plateNumber, licensePlate, vehic
     }
 }
 
-export async function getBookings({ status, keyword }) {
+const EARLY_CHECKIN_MIN = 60   // quá sớm nếu đến trước hơn 60 phút → cancelAndWalkIn
+const LATE_CHECKIN_MIN = 60    // no-show nếu đến trễ hơn 60 phút
+const GRACE_PERIOD_MIN = 15    // ân hạn 15 phút: đến sớm nhưng miễn phí
+const EARLY_FEE_FLAT = 5000    // phụ phí cố định 5.000đ nếu đến sớm > 15 phút
+
+export async function getBookings({ status, keyword, timeWindowHours, dateFrom, dateTo }) {
     const pool = await getPool()
     const request = pool.request()
 
@@ -276,12 +296,28 @@ export async function getBookings({ status, keyword }) {
         request.input('keyword', sql.NVarChar(100), `%${keyword}%`)
         where += `
         AND (
-            CAST(r.ReservationID AS NVARCHAR(50)) LIKE @keyword
+            CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) LIKE @keyword
             OR u.FullName LIKE @keyword
             OR u.PhoneNumber LIKE @keyword
             OR sl.SlotCode LIKE @keyword
         )
         `
+    }
+
+    const hours = Number(timeWindowHours)
+    if (hours > 0) {
+        request.input('timeWindowHours', sql.Int, hours)
+        where += ` AND r.StartTime >= GETDATE() AND r.StartTime <= DATEADD(HOUR, @timeWindowHours, GETDATE())`
+    }
+
+    if (dateFrom) {
+        request.input('dateFrom', sql.DateTime, new Date(dateFrom))
+        where += ' AND r.StartTime >= @dateFrom'
+    }
+
+    if (dateTo) {
+        request.input('dateTo', sql.DateTime, new Date(dateTo))
+        where += ' AND r.StartTime <= @dateTo'
     }
 
     const result = await request.query(`
@@ -314,7 +350,7 @@ export async function getBookings({ status, keyword }) {
         LEFT JOIN Floors f ON z.FloorID = f.FloorID
         LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
         ${where}
-        ORDER BY r.StartTime ASC
+        ORDER BY r.CreatedAt DESC
     `)
 
     return result.recordset
@@ -384,6 +420,7 @@ export async function checkInBooking(reservationId, plateNumber) {
 
     await transaction.begin()
 
+    let committed = false
     try {
         const bookingResult = await new sql.Request(transaction)
             .input('reservationId', sql.Int, id)
@@ -404,14 +441,45 @@ export async function checkInBooking(reservationId, plateNumber) {
             throw conflict('Booking này không còn ở trạng thái Reserved.', 'BOOKING_NOT_RESERVED')
         }
 
-        if (new Date(booking.EndTime) < new Date()) {
+        const now = new Date()
+        const startTime = new Date(booking.StartTime)
+        const endTime = new Date(booking.EndTime)
+        const diffMin = Math.round((now - startTime) / 60000)
+
+        if (diffMin < -EARLY_CHECKIN_MIN) {
+            const minutesLeft = -diffMin - EARLY_CHECKIN_MIN
+            const windowOpensAt = new Date(startTime.getTime() - EARLY_CHECKIN_MIN * 60000)
+            const timeStr = windowOpensAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+            const err = badRequest(
+                `Quá sớm để check-in. Cửa sổ check-in mở lúc ${timeStr} (còn ${minutesLeft} phút nữa).`,
+                'CHECKIN_TOO_EARLY'
+            )
+            err.data = { minutesLeft, windowOpensAt }
+            throw err
+        }
+
+        if (diffMin > LATE_CHECKIN_MIN) {
             await new sql.Request(transaction)
                 .input('reservationId', sql.Int, id)
-                .query(`
-                    UPDATE Reservations
-                    SET ReservationStatus = 'Expired'
-                    WHERE ReservationID = @reservationId
-                `)
+                .query(`UPDATE Reservations SET ReservationStatus = 'Expired' WHERE ReservationID = @reservationId`)
+            await transaction.commit()
+            committed = true
+            throw conflict(
+                `Khách hàng không đến đúng giờ (no-show). Booking đã bị đánh dấu hết hạn.`,
+                'CHECKIN_NO_SHOW'
+            )
+        }
+
+        // Ranh giới: đúng 15 phút = earlyFee (tính phí), < 15 phút = grace (miễn phí)
+        const earlyFee = (diffMin <= -GRACE_PERIOD_MIN) ? EARLY_FEE_FLAT : 0
+        const timeStatus = diffMin <= -GRACE_PERIOD_MIN ? 'earlyfee'
+            : diffMin < 0 ? 'grace'
+                : diffMin <= 15 ? 'ontime' : 'late'
+
+        if (endTime < now) {
+            await new sql.Request(transaction)
+                .input('reservationId', sql.Int, id)
+                .query(`UPDATE Reservations SET ReservationStatus = 'Expired' WHERE ReservationID = @reservationId`)
             throw conflict('Booking đã hết hạn.', 'BOOKING_EXPIRED')
         }
 
@@ -431,14 +499,16 @@ export async function checkInBooking(reservationId, plateNumber) {
             .input('driverId', sql.Int, booking.DriverID)
             .input('plateNumber', sql.NVarChar(20), finalPlate)
             .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
+            .input('earlyFeeAmount', sql.Int, earlyFee)
+            .input('bookingStartTime', sql.DateTime, startTime)
             .query(`
                 INSERT INTO ParkingSessions (
                     SlotID, DriverID, PlateNumber,
-                    VehicleTypeID, EntryTime, SessionStatus
-                )               
+                    VehicleTypeID, EntryTime, SessionStatus, EarlyFeeAmount, BookingStartTime
+                )
                 VALUES (
                     @slotId, @driverId, @plateNumber,
-                    @vehicleTypeId, GETDATE(), 'Active'
+                    @vehicleTypeId, GETDATE(), 'Active', @earlyFeeAmount, @bookingStartTime
                 );
                       SELECT * FROM ParkingSessions WHERE SessionID = SCOPE_IDENTITY();
             `)
@@ -464,16 +534,165 @@ export async function checkInBooking(reservationId, plateNumber) {
             `)
 
         await transaction.commit()
+        committed = true
 
         return {
             reservationId: id,
             bookingCode: formatBookingCode(id),
             sessionId: session.SessionID,
             sessionCode: formatSessionCode(session.SessionID),
+            timeStatus,
+            earlyFeeAmount: earlyFee,
             session
         }
     } catch (error) {
-        await transaction.rollback()
+        if (!committed) await transaction.rollback()
+        throw error
+    }
+}
+
+export async function cancelAndWalkIn(reservationId, plateNumber, slotId) {
+    const id = parseReservationId(reservationId)
+    if (!id) throw badRequest('ReservationID không hợp lệ.', 'INVALID_RESERVATION_ID')
+    if (!plateNumber?.trim()) throw badRequest('Vui lòng nhập biển số xe.', 'PLATE_REQUIRED')
+    const requestedSlotId = slotId ? Number(slotId) : null
+
+    const pool = await getPool()
+    const transaction = new sql.Transaction(pool)
+    await transaction.begin()
+
+    let committed = false
+    try {
+        const bookingResult = await new sql.Request(transaction)
+            .input('reservationId', sql.Int, id)
+            .query(`
+                SELECT r.*, sl.SlotStatus, sl.SlotCode, vt.VehicleTypeName
+                FROM Reservations r WITH (UPDLOCK, ROWLOCK)
+                LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
+                LEFT JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
+                WHERE r.ReservationID = @reservationId
+            `)
+
+        const booking = bookingResult.recordset[0]
+        if (!booking) throw notFound('Không tìm thấy booking.', 'BOOKING_NOT_FOUND')
+        if (booking.ReservationStatus !== 'Reserved') {
+            throw conflict('Booking này không còn ở trạng thái Reserved.', 'BOOKING_NOT_RESERVED')
+        }
+
+        const diffMin = Math.round((Date.now() - new Date(booking.StartTime).getTime()) / 60000)
+        if (diffMin >= -EARLY_CHECKIN_MIN) {
+            throw badRequest(
+                'Booking đã trong khung giờ check-in. Vui lòng dùng check-in thường.',
+                'NOT_ELIGIBLE_FOR_WALK_IN_OVERRIDE'
+            )
+        }
+
+        if (!booking.VehicleTypeID) throw badRequest('Booking chưa có loại xe.', 'BOOKING_VEHICLE_TYPE_REQUIRED')
+
+        const finalPlate = plateNumber.trim().toUpperCase()
+
+        // 1. Hủy booking gốc — giải phóng slot đó khỏi bảng Reservations
+        await new sql.Request(transaction)
+            .input('reservationId', sql.Int, id)
+            .query(`UPDATE Reservations SET ReservationStatus = 'Cancelled' WHERE ReservationID = @reservationId`)
+
+        // 2. Xác định slot sẽ dùng:
+        //    - Nếu staff chọn cụ thể (requestedSlotId): validate rồi dùng
+        //    - Nếu không: tự động tìm slot trống phù hợp
+        const minWindow = new Date(Date.now() + EARLY_CHECKIN_MIN * 60000)
+        let availableSlot
+
+        if (requestedSlotId) {
+            const checkResult = await new sql.Request(transaction)
+                .input('slotId', sql.Int, requestedSlotId)
+                .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
+                .input('minWindow', sql.DateTime, minWindow)
+                .query(`
+                    SELECT sl.SlotID, sl.SlotCode, sl.VehicleTypeID, sl.SlotStatus
+                    FROM ParkingSlots sl WITH (UPDLOCK, ROWLOCK)
+                    WHERE sl.SlotID = @slotId
+                `)
+            const picked = checkResult.recordset[0]
+            if (!picked) throw badRequest('Slot không tồn tại.', 'SLOT_NOT_FOUND')
+            if (picked.VehicleTypeID !== booking.VehicleTypeID)
+                throw badRequest('Slot không phù hợp loại xe của booking.', 'SLOT_VEHICLE_TYPE_MISMATCH')
+            if (['Maintenance', 'Blocked'].includes(picked.SlotStatus))
+                throw conflict('Slot đang bảo trì hoặc bị khóa.', 'SLOT_NOT_AVAILABLE')
+
+            const conflictCheck = await new sql.Request(transaction)
+                .input('slotId', sql.Int, requestedSlotId)
+                .input('minWindow', sql.DateTime, minWindow)
+                .query(`
+                    SELECT 1 FROM ParkingSessions WHERE SlotID = @slotId AND SessionStatus = 'Active'
+                    UNION ALL
+                    SELECT 1 FROM Reservations WHERE SlotID = @slotId AND ReservationStatus = 'Reserved' AND StartTime < @minWindow
+                `)
+            if (conflictCheck.recordset.length > 0)
+                throw conflict('Slot đã bị chiếm hoặc có booking sắp đến. Vui lòng chọn slot khác.', 'SLOT_CONFLICT')
+
+            availableSlot = picked
+        } else {
+            const slotResult = await new sql.Request(transaction)
+                .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
+                .input('minWindow', sql.DateTime, minWindow)
+                .query(`
+                    SELECT TOP 1 sl.SlotID, sl.SlotCode
+                    FROM ParkingSlots sl WITH (UPDLOCK, ROWLOCK)
+                    WHERE sl.VehicleTypeID = @vehicleTypeId
+                      AND sl.SlotStatus NOT IN ('Maintenance', 'Blocked')
+                      AND NOT EXISTS (
+                        SELECT 1 FROM ParkingSessions ps
+                        WHERE ps.SlotID = sl.SlotID AND ps.SessionStatus = 'Active'
+                      )
+                      AND NOT EXISTS (
+                        SELECT 1 FROM Reservations r
+                        WHERE r.SlotID = sl.SlotID
+                          AND r.ReservationStatus = 'Reserved'
+                          AND r.StartTime < @minWindow
+                      )
+                    ORDER BY sl.SlotCode
+                `)
+            availableSlot = slotResult.recordset[0]
+            if (!availableSlot) throw conflict('Không còn slot trống phù hợp. Bãi xe hiện đầy.', 'NO_SLOTS_AVAILABLE')
+        }
+
+        // 3. Tạo walk-in session trên slot vừa tìm được
+        const insertResult = await new sql.Request(transaction)
+            .input('slotId', sql.Int, availableSlot.SlotID)
+            .input('driverId', sql.Int, booking.DriverID)
+            .input('plateNumber', sql.NVarChar(20), finalPlate)
+            .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
+            .query(`
+                INSERT INTO ParkingSessions (SlotID, DriverID, PlateNumber, VehicleTypeID, EntryTime, SessionStatus)
+                VALUES (@slotId, @driverId, @plateNumber, @vehicleTypeId, GETDATE(), 'Active');
+                SELECT * FROM ParkingSessions WHERE SessionID = SCOPE_IDENTITY();
+            `)
+
+        const session = insertResult.recordset[0]
+
+        await new sql.Request(transaction)
+            .input('sessionId', sql.Int, session.SessionID)
+            .query(`
+                IF NOT EXISTS (SELECT 1 FROM Payments WHERE SessionID = @sessionId)
+                BEGIN
+                    INSERT INTO Payments (SessionID, Amount, PaymentMethod, PaymentStatus)
+                    VALUES (@sessionId, 0, 'Pending', 'Pending')
+                END
+            `)
+
+        await transaction.commit()
+        committed = true
+
+        return {
+            reservationId: id,
+            bookingCode: formatBookingCode(id),
+            sessionId: session.SessionID,
+            sessionCode: formatSessionCode(session.SessionID),
+            cancelledBooking: true,
+            session: { ...session, SlotCode: availableSlot.SlotCode, VehicleName: booking.VehicleTypeName }
+        }
+    } catch (error) {
+        if (!committed) await transaction.rollback()
         throw error
     }
 }
@@ -491,7 +710,7 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
             where += ` AND (
                 u.FullName LIKE @keyword
                 OR sl.SlotCode LIKE @keyword
-                OR CAST(r.ReservationID AS NVARCHAR) LIKE @keyword
+                OR CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) LIKE @keyword
             )`
         }
 
@@ -530,7 +749,7 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
             LEFT JOIN Floors f ON z.FloorID = f.FloorID
             LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
             ${where}
-            ORDER BY r.StartTime ASC
+            ORDER BY r.CreatedAt DESC
         `)
 
         return result.recordset
@@ -544,7 +763,7 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
         request.input('keyword', sql.NVarChar(100), `%${keyword}%`)
         where += `
         AND (
-            CAST(ps.SessionID AS NVARCHAR(50)) LIKE @keyword
+            CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) LIKE @keyword
             OR ps.PlateNumber LIKE @keyword
             OR u.FullName LIKE @keyword
             OR sl.SlotCode LIKE @keyword
@@ -668,6 +887,8 @@ export async function getCheckoutPreview(sessionId) {
             ps.EntryTime,
             ps.ExitTime,
             ps.SessionStatus,
+            ps.EarlyFeeAmount,
+            ps.BookingStartTime,
             p.PaymentID,
             p.Amount,
             p.PrepaidAmount,
@@ -697,18 +918,30 @@ export async function getCheckoutPreview(sessionId) {
     const now = new Date()
     const entry = new Date(session.EntryTime)
     const durationH = Math.max(0.01, (now.getTime() - entry.getTime()) / 1000 / 60 / 60)
+    const durationMin = Math.floor((now.getTime() - entry.getTime()) / 60000)
 
     // ← sửa chỗ này: dùng entry/now thật thay vì chỉ truyền durationH
     const { fee, breakdown } = await calcParkingFee(pool, session.VehicleTypeID, entry, now)
+    const earlyFeeAmount = Number(session.EarlyFeeAmount || 0)
+    const bookingStart = session.BookingStartTime ? new Date(session.BookingStartTime) : null
+    // Vào sớm nhưng ra sớm: ra trước giờ booking AND đỗ dưới 30 phút → miễn phụ phí đến sớm
+    const isEarlyExit = !!(bookingStart && now < bookingStart && durationMin < 30 && earlyFeeAmount > 0)
+    const effectiveEarlyFee = isEarlyExit ? 0 : earlyFeeAmount
+    const totalFee = fee + effectiveEarlyFee
+    const prepaidAmount = Number(session.PrepaidAmount || 0)
 
     return {
         session,
         checkoutTime: now,
         durationH,
-        estimatedFee: fee,
-        feeBreakdown: breakdown,   // ← thêm field mới, FE có thể hiển thị chi tiết từng đoạn ngày/đêm nếu muốn
-        prepaidAmount: Number(session.PrepaidAmount || 0),
-        surchargeAmount: Math.max(0, fee - Number(session.PrepaidAmount || 0))
+        durationMin,
+        parkingFee: fee,
+        earlyFeeAmount: effectiveEarlyFee,
+        isEarlyExit,
+        estimatedFee: totalFee,
+        feeBreakdown: breakdown,
+        prepaidAmount,
+        surchargeAmount: Math.max(0, totalFee - prepaidAmount)
     }
 }
 
@@ -723,27 +956,60 @@ export async function checkOutSession(sessionId, { paymentMethod = 'Cash', confi
 
     const pool = await getPool()
 
+    // Đọc EarlyFeeAmount và BookingStartTime để kiểm tra "vào sớm ra sớm"
+    const sessionRow = await pool.request()
+        .input('SessionID', sql.Int, Number(sessionId))
+        .query(`SELECT EarlyFeeAmount, BookingStartTime, EntryTime FROM ParkingSessions WHERE SessionID = @SessionID`)
+    const row = sessionRow.recordset[0]
+    const rawEarlyFee = Number(row?.EarlyFeeAmount || 0)
+    const now = new Date()
+    const bookingStart = row?.BookingStartTime ? new Date(row.BookingStartTime) : null
+    const entryTime = row?.EntryTime ? new Date(row.EntryTime) : null
+    const durationMin = entryTime ? Math.floor((now - entryTime) / 60000) : 999
+    // Khách ra trước giờ booking và đỗ < 30 phút → miễn phụ phí đến sớm
+    const isEarlyExit = !!(bookingStart && now < bookingStart && durationMin < 30 && rawEarlyFee > 0)
+    const earlyFeeAmount = isEarlyExit ? 0 : rawEarlyFee
+
     const request = pool.request()
     request.input('SessionID', sql.Int, Number(sessionId))
     request.input('PaymentMethod', sql.NVarChar(50), paymentMethod)
 
+    let checkoutResult
     try {
         const result = await request.execute('sp_CheckOutWithSurcharge')
-        return result.recordset[0]
+        checkoutResult = result.recordset[0]
     } catch (error) {
         const fallback = pool.request()
         fallback.input('SessionID', sql.Int, Number(sessionId))
         fallback.input('PaymentMethod', sql.NVarChar(50), paymentMethod)
-
         const result = await fallback.execute('sp_CheckOutVehicle')
-
-        return {
+        checkoutResult = {
             sessionId: Number(sessionId),
             paymentMethod,
             fallbackProcedure: 'sp_CheckOutVehicle',
             result: result.recordset?.[0] || null
         }
     }
+
+    // Cộng phụ phí đến sớm vào FinalAmount nếu có
+    if (earlyFeeAmount > 0) {
+        await pool.request()
+            .input('SessionID', sql.Int, Number(sessionId))
+            .input('EarlyFee', sql.Int, earlyFeeAmount)
+            .query(`
+                UPDATE Payments
+                SET FinalAmount = ISNULL(FinalAmount, Amount) + @EarlyFee,
+                    SurchargeAmount = ISNULL(SurchargeAmount, 0) + @EarlyFee
+                WHERE SessionID = @SessionID
+            `)
+        if (checkoutResult) {
+            checkoutResult.earlyFeeAmount = earlyFeeAmount
+            if (checkoutResult.FinalAmount != null) checkoutResult.FinalAmount += earlyFeeAmount
+            if (checkoutResult.SurchargeAmount != null) checkoutResult.SurchargeAmount += earlyFeeAmount
+        }
+    }
+
+    return checkoutResult
 }
 
 export async function confirmSurcharge(sessionId, paymentMethod = 'Cash') {

@@ -1,8 +1,16 @@
+/**
+ * FILE: DriverSubscriptionPayment.jsx
+ * MÔ TẢ: Trang Thanh toán Gói hội viên dành cho Driver.
+ * Xử lý việc tạo mã QR thanh toán (PayOS) cho gói hội viên đã chọn,
+ * hỗ trợ thanh toán qua Ví nội bộ và polling trạng thái thanh toán.
+ */
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { ArrowLeft, Clock, QrCode, ShieldCheck, CheckCircle2, Copy, ExternalLink, Wallet } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 import { subscriptionApi } from '../../apis/subscriptionApi';
 import walletApi from '../../apis/walletApi';
 
@@ -58,9 +66,10 @@ const Countdown = ({ expiredAt }) => {
 
 // ── Copy Button ──────────────────────────────────────────────────
 const CopyButton = ({ text }) => {
+  const { t } = useTranslation();
   const handleCopy = () => {
     navigator.clipboard.writeText(String(text || ''));
-    toast.info('Đã sao chép');
+    toast.info(t('driver.subscriptionPayment.copied'));
   };
   return (
     <button onClick={handleCopy} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
@@ -73,6 +82,7 @@ const CopyButton = ({ text }) => {
 // MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
 const DriverSubscriptionPayment = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [step, setStep] = useState('loading'); // loading | qr | done | error
@@ -110,7 +120,7 @@ const DriverSubscriptionPayment = () => {
         setPayment(res.data);
         setStep('qr');
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Không thể tạo mã thanh toán');
+        toast.error(t('driver.subscriptionPayment.createFail'));
         setStep('error');
       }
     };
@@ -132,7 +142,7 @@ const DriverSubscriptionPayment = () => {
             await handleConfirm();
           } else if (res.data?.status === 'CANCELLED' || res.data?.status === 'EXPIRED') {
             clearInterval(pollerRef.current);
-            toast.error('Giao dịch đã bị huỷ hoặc hết hạn');
+            toast.error(t('driver.subscriptionPayment.cancelledOrExpired'));
             navigate('/driver/subscription');
           }
         } catch (error) {
@@ -152,9 +162,9 @@ const DriverSubscriptionPayment = () => {
         orderCode: payment.orderCode
       });
       setStep('done');
-      toast.success('Kích hoạt gói hội viên thành công!');
+      toast.success(t('driver.subscriptionPayment.activateSuccess'));
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Giao dịch chưa được thanh toán thành công');
+      toast.error(t('driver.subscriptionPayment.paymentNotCompleted'));
     } finally {
       setConfirming(false);
     }
@@ -163,16 +173,16 @@ const DriverSubscriptionPayment = () => {
   const handlePayByWallet = async () => {
     try {
        if (walletBalance < payment.amount) {
-           toast.error('Số dư ví không đủ!');
+           toast.error(t('driver.payment.walletInsufficient'));
            return;
        }
        const res = await walletApi.paySubscription(plan.id, duration.months);
        if (res.success) {
            setStep('done');
-           toast.success('Thanh toán bằng ví thành công!');
+           toast.success(t('driver.payment.walletSuccess'));
        }
     } catch (e) {
-       toast.error(e.response?.data?.message || 'Thanh toán bằng ví thất bại');
+       toast.error(t('driver.payment.walletFail'));
     }
   }
 

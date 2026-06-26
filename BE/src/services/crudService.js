@@ -1,4 +1,8 @@
-// src/services/crudService.js
+/**
+ * FILE: crudService.js
+ * MÔ TẢ: Service cung cấp các hàm hỗ trợ CRUD (Create, Read, Update, Delete) cơ bản,
+ * dùng chung cho các API có cấu trúc dữ liệu đơn giản.
+ */
 
 import { getPool, sql } from "../config/db.js";
 

@@ -1,3 +1,9 @@
+/**
+ * FILE: AdminParkingConfig.jsx
+ * MÔ TẢ: Trang Quản lý Cấu trúc Bãi Đỗ Xe (Tòa nhà > Tầng > Khu vực > Ô đỗ) dành cho Admin.
+ * Hỗ trợ tạo mới, chỉnh sửa tầng, khu vực (Zone) và cấp phát, tạo ô đỗ (Slot) hàng loạt.
+ */
+
 // src/pages/admin/AdminParkingConfig.jsx
 
 import { useState, useRef, useEffect, useCallback } from 'react'

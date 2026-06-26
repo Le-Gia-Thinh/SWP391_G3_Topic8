@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffPaymentConfirm.jsx
+ * MÔ TẢ: Trang Xác nhận Thanh toán dành cho nhân viên.
+ * Cho phép nhân viên xác nhận biển số, chọn phương thức thanh toán (Tiền mặt / Chuyển khoản QR)
+ * khi khách hàng lấy xe ra khỏi bãi đỗ.
+ */
+
 // src/pages/Staff/StaffPaymentConfirm.jsx
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -13,10 +20,11 @@ import ScrollToTopButton from '../common/ScrollToTopButton'
 
 const formatVND = (v) => Number(v || 0).toLocaleString('vi-VN') + ' ₫'
 
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 const formatTime = (dt) => {
   if (!dt) return '—'
-  const d = new Date(dt)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
+  const d = new Date(new Date(dt).getTime() + VN_OFFSET_MS)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} · ${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}`
 }
 
 const calcDuration = (entryTime, minuteLabel) => {
@@ -368,7 +376,7 @@ const StaffPaymentConfirm = () => {
     </div>
   )
 
-  const { session, estimatedFee = 0, surchargeAmount = 0, prepaidAmount = 0, checkoutTime, durationH } = sessionData
+  const { session, estimatedFee = 0, surchargeAmount = 0, prepaidAmount = 0, checkoutTime, durationH, durationMin, isEarlyExit } = sessionData
   const totalFee = Number(estimatedFee)
   const surcharge = Number(surchargeAmount)
   const prepaid = Number(prepaidAmount)
@@ -422,6 +430,21 @@ const StaffPaymentConfirm = () => {
             </div>
           </div>
 
+          {isEarlyExit && (
+            <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                <AlertCircle size={16} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-amber-800 mb-1">Khách ra sớm — miễn phụ phí đến sớm</p>
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  Khách đỗ <strong>{durationMin ?? '—'} phút</strong> và ra trước giờ booking bắt đầu.
+                  Phụ phí đến sớm 5.000đ đã được <strong>miễn</strong> — chỉ thu phí đỗ thực tế.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-base font-bold text-gray-800 mb-5">{t('staff.paymentConfirm.feeTitle')}</h3>
             <div className="space-y-3">
@@ -435,15 +458,9 @@ const StaffPaymentConfirm = () => {
                   <span className="font-bold text-green-600">− {formatVND(prepaid)}</span>
                 </div>
               )}
-              {surcharge > 0 && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">{t('staff.paymentConfirm.feeSurcharge')}</span>
-                  <span className="font-bold text-orange-600">+ {formatVND(surcharge)}</span>
-                </div>
-              )}
               <div className="flex justify-between items-center pt-3 border-t border-gray-200">
                 <span className="font-bold text-gray-800">{prepaid > 0 ? t('staff.paymentConfirm.feeRemain') : t('staff.paymentConfirm.feeTotal')}</span>
-                <span className="font-black text-blue-700 text-xl">{formatVND(prepaid > 0 ? amountDue + surcharge : totalFee)}</span>
+                <span className="font-black text-blue-700 text-xl">{formatVND(prepaid > 0 ? amountDue : totalFee)}</span>
               </div>
             </div>
             {isPaid && (
@@ -512,7 +529,7 @@ const StaffPaymentConfirm = () => {
 
               <div className="bg-blue-600 rounded-xl p-5 text-white">
                 <p className="text-xs font-bold text-blue-200 uppercase tracking-wider mb-1">{t('staff.paymentConfirm.toCollect')}</p>
-                <p className="text-3xl font-black mb-1">{formatVND(prepaid > 0 ? amountDue + surcharge : totalFee)}</p>
+                <p className="text-3xl font-black mb-1">{formatVND(prepaid > 0 ? amountDue : totalFee)}</p>
                 <p className="text-xs text-blue-200">{paymentMethod === 'cash' ? t('staff.paymentConfirm.cashHint') : t('staff.paymentConfirm.qrHint')}</p>
               </div>
 

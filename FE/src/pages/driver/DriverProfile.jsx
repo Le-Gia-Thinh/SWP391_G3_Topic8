@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverProfile.jsx
+ * MÔ TẢ: Trang Thông tin cá nhân (Profile) dành cho Driver.
+ * Hiển thị thông tin người dùng cơ bản (họ tên, SĐT, email, ngày sinh, số dư ví, trạng thái xác thực),
+ * có tính năng làm mới dữ liệu và xử lý hiển thị ảnh đại diện/chữ cái đầu.
+ */
+
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {

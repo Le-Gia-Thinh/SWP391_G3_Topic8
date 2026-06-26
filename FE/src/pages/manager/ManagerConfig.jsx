@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerConfig.jsx
+ * MÔ TẢ: Trang Quản lý Cấu trúc Bãi Đỗ Xe dành cho Manager.
+ * Xem sơ đồ bãi đỗ (Tòa nhà > Tầng > Khu vực > Ô đỗ), đóng/mở tầng, đánh dấu bảo trì/khóa ô đỗ.
+ */
+
 import { useState, useEffect, useCallback } from 'react'
 import {
   Building, Layers, Map, RefreshCcw, ChevronRight, X, Info,

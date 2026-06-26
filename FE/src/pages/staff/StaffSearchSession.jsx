@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffSearchSession.jsx
+ * MÔ TẢ: Trang Tìm kiếm Phiên đỗ xe (Search Session).
+ * Hỗ trợ lọc theo trạng thái (Active, Completed, Reserved), loại (Walk-in, Booking),
+ * xe, ô đỗ và ngày. Hiển thị thông tin chi tiết phiên bên phải màn hình.
+ */
+
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Search, XCircle, Car, Clock, MapPin, CheckCircle2, AlertTriangle, Calendar, User, Hash, Tag } from 'lucide-react'
 import staffApi from '../../apis/staffApi'
@@ -32,11 +39,11 @@ function normalizeRow(s) {
     vehicle: s.VehicleName || '',
     vehicleCode: s.VehicleCode || '',
     gate: s.SlotCode || '',
-    checkIn: s.EntryTime ? new Date(s.EntryTime).toLocaleString('vi-VN')
-      : s.StartTime ? new Date(s.StartTime).toLocaleString('vi-VN') : '',
-    checkOut: s.ExitTime ? new Date(s.ExitTime).toLocaleString('vi-VN')
+    checkIn: s.EntryTime ? new Date(s.EntryTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+      : s.StartTime ? new Date(s.StartTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '',
+    checkOut: s.ExitTime ? new Date(s.ExitTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
       : s.EndTime && status !== 'active' && status !== 'reserved'
-        ? new Date(s.EndTime).toLocaleString('vi-VN') : null,
+        ? new Date(s.EndTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : null,
     staff: s.DriverName || '',
     phone: s.PhoneNumber || '',
     _rawCheckIn: s.EntryTime || s.StartTime || ''

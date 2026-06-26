@@ -1,3 +1,9 @@
+/**
+ * FILE: CheckIn.jsx
+ * MÔ TẢ: Component Check-in hiển thị giao diện quét mã QR hoặc nhập mã thủ công
+ * cho việc xác nhận xe vào bãi (dành cho người dùng công khai/khách).
+ */
+
 import { QrCode, LogIn } from 'lucide-react'
 
 const CheckIn = () => {

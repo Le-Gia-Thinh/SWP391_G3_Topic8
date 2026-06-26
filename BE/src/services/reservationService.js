@@ -1,3 +1,9 @@
+/**
+ * FILE: reservationService.js
+ * MÔ TẢ: Service xử lý nghiệp vụ đặt chỗ (Reservation).
+ * Chức năng: Tìm vị trí trống (tích hợp AI gợi ý), Tạo/Hủy đặt chỗ, Lấy danh sách đặt chỗ của tài xế.
+ */
+
 import { getPool, sql } from "../config/db.js";
 import { syncParkingSlotStatuses } from "./slotSyncService.js";
 import {
@@ -329,6 +335,7 @@ export async function createReservation(req) {
   const reservationDate = req.body.reservationDate || req.body.bookingDate;
   const startTime = req.body.startTime;
   const durationHours = getDurationHours(req.body.duration);
+  const licensePlate = req.body.licensePlate ? req.body.licensePlate.trim().toUpperCase() : null;
 
   const start = buildDateTime(reservationDate, startTime);
   const end = req.body.endTime
@@ -366,6 +373,46 @@ export async function createReservation(req) {
   const pool = await getPool();
 
   await expireOverdueReservations(pool);
+
+  if (licensePlate) {
+    // Chặn trùng giờ: cùng biển số, cùng khoảng thời gian (overlap) → không cho đặt
+    // Cho phép: cùng biển số, 2 khung giờ liên tiếp không chồng nhau (gia hạn)
+    const overlapCheck = await pool.request()
+      .input("PlateNumber", sql.NVarChar(20), licensePlate)
+      .input("StartTime", sql.DateTime, start)
+      .input("EndTime", sql.DateTime, end)
+      .query(`
+        SELECT TOP 1 1
+        FROM Reservations
+        WHERE PlateNumber = @PlateNumber
+          AND ReservationStatus = 'Reserved'
+          AND @StartTime < EndTime
+          AND @EndTime > StartTime
+      `);
+
+    if (overlapCheck.recordset.length > 0) {
+      const err = createHttpError(409, "Xe này đã có đặt chỗ trùng khung giờ.")
+      err.code = 'PLATE_ALREADY_BOOKED'
+      throw err
+    }
+
+    // Chặn nếu xe đang trong bãi (Active session) → không thể đặt thêm
+    const activeSessionCheck = await pool.request()
+      .input("PlateNumber", sql.NVarChar(20), licensePlate)
+      .query(`
+        SELECT TOP 1 1
+        FROM ParkingSessions
+        WHERE PlateNumber = @PlateNumber
+          AND SessionStatus = 'Active'
+          AND ExitTime IS NULL
+      `);
+
+    if (activeSessionCheck.recordset.length > 0) {
+      const err = createHttpError(409, "Xe này đang trong bãi, không thể đặt chỗ khi đang đỗ.")
+      err.code = 'PLATE_ALREADY_PARKED'
+      throw err
+    }
+  }
 
   const slotRequest = pool.request()
     .input("BuildingID", sql.Int, buildingId)
@@ -433,6 +480,7 @@ export async function createReservation(req) {
     .input("ReservationDate", sql.Date, reservationDate)
     .input("StartTime", sql.DateTime, start)
     .input("EndTime", sql.DateTime, end)
+    .input("PlateNumber", sql.NVarChar(20), licensePlate)
     .execute("sp_CreateReservation");
 
   const newestReservation = await pool.request()

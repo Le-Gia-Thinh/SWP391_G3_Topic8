@@ -1,3 +1,9 @@
+/**
+ * FILE: AdminUsers.jsx
+ * MÔ TẢ: Trang Quản lý Người dùng dành cho Admin.
+ * Hỗ trợ CRUD người dùng, cấp phát tài khoản nội bộ (Manager/Staff) và kiểm tra ràng buộc độ tuổi (>18).
+ */
+
 // src/pages/admin/AdminUsers.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'

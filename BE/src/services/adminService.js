@@ -1,4 +1,12 @@
-// src/services/adminService.js
+/**
+ * FILE: adminService.js
+ * MÔ TẢ: Service cung cấp các logic xử lý nghiệp vụ dành cho Admin.
+ * 
+ * Chức năng:
+ * - Quản lý cơ sở hạ tầng bãi đỗ xe: Tầng (Floors), Khu vực (Zones), Vị trí (Slots)
+ * - Lấy số liệu thống kê tổng quan (Dashboard Stats)
+ * - Quản lý người dùng, vai trò (Roles)
+ */
 
 import { getPool, sql } from '../config/db.js'
 import bcrypt from 'bcryptjs'

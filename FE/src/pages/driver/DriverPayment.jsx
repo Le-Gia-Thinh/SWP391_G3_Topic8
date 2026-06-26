@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverPayment.jsx
+ * MÔ TẢ: Trang Thanh toán phí đỗ xe dành cho Driver.
+ * Cho phép tài xế chọn phiên đỗ xe đang diễn ra, xem chi tiết phí dự kiến, 
+ * tạo mã QR thanh toán (PayOS) hoặc thanh toán bằng ví, đồng thời hỗ trợ polling trạng thái giao dịch.
+ */
+
 // src/pages/driver/DriverPayment.jsx
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -59,6 +66,56 @@ const getVehicleIcon = (code) => {
   if (c.includes('moto') || c.includes('bike')) return <BikeIcon />
   if (c.includes('truck')) return <TruckIcon />
   return <CarIcon />
+}
+
+// ── Fee Calculation (khớp với sp_CalcParkingFeeV2) ───────────────
+const DAY_BRACKETS = {
+  1: [{ maxH: 4, fee: 5000 }, { maxH: 8, fee: 8000 }, { maxH: Infinity, fee: 15000 }],
+  2: [{ maxH: 4, fee: 40000 }, { maxH: 8, fee: 70000 }, { maxH: Infinity, fee: 120000 }],
+  3: [{ maxH: 4, fee: 70000 }, { maxH: 8, fee: 130000 }, { maxH: Infinity, fee: 200000 }]
+}
+const NIGHT_FEE = { 1: 12000, 2: 120000, 3: 200000 }
+
+const splitDayNightSegs = (start, end) => {
+  const segs = []
+  let cur = new Date(start.getTime())
+  while (cur < end) {
+    const h = cur.getHours()
+    const isDay = h >= 6 && h < 22
+    const next = new Date(cur)
+    if (isDay) { next.setHours(22, 0, 0, 0) }
+    else if (h >= 22) { next.setDate(next.getDate() + 1); next.setHours(6, 0, 0, 0) }
+    else { next.setHours(6, 0, 0, 0) }
+    const clamped = next > end ? new Date(end) : next
+    const mins = Math.floor((clamped - cur) / 60000)
+    if (mins > 0) segs.push({ type: isDay ? 'day' : 'night', minutes: mins })
+    cur = clamped
+  }
+  return segs
+}
+
+const calcBreakdown = (entryTime, vehicleTypeId) => {
+  if (!entryTime || !vehicleTypeId) return null
+  const entry = new Date(String(entryTime).replace(/Z$/, ''))
+  const now = new Date()
+  const totalMinutes = Math.max(0, Math.floor((now - entry) / 60000))
+  const segs = splitDayNightSegs(entry, now)
+  const brackets = DAY_BRACKETS[vehicleTypeId] ?? DAY_BRACKETS[1]
+  const nightFee = NIGHT_FEE[vehicleTypeId] ?? NIGHT_FEE[1]
+  let baseFee = 0
+  const dayDetails = []
+  let nightCount = 0
+  segs.forEach(seg => {
+    if (seg.type === 'night') { baseFee += nightFee; nightCount++ }
+    else {
+      const hours = seg.minutes / 60
+      const idx = brackets.findIndex(b => hours <= b.maxH)
+      const bi = idx === -1 ? brackets.length - 1 : idx
+      baseFee += brackets[bi].fee
+      dayDetails.push({ minutes: seg.minutes, hours, bracketIdx: bi, fee: brackets[bi].fee })
+    }
+  })
+  return { totalMinutes, segments: segs, dayDetails, nightCount, nightFee, nightFeeTotal: nightCount * nightFee, baseFee, brackets, isOvernight: nightCount > 0, isMultiDay: dayDetails.length > 1 }
 }
 
 // ── QR Canvas ────────────────────────────────────────────────────
@@ -191,6 +248,95 @@ const SessionCard = ({ session, onPay, paying, now }) => {
   const dur = getDuration(session.EntryTime, now)
   const isMe = paying?.SessionID === session.SessionID
   const isPrepaid = session.PaymentStatus === 'Prepaid'
+  const surcharge = Number(session.SurchargeAmount ?? 0)
+  const prepaid = Number(session.PrepaidAmount ?? 0)
+  const bd = calcBreakdown(session.EntryTime, session.VehicleTypeID)
+  const baseFee = bd ? bd.baseFee : Number(session.CurrentAmount || 0)
+  const grandTotal = (isPrepaid ? prepaid : baseFee) + surcharge
+
+  const bracketLabels = [
+    t('driver.payment.bracketLabel0'),
+    t('driver.payment.bracketLabel1'),
+    t('driver.payment.bracketLabel2')
+  ]
+
+  const renderFeeRows = () => {
+    if (!bd) return null
+    if (bd.isOvernight || bd.isMultiDay) {
+      let dayIdx = 0
+      return bd.segments.map((seg, i) => {
+        if (seg.type === 'night') {
+          return (
+            <Stack key={i} direction="row" justifyContent="space-between" alignItems="center"
+              sx={{ px: 2, py: 1, bgcolor: '#eef2ff', borderTop: '1px solid #e0e7ff' }}>
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#6366f1' }} />
+                <Typography variant="caption" color="#4338ca" fontWeight={600}>
+                  {t('driver.payment.nightSegment')}
+                  <Typography component="span" variant="caption" color="text.disabled" sx={{ ml: 0.5 }}>
+                    ({Math.floor(seg.minutes / 60)}h{seg.minutes % 60 > 0 ? ` ${seg.minutes % 60}m` : ''})
+                  </Typography>
+                </Typography>
+                <Chip label={t('driver.payment.nightFlatRate')} size="small"
+                  sx={{ fontSize: 10, height: 18, bgcolor: '#c7d2fe', color: '#3730a3' }} />
+              </Stack>
+              <Typography variant="caption" fontWeight={800} color="#3730a3">{fmt(bd.nightFee, cur)}</Typography>
+            </Stack>
+          )
+        }
+        dayIdx++
+        const detail = bd.dayDetails[dayIdx - 1]
+        const dH = Math.floor(seg.minutes / 60)
+        const dM = seg.minutes % 60
+        return (
+          <Stack key={i} direction="row" justifyContent="space-between" alignItems="center"
+            sx={{ px: 2, py: 1, bgcolor: '#f0f9ff', borderTop: i > 0 ? '1px solid #e0f2fe' : 'none' }}>
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#0ea5e9' }} />
+              <Typography variant="caption" color="#0369a1" fontWeight={600}>
+                {t('driver.payment.daySegment')} {dayIdx}
+                <Typography component="span" variant="caption" color="text.disabled" sx={{ ml: 0.5 }}>
+                  ({dH}h{dM > 0 ? ` ${dM}m` : ''})
+                </Typography>
+              </Typography>
+              {detail && (
+                <Chip label={bracketLabels[detail.bracketIdx] ?? '-'} size="small"
+                  sx={{ fontSize: 10, height: 18, bgcolor: '#bae6fd', color: '#0c4a6e' }} />
+              )}
+            </Stack>
+            <Typography variant="caption" fontWeight={800} color="#0369a1">
+              {detail ? fmt(detail.fee, cur) : '—'}
+            </Typography>
+          </Stack>
+        )
+      })
+    }
+
+    // Simple case: show bracket table
+    return bd.brackets.map((b, i) => {
+      const isCurrent = bd.dayDetails[0] && i === bd.dayDetails[0].bracketIdx
+      return (
+        <Stack key={i} direction="row" justifyContent="space-between" alignItems="center"
+          sx={{
+            px: 2, py: 0.875,
+            bgcolor: isCurrent ? '#eff6ff' : 'transparent',
+            borderTop: i > 0 ? '1px solid #f1f5f9' : 'none'
+          }}>
+          <Stack direction="row" spacing={0.75} alignItems="center">
+            {isCurrent && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#2563eb' }} />}
+            <Typography variant="caption" color={isCurrent ? '#1d4ed8' : 'text.secondary'} fontWeight={isCurrent ? 700 : 500}>
+              {bracketLabels[i]}
+            </Typography>
+            {isCurrent && <Chip label="◀ hiện tại" size="small"
+              sx={{ fontSize: 10, height: 18, bgcolor: '#dbeafe', color: '#1d4ed8' }} />}
+          </Stack>
+          <Typography variant="caption" fontWeight={isCurrent ? 800 : 500} color={isCurrent ? '#1d4ed8' : 'text.secondary'}>
+            {fmt(b.fee, cur)}
+          </Typography>
+        </Stack>
+      )
+    })
+  }
 
   return (
     <Card variant="outlined" sx={{
@@ -198,73 +344,127 @@ const SessionCard = ({ session, onPay, paying, now }) => {
       border: isPrepaid ? '2px solid' : '1px solid',
       borderColor: isPrepaid ? 'warning.main' : 'divider',
       transition: 'box-shadow .2s',
-      '&:hover': { boxShadow: 4 }
+      '&:hover': { boxShadow: 6 }
     }}>
+      {/* Header */}
       <Box sx={{
         background: 'linear-gradient(135deg, #1e293b 0%, #1d4ed8 100%)',
         px: 3, py: 2.5,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
         <Box>
-          <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, letterSpacing: 2, mb: 0.25 }}>
+          <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, letterSpacing: 2, mb: 0.25 }}>
             {t('driver.payment.plateLabel')}
           </Typography>
-          <Typography sx={{ color: '#fff', fontSize: 24, fontWeight: 900, letterSpacing: 4, fontFamily: 'monospace' }}>
+          <Typography sx={{ color: '#fff', fontSize: 22, fontWeight: 900, letterSpacing: 4, fontFamily: 'monospace' }}>
             {session.PlateNumber}
           </Typography>
         </Box>
-        <Stack alignItems="flex-end" spacing={0.5}>
-          <Chip
-            icon={getVehicleIcon(session.VehicleCode)}
-            label={session.VehicleName}
-            size="small"
-            sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: '#fff', '& .MuiChip-icon': { color: '#fff' } }}
-          />
-          {isPrepaid && (
-            <Chip label={t('driver.payment.prepaid')} size="small" color="warning" icon={<CheckCircleIcon />} />
+        <Stack alignItems="flex-end" spacing={0.75}>
+          <Chip icon={getVehicleIcon(session.VehicleCode)} label={session.VehicleName} size="small"
+            sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: '#fff', '& .MuiChip-icon': { color: '#fff' } }} />
+          {isPrepaid && <Chip label={t('driver.payment.prepaid')} size="small" color="warning" icon={<CheckCircleIcon />} />}
+          {bd?.isOvernight && (
+            <Chip label={t('driver.payment.overnightBadge')} size="small"
+              sx={{ bgcolor: 'rgba(99,102,241,0.3)', color: '#c7d2fe', fontSize: 11 }} />
           )}
         </Stack>
       </Box>
 
-      <CardContent sx={{ p: 3 }}>
-        <Grid container spacing={2} mb={2.5}>
-          {[
-            [t('driver.payment.entryAt'), fmtTime(session.EntryTime)],
-            [t('driver.payment.parked'), dur.text],
-            [t('driver.payment.location'), `${session.BuildingName} / ${session.FloorName} / ${session.SlotCode}`],
-            [t('driver.payment.estFee'), fmt(session.CurrentAmount || 0, cur)]
-          ].map(([label, value]) => (
-            <Grid item xs={6} key={label}>
-              <Typography variant="caption" color="text.secondary" display="block" mb={0.25} fontWeight={600}>
-                {label}
+      <CardContent sx={{ p: 0 }}>
+        {/* Info: entry time, duration, location */}
+        <Box sx={{ px: 3, pt: 2.5, pb: 1.5 }}>
+          <Grid container spacing={1.5}>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={0.25}>
+                {t('driver.payment.entryAt')}
               </Typography>
-              <Typography variant="body2" fontWeight={700}>{value}</Typography>
+              <Typography variant="body2" fontWeight={700} fontSize={13}>{fmtTime(session.EntryTime)}</Typography>
             </Grid>
-          ))}
-        </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={0.25}>
+                {t('driver.payment.parked')}
+              </Typography>
+              <Typography variant="body2" fontWeight={700} fontSize={13} color="primary.main">{dur.text}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={0.25}>
+                {t('driver.payment.location')}
+              </Typography>
+              <Typography variant="body2" fontWeight={700} fontSize={13}>
+                {[session.BuildingName, session.FloorName, session.SlotCode].filter(Boolean).join(' / ')}
+              </Typography>
+            </Grid>
+          </Grid>
+        </Box>
 
-        {isPrepaid && session.SurchargeAmount > 0 && (
-          <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
-            <AlertTitle>{t('driver.payment.surchargeTitle')}</AlertTitle>
-            {t('driver.payment.surchargeBody')} <strong>{fmt(session.SurchargeAmount, cur)}</strong>
-          </Alert>
-        )}
+        <Divider />
 
-        <Button
-          fullWidth variant="contained"
-          startIcon={isMe ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <QrCodeIcon />}
-          disabled={!!paying}
-          onClick={() => onPay(session)}
-          sx={{
-            py: 1.5, borderRadius: 2, fontWeight: 700,
-            background: isPrepaid
-              ? 'linear-gradient(90deg, #f59e0b, #d97706)'
-              : 'linear-gradient(90deg, #2563eb, #1d4ed8)',
-            '&:hover': { opacity: 0.92 }
-          }}
-        >
-          {isMe ? t('driver.payment.creatingQr') : isPrepaid ? t('driver.payment.createQrAgain') : t('driver.payment.createQr')}
-        </Button>
+        {/* Fee breakdown */}
+        <Box>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2, py: 1.25, bgcolor: '#f8fafc' }}>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              {t('driver.payment.feeBreakdown')}
+            </Typography>
+            {(bd?.isOvernight || bd?.isMultiDay) && (
+              <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10 }}>
+                {t('driver.payment.multiDayNote')}
+              </Typography>
+            )}
+          </Stack>
+
+          {renderFeeRows()}
+
+          {/* Tổng hợp */}
+          <Divider />
+          {!isPrepaid && (
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2, py: 1 }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('driver.payment.baseFee')}</Typography>
+              <Typography variant="caption" fontWeight={700}>{fmt(baseFee, cur)}</Typography>
+            </Stack>
+          )}
+          {isPrepaid && prepaid > 0 && (
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2, py: 1, bgcolor: '#fffbeb' }}>
+              <Typography variant="caption" color="warning.dark" fontWeight={600}>{t('driver.payment.prepaid')}</Typography>
+              <Typography variant="caption" fontWeight={700} color="warning.dark">{fmt(prepaid, cur)}</Typography>
+            </Stack>
+          )}
+          {surcharge > 0 && (
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2, py: 1, bgcolor: '#fff7ed' }}>
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <Typography variant="caption" color="warning.dark" fontWeight={600}>{t('driver.payment.surcharge')}</Typography>
+              </Stack>
+              <Typography variant="caption" fontWeight={700} color="warning.dark">+ {fmt(surcharge, cur)}</Typography>
+            </Stack>
+          )}
+          <Stack direction="row" justifyContent="space-between" alignItems="center"
+            sx={{ px: 2, py: 1.5, bgcolor: isPrepaid ? '#fefce8' : '#eff6ff', borderTop: '2px solid', borderColor: isPrepaid ? 'warning.light' : 'primary.light' }}>
+            <Typography fontWeight={800} color={isPrepaid ? 'warning.dark' : 'primary.dark'} fontSize={14}>
+              {t('driver.payment.totalFee')}
+            </Typography>
+            <Typography fontWeight={900} fontSize={20} color={isPrepaid ? 'warning.dark' : 'primary.dark'}>
+              {fmt(grandTotal, cur)}
+            </Typography>
+          </Stack>
+        </Box>
+
+        {/* CTA button */}
+        <Box sx={{ px: 3, py: 2.5 }}>
+          <Button fullWidth variant="contained"
+            startIcon={isMe ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <QrCodeIcon />}
+            disabled={!!paying}
+            onClick={() => onPay(session)}
+            sx={{
+              py: 1.5, borderRadius: 2, fontWeight: 700, fontSize: 15,
+              background: isPrepaid
+                ? 'linear-gradient(90deg, #f59e0b, #d97706)'
+                : 'linear-gradient(90deg, #2563eb, #1d4ed8)',
+              boxShadow: isPrepaid ? '0 4px 12px rgba(245,158,11,0.35)' : '0 4px 12px rgba(37,99,235,0.35)',
+              '&:hover': { opacity: 0.92, boxShadow: 'none' }
+            }}>
+            {isMe ? t('driver.payment.creatingQr') : isPrepaid ? t('driver.payment.createQrAgain') : t('driver.payment.createQr')}
+          </Button>
+        </Box>
       </CardContent>
     </Card>
   )
@@ -406,16 +606,16 @@ const DriverPayment = () => {
   const handlePayByWallet = async () => {
     try {
       if (walletBalance < payment.amount) {
-        toast.error('Số dư ví không đủ!')
+        toast.error(t('driver.payment.walletInsufficient'))
         return
       }
       const res = await walletApi.payParking(paying.SessionID)
       if (res.success) {
         setStep('done')
-        toast.success('Thanh toán bằng ví thành công!')
+        toast.success(t('driver.payment.walletSuccess'))
       }
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Thanh toán bằng ví thất bại')
+      toast.error(t('driver.payment.walletFail'))
     }
   }
 
@@ -550,7 +750,7 @@ const DriverPayment = () => {
             </Typography>
             <Button variant="contained" color="success" onClick={() => {
               setStep('done');
-              toast.success('Đã thanh toán (Miễn phí)');
+              toast.success(t('driver.payment.freeSuccess'));
             }} size="large" fullWidth>
               Xác Nhận Đã Thanh Toán (Miễn Phí)
             </Button>

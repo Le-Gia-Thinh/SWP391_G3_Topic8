@@ -1,7 +1,5 @@
 /* =====================================================================
    PARKING MANAGEMENT DB - COMPLETE FINAL
-   = V2 GỐC (Alice/Bob/Carol/data cũ) + ADDON V4 (3 tòa hầm + night pricing)
-   Chạy 1 lần từ đầu đến cuối trên DB mới.
    ===================================================================== */
 
 USE master;
@@ -277,14 +275,16 @@ CREATE TABLE ParkingSlots (
 GO
 
 CREATE TABLE ParkingSessions (
-    SessionID     INT IDENTITY(1,1) PRIMARY KEY,
-    SlotID        INT NOT NULL,
-    DriverID      INT NULL,
-    PlateNumber   NVARCHAR(20) NOT NULL,
-    VehicleTypeID INT NOT NULL,
-    EntryTime     DATETIME DEFAULT GETDATE(),
-    ExitTime      DATETIME NULL,
-    SessionStatus NVARCHAR(20) DEFAULT 'Active',
+    SessionID        INT IDENTITY(1,1) PRIMARY KEY,
+    SlotID           INT NOT NULL,
+    DriverID         INT NULL,
+    PlateNumber      NVARCHAR(20) NOT NULL,
+    VehicleTypeID    INT NOT NULL,
+    EntryTime        DATETIME DEFAULT GETDATE(),
+    ExitTime         DATETIME NULL,
+    SessionStatus    NVARCHAR(20) DEFAULT 'Active',
+    EarlyFeeAmount   INT NOT NULL DEFAULT 0,
+    BookingStartTime DATETIME NULL,
     FOREIGN KEY (SlotID)        REFERENCES ParkingSlots(SlotID),
     FOREIGN KEY (DriverID)      REFERENCES Users(UserID),
     FOREIGN KEY (VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
@@ -636,7 +636,7 @@ CREATE PROCEDURE sp_SyncParkingSlotStatuses AS BEGIN
     UPDATE Reservations SET ReservationStatus='Expired' WHERE ReservationStatus='Reserved' AND EndTime<GETDATE();
     UPDATE ps SET ps.SlotStatus=CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus
         WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active' AND s.ExitTime IS NULL) THEN 'Occupied'
-        WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved' AND r.EndTime>=GETDATE()) THEN 'Reserved'
+        WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved' AND r.EndTime>=GETDATE() AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved'
         ELSE 'Available' END
     FROM ParkingSlots ps WHERE ps.SlotStatus IN('Available','Occupied','Reserved');
 END
@@ -683,16 +683,16 @@ AS BEGIN
         driver.FullName AS DriverName,driver.Email AS DriverEmail,driver.PhoneNumber AS DriverPhone,
         CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus
              WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied'
-             WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus IN('Reserved','Completed')) THEN 'Reserved'
+             WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus IN('Reserved','Completed') AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved'
              ELSE 'Available' END AS SlotStatus
     FROM ParkingSlots ps
     JOIN VehicleTypes vt ON ps.VehicleTypeID=vt.VehicleTypeID
     JOIN Zones z ON ps.ZoneID=z.ZoneID JOIN Floors f ON z.FloorID=f.FloorID
     LEFT JOIN (SELECT TOP 1 WITH TIES SlotID,SessionID,PlateNumber,EntryTime,SessionStatus FROM ParkingSessions WHERE SessionStatus='Active' ORDER BY ROW_NUMBER() OVER(PARTITION BY SlotID ORDER BY EntryTime DESC)) sess ON sess.SlotID=ps.SlotID
-    LEFT JOIN (SELECT * FROM Reservations WHERE ReservationStatus IN('Reserved','Completed')) rsv ON rsv.SlotID=ps.SlotID
+    LEFT JOIN (SELECT * FROM Reservations WHERE ReservationStatus IN('Reserved','Completed') AND StartTime<=DATEADD(HOUR,8,GETDATE())) rsv ON rsv.SlotID=ps.SlotID
     LEFT JOIN Users driver ON driver.UserID=rsv.DriverID
     WHERE f.IsActive=1 AND (@buildingId IS NULL OR f.BuildingID=@buildingId) AND (@floorId IS NULL OR z.FloorID=@floorId) AND (@vehicleTypeId IS NULL OR ps.VehicleTypeID=@vehicleTypeId)
-    AND (@status IS NULL OR CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus IN('Reserved','Completed')) THEN 'Reserved' ELSE 'Available' END=@status)
+    AND (@status IS NULL OR CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus IN('Reserved','Completed') AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved' ELSE 'Available' END=@status)
     ORDER BY z.ZoneID,ps.SlotCode;
 END
 GO
@@ -874,12 +874,12 @@ GO
 CREATE TRIGGER TRG_ValidateExitTime ON ParkingSessions AFTER INSERT,UPDATE AS BEGIN SET NOCOUNT ON; IF EXISTS(SELECT 1 FROM inserted i WHERE i.ExitTime IS NOT NULL AND i.ExitTime<=i.EntryTime) BEGIN RAISERROR('ExitTime must be greater than EntryTime.',16,1); ROLLBACK TRANSACTION; RETURN; END END
 GO
 CREATE TRIGGER TRG_UpdateSlotStatus ON ParkingSessions AFTER INSERT,UPDATE AS BEGIN SET NOCOUNT ON;
-    UPDATE ps SET ps.SlotStatus=CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved') THEN 'Reserved' ELSE 'Available' END
+    UPDATE ps SET ps.SlotStatus=CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved' AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved' ELSE 'Available' END
     FROM ParkingSlots ps WHERE ps.SlotID IN(SELECT DISTINCT i.SlotID FROM inserted i WHERE i.SlotID IS NOT NULL);
 END
 GO
 CREATE TRIGGER TRG_RecalculateSlotStatus_OnReservation ON Reservations AFTER INSERT,UPDATE AS BEGIN SET NOCOUNT ON;
-    UPDATE ps SET ps.SlotStatus=CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved') THEN 'Reserved' ELSE 'Available' END
+    UPDATE ps SET ps.SlotStatus=CASE WHEN ps.SlotStatus IN('Maintenance','Blocked') THEN ps.SlotStatus WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied' WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved' AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved' ELSE 'Available' END
     FROM ParkingSlots ps WHERE ps.SlotID IN(SELECT DISTINCT i.SlotID FROM inserted i WHERE i.SlotID IS NOT NULL);
 END
 GO
@@ -929,6 +929,20 @@ JOIN Buildings b ON f.BuildingID=b.BuildingID JOIN VehicleTypes vt ON z.AllowedV
 WHERE f.IsActive=1 GROUP BY b.BuildingID,b.BuildingName,f.FloorID,f.FloorName,z.ZoneID,z.ZoneName,vt.VehicleName;
 GO
 
+/* =====================================================================
+   PHẦN G: MIGRATIONS — chạy cho DB đang chạy (idempotent)
+   ===================================================================== */
+
+-- EarlyFeeAmount: phụ phí đến sớm cố định (5.000đ nếu đến trước 15-60 phút)
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ParkingSessions') AND name = 'EarlyFeeAmount')
+    ALTER TABLE ParkingSessions ADD EarlyFeeAmount INT NOT NULL DEFAULT 0;
+GO
+
+-- BookingStartTime: thời điểm booking bắt đầu (lưu để phát hiện "vào sớm ra sớm")
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ParkingSessions') AND name = 'BookingStartTime')
+    ALTER TABLE ParkingSessions ADD BookingStartTime DATETIME NULL;
+GO
+
 CREATE TRIGGER TRG_NotifyOnPaymentComplete ON Payments AFTER INSERT,UPDATE AS BEGIN SET NOCOUNT ON;
     INSERT INTO Notifications (UserID,Title,Message,NotificationType,ReferenceID,ReferenceType,CreatedAt)
     SELECT s.DriverID,N'Thanh toán thành công',N'Thanh toán '+FORMAT(i.Amount,'N0')+N'đ cho phiên gửi xe '+s.PlateNumber+N' đã hoàn tất.','payment',i.PaymentID,'payment',GETDATE()
@@ -968,21 +982,10 @@ INSERT INTO VehicleTypes (VehicleCode,VehicleName,Description) VALUES
 ('CAR',  'Car',       'Passenger cars'),
 ('TRUCK','Truck',     'Light trucks');
 GO
-
--- Bảng giá cũ (v2 gốc - giữ nguyên)
-INSERT INTO PricingPolicies (VehicleTypeID,MinHours,MaxHours,Fee,IsOvernight,IsActive) VALUES
-(1, 0, 4,   5000,   0, 1),
-(1, 4, 8,   8000,   0, 1),
-(1, 8, 999, 15000,  0, 1),
-(2, 0, 4,   40000,  0, 1),
-(2, 4, 8,   70000,  0, 1),
-(2, 8, 999, 120000, 0, 1),
-(3, 0, 4,   70000,  0, 1),
-(3, 4, 8,   130000, 0, 1),
-(3, 8, 999, 200000, 0, 1);
-GO
-
--- Bảng giá mới (ban ngày theo khung giờ thực tế)
+-- Bảng giá ban ngày theo khung giờ thực tế (MOTO/CAR/TRUCK)
+-- MOTO: 0-4h=5,000đ | 4-8h=8,000đ | 8h+=15,000đ
+-- CAR:  0-4h=40,000đ | 4-8h=70,000đ | 8h+=120,000đ
+-- TRUCK:0-4h=70,000đ | 4-8h=130,000đ | 8h+=200,000đ
 INSERT INTO PricingPolicies (VehicleTypeID,MinHours,MaxHours,Fee,IsOvernight,IsActive) VALUES
 (1, 0, 4,   5000,   0, 1),
 (1, 4, 8,   8000,   0, 1),
@@ -1004,9 +1007,9 @@ FROM VehicleTypes;
 GO
 
 INSERT INTO SubscriptionPlans (PlanID,Name,BasePrice,Description) VALUES
-('basic',   N'Cơ Bản',  99000,  N'Phù hợp cho người đỗ xe không thường xuyên. Giảm 5% phí.'),
-('pro',     N'Nâng Cao',199000, N'Lựa chọn phổ biến cho người đi làm hàng ngày. Giảm 10%.'),
-('premium', N'Cao Cấp', 399000, N'Trải nghiệm đặc quyền. Giảm 20%, slot VIP, không giới hạn.');
+('basic',   N'Cơ Bản',  99000,  N'Giảm 10% cho 5 lượt đỗ đầu tiên mỗi tháng.'),
+('pro',     N'Nâng Cao',199000, N'Miễn phí 15 lượt đỗ đầu tiên, sau đó giảm 25% không giới hạn.'),
+('premium', N'Cao Cấp', 399000, N'Miễn phí đỗ xe hoàn toàn, không giới hạn số lượt.');
 GO
 
 /* ===================================================================
@@ -1062,47 +1065,141 @@ GO
 
 /* ===================================================================
    SESSIONS + PAYMENTS V2 GỐC
+   6 kịch bản Active bao phủ đủ 3 bracket ngày + cross-night
+   2 kịch bản Completed với FinalAmount tính đúng
    =================================================================== */
 
-INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus) VALUES
-(1,1,'29A-12345',1,GETDATE(),                   'Active'),
-(6,1,'29A-54321',2,GETDATE(),                   'Active'),
-(2,1,'29A-56789',1,DATEADD(HOUR,-2,GETDATE()),  'Active'),
-(7,1,'29A-98765',2,DATEADD(HOUR,-3,GETDATE()),  'Active');
+-- Active: MOTO bracket 0-4h (vào 1.5h trước)
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
+SELECT ps.SlotID, u.UserID, '29A-10001', 1, DATEADD(MINUTE,-90,GETDATE()), 'Active'
+FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-M-01' AND u.Email='alice@email.com';
+
+-- Active: MOTO bracket 4-8h (vào 5h trước)
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
+SELECT ps.SlotID, u.UserID, '29A-10002', 1, DATEADD(HOUR,-5,GETDATE()), 'Active'
+FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-M-02' AND u.Email='david@email.com';
+
+-- Active: MOTO bracket 8h+ (vào 9h trước)
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
+SELECT ps.SlotID, u.UserID, '29A-10003', 1, DATEADD(HOUR,-9,GETDATE()), 'Active'
+FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-M-03' AND u.Email='eve@email.com';
+
+-- Active: CAR bracket 0-4h (vào 2h trước)
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
+SELECT ps.SlotID, u.UserID, '51G-10001', 2, DATEADD(HOUR,-2,GETDATE()), 'Active'
+FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-C-01' AND u.Email='alice@email.com';
+
+-- Active: CAR bracket 4-8h (vào 6h trước)
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
+SELECT ps.SlotID, u.UserID, '51G-10002', 2, DATEADD(HOUR,-6,GETDATE()), 'Active'
+FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-C-02' AND u.Email='david@email.com';
+
+-- Active: CAR bracket 8h+ (vào 10h trước)
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
+SELECT ps.SlotID, u.UserID, '51G-10003', 2, DATEADD(HOUR,-10,GETDATE()), 'Active'
+FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-C-03' AND u.Email='eve@email.com';
+
+-- Active: MOTO cross-night (vào 17h trước, qua 22:00 → phát sinh phí đêm 12,000đ)
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
+SELECT ps.SlotID, u.UserID, '29A-10004', 1, DATEADD(HOUR,-17,GETDATE()), 'Active'
+FROM ParkingSlots ps, Users u WHERE ps.SlotCode='B-M-01' AND u.Email='alice@email.com';
 GO
 
-INSERT INTO Payments (SessionID,Amount,PaymentMethod,PaymentStatus) VALUES
-(1,4000,'Cash','Pending'),(2,6000,'Cash','Pending'),
-(3,4000,'Cash','Pending'),(4,6000,'Cash','Pending');
+-- Payments cho Active sessions (Amount = bracket tối thiểu tại thời điểm check-in)
+INSERT INTO Payments (SessionID,Amount,PaymentMethod,PaymentStatus)
+SELECT s.SessionID,
+    CASE s.VehicleTypeID WHEN 1 THEN 5000 WHEN 2 THEN 40000 ELSE 70000 END,
+    'Cash', 'Pending'
+FROM ParkingSessions s
+WHERE s.PlateNumber IN ('29A-10001','29A-10002','29A-10003','51G-10001','51G-10002','51G-10003','29A-10004')
+  AND s.SessionStatus = 'Active';
+GO
+
+-- Completed: MOTO 3h (bracket 0-4h → 5,000đ)
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,ExitTime,SessionStatus)
+SELECT ps.SlotID, u.UserID, '29A-20001', 1,
+    DATEADD(DAY,-1,DATEADD(HOUR,8, CAST(CAST(GETDATE() AS DATE) AS DATETIME))),
+    DATEADD(DAY,-1,DATEADD(HOUR,11,CAST(CAST(GETDATE() AS DATE) AS DATETIME))), 'Completed'
+FROM ParkingSlots ps, Users u WHERE ps.SlotCode='B-M-02' AND u.Email='david@email.com';
+
+-- Completed: CAR 12h (bracket 8h+ → 120,000đ)
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,ExitTime,SessionStatus)
+SELECT ps.SlotID, u.UserID, '51G-20001', 2,
+    DATEADD(DAY,-2,DATEADD(HOUR,9, CAST(CAST(GETDATE() AS DATE) AS DATETIME))),
+    DATEADD(DAY,-2,DATEADD(HOUR,21,CAST(CAST(GETDATE() AS DATE) AS DATETIME))), 'Completed'
+FROM ParkingSlots ps, Users u WHERE ps.SlotCode='B-C-01' AND u.Email='eve@email.com';
+GO
+
+-- Payments cho Completed sessions (Amount + FinalAmount theo bracket thực tế)
+INSERT INTO Payments (SessionID,Amount,PaymentMethod,PaymentTime,PaymentStatus,FinalAmount)
+SELECT s.SessionID,
+    CASE WHEN DATEDIFF(MINUTE,s.EntryTime,s.ExitTime)/60.0<=4
+              THEN CASE s.VehicleTypeID WHEN 1 THEN 5000  WHEN 2 THEN 40000  ELSE 70000  END
+         WHEN DATEDIFF(MINUTE,s.EntryTime,s.ExitTime)/60.0<=8
+              THEN CASE s.VehicleTypeID WHEN 1 THEN 8000  WHEN 2 THEN 70000  ELSE 130000 END
+         ELSE      CASE s.VehicleTypeID WHEN 1 THEN 15000 WHEN 2 THEN 120000 ELSE 200000 END END,
+    'Cash', s.ExitTime, 'Completed',
+    CASE WHEN DATEDIFF(MINUTE,s.EntryTime,s.ExitTime)/60.0<=4
+              THEN CASE s.VehicleTypeID WHEN 1 THEN 5000  WHEN 2 THEN 40000  ELSE 70000  END
+         WHEN DATEDIFF(MINUTE,s.EntryTime,s.ExitTime)/60.0<=8
+              THEN CASE s.VehicleTypeID WHEN 1 THEN 8000  WHEN 2 THEN 70000  ELSE 130000 END
+         ELSE      CASE s.VehicleTypeID WHEN 1 THEN 15000 WHEN 2 THEN 120000 ELSE 200000 END END
+FROM ParkingSessions s
+WHERE s.PlateNumber IN ('29A-20001','51G-20001') AND s.SessionStatus='Completed';
 GO
 
 /* ===================================================================
    RESERVATIONS V2 GỐC
    =================================================================== */
 
-INSERT INTO Reservations (DriverID,VehicleTypeID,SlotID,ReservationDate,StartTime,EndTime,ReservationStatus) VALUES
-(1,1,3,CAST(GETDATE() AS DATE),DATEADD(HOUR,1,GETDATE()),DATEADD(HOUR,4,GETDATE()),'Reserved'),
-(1,2,8,CAST(GETDATE() AS DATE),DATEADD(HOUR,2,GETDATE()),DATEADD(HOUR,5,GETDATE()),'Reserved'),
-(1,1,4,CAST(GETDATE() AS DATE),DATEADD(HOUR,1,GETDATE()),DATEADD(HOUR,4,GETDATE()),'Reserved'),
-(1,2,9,CAST(GETDATE() AS DATE),DATEADD(HOUR,2,GETDATE()),DATEADD(HOUR,5,GETDATE()),'Reserved');
+INSERT INTO Reservations (DriverID,VehicleTypeID,SlotID,ReservationDate,StartTime,EndTime,ReservationStatus)
+SELECT u.UserID, 1, ps.SlotID,
+    CAST(GETDATE() AS DATE), DATEADD(HOUR,1,GETDATE()), DATEADD(HOUR,4,GETDATE()), 'Reserved'
+FROM Users u, ParkingSlots ps WHERE u.Email='alice@email.com' AND ps.SlotCode='A-M-04';
+
+INSERT INTO Reservations (DriverID,VehicleTypeID,SlotID,ReservationDate,StartTime,EndTime,ReservationStatus)
+SELECT u.UserID, 2, ps.SlotID,
+    CAST(GETDATE() AS DATE), DATEADD(HOUR,2,GETDATE()), DATEADD(HOUR,5,GETDATE()), 'Reserved'
+FROM Users u, ParkingSlots ps WHERE u.Email='david@email.com' AND ps.SlotCode='A-C-04';
 GO
 
 /* ===================================================================
    INCIDENTS + FEEDBACKS V2 GỐC
    =================================================================== */
 
-INSERT INTO Incidents (SessionID,DriverID,IncidentType,IncidentStatus,Priority,Description,AssignedStaffID) VALUES
-(1,1,'Lost Ticket','Open',   'Normal','Customer lost ticket for slot 1',  2),
-(2,1,'Overdue',     'Open',   'High',  'Vehicle parked over allowed time', 2),
-(3,1,'Wrong Slot',  'Open',   'Normal','Vehicle parked in wrong slot',     2),
-(4,1,'Lost Ticket', 'Open',   'High',  'Customer lost ticket urgent',      2);
+INSERT INTO Incidents (SessionID,DriverID,IncidentType,IncidentStatus,Priority,Description,AssignedStaffID)
+SELECT s.SessionID, s.DriverID, 'Lost Ticket', 'Open', 'Normal',
+    N'Khach mat ve gui xe tai o do. Bien so: ' + s.PlateNumber, 2
+FROM ParkingSessions s WHERE s.PlateNumber='29A-10001';
+
+INSERT INTO Incidents (SessionID,DriverID,IncidentType,IncidentStatus,Priority,Description,AssignedStaffID)
+SELECT s.SessionID, s.DriverID, 'Overdue', 'Open', 'High',
+    N'Xe dau qua gio cho phep. Bien so: ' + s.PlateNumber, 2
+FROM ParkingSessions s WHERE s.PlateNumber='29A-10002';
+
+INSERT INTO Incidents (SessionID,DriverID,IncidentType,IncidentStatus,Priority,Description,AssignedStaffID)
+SELECT s.SessionID, s.DriverID, 'Wrong Slot', 'Open', 'Normal',
+    N'Xe dau sai vi tri quy dinh. Bien so: ' + s.PlateNumber, 2
+FROM ParkingSessions s WHERE s.PlateNumber='51G-10001';
 GO
 
-INSERT INTO Feedbacks (DriverID,IncidentID,FeedbackType,Description,FeedbackStatus) VALUES
-(1,1,'Complaint','Lost ticket handling issue',  'Open'),
-(1,2,'Complaint','Overdue fee unclear',         'Open'),
-(1,3,'Complaint','Wrong slot problem',          'Open'),
-(1,4,'Complaint','Lost ticket urgent follow-up','Open');
+INSERT INTO Feedbacks (DriverID,IncidentID,FeedbackType,Description,FeedbackStatus)
+SELECT i.DriverID, i.IncidentID, 'Complaint',
+    N'Quy trinh xu ly mat ve can duoc cai thien.', 'Open'
+FROM Incidents i WHERE i.IncidentType='Lost Ticket'
+  AND NOT EXISTS (SELECT 1 FROM Feedbacks f WHERE f.IncidentID=i.IncidentID);
+
+INSERT INTO Feedbacks (DriverID,IncidentID,FeedbackType,Description,FeedbackStatus)
+SELECT i.DriverID, i.IncidentID, 'Complaint',
+    N'Phi qua han chua ro rang, can thong bao som hon.', 'Open'
+FROM Incidents i WHERE i.IncidentType='Overdue'
+  AND NOT EXISTS (SELECT 1 FROM Feedbacks f WHERE f.IncidentID=i.IncidentID);
+
+INSERT INTO Feedbacks (DriverID,IncidentID,FeedbackType,Description,FeedbackStatus)
+SELECT i.DriverID, i.IncidentID, 'Complaint',
+    N'Bien bao khu vuc cho xe chua ro rang.', 'Open'
+FROM Incidents i WHERE i.IncidentType='Wrong Slot'
+  AND NOT EXISTS (SELECT 1 FROM Feedbacks f WHERE f.IncidentID=i.IncidentID);
 GO
 
 -- Nạp 500k cho Alice (v2 gốc)
@@ -1116,7 +1213,7 @@ GO
 UPDATE ps SET ps.SlotStatus =
     CASE WHEN ps.SlotStatus IN ('Maintenance','Blocked') THEN ps.SlotStatus
          WHEN EXISTS(SELECT 1 FROM ParkingSessions s WHERE s.SlotID=ps.SlotID AND s.SessionStatus='Active') THEN 'Occupied'
-         WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved') THEN 'Reserved'
+         WHEN EXISTS(SELECT 1 FROM Reservations r WHERE r.SlotID=ps.SlotID AND r.ReservationStatus='Reserved' AND r.StartTime<=DATEADD(HOUR,8,GETDATE())) THEN 'Reserved'
          ELSE 'Available' END
 FROM ParkingSlots ps;
 GO
@@ -3395,7 +3492,7 @@ GO
 INSERT INTO Payments (SessionID,Amount,PaymentMethod,PaymentStatus)
 SELECT s.SessionID,
     CASE s.VehicleTypeID WHEN 1 THEN 5000 WHEN 2 THEN 40000 ELSE 70000 END,
-    'Pending', 'Pending'
+    'Cash', 'Pending'
 FROM ParkingSessions s
 WHERE s.SessionStatus = 'Active'
   AND s.SlotID IN (SELECT SlotID FROM ParkingSlots WHERE SlotCode LIKE 'C-%' OR SlotCode LIKE 'D-%' OR SlotCode LIKE 'E-%')
@@ -3707,8 +3804,3 @@ FROM ParkingSlots ps
 JOIN Zones z ON ps.ZoneID=z.ZoneID JOIN Floors f ON z.FloorID=f.FloorID JOIN Buildings b ON f.BuildingID=b.BuildingID
 GROUP BY b.BuildingName ORDER BY b.BuildingName;
 GO
-
-PRINT '==== ADD-ON v4 HOAN TAT ====';
-PRINT 'Da them: 3 toa ham moi (C/D/E), ~1045 slot, 16 users moi';
-PRINT 'Data cu (Alice, Bob, Carol...) KHONG bi anh huong';
-GO  

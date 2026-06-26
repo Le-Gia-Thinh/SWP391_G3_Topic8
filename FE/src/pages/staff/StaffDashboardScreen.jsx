@@ -1,3 +1,9 @@
+/**
+ * FILE: StaffDashboardScreen.jsx
+ * MÔ TẢ: Trang Tổng quan (Dashboard) dành cho Staff.
+ * Hiển thị tóm tắt vận hành (số chỗ trống, xe trong bãi, lượt xe hôm nay) và thao tác nhanh.
+ */
+
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -150,7 +156,7 @@ export default function StaffDashboardScreen() {
                         <td className="py-3 px-5 font-medium text-blue-600">{item.SessionCode}</td>
                         <td className="py-3 px-5 font-bold text-gray-800">{item.PlateNumber}</td>
                         <td className="py-3 px-5 text-gray-600">{item.VehicleName}</td>
-                        <td className="py-3 px-5 text-gray-600">{item.EntryTime ? new Date(item.EntryTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</td>
+                        <td className="py-3 px-5 text-gray-600">{item.EntryTime ? new Date(item.EntryTime).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'}</td>
                         <td className="py-3 px-5 font-medium text-gray-800">{item.SlotCode}</td>
                         <td className="py-3 px-5 text-gray-600">{item.ZoneName} · {item.FloorName}</td>
                         <td className="py-3 px-5"><span className="px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700">{item.SessionStatus}</span></td>
@@ -182,7 +188,7 @@ export default function StaffDashboardScreen() {
             ) : (
               <div className="space-y-1">
                 {alerts.map(alert => (
-                  <AlertItem key={alert.IncidentID} title={`${alert.IncidentType} · ${alert.Description?.slice(0, 40) || ''}`} time={new Date(alert.CreatedAt).toLocaleString('vi-VN')} type={alert.Priority} />
+                  <AlertItem key={alert.IncidentID} title={`${alert.IncidentType} · ${alert.Description?.slice(0, 40) || ''}`} time={new Date(alert.CreatedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })} type={alert.Priority} />
                 ))}
               </div>
             )}

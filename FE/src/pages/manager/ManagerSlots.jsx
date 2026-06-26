@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerSlots.jsx
+ * MÔ TẢ: Trang Quản lý Ô đỗ (Slots) dành cho Manager.
+ * Xem sơ đồ ô đỗ theo dạng bản đồ/danh sách, tìm kiếm, khóa/mở khóa/bảo trì ô đỗ và xem lịch sử sử dụng chi tiết.
+ */
+
 // src/pages/manager/ManagerSlots.jsx
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -103,11 +109,11 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
     setUpdating(true)
     try {
       await updateSlotStatusAPI(slotId, { status: newStatus })
-      toast.success(`Đã cập nhật slot ${data?.slot?.SlotCode} → ${STATUS_CFG[newStatus]?.label}`)
+      toast.success(t('manager.slots.updateSuccess', { code: data?.slot?.SlotCode, status: t(`manager.slots.status.${newStatus}`) }))
       onStatusChange()
       load()
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Cập nhật thất bại')
+      toast.error(t('manager.slots.updateFail'))
     } finally { setUpdating(false) }
   }
 
@@ -326,7 +332,7 @@ const ManagerSlots = () => {
     try {
       const res = await getParkingSlotsAPI({ limit: 2000 })
       setAllSlots(res.data.data || [])
-    } catch { toast.error('Không tải được danh sách slot') }
+    } catch { toast.error(t('manager.slots.loadFail')) }
     finally { setLoading(false) }
   }, [])
 

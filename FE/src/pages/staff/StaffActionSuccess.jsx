@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffActionSuccess.jsx
+ * MÔ TẢ: Trang Thông báo Thành công dành cho Staff.
+ * Hiển thị kết quả sau khi thực hiện Check-in (Vãng lai/Đặt trước) hoặc Check-out.
+ * Cho phép in hóa đơn và gợi ý các bước tiếp theo.
+ */
+
 // src/pages/Staff/StaffActionSuccess.jsx
 import {
   CheckCircle2, ChevronRight, MapPin, ArrowRight, ShieldCheck, Home, Printer, AlertTriangle,
@@ -7,7 +14,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 const formatVND = (v) => Number(v || 0).toLocaleString('vi-VN')
-const formatDT = (dt) => dt ? new Date(dt).toLocaleString('vi-VN') : '—'
+const formatDT = (dt) => dt ? new Date(dt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'
 
 const StaffActionSuccess = () => {
   const navigate = useNavigate()

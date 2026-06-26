@@ -1,4 +1,10 @@
-// src/apis/staffApi.js
+/**
+ * FILE: staffApi.js
+ * MÔ TẢ: Tập hợp các API dành cho quyền Nhân viên (Staff).
+ * Bao gồm: Quản lý bãi đỗ thực tế, Check-in/Check-out, Thu phí phụ trội, 
+ * Ghi nhận sự cố và Phản hồi hỗ trợ khách hàng.
+ */
+
 import authorizedAxiosInstance from '../utils/authorizeAxios'
 
 const STAFF_BASE = '/staff'
@@ -35,12 +41,12 @@ const staffApi = {
 
   // ── Booking ──────────────────────────────────────────────────
   getBookingQueue: async (params = {}) => {
-    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/bookings`, { params })
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/bookings`, { params, _noToast: true })
     return res.data
   },
 
   getBookingDetail: async (reservationId) => {
-    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/bookings/${reservationId}`)
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/bookings/${reservationId}`, { _noToast: true })
     return res.data
   },
 
@@ -48,6 +54,14 @@ const staffApi = {
     const res = await authorizedAxiosInstance.post(
       `${STAFF_BASE}/bookings/${reservationId}/check-in`,
       { plateNumber }
+    )
+    return res.data
+  },
+
+  cancelAndWalkIn: async (reservationId, plateNumber, slotId) => {
+    const res = await authorizedAxiosInstance.post(
+      `${STAFF_BASE}/bookings/${reservationId}/cancel-and-walkin`,
+      { plateNumber, slotId }
     )
     return res.data
   },

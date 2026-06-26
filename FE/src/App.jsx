@@ -1,3 +1,10 @@
+/**
+ * FILE: App.jsx
+ * MÔ TẢ: Component gốc chứa cấu hình Router chính của ứng dụng.
+ * Định nghĩa tất cả các tuyến đường (Routes) công khai và bảo vệ (Protected/Role Routes).
+ * Hỗ trợ tải lười (Lazy Loading) các trang để tối ưu hiệu suất.
+ */
+
 import React, { Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { GuestRoute, ProtectedRoute, RoleRoute } from './components/ProtectedRoute'

@@ -1,3 +1,9 @@
+/**
+ * FILE: Modal.jsx
+ * MÔ TẢ: Component Modal (Cửa sổ nổi bật) tái sử dụng cho toàn ứng dụng.
+ * Hỗ trợ hiển thị nội dung trên các layer khác, khóa cuộn trang nền và đóng/mở qua state.
+ */
+
 import React, { useEffect } from 'react'
 import { X } from 'lucide-react'
 import Button from './Button'

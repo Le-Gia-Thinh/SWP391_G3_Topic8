@@ -1,4 +1,13 @@
-import * as supportService from '../services/supportService.js';
+/**
+ * FILE: supportController.js
+ * MÔ TẢ: Controller xử lý hỗ trợ khách hàng (Support Tickets).
+ * 
+ * Chức năng:
+ * - Driver: Tạo yêu cầu hỗ trợ (Ticket), Xem danh sách ticket của mình.
+ * - Staff: Xem danh sách ticket của hệ thống, Xem chi tiết, Phản hồi (Reply) ticket, Cập nhật trạng thái ticket.
+ */
+
+import * as supportService from '../services/supportService.js'; // Service xử lý logic Support Tickets
 
 export const createTicket = async (req, res) => {
   try {

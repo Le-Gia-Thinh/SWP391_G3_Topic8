@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffTicketDetail.jsx
+ * MÔ TẢ: Trang Chi tiết Yêu cầu Hỗ trợ (Ticket Detail).
+ * Cho phép Staff xem nội dung trao đổi, phản hồi ticket và cập nhật trạng thái
+ * (VD: chuyển sang Resolved hoặc Closed).
+ */
+
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send, User, ShieldCheck, CheckCircle, XCircle } from 'lucide-react'

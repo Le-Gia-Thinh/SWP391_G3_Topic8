@@ -1,7 +1,22 @@
-import { StatusCodes } from "http-status-codes";
-import { subscriptionService } from "../services/subscriptionService.js";
+/**
+ * FILE: subscriptionController.js
+ * MÔ TẢ: Controller xử lý gói hội viên (Subscription/Premium) cho Driver.
+ * 
+ * Chức năng:
+ * - getPlans: Lấy danh sách các gói có sẵn
+ * - getMyStatus: Kiểm tra trạng thái gói hiện tại của user
+ * - checkStatus: Polling kiểm tra trạng thái thanh toán từ PayOS
+ * - createPayment: Tạo link thanh toán PayOS cho gói hội viên
+ * - subscribe: Kích hoạt gói sau khi thanh toán thành công
+ * 
+ * @access Driver only
+ */
+
+import { StatusCodes } from "http-status-codes"; // Mã HTTP status chuẩn
+import { subscriptionService } from "../services/subscriptionService.js"; // Service xử lý logic subscription
 
 export const subscriptionController = {
+  /** @route GET /api/driver/subscriptions/plans - Lấy danh sách gói hội viên */
   getPlans: async (req, res, next) => {
     try {
       const plans = await subscriptionService.getPlans();

@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverNotifications.jsx
+ * MÔ TẢ: Trang Quản lý Thông báo dành cho Driver.
+ * Hiển thị danh sách các thông báo theo bộ lọc (tất cả, đặt chỗ, phiên đỗ, thanh toán, sự cố, hệ thống),
+ * cho phép đánh dấu đã đọc một phần hoặc toàn bộ.
+ */
+
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {

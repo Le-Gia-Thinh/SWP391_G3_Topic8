@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerUnpaid.jsx
+ * MÔ TẢ: Trang Quản lý Xe chưa thanh toán dành cho Manager.
+ * Danh sách các lượt gửi xe đang trong bãi hoặc đã ra nhưng nợ phí phụ trội, giúp theo dõi và thu hồi nợ.
+ */
+
 // src/pages/manager/ManagerUnpaid.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'

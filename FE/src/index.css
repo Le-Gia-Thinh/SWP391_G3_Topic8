@@ -1,3 +1,9 @@
+/**
+ * FILE: index.css
+ * MÔ TẢ: File CSS chính, cấu hình tích hợp Tailwind CSS.
+ * Chứa cấu hình nền tảng, custom variants (Dark mode), và xử lý lỗi hiển thị autofill trên trình duyệt.
+ */
+
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));

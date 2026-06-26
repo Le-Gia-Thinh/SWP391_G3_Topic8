@@ -1,3 +1,9 @@
+/**
+ * FILE: AdminRoles.jsx
+ * MÔ TẢ: Trang Quản lý Vai trò (Role) và Quyền truy cập dành cho Admin.
+ * Cho phép thay đổi vai trò (Staff/Manager/Driver), khóa/mở khóa tài khoản và đặt lại mật khẩu cho nhân viên.
+ */
+
 // src/pages/admin/AdminRoles.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'

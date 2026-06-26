@@ -1,3 +1,9 @@
+/**
+ * FILE: DriverRegister.jsx
+ * MÔ TẢ: Trang Đăng Ký tài khoản dành riêng cho người dùng Driver (Khách hàng).
+ * Thu thập thông tin cá nhân cơ bản và biển số xe, có cơ chế xác thực đầu vào (Validation).
+ */
+
 // src/pages/DriverRegister.jsx
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -10,6 +16,7 @@ import { useNavigate, Navigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { registerAPI } from '../apis/authApi'
 import { useAuth } from '../contexts/AuthContext'
+import { formatPlateNumber } from '../utils/formatters'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -185,8 +192,8 @@ export default function DriverRegister() {
   ]
 
   const handleChange = ({ target: { name, value, checked, type } }) => {
-    setFormData(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
-    // Xóa error của field khi user bắt đầu nhập lại
+    const cooked = type === 'checkbox' ? checked : name === 'plateNumber' ? formatPlateNumber(value) : value
+    setFormData(f => ({ ...f, [name]: cooked }))
     if (fieldErrors[name]) setFieldErrors(e => ({ ...e, [name]: '' }))
   }
 

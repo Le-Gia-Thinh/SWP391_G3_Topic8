@@ -1,4 +1,11 @@
- import { createContext, useContext, useEffect, useState } from 'react'
+/**
+ * FILE: AuthContext.jsx
+ * MÔ TẢ: Cung cấp Context để quản lý trạng thái xác thực (Authentication State) toàn cục.
+ * Xử lý các logic: Đăng nhập (Local/Google/Facebook), Đăng xuất, Khởi tạo xác thực khi tải trang,
+ * và điều hướng theo vai trò (Role-based redirect).
+ */
+
+import { createContext, useContext, useEffect, useState } from 'react'
 import { loginAPI, googleLoginAPI, facebookLoginAPI, getMeAPI, logoutAPI } from '../apis/authApi'
 
 const AuthContext = createContext(null)

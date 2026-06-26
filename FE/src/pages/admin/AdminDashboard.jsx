@@ -1,3 +1,9 @@
+/**
+ * FILE: AdminDashboard.jsx
+ * MÔ TẢ: Trang Bảng điều khiển (Dashboard) chính của Admin.
+ * Hiển thị các chỉ số tổng quan (KPIs) về lượng người dùng (Tổng số, Đang hoạt động, Chờ xác thực) và biểu đồ phân bổ vai trò.
+ */
+
 // src/pages/admin/AdminDashboard.jsx
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'

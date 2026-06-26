@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverHelp.jsx
+ * MÔ TẢ: Trang Trợ giúp dành cho Driver.
+ * Cung cấp thông tin liên hệ hỗ trợ (Hotline, Email, Chat), các câu hỏi thường gặp (FAQ),
+ * Điều khoản sử dụng và Chính sách bảo mật.
+ */
+
 import React, { useState } from 'react'
 import { LifeBuoy, Phone, Mail, MessageSquare, ChevronRight, FileText, ShieldAlert, HelpCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'

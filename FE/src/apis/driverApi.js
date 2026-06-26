@@ -1,3 +1,10 @@
+/**
+ * FILE: driverApi.js
+ * MÔ TẢ: Tập hợp các API dành cho quyền Tài xế (Driver).
+ * Bao gồm: Đặt chỗ, Quản lý phương tiện, Xem phiên gửi xe hiện tại, 
+ * Lịch sử thanh toán, Thông báo, và Đánh giá (Feedback).
+ */
+
 import authorizeAxios from '../utils/authorizeAxios'
 
 const unwrap = (response) => response.data

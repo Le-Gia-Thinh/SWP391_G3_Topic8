@@ -1,4 +1,10 @@
-// src/services/walletService.js
+/**
+ * FILE: walletService.js
+ * MÔ TẢ: Service xử lý nghiệp vụ Ví điện tử (Wallet) của người dùng.
+ * Chức năng: Nạp tiền (Topup) qua PayOS, xử lý Webhook Topup, thanh toán phiên gửi xe
+ * và mua gói hội viên bằng số dư ví.
+ */
+
 import crypto from 'crypto';
 import axios from 'axios';
 import { getPool, sql } from '../config/db.js';

@@ -1,3 +1,10 @@
+/**
+ * FILE: Button.jsx
+ * MÔ TẢ: Component Nút bấm (Button) tái sử dụng cho toàn ứng dụng.
+ * Hỗ trợ nhiều trạng thái: Đang tải (loading), vô hiệu hóa (disabled), có icon.
+ * Hỗ trợ các biến thể màu (primary, secondary, danger, outline, ghost) và kích thước (sm, md, lg).
+ */
+
 import React from 'react'
 import { Loader2 } from 'lucide-react'
 

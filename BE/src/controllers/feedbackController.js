@@ -1,5 +1,20 @@
-import { getPool, sql } from "../config/db.js";
+/**
+ * FILE: feedbackController.js
+ * MÔ TẢ: Controller xử lý đánh giá dịch vụ (Feedback/Rating) từ tài xế.
+ * 
+ * Chức năng:
+ * - createServiceRating: Tài xế tạo đánh giá cho một phiên đỗ xe đã hoàn thành.
+ * - getDriverRatings: Lấy danh sách đánh giá của tài xế.
+ * - getUnratedSessions: Lấy danh sách phiên đỗ xe đã hoàn thành nhưng chưa được đánh giá.
+ * 
+ * @access Driver only
+ */
 
+import { getPool, sql } from "../config/db.js"; // Kết nối database
+
+/**
+ * Hàm helper: Lấy UserID từ request.
+ */
 function getUserIdFromToken(req) {
   return req.user?.UserID || req.user?.userId || req.user?.id;
 }

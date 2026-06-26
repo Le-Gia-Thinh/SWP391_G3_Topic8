@@ -1,3 +1,9 @@
+/**
+ * FILE: StaffCreateIncident.jsx
+ * MÔ TẢ: Trang Báo cáo Sự cố dành cho Staff.
+ * Tạo sự cố mới (tìm kiếm theo mã phiên, biển số) và xem/cập nhật lịch sử sự cố.
+ */
+
 import { useState, useEffect, useRef } from 'react'
 import {
   Box, Typography, Button, TextField, Select, MenuItem,
@@ -84,6 +90,7 @@ const sessionCodeToId = (code) => {
 function fmtDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   })
