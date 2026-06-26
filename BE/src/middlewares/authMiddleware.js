@@ -23,7 +23,7 @@ export async function isAuthorized(req, res, next) {
     try {
       decoded = JwtProvider.verifyAccessToken(token);
     } catch (err) {
-      const isExpired = err.name === "TokenExpiredError";
+      const isExpired = err.name === "TokenExpiredError"; 
       return res.status(401).json({
         success: false,
         message: isExpired

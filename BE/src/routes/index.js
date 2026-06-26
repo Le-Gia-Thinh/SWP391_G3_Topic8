@@ -202,6 +202,7 @@ router.patch(
   notificationController.markAsRead
 );
 
+
 // Driver Vehicles
 router.get(
   "/driver/vehicles",
