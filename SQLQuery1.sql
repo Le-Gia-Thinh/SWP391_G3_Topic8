@@ -1,4 +1,4 @@
-/* =====================================================================
+﻿/* =====================================================================
    PARKING MANAGEMENT DB - COMPLETE FINAL
    ===================================================================== */
 
@@ -621,14 +621,58 @@ END;
 GO
 
 CREATE PROCEDURE sp_CreateReservation
-    @DriverID INT, @VehicleTypeID INT, @SlotID INT, @ReservationDate DATE, @StartTime DATETIME, @EndTime DATETIME
-AS BEGIN
+    @DriverID INT,
+    @VehicleTypeID INT,
+    @SlotID INT,
+    @ReservationDate DATE,
+    @StartTime DATETIME,
+    @EndTime DATETIME,
+    @PlateNumber NVARCHAR(20)
+AS
+BEGIN
     SET NOCOUNT ON;
-    IF @EndTime<=@StartTime BEGIN RAISERROR('EndTime must be greater than StartTime.',16,1); RETURN; END
-    IF EXISTS(SELECT 1 FROM Reservations WHERE SlotID=@SlotID AND ReservationStatus='Reserved' AND @StartTime<EndTime AND @EndTime>StartTime)
-        BEGIN RAISERROR('Slot already reserved in this time range.',16,1); RETURN; END
-    INSERT INTO Reservations (DriverID,VehicleTypeID,SlotID,ReservationDate,StartTime,EndTime,ReservationStatus,PlateNumber)
-    VALUES (@DriverID,@VehicleTypeID,@SlotID,@ReservationDate,@StartTime,@EndTime,'Reserved',@PlateNumber);
+
+    IF @EndTime <= @StartTime
+    BEGIN
+        RAISERROR('EndTime must be greater than StartTime.',16,1);
+        RETURN;
+    END;
+
+    IF EXISTS (
+        SELECT 1
+        FROM Reservations
+        WHERE SlotID = @SlotID
+          AND ReservationStatus = 'Reserved'
+          AND @StartTime < EndTime
+          AND @EndTime > StartTime
+    )
+    BEGIN
+        RAISERROR('Slot already reserved in this time range.',16,1);
+        RETURN;
+    END;
+
+    INSERT INTO Reservations
+    (
+        DriverID,
+        VehicleTypeID,
+        SlotID,
+        ReservationDate,
+        StartTime,
+        EndTime,
+        ReservationStatus,
+        PlateNumber
+    )
+    VALUES
+    (
+        @DriverID,
+        @VehicleTypeID,
+        @SlotID,
+        @ReservationDate,
+        @StartTime,
+        @EndTime,
+        'Reserved',
+        @PlateNumber
+    );
 END
 GO
 
