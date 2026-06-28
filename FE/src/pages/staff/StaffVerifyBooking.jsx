@@ -496,8 +496,6 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
             {t('staff.verifyBooking.actualPlateLabel')}
           </p>
-<<<<<<< HEAD
-          
           {/* Premium AI Plate Insight Banner */}
           {aiPlateInsight && (
             <div className="overflow-hidden rounded-3xl bg-white border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
@@ -515,20 +513,6 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                 </div>
               </div>
             </div>
-=======
-          <input
-            type="text"
-            value={plateNumber}
-            onChange={e => {
-              setPlateNumber(formatPlate(e.target.value))
-              setPlateError('')
-            }}
-            placeholder={t('staff.verifyBooking.actualPlatePlaceholder')}
-            className={`w-full px-3 py-2.5 border rounded-lg text-sm font-bold uppercase focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 ${plateError ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white'}`}
-          />
-          {plateError && (
-            <p className="text-xs text-red-500 mt-1.5 font-medium">{plateError}</p>
->>>>>>> 7054c7b0316fe9e878a1ab08111ca3545b35e59e
           )}
 
           <div>
@@ -746,11 +730,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                           placeholder="29A-12345"
                           maxLength={12}
                           autoFocus
-<<<<<<< HEAD
                           className={`w-full px-3 py-2.5 rounded-xl border text-sm font-black uppercase tracking-widest
-=======
-                          className={`w-full px-3 py-2.5 rounded-lg border text-sm font-black uppercase tracking-widest text-gray-900
->>>>>>> 7054c7b0316fe9e878a1ab08111ca3545b35e59e
                             focus:outline-none focus:ring-2 transition-all
                             ${walkInPlateError ? 'border-red-400 bg-red-50 focus:ring-red-200'
                               : walkInPlate.length >= 8 ? 'border-emerald-400 bg-emerald-50 focus:ring-emerald-200'
@@ -1309,11 +1289,7 @@ const StaffVerifyBooking = () => {
           onChange={e => setSearchId(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSearch()}
           placeholder={t('staff.verifyBooking.searchPlaceholder')}
-<<<<<<< HEAD
           className="flex-1 text-sm outline-none bg-transparent placeholder-slate-400"
-=======
-          className="flex-1 text-sm outline-none bg-transparent text-gray-900 placeholder-gray-400"
->>>>>>> 7054c7b0316fe9e878a1ab08111ca3545b35e59e
         />
         {searchId && (
           <button onClick={() => { setSearchId(''); setSearchResult(null) }} className="text-slate-300 hover:text-slate-500">
