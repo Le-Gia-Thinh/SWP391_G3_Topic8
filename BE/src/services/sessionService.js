@@ -88,7 +88,7 @@ export async function getSessions() {
 
   const result = await pool.request().query(`
         SELECT s.SessionID,
-              CONCAT('SESS-', FORMAT(s.EntryTime,'yyyyMMdd'), '-', RIGHT('0000'+CAST(s.SessionID AS VARCHAR(10)),4)) AS SessionCode,
+              CONCAT('SS-', RIGHT('00000'+CAST(s.SessionID AS VARCHAR(10)),5)) AS SessionCode,
               s.DriverID, u.FullName AS DriverName, s.PlateNumber,
               s.VehicleTypeID, vt.VehicleCode, vt.VehicleName,
               s.SlotID, ps.SlotCode, ps.SlotStatus,
@@ -457,12 +457,10 @@ export async function getCurrentDriverSession(req) {
     .query(`
           SELECT TOP 1
             s.SessionID,
-            CONCAT(
-              'SESS-',
-              FORMAT(s.EntryTime, 'yyyyMMdd'),
-              '-',
-              RIGHT('0000' + CAST(s.SessionID AS VARCHAR(10)), 4)
-            ) AS SessionCode,
+              CONCAT(
+                'SS-',
+                RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)), 5)
+              ) AS SessionCode,
 
             s.DriverID,
             u.FullName AS DriverName,

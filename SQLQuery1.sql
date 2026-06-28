@@ -330,6 +330,7 @@ CREATE TABLE Reservations (
     StartTime         DATETIME NOT NULL,
     EndTime           DATETIME NOT NULL,
     ReservationStatus NVARCHAR(20) DEFAULT 'Reserved',
+    PlateNumber       NVARCHAR(20) NULL,
     CreatedAt         DATETIME DEFAULT GETDATE(),
     FOREIGN KEY (DriverID)      REFERENCES Users(UserID),
     FOREIGN KEY (VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
@@ -386,8 +387,8 @@ CREATE TABLE Notifications (
     IsRead           BIT NOT NULL DEFAULT 0,
     CreatedAt        DATETIME NOT NULL DEFAULT GETDATE(),
     CONSTRAINT FK_Notifications_User FOREIGN KEY (UserID) REFERENCES Users(UserID),
-    CONSTRAINT CK_NotificationType   CHECK (NotificationType IN ('booking','session','payment','incident','system')),
-    CONSTRAINT CK_ReferenceType      CHECK (ReferenceType IS NULL OR ReferenceType IN ('reservation','session','payment','incident'))
+    CONSTRAINT CK_NotificationType   CHECK (NotificationType IN ('booking','session','payment','incident','system','subscription','wallet')),
+    CONSTRAINT CK_ReferenceType      CHECK (ReferenceType IS NULL OR ReferenceType IN ('reservation','session','payment','incident','subscription','wallet'))
 );
 GO
 CREATE INDEX IX_Notifications_UserID        ON Notifications(UserID);
@@ -626,8 +627,8 @@ AS BEGIN
     IF @EndTime<=@StartTime BEGIN RAISERROR('EndTime must be greater than StartTime.',16,1); RETURN; END
     IF EXISTS(SELECT 1 FROM Reservations WHERE SlotID=@SlotID AND ReservationStatus='Reserved' AND @StartTime<EndTime AND @EndTime>StartTime)
         BEGIN RAISERROR('Slot already reserved in this time range.',16,1); RETURN; END
-    INSERT INTO Reservations (DriverID,VehicleTypeID,SlotID,ReservationDate,StartTime,EndTime,ReservationStatus)
-    VALUES (@DriverID,@VehicleTypeID,@SlotID,@ReservationDate,@StartTime,@EndTime,'Reserved');
+    INSERT INTO Reservations (DriverID,VehicleTypeID,SlotID,ReservationDate,StartTime,EndTime,ReservationStatus,PlateNumber)
+    VALUES (@DriverID,@VehicleTypeID,@SlotID,@ReservationDate,@StartTime,@EndTime,'Reserved',@PlateNumber);
 END
 GO
 
@@ -1007,9 +1008,9 @@ FROM VehicleTypes;
 GO
 
 INSERT INTO SubscriptionPlans (PlanID,Name,BasePrice,Description) VALUES
-('basic',   N'Cơ Bản',  99000,  N'Giảm 10% cho 5 lượt đỗ đầu tiên mỗi tháng.'),
-('pro',     N'Nâng Cao',199000, N'Miễn phí 15 lượt đỗ đầu tiên, sau đó giảm 25% không giới hạn.'),
-('premium', N'Cao Cấp', 399000, N'Miễn phí đỗ xe hoàn toàn, không giới hạn số lượt.');
+('basic',   N'Cơ Bản',  99000,  N'5 lần miễn phí mỗi tháng, sau đó giảm 10% cho các lần tiếp theo.'),
+('pro',     N'Nâng Cao',199000, N'15 lần miễn phí mỗi tháng, sau đó giảm 25% cho các lần tiếp theo.'),
+('premium', N'Cao Cấp', 399000, N'Miễn phí đỗ xe hoàn toàn, không giới hạn số lượt mỗi tháng.');
 GO
 
 /* ===================================================================
@@ -1206,7 +1207,7 @@ GO
 DECLARE @AliceID INT;
 SELECT @AliceID = UserID FROM Users WHERE Email = 'alice@email.com';
 IF @AliceID IS NOT NULL
-    EXEC sp_TopUpWallet @UserID=@AliceID, @Amount=500000, @ReferenceID='SEED', @Description=N'Admin Topup 500k cho Alice test';
+    EXEC sp_TopUpWallet @UserID=@AliceID, @Amount=999999999, @ReferenceID='SEED', @Description=N'Admin Topup 999M cho Alice test';
 GO
 
 -- Đồng bộ slot status ban đầu
@@ -1228,8 +1229,8 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM SubscriptionPlans WHERE PlanID = 'basic')
     INSERT INTO SubscriptionPlans (PlanID, Name, BasePrice, Description) VALUES
-    ('basic',   N'Cơ Bản',  99000,  N'Phù hợp cho người đỗ xe không thường xuyên. Giảm 5% phí.'),
-    ('pro',     N'Nâng Cao',199000, N'Lựa chọn phổ biến cho người đi làm hàng ngày. Giảm 10%.'),
+    ('basic',   N'Cơ Bản',  99000,  N'5 lần miễn phí mỗi tháng, sau đó giảm 10% cho các lần tiếp theo.'),
+    ('pro',     N'Nâng Cao',199000, N'15 lần miễn phí mỗi tháng, sau đó giảm 25% cho các lần tiếp theo.'),
     ('premium', N'Cao Cấp', 399000, N'Trải nghiệm đặc quyền. Giảm 20%, slot VIP, không giới hạn.');
 GO
 

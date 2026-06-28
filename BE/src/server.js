@@ -62,4 +62,4 @@ app.listen(PORT, () => {
    * Tự động kiểm tra các booking hết hạn và đồng bộ lại slot sau mỗi 60 giây (60000 ms)
    */
   startParkingSlotAutoSync(60000);
-});
+});

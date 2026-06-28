@@ -115,7 +115,10 @@ const DriverSubscriptionPayment = () => {
         setStep('loading');
         const res = await subscriptionApi.createPayment({
           planId: plan.id,
-          durationMonths: duration.months
+          durationMonths: duration.months,
+          deductionAmount: location.state?.deductionAmount || 0,
+          excessValue: location.state?.excessValue || 0,
+          extraDays: location.state?.extraDays || 0
         });
         setPayment(res.data);
         setStep('qr');
@@ -162,6 +165,7 @@ const DriverSubscriptionPayment = () => {
         orderCode: payment.orderCode
       });
       setStep('done');
+      localStorage.setItem('driver_subscription_auto_renew', 'true');
       toast.success(t('driver.subscriptionPayment.activateSuccess'));
     } catch (error) {
       toast.error(t('driver.subscriptionPayment.paymentNotCompleted'));
@@ -179,6 +183,7 @@ const DriverSubscriptionPayment = () => {
        const res = await walletApi.paySubscription(plan.id, duration.months);
        if (res.success) {
            setStep('done');
+           localStorage.setItem('driver_subscription_auto_renew', 'true');
            toast.success(t('driver.payment.walletSuccess'));
        }
     } catch (e) {

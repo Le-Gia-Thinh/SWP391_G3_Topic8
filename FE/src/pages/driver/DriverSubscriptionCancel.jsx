@@ -22,6 +22,7 @@ const DriverSubscriptionCancel = () => {
     // Simulate API call
     setTimeout(() => {
       setLoading(false);
+      localStorage.setItem('driver_subscription_auto_renew', 'false');
       toast.success(t('driver.membershipPage.cancelSuccess'));
       navigate('/driver/subscription', { state: { activeTab: 'status' } });
     }, 1500);

@@ -107,10 +107,8 @@ export async function getCurrentDriverSession(req, res, next) {
         SELECT TOP 1
           s.SessionID,
           CONCAT(
-            'SESS-',
-            CONVERT(CHAR(8), s.EntryTime, 112),
-            '-',
-            RIGHT('0000' + CAST(s.SessionID AS VARCHAR(10)), 4)
+            'SS-',
+            RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)), 5)
           ) AS SessionCode,
 
           s.DriverID,
@@ -221,10 +219,8 @@ export async function getCurrentDriverSessions(req, res, next) {
         SELECT
           s.SessionID,
           CONCAT(
-            'SESS-',
-            CONVERT(CHAR(8), s.EntryTime, 112),
-            '-',
-            RIGHT('0000' + CAST(s.SessionID AS VARCHAR(10)), 4)
+            'SS-',
+            RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)), 5)
           ) AS SessionCode,
 
           s.DriverID,

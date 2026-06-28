@@ -60,7 +60,7 @@ export const subscriptionController = {
   createPayment: async (req, res, next) => {
     try {
       const userId = req.user.UserID;
-      const { planId, durationMonths } = req.body;
+      const { planId, durationMonths, deductionAmount, excessValue, extraDays } = req.body;
       
       if (!planId || !durationMonths) {
         return res.status(StatusCodes.BAD_REQUEST).json({
@@ -69,7 +69,9 @@ export const subscriptionController = {
         });
       }
 
-      const result = await subscriptionService.createPayment(userId, planId, durationMonths);
+      const result = await subscriptionService.createPayment(
+          userId, planId, durationMonths, deductionAmount || 0, excessValue || 0, extraDays || 0
+      );
       
       return res.status(StatusCodes.OK).json({
         success: true,

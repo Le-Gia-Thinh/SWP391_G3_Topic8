@@ -22,12 +22,13 @@ const planConfigs = {
     borderColor: 'border-blue-200',
     buttonColor: 'bg-blue-600 hover:bg-blue-700',
     features: [
-      'Miễn phí 5 lượt đỗ xe đầu tiên',
+      'Miễn phí 5 lượt đỗ xe mỗi tháng',
       'Giảm 10% phí đỗ xe các lượt tiếp theo',
       'Hỗ trợ khách hàng tiêu chuẩn',
       'Thanh toán linh hoạt'
     ],
-    popular: false,
+    cardStyle: 'border border-slate-200 hover:border-blue-300',
+    badgeText: null,
   },
   pro: {
     icon: Star,
@@ -36,12 +37,14 @@ const planConfigs = {
     borderColor: 'border-amber-400',
     buttonColor: 'bg-amber-500 hover:bg-amber-600',
     features: [
-      'Miễn phí 15 lượt đỗ xe đầu tiên',
+      'Miễn phí 15 lượt đỗ xe mỗi tháng',
       'Giảm 25% phí đỗ xe các lượt tiếp theo',
       'Ưu tiên đặt chỗ trước 24h',
       'Hỗ trợ khách hàng ưu tiên 24/7'
     ],
-    popular: true,
+    cardStyle: 'border-2 border-amber-400 scale-105 z-10 shadow-amber-100/50 hover:shadow-amber-200/50',
+    badgeText: 'Phổ Biến Nhất',
+    badgeBg: 'from-amber-400 to-amber-600',
   },
   premium: {
     icon: Crown,
@@ -50,21 +53,25 @@ const planConfigs = {
     borderColor: 'border-purple-200',
     buttonColor: 'bg-purple-600 hover:bg-purple-700',
     features: [
-      'Đỗ xe không giới hạn thời gian',
+      'Đỗ xe miễn phí không giới hạn',
       'Giữ cố định 1 vị trí đỗ xe VIP',
       'Miễn phí dịch vụ rửa xe 1 lần/tháng',
       'Đường dây nóng hỗ trợ riêng biệt'
     ],
-    popular: false,
+    cardStyle: 'border-2 border-purple-500 scale-110 z-20 shadow-xl shadow-purple-200/50 hover:shadow-purple-300/50',
+    badgeText: 'Khuyên Dùng',
+    badgeBg: 'from-purple-500 to-indigo-500',
   }
 };
 
 const durations = [
   { months: 1, discount: 0, label: '1 tháng' },
+  { months: 2, discount: 2, label: '2 tháng' },
   { months: 3, discount: 5, label: '3 tháng' },
   { months: 6, discount: 10, label: '6 tháng' },
   { months: 9, discount: 15, label: '9 tháng' },
-  { months: 12, discount: 20, label: '12 tháng' },
+  { months: 12, discount: 20, label: '1 năm' },
+  { months: 24, discount: 30, label: '2 năm' },
 ];
 
 const DriverSubscription = () => {
@@ -98,8 +105,16 @@ const DriverSubscription = () => {
             ...(planConfigs[p.id] || planConfigs.basic) // fallback to basic if not found
         }));
         
-        setPlans(mergedPlans);
-        
+        // Ensure premium plan is added if missing from backend
+        if (!mergedPlans.find(p => p.id === 'premium' || p.PlanID === 'premium')) {
+             mergedPlans.push({
+                 id: 'premium',
+                 name: 'Cao Cấp',
+                 basePrice: 399000,
+                 description: 'Trải nghiệm đặc quyền, không giới hạn.',
+                 ...planConfigs.premium
+             });
+        }
         if (statusRes.data) {
             const startDate = new Date(statusRes.data.startDate);
             const endDate = new Date(statusRes.data.endDate);
@@ -108,6 +123,11 @@ const DriverSubscription = () => {
             const totalDays = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
             const daysLeft = Math.round((endDate - today) / (1000 * 60 * 60 * 24));
             
+            const storedAutoRenew = localStorage.getItem('driver_subscription_auto_renew');
+            const isAutoRenew = storedAutoRenew ? storedAutoRenew === 'true' : true;
+
+            const currentBasePrice = statusRes.data.basePrice || mergedPlans.find(p => p.id === statusRes.data.planId)?.basePrice || 0;
+
             setCurrentSubscription({
                 active: true,
                 planId: statusRes.data.planId,
@@ -116,9 +136,18 @@ const DriverSubscription = () => {
                 endDate: endDate.toLocaleDateString('vi-VN'),
                 totalDays: Math.max(1, totalDays),
                 daysLeft: Math.max(0, daysLeft),
-                autoRenew: true, // Mock logic
+                autoRenew: isAutoRenew,
+                basePrice: currentBasePrice
             });
+            
+            // Filter out plans cheaper than current
+            let finalPlans = mergedPlans.filter(p => p.basePrice >= currentBasePrice);
+            finalPlans.sort((a, b) => a.basePrice - b.basePrice);
+            setPlans(finalPlans);
         } else {
+            // No active subscription, just sort by price
+            mergedPlans.sort((a, b) => a.basePrice - b.basePrice);
+            setPlans(mergedPlans);
             setCurrentSubscription({ active: false });
         }
     } catch (error) {
@@ -185,7 +214,7 @@ const DriverSubscription = () => {
             </p>
 
             <div className="flex justify-center mt-10">
-              <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-center gap-2 max-w-3xl">
+              <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-center gap-2 max-w-5xl">
                 {durations.map((opt) => (
                   <button
                     key={opt.months}
@@ -221,15 +250,13 @@ const DriverSubscription = () => {
               return (
                 <div 
                   key={plan.id}
-                  className={`relative bg-white rounded-3xl p-8 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
-                    plan.popular ? 'border-2 border-amber-400 scale-105 z-10' : 'border border-slate-200 mt-4 md:mt-0'
-                  }`}
+                  className={`relative bg-white rounded-3xl p-8 shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${plan.cardStyle}`}
                 >
-                  {plan.popular && (
+                  {plan.badgeText && (
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                      <span className="bg-gradient-to-r from-amber-400 to-amber-600 text-white text-xs font-bold uppercase tracking-wider py-1.5 px-4 rounded-full shadow-md flex items-center gap-1">
+                      <span className={`bg-gradient-to-r ${plan.badgeBg} text-white text-xs font-bold uppercase tracking-wider py-1.5 px-4 rounded-full shadow-md flex items-center gap-1`}>
                         <Zap className="w-3 h-3 fill-current" />
-                        Phổ Biến Nhất
+                        {plan.badgeText}
                       </span>
                     </div>
                   )}
@@ -346,18 +373,20 @@ const DriverSubscription = () => {
 
                 <div className="flex flex-wrap gap-4 pt-6 border-t border-slate-100">
                   <button 
-                    onClick={() => navigate('/driver/subscription-upgrade')}
+                    onClick={() => navigate('/driver/subscription-upgrade', { state: { currentSubscription } })}
                     className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
                   >
-                    Nâng Cấp Gói
+                    Nâng Cấp / Gia Hạn
                   </button>
-                  <button 
-                    onClick={() => navigate('/driver/subscription-cancel')}
-                    className="px-6 py-3 bg-white text-rose-600 border border-rose-200 rounded-xl font-bold hover:bg-rose-50 transition-colors flex items-center gap-2"
-                  >
-                    <AlertCircle className="w-4 h-4" />
-                    Hủy Gia Hạn
-                  </button>
+                  {currentSubscription.autoRenew && (
+                    <button 
+                      onClick={() => navigate('/driver/subscription-cancel')}
+                      className="px-6 py-3 bg-white text-rose-600 border border-rose-200 rounded-xl font-bold hover:bg-rose-50 transition-colors flex items-center gap-2"
+                    >
+                      <AlertCircle className="w-4 h-4" />
+                      Hủy Gia Hạn
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
