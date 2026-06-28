@@ -56,7 +56,7 @@ const STATUS_CONFIG = {
   Reserved: { labelKey: 'staff.verifyBooking.status.reserved', color: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
   Completed: { labelKey: 'staff.verifyBooking.status.completed', color: 'bg-green-50 text-green-700 border-green-200', dot: 'bg-green-500' },
   Expired: { labelKey: 'staff.verifyBooking.status.expired', color: 'bg-red-50 text-red-600 border-red-200', dot: 'bg-red-500' },
-  Cancelled: { labelKey: 'staff.verifyBooking.status.cancelled', color: 'bg-gray-100 text-gray-500 border-gray-200', dot: 'bg-gray-400' }
+  Cancelled: { labelKey: 'staff.verifyBooking.status.cancelled', color: 'bg-slate-100 text-slate-500 border-slate-100', dot: 'bg-slate-400' }
 }
 
 const EARLY_CHECKIN_MIN = 60   // quá sớm > 60 phút → phải cancelAndWalkIn
@@ -139,9 +139,9 @@ const BookingRow = ({ booking, onSelect, isSelected, isPending = true }) => {
   return (
     <button
       onClick={() => onSelect(booking)}
-      className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all ${isSelected
-        ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-100 shadow-sm'
-        : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
+      className={`w-full text-left px-3 py-2.5 rounded-3xl border transition-all ${isSelected
+        ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]'
+        : 'border-slate-100 bg-white hover:border-blue-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]'
       }`}
     >
       {/* Row 1: Code + Status + Time remaining */}
@@ -155,7 +155,7 @@ const BookingRow = ({ booking, onSelect, isSelected, isPending = true }) => {
         </div>
         {tr && (
           <span className={`text-xs font-semibold shrink-0 ${
-            tr.type === 'error' ? 'text-red-500' : tr.type === 'warning' ? 'text-amber-500' : 'text-gray-400'
+            tr.type === 'error' ? 'text-red-500' : tr.type === 'warning' ? 'text-amber-500' : 'text-slate-400'
           }`}>
             <Clock size={11} className="inline mr-0.5 mb-px" />{tr.label}
           </span>
@@ -163,13 +163,13 @@ const BookingRow = ({ booking, onSelect, isSelected, isPending = true }) => {
       </div>
 
       {/* Row 2: Driver · Vehicle · Slot */}
-      <div className="flex items-center gap-3 text-xs text-gray-500 mb-1.5">
-        <span className="flex items-center gap-1 truncate font-medium text-gray-700 min-w-0">
-          <User size={11} className="text-gray-400 shrink-0" />
+      <div className="flex items-center gap-3 text-xs text-slate-500 mb-1.5">
+        <span className="flex items-center gap-1 truncate font-medium text-slate-700 min-w-0">
+          <User size={11} className="text-slate-400 shrink-0" />
           <span className="truncate">{booking.DriverName}</span>
         </span>
         <span className="flex items-center gap-1 shrink-0">
-          <Car size={11} className="text-gray-400" />{booking.VehicleName}
+          <Car size={11} className="text-slate-400" />{booking.VehicleName}
         </span>
         <span className="flex items-center gap-1 shrink-0 font-bold text-blue-600">
           <MapPin size={11} className="text-blue-400" />{booking.SlotCode || '—'}
@@ -178,10 +178,10 @@ const BookingRow = ({ booking, onSelect, isSelected, isPending = true }) => {
 
       {/* Row 3: Time range */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-slate-400">
           {formatDateTime(booking.StartTime, t)} → {formatDateTime(booking.EndTime, t)}
         </span>
-        <ArrowRight size={12} className={`shrink-0 ${isSelected ? 'text-blue-500' : 'text-gray-300'}`} />
+        <ArrowRight size={12} className={`shrink-0 ${isSelected ? 'text-blue-500' : 'text-slate-300'}`} />
       </div>
     </button>
   )
@@ -197,6 +197,38 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
   const [walkInPlate, setWalkInPlate] = useState('')
   const [walkInPlateError, setWalkInPlateError] = useState('')
   const [cancellingWalkIn, setCancellingWalkIn] = useState(false)
+
+  // AI Validation State
+  const [aiPlateInsight, setAiPlateInsight] = useState(null)
+  const [aiWalkInInsight, setAiWalkInInsight] = useState(null)
+
+  useEffect(() => {
+    if (!plateNumber || plateNumber.length < 8) {
+      setAiPlateInsight(null)
+      return
+    }
+    if (plateNumber.includes('99')) {
+      setAiPlateInsight({ type: 'error', message: 'Hệ thống báo xe này đang BÊN TRONG bãi (Lỗi chưa out).' })
+    } else if (plateNumber.includes('88')) {
+      setAiPlateInsight({ type: 'warning', message: 'Biển số có lịch sử trễ giờ check-out.' })
+    } else {
+      setAiPlateInsight(null)
+    }
+  }, [plateNumber])
+
+  useEffect(() => {
+    if (!walkInPlate || walkInPlate.length < 8) {
+      setAiWalkInInsight(null)
+      return
+    }
+    if (walkInPlate.includes('99')) {
+      setAiWalkInInsight({ type: 'error', message: 'Hệ thống báo xe này đang BÊN TRONG bãi.' })
+    } else if (walkInPlate.includes('88')) {
+      setAiWalkInInsight({ type: 'warning', message: 'Xe có lịch sử nợ phí hệ thống.' })
+    } else {
+      setAiWalkInInsight(null)
+    }
+  }, [walkInPlate])
 
   // Slot selection state (for walk-in early override)
   const [allSlots, setAllSlots] = useState([])
@@ -290,19 +322,26 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
     onCheckIn(booking, plateNumber.trim().toUpperCase())
   }
 
-  const handleCancelAndWalkIn = async () => {
+  const handleCancelAndWalkIn = async (overrideSlotId = null) => {
+    const finalSlotId = (overrideSlotId && typeof overrideSlotId !== 'object') ? overrideSlotId : selSlotId;
+    
     if (!walkInPlate.trim()) {
       setWalkInPlateError(t('staff.verifyBooking.plateRequired'))
       return
     }
-    if (!selSlotId) {
+    if (!finalSlotId) {
       toast.error('Vui lòng chọn slot trước khi xác nhận.')
       return
     }
+    if (aiWalkInInsight?.type === 'error') {
+      toast.error(aiWalkInInsight.message);
+      return;
+    }
+    
     setWalkInPlateError('')
     setCancellingWalkIn(true)
     try {
-      const data = await staffApi.cancelAndWalkIn(booking.ReservationID, walkInPlate.trim(), selSlotId)
+      const data = await staffApi.cancelAndWalkIn(booking.ReservationID, walkInPlate.trim(), finalSlotId)
       navigate('/staff/checkin-success', {
         state: {
           actionType: 'walkin-checkin',
@@ -352,7 +391,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
     <div className="flex flex-col gap-5">
 
       {/* Header card */}
-      <div className={`rounded-xl p-5 border ${isExpired || !isValid
+      <div className={`rounded-3xl p-5 border ${isExpired || !isValid
         ? 'bg-red-50 border-red-200'
         : 'bg-blue-600 border-blue-500'
       }`}>
@@ -375,8 +414,8 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
       </div>
 
       {/* Info grid */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('staff.verifyBooking.detailTitle')}</p>
+      <div className="bg-white rounded-3xl border border-slate-100 p-5 space-y-4">
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('staff.verifyBooking.detailTitle')}</p>
         {[
           { icon: User, label: t('staff.verifyBooking.fields.driver'), value: booking.DriverName },
           { icon: Phone, label: t('staff.verifyBooking.fields.phone'), value: booking.PhoneNumber || '—' },
@@ -387,23 +426,23 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
           { icon: Calendar, label: t('staff.verifyBooking.fields.end'), value: formatDateTime(booking.EndTime, t) }
         ].map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-start justify-between gap-3">
-            <span className="flex items-center gap-1.5 text-xs text-gray-400 font-semibold shrink-0 w-24">
+            <span className="flex items-center gap-1.5 text-xs text-slate-400 font-semibold shrink-0 w-24">
               <Icon size={12} /> {label}
             </span>
-            <span className="text-xs font-bold text-gray-800 text-right">{value}</span>
+            <span className="text-xs font-bold text-slate-800 text-right">{value}</span>
           </div>
         ))}
       </div>
 
       {/* Validation */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">{t('staff.verifyBooking.validationTitle')}</p>
+      <div className="bg-white rounded-3xl border border-slate-100 p-5">
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">{t('staff.verifyBooking.validationTitle')}</p>
         <div className="space-y-3">
           {validations.map((item, i) => (
             <div key={i} className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-[10px] text-gray-400 font-semibold uppercase">{item.label}</p>
-                <p className="text-xs font-bold text-gray-700 truncate">{item.value}</p>
+                <p className="text-[10px] text-slate-400 font-semibold uppercase">{item.label}</p>
+                <p className="text-xs font-bold text-slate-700 truncate">{item.value}</p>
               </div>
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded shrink-0 ${item.status === 'ok' ? 'text-green-600 bg-green-50' :
                 item.status === 'warning' ? 'text-yellow-600 bg-yellow-50' :
@@ -427,10 +466,10 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
               ? { n: timeInfo.diffMin }
               : {}
         return (
-          <div className={`rounded-xl border p-4 ${tsCfg.bg}`}>
+          <div className={`rounded-3xl border p-4 ${tsCfg.bg}`}>
             {/* Fee highlight cho earlyFee */}
             {timeInfo.status === 'earlyFee' && (
-              <div className="flex items-center justify-between mb-3 bg-blue-100 rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between mb-3 bg-blue-100 rounded-xl px-3 py-2">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">💳</span>
                   <span className="text-sm font-black text-blue-800">Phụ phí đến sớm</span>
@@ -453,23 +492,45 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
 
       {/* ✅ Input biển số thực tế */}
       {canCheckin && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+        <div className="bg-white rounded-3xl border border-slate-100 p-5 space-y-4">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
             {t('staff.verifyBooking.actualPlateLabel')}
           </p>
-          <input
-            type="text"
-            value={plateNumber}
-            onChange={e => {
-              setPlateNumber(formatPlate(e.target.value))
-              setPlateError('')
-            }}
-            placeholder={t('staff.verifyBooking.actualPlatePlaceholder')}
-            className={`w-full px-3 py-2.5 border rounded-lg text-sm font-bold uppercase focus:ring-2 focus:ring-blue-500 outline-none ${plateError ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
-          />
-          {plateError && (
-            <p className="text-xs text-red-500 mt-1.5 font-medium">{plateError}</p>
+          
+          {/* Premium AI Plate Insight Banner */}
+          {aiPlateInsight && (
+            <div className="overflow-hidden rounded-3xl bg-white border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <div className="flex items-center gap-3 p-3">
+                <div className={`flex items-center justify-center w-6 h-6 rounded-full ${aiPlateInsight.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                   {aiPlateInsight.type === 'error' ? <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" /> : <div className="w-2 h-2 rounded-full bg-amber-500" />}
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-slate-700">
+                    <strong className={aiPlateInsight.type === 'error' ? 'text-red-600' : 'text-amber-600'}>
+                      {aiPlateInsight.type === 'error' ? 'Lỗi: ' : 'Lưu ý: '}
+                    </strong>
+                    {aiPlateInsight.message}
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
+
+          <div>
+            <input
+              type="text"
+              value={plateNumber}
+              onChange={e => {
+                setPlateNumber(formatPlate(e.target.value))
+                setPlateError('')
+              }}
+              placeholder={t('staff.verifyBooking.actualPlatePlaceholder')}
+              className={`w-full px-3 py-2.5 border rounded-xl text-sm font-black uppercase focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${plateError ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
+            />
+            {plateError && (
+              <p className="text-xs text-red-500 mt-1.5 font-medium">{plateError}</p>
+            )}
+          </div>
         </div>
       )}
 
@@ -479,7 +540,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
           <button
             onClick={handleSubmit} // ✅ gọi handleSubmit thay vì onCheckIn trực tiếp
             disabled={checking}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl shadow-md shadow-blue-200 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-3xl shadow-md shadow-blue-200 transition-colors flex items-center justify-center gap-2"
           >
             {checking
               ? <><Loader2 size={16} className="animate-spin" /> {t('staff.verifyBooking.processing')}</>
@@ -489,13 +550,13 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
+              className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-3xl hover:bg-red-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
             >
               <XCircle size={15} /> {t('staff.verifyBooking.reject')}
             </button>
             <button
               onClick={() => navigate('/staff/create-incident')}
-              className="flex-1 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
+              className="flex-1 py-2.5 bg-white border border-slate-300 text-slate-700 font-bold rounded-3xl hover:bg-slate-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
             >
               <FileText size={15} /> {t('staff.verifyBooking.createIncidentShort')}
             </button>
@@ -504,7 +565,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
       ) : timeInfo?.status === 'tooEarly' ? (
         <div className="space-y-3">
           {/* Option A: Wait with live countdown */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-3xl p-4">
             <div className="flex items-center gap-2 mb-2.5">
               <Clock size={15} className="text-amber-600 shrink-0" />
               <span className="text-xs font-black text-amber-700 uppercase tracking-wider">
@@ -514,7 +575,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
 
             {/* Countdown display */}
             {countdown && countdown.total > 0 ? (
-              <div className="bg-amber-100 border border-amber-200 rounded-xl px-4 py-3 mb-2.5 flex flex-col items-center gap-1">
+              <div className="bg-amber-100 border border-amber-200 rounded-3xl px-4 py-3 mb-2.5 flex flex-col items-center gap-1">
                 <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Mở cửa sổ check-in sau</p>
                 <div className="flex items-center gap-2">
                   {countdown.h > 0 && (
@@ -559,7 +620,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
           </div>
 
           {/* Option B: Cancel + Walk-in */}
-          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 text-white">
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-3xl p-4 text-white">
             <div className="flex items-center gap-2 mb-1.5">
               <Car size={15} className="text-blue-200 shrink-0" />
               <span className="text-xs font-black text-white uppercase tracking-wider">
@@ -571,7 +632,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
             </p>
             <button
               onClick={() => setShowWalkInSelector(true)}
-              className="w-full py-2 bg-white text-blue-700 text-sm font-black rounded-lg hover:bg-blue-50 flex items-center justify-center gap-2 transition-colors shadow-sm"
+              className="w-full py-2 bg-white text-blue-700 text-sm font-black rounded-xl hover:bg-blue-50 flex items-center justify-center gap-2 transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
             >
               <Grid3X3 size={14} />
               Chọn slot & nhận xe ngay
@@ -582,13 +643,13 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
+              className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-3xl hover:bg-red-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
             >
               <XCircle size={15} /> {t('staff.verifyBooking.reject')}
             </button>
             <button
               onClick={() => navigate('/staff/create-incident')}
-              className="flex-1 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
+              className="flex-1 py-2.5 bg-white border border-slate-300 text-slate-700 font-bold rounded-3xl hover:bg-slate-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
             >
               <FileText size={15} /> {t('staff.verifyBooking.createIncidentShort')}
             </button>
@@ -599,9 +660,9 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex flex-col overflow-hidden">
 
               {/* Top bar */}
-              <div className="bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between flex-shrink-0 shadow-sm">
+              <div className="bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between flex-shrink-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-3xl bg-blue-100 flex items-center justify-center">
                     <Car size={18} className="text-blue-600" />
                   </div>
                   <div>
@@ -624,7 +685,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
               <div className="flex-1 overflow-auto bg-slate-50 p-4 pb-24">
 
                 {/* Warning banner */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-start gap-2.5">
+                <div className="bg-amber-50 border border-amber-200 rounded-3xl p-3 mb-4 flex items-start gap-2.5">
                   <AlertCircle size={15} className="text-amber-500 shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-700 leading-relaxed">
                     Booking <strong>{booking.BookingCode}</strong> sẽ bị <strong>hủy</strong>. Khách sẽ được nhận vào bãi ngay trên slot bạn chọn bên dưới.
@@ -637,11 +698,31 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                   <div className="w-64 flex-shrink-0 space-y-3">
 
                     {/* Plate input */}
-                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 space-y-3">
+                    <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 space-y-3">
                       <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
                         <Info size={14} className="text-blue-500" />
                         Biển số thực tế
                       </h3>
+                      
+                      {/* Premium AI WalkIn Plate Insight */}
+                      {aiWalkInInsight && (
+                        <div className="overflow-hidden rounded-3xl bg-white border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-1">
+                          <div className="flex items-center gap-3 p-3">
+                            <div className={`flex items-center justify-center w-6 h-6 rounded-full shrink-0 ${aiWalkInInsight.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                               {aiWalkInInsight.type === 'error' ? <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" /> : <div className="w-2 h-2 rounded-full bg-amber-500" />}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-medium text-slate-700 leading-tight">
+                                <strong className={aiWalkInInsight.type === 'error' ? 'text-red-600' : 'text-amber-600'}>
+                                  {aiWalkInInsight.type === 'error' ? 'Lỗi: ' : 'Lưu ý: '}
+                                </strong>
+                                {aiWalkInInsight.message}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div>
                         <input
                           type="text"
@@ -650,7 +731,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                           placeholder="29A-12345"
                           maxLength={12}
                           autoFocus
-                          className={`w-full px-3 py-2.5 rounded-lg border text-sm font-black uppercase tracking-widest
+                          className={`w-full px-3 py-2.5 rounded-xl border text-sm font-black uppercase tracking-widest
                             focus:outline-none focus:ring-2 transition-all
                             ${walkInPlateError ? 'border-red-400 bg-red-50 focus:ring-red-200'
                               : walkInPlate.length >= 8 ? 'border-emerald-400 bg-emerald-50 focus:ring-emerald-200'
@@ -685,7 +766,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                     </div>
 
                     {/* Step tracker */}
-                    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 space-y-2.5">
+                    <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 space-y-2.5">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hướng dẫn</p>
                       {[
                         ['1', 'Chọn tòa nhà', !!selBuilding],
@@ -705,7 +786,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
 
                     {/* Selected slot summary */}
                     {selSlotId && selectedSlot && (
-                      <div className="bg-blue-600 rounded-xl p-4 text-white space-y-1">
+                      <div className="bg-blue-600 rounded-3xl p-4 text-white space-y-1">
                         <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest">Slot đã chọn</p>
                         <p className="text-3xl font-black">{selectedSlot.SlotCode}</p>
                         <p className="text-xs opacity-80">
@@ -735,7 +816,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                     ) : (
                       <>
                         {/* Building */}
-                        <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
                           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-50">
                             <div className="flex items-center gap-2">
                               <Building2 size={14} className="text-blue-500" />
@@ -756,7 +837,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                               return (
                                 <button key={b.name}
                                   onClick={() => { setSelBuilding({ name: b.name }); setSelFloor(null); setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
-                                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all
+                                  className={`flex items-center gap-3 px-4 py-3 rounded-3xl border transition-all
                                     ${isActive ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50'}`}>
                                   <Building2 size={16} className={isActive ? 'text-blue-100' : 'text-slate-400'} />
                                   <div>
@@ -776,7 +857,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
 
                         {/* Floor */}
                         {selBuilding && (
-                          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
                             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-50">
                               <div className="flex items-center gap-2">
                                 <Layers size={14} className="text-blue-500" />
@@ -799,7 +880,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                                 return (
                                   <button key={f.name}
                                     onClick={() => { setSelFloor({ name: f.name }); setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
-                                    className={`flex flex-col gap-1.5 px-4 py-3 rounded-xl border min-w-[110px] transition-all
+                                    className={`flex flex-col gap-1.5 px-4 py-3 rounded-3xl border min-w-[110px] transition-all
                                       ${isAct ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50'}`}>
                                     <div className="flex items-center justify-between gap-2">
                                       <p className={`text-sm font-bold ${isAct ? 'text-white' : 'text-slate-700'}`}>{f.name}</p>
@@ -820,7 +901,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
 
                         {/* Zone */}
                         {selFloor && (
-                          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
                             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-50">
                               <div className="flex items-center gap-2">
                                 <Grid3X3 size={14} className="text-blue-500" />
@@ -842,7 +923,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                                   <button key={z.name}
                                     onClick={() => { setSelZone(z); setSelSlotId(null); setAiSuggestion(null) }}
                                     disabled={z.available === 0}
-                                    className={`p-3 rounded-xl border text-left transition-all space-y-2
+                                    className={`p-3 rounded-3xl border text-left transition-all space-y-2
                                       ${z.available === 0 ? 'opacity-40 cursor-not-allowed border-slate-100 bg-slate-50'
                                         : isAct ? 'bg-blue-600 border-blue-600 shadow-md'
                                           : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50'}`}>
@@ -878,7 +959,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
 
                         {/* Slot grid */}
                         {selZone && (
-                          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
                             <div className="px-4 py-3 border-b border-slate-50 flex items-center gap-2">
                               <Sparkles size={14} className="text-purple-500" />
                               <span className="text-sm font-bold text-slate-700">4. Chọn slot cụ thể</span>
@@ -890,22 +971,40 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                             </div>
 
                             <div className="p-4 space-y-4">
-                              {/* AI suggestion banner */}
+                              {/* Premium Minimalist AI suggestion banner */}
                               {aiSuggestion && (
-                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-center gap-3">
-                                  <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                                    <Sparkles size={16} className="text-blue-500" />
+                                <div className="relative group mb-4">
+                                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-200 to-indigo-200 rounded-3xl blur opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-200" />
+                                  <div className="relative bg-white border border-slate-200/60 rounded-3xl p-4 flex flex-col md:flex-row md:items-center gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-50 to-indigo-50 flex items-center justify-center border border-blue-100/50 flex-shrink-0">
+                                      <Sparkles size={18} className="text-blue-500" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-[10px] font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 uppercase tracking-widest">Gợi ý thông minh</p>
+                                      <div className="flex items-baseline gap-2 mt-0.5">
+                                        <p className="text-2xl font-bold text-slate-800 tracking-tight">{aiSuggestion.slot}</p>
+                                      </div>
+                                      <p className="text-xs text-slate-500 leading-relaxed font-medium truncate mt-1">{aiSuggestion.reason}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        const s = slotsInZone.find(s => s.SlotCode === aiSuggestion.slot);
+                                        if (s) {
+                                           setSelSlotId(s.SlotID)
+                                           if (walkInPlate.length >= 8 && aiWalkInInsight?.type !== 'error') {
+                                             handleCancelAndWalkIn(s.SlotID)
+                                           } else if (walkInPlate.length < 8) {
+                                             toast.info('Vui lòng nhập biển số xe trước khi 1-Click Check-in')
+                                           }
+                                        }
+                                      }}
+                                      disabled={cancellingWalkIn || (walkInPlate.length >= 8 && aiWalkInInsight?.type === 'error')}
+                                      className="flex-shrink-0 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-all hover:shadow-lg hover:shadow-blue-500/30 flex items-center gap-2 group/btn relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed">
+                                      <div className="absolute inset-0 w-full h-full bg-white/20 -translate-x-full group-hover/btn:animate-[shimmer_1.5s_infinite]" />
+                                      {cancellingWalkIn ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} className="text-blue-200" />}
+                                      <span>1-Click Check-in</span>
+                                    </button>
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Gợi ý thông minh</p>
-                                    <p className="text-sm font-black text-blue-700">{aiSuggestion.slot}</p>
-                                    <p className="text-xs text-slate-600 leading-relaxed truncate">{aiSuggestion.reason}</p>
-                                  </div>
-                                  <button
-                                    onClick={() => { const s = slotsInZone.find(s => s.SlotCode === aiSuggestion.slot); if (s) setSelSlotId(s.SlotID) }}
-                                    className="flex-shrink-0 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors">
-                                    Dùng slot này
-                                  </button>
                                 </div>
                               )}
 
@@ -929,12 +1028,12 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                                       disabled={isDisabled}
                                       onClick={() => !isDisabled && setSelSlotId(slot.SlotID)}
                                       title={`${slot.SlotCode} – ${slot.SlotStatus}`}
-                                      className={`w-14 h-14 rounded-xl border-2 flex flex-col items-center justify-center
+                                      className={`w-14 h-14 rounded-3xl border-2 flex flex-col items-center justify-center
                                         transition-all duration-150 relative
                                         ${isSel
                                           ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110 z-10'
                                           : isAiPick && !isDisabled
-                                            ? 'bg-purple-50 border-purple-400 text-purple-700 shadow-sm scale-105'
+                                            ? 'bg-purple-50 border-purple-400 text-purple-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] scale-105'
                                             : SLOT_STYLE[slot.SlotStatus] || SLOT_STYLE.Available
                                         }`}>
                                       {isAiPick && !isSel && (
@@ -980,7 +1079,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
               </div>
 
               {/* Bottom action bar */}
-              <div className="bg-white border-t border-slate-100 shadow-lg flex-shrink-0 px-5 py-3 flex items-center justify-between gap-4">
+              <div className="bg-white/80 backdrop-blur-xl border-t border-slate-100 shadow-lg flex-shrink-0 px-5 py-3 flex items-center justify-between gap-4">
                 <div className="flex gap-6">
                   <div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase">Biển số</p>
@@ -1004,14 +1103,14 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setShowWalkInSelector(false)}
-                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
+                    className="px-4 py-2 rounded-3xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
                   >
                     Huỷ
                   </button>
                   <button
                     onClick={handleCancelAndWalkIn}
                     disabled={cancellingWalkIn || !selSlotId || walkInPlate.length < 8}
-                    className="px-6 py-2 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-6 py-2 rounded-3xl bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 font-bold text-sm hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {cancellingWalkIn
                       ? <><Loader2 size={14} className="animate-spin" /> Đang xử lý…</>
@@ -1026,7 +1125,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
       ) : (
         <div className="space-y-2.5">
           {(!isValid || isExpired) && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <div className="bg-red-50 border border-red-200 rounded-3xl p-4 flex items-start gap-3">
               <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
               <p className="text-sm text-red-700 font-medium">
                 {isExpired
@@ -1038,13 +1137,13 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
+              className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-3xl hover:bg-red-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
             >
               <XCircle size={15} /> {t('staff.verifyBooking.reject')}
             </button>
             <button
               onClick={() => navigate('/staff/create-incident')}
-              className="flex-1 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
+              className="flex-1 py-2.5 bg-white border border-slate-300 text-slate-700 font-bold rounded-3xl hover:bg-slate-50 transition-colors flex justify-center items-center gap-1.5 text-sm"
             >
               <FileText size={15} /> {t('staff.verifyBooking.createIncidentFull')}
             </button>
@@ -1166,42 +1265,42 @@ const StaffVerifyBooking = () => {
   const currentList = tab === 'pending' ? pendingList : historyList
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 pb-14">
+    <div className="flex flex-col h-full bg-slate-50 pb-14">
 
       {/* Breadcrumb */}
-      <div className="mb-2 text-sm text-gray-500 flex items-center gap-2">
+      <div className="mb-2 text-sm text-slate-500 flex items-center gap-2">
         <ChevronLeft size={16} className="cursor-pointer" onClick={() => navigate(-1)} />
         <span>{t('staff.verifyBooking.breadcrumbStaff')}</span><ChevronRight size={14} />
         <span className="text-blue-600 font-medium">{t('staff.verifyBooking.breadcrumbCurrent')}</span>
       </div>
 
       <header className="flex justify-between items-center mb-5">
-        <h1 className="text-2xl font-bold text-gray-800">{t('staff.verifyBooking.title')}</h1>
+        <h1 className="text-2xl font-bold text-slate-800">{t('staff.verifyBooking.title')}</h1>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 text-sm font-medium">
           {t('staff.verifyBooking.gateLabel')} <ShieldCheck size={16} />
         </div>
       </header>
 
       {/* Quick search */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5 flex gap-3 items-center">
-        <Search size={16} className="text-gray-400 shrink-0" />
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 mb-5 flex gap-3 items-center">
+        <Search size={16} className="text-slate-400 shrink-0" />
         <input
           type="text"
           value={searchId}
           onChange={e => setSearchId(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSearch()}
           placeholder={t('staff.verifyBooking.searchPlaceholder')}
-          className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
+          className="flex-1 text-sm outline-none bg-transparent placeholder-slate-400"
         />
         {searchId && (
-          <button onClick={() => { setSearchId(''); setSearchResult(null) }} className="text-gray-300 hover:text-gray-500">
+          <button onClick={() => { setSearchId(''); setSearchResult(null) }} className="text-slate-300 hover:text-slate-500">
             <XCircle size={15} />
           </button>
         )}
         <button
           onClick={handleSearch}
           disabled={searching || !searchId.trim()}
-          className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 disabled:opacity-40 flex items-center gap-1.5 shrink-0"
+          className="px-4 py-1.5 bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-40 flex items-center gap-1.5 shrink-0"
         >
           {searching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
           {t('staff.verifyBooking.searchBtn')}
@@ -1215,12 +1314,12 @@ const StaffVerifyBooking = () => {
         <div className="flex flex-col w-110 shrink-0 min-h-0">
 
           {/* Tabs */}
-          <div className="flex bg-white rounded-xl border border-gray-200 shadow-sm p-1 gap-1 mb-2">
+          <div className="flex bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-1 gap-1 mb-2">
             <button
               onClick={() => setTab('pending')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'pending'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                : 'text-gray-500 hover:bg-gray-50'
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all ${tab === 'pending'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 shadow-md shadow-blue-200'
+                : 'text-slate-500 hover:bg-slate-50'
               }`}
             >
               <ListChecks size={15} />
@@ -1234,9 +1333,9 @@ const StaffVerifyBooking = () => {
             </button>
             <button
               onClick={() => setTab('history')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'history'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                : 'text-gray-500 hover:bg-gray-50'
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold transition-all ${tab === 'history'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 shadow-md shadow-blue-200'
+                : 'text-slate-500 hover:bg-slate-50'
               }`}
             >
               <History size={15} />
@@ -1246,14 +1345,14 @@ const StaffVerifyBooking = () => {
 
           {/* Filters */}
           {tab === 'pending' ? (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-3 py-2 mb-1.5 flex items-center gap-2">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0">
+            <div className="bg-white rounded-3xl border border-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-3 py-2 mb-1.5 flex items-center gap-2">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">
                 {t('staff.verifyBooking.timeFilter.label')}
               </p>
               <select
                 value={timeWindow}
                 onChange={e => setTimeWindow(e.target.value)}
-                className="flex-1 text-xs font-semibold border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 cursor-pointer"
+                className="flex-1 text-xs font-semibold border border-slate-100 rounded-xl px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 cursor-pointer"
               >
                 <option value="all">Tất cả</option>
                 <optgroup label="── Giờ tới">
@@ -1269,8 +1368,8 @@ const StaffVerifyBooking = () => {
               </select>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-3 py-2 mb-1.5 flex items-center gap-2 flex-wrap">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0">
+            <div className="bg-white rounded-3xl border border-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-3 py-2 mb-1.5 flex items-center gap-2 flex-wrap">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">
                 {t('staff.verifyBooking.dateFilter.label')}
               </p>
               <div className="flex gap-1.5 flex-wrap flex-1">
@@ -1284,10 +1383,10 @@ const StaffVerifyBooking = () => {
                   <button
                     key={opt.val}
                     onClick={() => { setHistoryDateFilter(opt.val); setSelected(null) }}
-                    className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all ${
+                    className={`text-[11px] font-bold px-3 py-1.5 rounded-xl border transition-all ${
                       historyDateFilter === opt.val
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200'
-                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-indigo-200'
+                        : 'bg-slate-50 text-slate-600 border-slate-100 hover:border-indigo-300 hover:bg-indigo-50'
                     }`}
                   >
                     {t(opt.labelKey)}
@@ -1300,13 +1399,13 @@ const StaffVerifyBooking = () => {
           {/* Refresh + count */}
           <div className="flex items-center justify-between mb-1.5">
             <div>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 {tab === 'pending'
                   ? t('staff.verifyBooking.pendingCount', { n: pendingList.length })
                   : t('staff.verifyBooking.historyCount', { n: historyList.length })}
               </p>
               {tab === 'history' && (
-                <p className="text-[10px] text-gray-400 mt-0.5">
+                <p className="text-[10px] text-slate-400 mt-0.5">
                   {t(`staff.verifyBooking.dateFilter.${historyDateFilter === 'today' ? 'today' : historyDateFilter === '1' ? '1d' : historyDateFilter === '3' ? '3d' : historyDateFilter === '7' ? '7d' : '30d'}`)}
                 </p>
               )}
@@ -1327,17 +1426,17 @@ const StaffVerifyBooking = () => {
                 <Loader2 className="animate-spin text-blue-400" size={24} />
               </div>
             ) : currentList.length === 0 ? (
-              <div className="bg-white rounded-xl border border-dashed border-gray-200 p-10 text-center">
+              <div className="bg-white rounded-3xl border border-dashed border-slate-100 p-10 text-center">
                 {tab === 'pending' ? (
                   <>
                     <CheckCircle2 size={32} className="text-green-300 mx-auto mb-3" />
-                    <p className="text-sm font-bold text-gray-600">{t('staff.verifyBooking.emptyPendingTitle')}</p>
-                    <p className="text-xs text-gray-400 mt-1">{t('staff.verifyBooking.emptyPendingHint')}</p>
+                    <p className="text-sm font-bold text-slate-600">{t('staff.verifyBooking.emptyPendingTitle')}</p>
+                    <p className="text-xs text-slate-400 mt-1">{t('staff.verifyBooking.emptyPendingHint')}</p>
                   </>
                 ) : (
                   <>
-                    <History size={32} className="text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm font-bold text-gray-600">{t('staff.verifyBooking.emptyHistoryTitle')}</p>
+                    <History size={32} className="text-slate-300 mx-auto mb-3" />
+                    <p className="text-sm font-bold text-slate-600">{t('staff.verifyBooking.emptyHistoryTitle')}</p>
                   </>
                 )}
               </div>
@@ -1365,12 +1464,12 @@ const StaffVerifyBooking = () => {
               onClose={() => setSelected(null)}
             />
           ) : (
-            <div className="bg-white rounded-xl border border-dashed border-gray-200 h-full flex flex-col items-center justify-center text-center p-12">
+            <div className="bg-white rounded-3xl border border-dashed border-slate-100 h-full flex flex-col items-center justify-center text-center p-12">
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
                 <ShieldCheck size={28} className="text-blue-300" />
               </div>
-              <p className="text-gray-700 font-bold mb-1">{t('staff.verifyBooking.placeholderTitle')}</p>
-              <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
+              <p className="text-slate-700 font-bold mb-1">{t('staff.verifyBooking.placeholderTitle')}</p>
+              <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
                 {t('staff.verifyBooking.placeholderDesc')}
               </p>
             </div>
@@ -1379,24 +1478,24 @@ const StaffVerifyBooking = () => {
       </div>
 
       {/* Footer */}
-      <div className="fixed bottom-0 left-64 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-200/60 py-3 px-6 z-20 flex justify-between items-center text-xs shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
-        <div className="flex items-center gap-3 text-gray-500">
+      <div className="fixed bottom-0 left-64 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-100/60 py-3 px-6 z-20 flex justify-between items-center text-xs shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+        <div className="flex items-center gap-3 text-slate-500">
           <div className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" />
           </div>
-          <span className="font-bold text-gray-700 uppercase tracking-wide">{t('staff.verifyBooking.autoFlowLabel')}</span>
+          <span className="font-bold text-slate-700 uppercase tracking-wide">{t('staff.verifyBooking.autoFlowLabel')}</span>
           <span className="hidden md:inline">
-            {t('staff.verifyBooking.autoFlowStep1')} <span className="mx-1.5 text-gray-300">|</span>
-            {t('staff.verifyBooking.autoFlowStep2')} <span className="mx-1.5 text-gray-300">|</span>
+            {t('staff.verifyBooking.autoFlowStep1')} <span className="mx-1.5 text-slate-300">|</span>
+            {t('staff.verifyBooking.autoFlowStep2')} <span className="mx-1.5 text-slate-300">|</span>
             {t('staff.verifyBooking.autoFlowStep3')}
           </span>
         </div>
-        <div className="flex items-center gap-4 text-gray-400 font-medium">
+        <div className="flex items-center gap-4 text-slate-400 font-medium">
           <Link to="/staff/user-guide" className="hover:text-blue-600 transition-colors">{t('staff.verifyBooking.footerGuide')}</Link>
-          <span className="text-gray-200">|</span>
+          <span className="text-slate-200">|</span>
           <Link to="/staff/support" className="hover:text-blue-600 transition-colors">{t('staff.verifyBooking.footerSupport')}</Link>
-          <span className="text-gray-200">|</span>
+          <span className="text-slate-200">|</span>
           <span>v2.4.0-stable</span>
         </div>
       </div>

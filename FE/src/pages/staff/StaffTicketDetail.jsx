@@ -103,7 +103,7 @@ const StaffTicketDetail = () => {
   return (
     <div className="animate-in fade-in duration-500 flex flex-col h-[calc(100vh-8rem)]">
       {/* Header */}
-      <div className="flex items-center justify-between bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 shrink-0 rounded-t-2xl shadow-sm">
+      <div className="flex items-center justify-between bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 shrink-0 rounded-t-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/staff/support')}
@@ -127,7 +127,7 @@ const StaffTicketDetail = () => {
           {ticket.Status !== 'Resolved' && ticket.Status !== 'Closed' && (
             <button
               onClick={() => handleStatusChange('Resolved')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-xs font-bold hover:bg-green-100 dark:hover:bg-green-900/50 transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-xl text-xs font-bold hover:bg-green-100 dark:hover:bg-green-900/50 transition"
             >
               <CheckCircle size={14} /> {t('staff.ticketDetail.resolveBtn')}
             </button>
@@ -135,7 +135,7 @@ const StaffTicketDetail = () => {
           {ticket.Status !== 'Closed' && (
             <button
               onClick={() => handleStatusChange('Closed')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition"
             >
               <XCircle size={14} /> {t('staff.ticketDetail.closeBtn')}
             </button>
@@ -153,7 +153,7 @@ const StaffTicketDetail = () => {
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold text-slate-500 ml-1">{ticket.DriverName} ({t('staff.ticketDetail.driverTag')})</span>
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-sm whitespace-pre-wrap">
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-tl-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-sm whitespace-pre-wrap">
               {ticket.Content}
             </div>
             <span className="text-[10px] text-slate-400 ml-1">{dayjs(ticket.CreatedAt).format('HH:mm DD/MM')}</span>
@@ -173,8 +173,8 @@ const StaffTicketDetail = () => {
                 <span className={`text-xs font-semibold text-slate-500 ${isStaff ? 'mr-1' : 'ml-1'}`}>
                   {!isStaff ? ticket.DriverName : t('staff.ticketDetail.youLabel')}
                 </span>
-                <div className={`p-4 rounded-2xl shadow-sm text-sm whitespace-pre-wrap ${isStaff
-                  ? 'bg-emerald-600 text-white rounded-tr-none'
+                <div className={`p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-sm whitespace-pre-wrap ${isStaff
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/40 rounded-tr-none'
                   : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-tl-none'
                 }`}>
                   {reply.Content}
@@ -190,7 +190,7 @@ const StaffTicketDetail = () => {
       </div>
 
       {/* Reply Input */}
-      <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl shrink-0 shadow-sm">
+      <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 rounded-b-2xl shrink-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         {ticket.Status === 'Closed' ? (
           <div className="text-center text-sm text-slate-500 p-2">
             {t('staff.ticketDetail.closedNotice')}
@@ -213,7 +213,7 @@ const StaffTicketDetail = () => {
             <button
               type="submit"
               disabled={submitting || !replyContent.trim()}
-              className="h-11 w-11 shrink-0 rounded-full bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed self-end mb-0.5"
+              className="h-11 w-11 shrink-0 rounded-full bg-emerald-600 text-white shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/40 flex items-center justify-center hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed self-end mb-0.5"
             >
               <Send size={18} className="ml-1" />
             </button>

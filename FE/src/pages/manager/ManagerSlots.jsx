@@ -31,7 +31,7 @@ const STATUS_CFG = {
 const StatusBadge = ({ status }) => {
   const cfg = STATUS_CFG[status] || STATUS_CFG.Available
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold border ${cfg.color}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold border ${cfg.color}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
       {cfg.label}
     </span>
@@ -131,7 +131,7 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
             <h3 className="text-base font-bold text-slate-900">{t('manager.slots.detail.title')}</h3>
             {slot && <p className="text-xs text-slate-400 mt-0.5">{slot.SlotCode} · {slot.ZoneName} · {slot.FloorName}</p>}
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100 transition">
+          <button onClick={onClose} className="rounded-xl p-2 hover:bg-slate-100 transition">
             <X size={18} />
           </button>
         </div>
@@ -151,10 +151,10 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
                   { label: 'Khu vực', value: slot.ZoneName },
                   { label: 'Trạng thái', value: <StatusBadge status={slot.SlotStatus} />, raw: true },
                 ].map(({ label, value, bold, raw }) => (
-                  <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                  <div key={label} className="rounded-3xl bg-slate-50 border border-slate-100 p-3">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">{label}</p>
                     {raw ? value : (
-                      <p className={`text-sm ${bold ? 'font-black text-blue-600 text-base' : 'font-semibold text-slate-800'}`}>{value || '—'}</p>
+                      <p className={`text-sm ${bold ? 'font-black text-blue-600 text-base' : 'font-semibold text-slate-800 font-black'}`}>{value || '—'}</p>
                     )}
                   </div>
                 ))}
@@ -162,7 +162,7 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
 
               {/* Active session */}
               {session ? (
-                <div className="rounded-xl bg-blue-600 p-5 text-white">
+                <div className="rounded-3xl bg-blue-600 p-5 text-white">
                   <div className="flex items-center gap-2 mb-3">
                     <Activity size={15} className="text-blue-200" />
                     <p className="text-sm font-bold text-blue-100">{t('manager.slots.detail.activeSession')}</p>
@@ -175,7 +175,7 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex items-center gap-3 text-slate-400">
+                <div className="rounded-3xl bg-slate-50 border border-slate-100 p-4 flex items-center gap-3 text-slate-400">
                   <Info size={15} />
                   <p className="text-sm">{t('manager.slots.detail.noSession')}</p>
                 </div>
@@ -186,19 +186,19 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
                 <div className="flex gap-2">
                   {slot.SlotStatus !== 'Available' && (
                     <button onClick={() => handleStatusUpdate('Available')} disabled={updating}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 transition">
+                      className="flex-1 flex items-center justify-center gap-2 rounded-3xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60 transition">
                       <Unlock size={15} /> Mở slot
                     </button>
                   )}
                   {slot.SlotStatus !== 'Maintenance' && (
                     <button onClick={() => handleStatusUpdate('Maintenance')} disabled={updating}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-60 transition">
+                      className="flex-1 flex items-center justify-center gap-2 rounded-3xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-60 transition">
                       <Wrench size={15} /> Bảo trì
                     </button>
                   )}
                   {slot.SlotStatus !== 'Blocked' && (
                     <button onClick={() => handleStatusUpdate('Blocked')} disabled={updating}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60 transition">
+                      className="flex-1 flex items-center justify-center gap-2 rounded-3xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60 transition">
                       <Lock size={15} /> Khoá slot
                     </button>
                   )}
@@ -209,9 +209,9 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <History size={15} className="text-slate-400" />
-                  <h4 className="text-sm font-bold text-slate-700">{t('manager.slots.detail.historyTitle')}</h4>
+                  <h4 className="text-sm font-bold text-slate-700 font-bold">{t('manager.slots.detail.historyTitle')}</h4>
                 </div>
-                <div className="rounded-xl border border-slate-100 overflow-hidden">
+                <div className="rounded-3xl border border-slate-100 overflow-hidden">
                   <div className="overflow-y-auto max-h-56">
                     <table className="min-w-full text-left text-xs text-slate-600">
                       <thead className="bg-slate-50 border-b border-slate-100 sticky top-0">
@@ -228,7 +228,7 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
                           <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-300">{t('manager.slots.detail.noHistory')}</td></tr>
                         ) : history.map(h => (
                           <tr key={h.SessionID} className="hover:bg-slate-50 bg-white">
-                            <td className="px-4 py-2.5 font-bold text-slate-700">{h.SessionCode}</td>
+                            <td className="px-4 py-2.5 font-bold text-slate-700 font-bold">{h.SessionCode}</td>
                             <td className="px-4 py-2.5 font-semibold">{h.PlateNumber}</td>
                             <td className="px-4 py-2.5 text-slate-400">{new Date(h.EntryTime).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}</td>
                             <td className="px-4 py-2.5">{h.DurationMinutes != null ? `${Math.floor(h.DurationMinutes / 60)}h${h.DurationMinutes % 60}m` : 'Đang đỗ'}</td>
@@ -266,10 +266,10 @@ const ZoneMapView = ({ slots, onSelectSlot, selectedSlotId }) => {
           <button key={slot.SlotID}
             onClick={() => onSelectSlot(slot.SlotID)}
             title={`${slot.SlotCode} · ${cfg.label}${slot.PlateNumber ? ' · ' + slot.PlateNumber : ''}`}
-            className={`w-14 h-14 rounded-xl border-2 flex flex-col items-center justify-center transition-all duration-150
+            className={`w-14 h-14 rounded-3xl border-2 flex flex-col items-center justify-center transition-all duration-150
               ${isSelected
                 ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110 z-10'
-                : `${cfg.mapBg} ${slot.SlotStatus === 'Blocked' ? 'text-white' : 'text-slate-700'}`
+                : `${cfg.mapBg} ${slot.SlotStatus === 'Blocked' ? 'text-white' : 'text-slate-700 font-bold'}`
               }`}>
             <span className="font-black text-[10px] leading-tight text-center px-0.5">
               {slot.SlotCode.split('-').slice(-1)[0]}
@@ -290,16 +290,16 @@ const ZoneMapView = ({ slots, onSelectSlot, selectedSlotId }) => {
 function NavItem({ icon: Icon, label, active, onClick, count, indent = 0, badge }) {
   return (
     <button onClick={onClick}
-      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all text-sm
+      className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all text-sm
         ${indent === 1 ? 'pl-6' : indent === 2 ? 'pl-9' : ''}
         ${active
-          ? 'bg-blue-600 text-white font-semibold shadow-sm'
+          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 font-semibold shadow-[0_8px_30px_rgb(0,0,0,0.04)]'
           : 'text-slate-600 hover:bg-slate-100 font-medium'}`}>
       <Icon size={13} className={active ? 'text-blue-100' : 'text-slate-400'} />
       <span className="flex-1 truncate text-xs">{label}</span>
       {badge !== undefined && (
         <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-bold min-w-[20px] text-center
-          ${active ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+          ${active ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500 font-medium'}`}>
           {badge}
         </span>
       )}
@@ -400,27 +400,27 @@ const ManagerSlots = () => {
     <div className="flex flex-col gap-4 pb-12">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4">
+      <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-5 py-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-blue-500">{t('manager.slots.eyebrow')}</p>
           <h1 className="text-xl font-bold text-slate-900 mt-0.5">{t('manager.slots.title')}</h1>
         </div>
         <div className="flex items-center gap-2">
           {/* View toggle */}
-          <div className="flex items-center bg-slate-100 rounded-lg p-1">
+          <div className="flex items-center bg-slate-100 rounded-xl p-1">
             <button onClick={() => setViewMode('map')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all
-                ${viewMode === 'map' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>
+                ${viewMode === 'map' ? 'bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-blue-600' : 'text-slate-500 font-medium'}`}>
               <LayoutGrid size={13} /> Bản đồ
             </button>
             <button onClick={() => setViewMode('list')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all
-                ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>
+                ${viewMode === 'list' ? 'bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-blue-600' : 'text-slate-500 font-medium'}`}>
               <List size={13} /> Danh sách
             </button>
           </div>
           <button onClick={loadSlots} disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
             <RefreshCcw size={13} className={loading ? 'animate-spin' : ''} /> Làm mới
           </button>
         </div>
@@ -431,13 +431,13 @@ const ManagerSlots = () => {
         {Object.entries(STATUS_CFG).map(([k, cfg]) => (
           <button key={k}
             onClick={() => setFilterStatus(filterStatus === k ? 'all' : k)}
-            className={`rounded-xl border p-3 text-left transition-all hover:shadow-sm
-              ${filterStatus === k ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-slate-100 bg-white'}`}>
+            className={`rounded-3xl border p-3 text-left transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]
+              ${filterStatus === k ? 'border-blue-400 bg-blue-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)]' : 'border-slate-100 bg-white'}`}>
             <div className="flex items-center gap-1.5 mb-1">
               <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{cfg.label}</span>
             </div>
-            <p className="text-2xl font-black text-slate-800">{stats[k] || 0}</p>
+            <p className="text-2xl font-black text-slate-800 font-black">{stats[k] || 0}</p>
             <p className="text-[10px] text-slate-400 mt-0.5">
               {totalSlots > 0 ? Math.round((stats[k] || 0) / totalSlots * 100) : 0}%
             </p>
@@ -449,7 +449,7 @@ const ManagerSlots = () => {
       <div className="flex gap-3 min-h-0">
 
         {/* ━━ LEFT SIDEBAR ━━ */}
-        <aside className="w-52 flex-shrink-0 bg-white rounded-xl border border-slate-100 shadow-sm overflow-y-auto p-2 max-h-[calc(100vh-280px)]">
+        <aside className="w-52 flex-shrink-0 bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-y-auto p-2 max-h-[calc(100vh-280px)]">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1 mb-1">{t('manager.slots.locationLabel')}</p>
 
           {loading ? (
@@ -469,8 +469,8 @@ const ManagerSlots = () => {
                     setSelBuilding(building.name)
                     setSelFloor(null); setSelZone(null)
                   }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all
-                    ${selBuilding === building.name && !selFloor ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all
+                    ${selBuilding === building.name && !selFloor ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40' : 'text-slate-600 hover:bg-slate-100'}`}>
                   <Building2 size={13} className={selBuilding === building.name && !selFloor ? 'text-blue-100' : 'text-slate-400'} />
                   <span className="flex-1 truncate text-xs font-semibold">
                     {building.name.split(' - ').slice(-1)[0] || building.name}
@@ -494,8 +494,8 @@ const ManagerSlots = () => {
                           setExpandedFloors(prev => ({ ...prev, [key]: !prev[key] }))
                           setSelBuilding(building.name); setSelFloor(floor.name); setSelZone(null)
                         }}
-                        className={`w-full flex items-center gap-2 pl-6 pr-3 py-1.5 rounded-lg text-left transition-all
-                          ${selFloor === floor.name && selBuilding === building.name && !selZone ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+                        className={`w-full flex items-center gap-2 pl-6 pr-3 py-1.5 rounded-xl text-left transition-all
+                          ${selFloor === floor.name && selBuilding === building.name && !selZone ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40' : 'text-slate-500 font-medium hover:bg-slate-100'}`}>
                         <Layers size={12} className="text-slate-300 flex-shrink-0" />
                         <span className="flex-1 truncate text-xs font-medium">{floor.name}</span>
                         <span className="text-[10px] text-slate-400 font-bold">{fAvail}</span>
@@ -509,8 +509,8 @@ const ManagerSlots = () => {
                         return (
                           <button key={zone.name}
                             onClick={() => { setSelBuilding(building.name); setSelFloor(floor.name); setSelZone(zone.name); setSelectedSlotId(null) }}
-                            className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-left transition-all
-                              ${isAct ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}>
+                            className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-xl text-left transition-all
+                              ${isAct ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40' : 'text-slate-500 font-medium hover:bg-slate-100'}`}>
                             <Grid3X3 size={11} className={isAct ? 'text-blue-100' : 'text-slate-300'} />
                             <span className="flex-1 truncate text-[11px] font-medium">
                               {zone.name.split(' ').slice(-2).join(' ')}
@@ -531,7 +531,7 @@ const ManagerSlots = () => {
         <div className="flex-1 flex flex-col gap-3 min-w-0">
 
           {/* Breadcrumb + zone info */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm px-4 py-3 flex items-center justify-between gap-4">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] px-4 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-1.5 text-xs text-slate-400 flex-wrap">
               {selBuilding && <>
                 <Building2 size={11} className="text-blue-400" />
@@ -554,12 +554,12 @@ const ManagerSlots = () => {
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input value={search} onChange={e => setSearch(e.target.value)}
                 placeholder={t('manager.slots.filters.searchPlaceholder')}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all" />
+                className="w-full pl-9 pr-4 py-2.5 rounded-3xl border border-slate-200 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all" />
             </div>
           )}
 
           {/* Content area */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex-1 overflow-hidden">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex-1 overflow-hidden">
             {loading ? (
               <div className="flex justify-center py-16">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
@@ -596,7 +596,7 @@ const ManagerSlots = () => {
             ) : (
               /* LIST VIEW */
               <div className="overflow-auto max-h-[calc(100vh-380px)]">
-                <table className="min-w-full text-left text-sm text-slate-700">
+                <table className="min-w-full text-left text-sm text-slate-700 font-bold">
                   <thead className="bg-slate-50 border-b border-slate-100 sticky top-0 z-10">
                     <tr>
                       {['Mã slot', 'Vị trí', 'Loại xe', 'Trạng thái', 'Xe hiện tại', 'Đỗ từ', ''].map(col => (
@@ -608,10 +608,10 @@ const ManagerSlots = () => {
                     {displaySlots.length === 0 ? (
                       <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-300 text-sm">{t('manager.slots.empty')}</td></tr>
                     ) : displaySlots.map(slot => (
-                      <tr key={slot.SlotID} className="hover:bg-slate-50 transition-colors">
+                      <tr key={slot.SlotID} className="hover:bg-slate-50/60 transition-colors">
                         <td className="px-4 py-3 font-black text-slate-900">{slot.SlotCode}</td>
                         <td className="px-4 py-3">
-                          <p className="font-semibold text-slate-700 text-xs">{slot.ZoneName}</p>
+                          <p className="font-semibold text-slate-700 font-bold text-xs">{slot.ZoneName}</p>
                           <p className="text-[11px] text-slate-400">{slot.FloorName} · {slot.BuildingName}</p>
                         </td>
                         <td className="px-4 py-3">
@@ -628,7 +628,7 @@ const ManagerSlots = () => {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button onClick={() => setSelectedSlotId(slot.SlotID)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all">
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-all">
                             Chi tiết <ChevronRight size={11} />
                           </button>
                         </td>

@@ -13,38 +13,38 @@ const StaffUserGuide = () => {
 
   return (
     <div className="animate-in fade-in duration-500 max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-3 border-b border-gray-200 dark:border-gray-800 pb-4">
-        <Link to="/staff/support" className="p-2 -ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+      <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+        <Link to="/staff/support" className="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition">
           <ChevronLeft size={20} />
         </Link>
         <BookOpen className="text-emerald-600 dark:text-emerald-500" size={24} />
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('staff.userGuide.title')}</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('staff.userGuide.title')}</h1>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-8 prose prose-blue dark:prose-invert max-w-none">
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white">{t('staff.userGuide.section1Title')}</h3>
-        <p className="dark:text-gray-300">{t('staff.userGuide.section1Body')}</p>
-        <ul className="dark:text-gray-300">
-          <li><Trans i18nKey="staff.userGuide.section1Item1" components={{ strong: <strong className="dark:text-gray-100" /> }} /></li>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 prose prose-blue dark:prose-invert max-w-none">
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{t('staff.userGuide.section1Title')}</h3>
+        <p className="dark:text-slate-300">{t('staff.userGuide.section1Body')}</p>
+        <ul className="dark:text-slate-300">
+          <li><Trans i18nKey="staff.userGuide.section1Item1" components={{ strong: <strong className="dark:text-slate-100" /> }} /></li>
           <li>{t('staff.userGuide.section1Item2')}</li>
-          <li><Trans i18nKey="staff.userGuide.section1Item3" components={{ strong: <strong className="dark:text-gray-100" /> }} /></li>
+          <li><Trans i18nKey="staff.userGuide.section1Item3" components={{ strong: <strong className="dark:text-slate-100" /> }} /></li>
         </ul>
 
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8">{t('staff.userGuide.section2Title')}</h3>
-        <p className="dark:text-gray-300">{t('staff.userGuide.section2Body')}</p>
-        <ul className="dark:text-gray-300">
-          <li><Trans i18nKey="staff.userGuide.section2Item1" components={{ strong: <strong className="dark:text-gray-100" /> }} /></li>
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8">{t('staff.userGuide.section2Title')}</h3>
+        <p className="dark:text-slate-300">{t('staff.userGuide.section2Body')}</p>
+        <ul className="dark:text-slate-300">
+          <li><Trans i18nKey="staff.userGuide.section2Item1" components={{ strong: <strong className="dark:text-slate-100" /> }} /></li>
           <li>{t('staff.userGuide.section2Item2')}</li>
           <li>{t('staff.userGuide.section2Item3')}</li>
         </ul>
 
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8">{t('staff.userGuide.section3Title')}</h3>
-        <p className="dark:text-gray-300">{t('staff.userGuide.section3Body')}</p>
-        <ul className="dark:text-gray-300">
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8">{t('staff.userGuide.section3Title')}</h3>
+        <p className="dark:text-slate-300">{t('staff.userGuide.section3Body')}</p>
+        <ul className="dark:text-slate-300">
           <li>{t('staff.userGuide.section3Item1')}</li>
           <li>{t('staff.userGuide.section3Item2')}</li>
           <li>{t('staff.userGuide.section3Item3')}</li>
-          <li><Trans i18nKey="staff.userGuide.section3Item4" components={{ strong: <strong className="dark:text-gray-100" /> }} /></li>
+          <li><Trans i18nKey="staff.userGuide.section3Item4" components={{ strong: <strong className="dark:text-slate-100" /> }} /></li>
         </ul>
       </div>
     </div>

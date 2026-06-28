@@ -96,35 +96,35 @@ const CashConfirmDialog = ({ session, onConfirm, onCancel, loading }) => {
           <p className="text-white font-black text-lg">{t('staff.paymentHistory.cashDialog.title')}</p>
         </div>
         <div className="p-6 space-y-4">
-          <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-2 text-sm">
+          <div className="bg-orange-50 border border-orange-100 rounded-3xl p-4 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">{t('staff.paymentHistory.cashDialog.fieldSession')}</span>
+              <span className="text-slate-500">{t('staff.paymentHistory.cashDialog.fieldSession')}</span>
               <span className="font-bold font-mono">{session.SessionCode}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">{t('staff.paymentHistory.cashDialog.fieldPlate')}</span>
+              <span className="text-slate-500">{t('staff.paymentHistory.cashDialog.fieldPlate')}</span>
               <span className="font-bold tracking-wider">{session.PlateNumber}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">{t('staff.paymentHistory.cashDialog.fieldPrepaid')}</span>
+              <span className="text-slate-500">{t('staff.paymentHistory.cashDialog.fieldPrepaid')}</span>
               <span className="font-bold text-green-600">{formatVND(session.PrepaidAmount)}</span>
             </div>
             <div className="flex justify-between border-t border-orange-200 pt-2">
-              <span className="font-bold text-gray-700">{t('staff.paymentHistory.cashDialog.fieldDue')}</span>
+              <span className="font-bold text-slate-700">{t('staff.paymentHistory.cashDialog.fieldDue')}</span>
               <span className="font-black text-orange-600 text-base">{formatVND(session.SurchargeAmount)}</span>
             </div>
           </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-2 text-xs text-yellow-800">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex gap-2 text-xs text-yellow-800">
             <Info size={14} className="shrink-0 mt-0.5" />
             <span dangerouslySetInnerHTML={{ __html: t('staff.paymentHistory.cashDialog.hint', { amount: `<strong>${formatVND(session.SurchargeAmount)}</strong>` }) }} />
           </div>
           <div className="flex gap-3">
             <button onClick={onCancel} disabled={loading}
-              className="flex-1 py-2.5 border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 text-sm">
+              className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-bold rounded-3xl hover:bg-slate-50 text-sm">
               {t('staff.paymentHistory.cashDialog.cancel')}
             </button>
             <button onClick={onConfirm} disabled={loading}
-              className="flex-1 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2">
+              className="flex-1 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-bold rounded-3xl text-sm flex items-center justify-center gap-2">
               {loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
               {t('staff.paymentHistory.cashDialog.confirm')}
             </button>
@@ -184,7 +184,7 @@ const BankingConfirmDialog = ({ session, onConfirm, onCancel, onSwitchCash, load
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-        <div className={`p-5 text-center ${hasTransfer ? 'bg-blue-600' : 'bg-gray-700'}`}>
+        <div className={`p-5 text-center ${hasTransfer ? 'bg-blue-600' : 'bg-slate-700'}`}>
           <QrCode size={28} className="mx-auto text-white mb-2" />
           <p className="text-white font-black text-lg">{t('staff.paymentHistory.bankDialog.title')}</p>
           <p className="text-white/70 text-xs mt-1">
@@ -195,49 +195,49 @@ const BankingConfirmDialog = ({ session, onConfirm, onCancel, onSwitchCash, load
           {checking ? (
             <div className="flex flex-col items-center py-6 gap-3">
               <Loader2 size={28} className="animate-spin text-blue-400" />
-              <p className="text-sm text-gray-500">{t('staff.paymentHistory.bankDialog.checking')}</p>
+              <p className="text-sm text-slate-500">{t('staff.paymentHistory.bankDialog.checking')}</p>
             </div>
           ) : hasTransfer ? (
             <>
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2 text-sm">
+              <div className="bg-green-50 border border-green-200 rounded-3xl p-4 space-y-2 text-sm">
                 <div className="flex items-center gap-2 mb-2">
                   <CheckCircle2 size={16} className="text-green-600" />
                   <span className="font-bold text-green-700">{t('staff.paymentHistory.bankDialog.receivedTag')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">{t('staff.paymentHistory.bankDialog.fieldSession')}</span>
+                  <span className="text-slate-500">{t('staff.paymentHistory.bankDialog.fieldSession')}</span>
                   <span className="font-bold font-mono">{session.SessionCode}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">{t('staff.paymentHistory.bankDialog.fieldPlate')}</span>
+                  <span className="text-slate-500">{t('staff.paymentHistory.bankDialog.fieldPlate')}</span>
                   <span className="font-bold">{session.PlateNumber}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">{t('staff.paymentHistory.bankDialog.fieldPrepaid')}</span>
+                  <span className="text-slate-500">{t('staff.paymentHistory.bankDialog.fieldPrepaid')}</span>
                   <span className="font-bold text-green-600">{formatVND(paymentInfo?.prepaidAmount)}</span>
                 </div>
                 {paymentInfo?.prepaidAt && (
                   <div className="flex justify-between">
-                    <span className="text-gray-500">{t('staff.paymentHistory.bankDialog.fieldTime')}</span>
+                    <span className="text-slate-500">{t('staff.paymentHistory.bankDialog.fieldTime')}</span>
                     <span className="font-medium">{formatDateTime(paymentInfo.prepaidAt)}</span>
                   </div>
                 )}
                 <div className="flex justify-between border-t border-green-200 pt-2">
-                  <span className="font-bold text-gray-700">{t('staff.paymentHistory.bankDialog.fieldSurchargeDue')}</span>
+                  <span className="font-bold text-slate-700">{t('staff.paymentHistory.bankDialog.fieldSurchargeDue')}</span>
                   <span className="font-black text-orange-600">{formatVND(paymentInfo?.surchargeAmount)}</span>
                 </div>
               </div>
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex gap-2 text-xs text-blue-800">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex gap-2 text-xs text-blue-800">
                 <Info size={14} className="shrink-0 mt-0.5" />
                 <span dangerouslySetInnerHTML={{ __html: t('staff.paymentHistory.bankDialog.hintReceived', { amount: `<strong>${formatVND(paymentInfo?.surchargeAmount)}</strong>` }) }} />
               </div>
               <div className="flex gap-3">
                 <button onClick={onCancel} disabled={loading}
-                  className="flex-1 py-2.5 border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 text-sm">
+                  className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-bold rounded-3xl hover:bg-slate-50 text-sm">
                   {t('staff.paymentHistory.bankDialog.cancel')}
                 </button>
                 <button onClick={onConfirm} disabled={loading}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2">
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-3xl text-sm flex items-center justify-center gap-2">
                   {loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                   {t('staff.paymentHistory.bankDialog.confirm')}
                 </button>
@@ -245,43 +245,43 @@ const BankingConfirmDialog = ({ session, onConfirm, onCancel, onSwitchCash, load
             </>
           ) : (
             <>
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
+              <div className="bg-red-50 border border-red-200 rounded-3xl p-4 space-y-2">
                 <div className="flex items-center gap-2 mb-2">
                   <XCircle size={16} className="text-red-500" />
                   <span className="font-bold text-red-700 text-sm">{t('staff.paymentHistory.bankDialog.notReceivedTag')}</span>
                 </div>
                 <p className="text-xs text-red-600" dangerouslySetInnerHTML={{ __html: t('staff.paymentHistory.bankDialog.notReceivedBody', { amount: `<strong>${formatVND(session.SurchargeAmount)}</strong>` }) }} />
               </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm space-y-2">
-                <p className="font-bold text-gray-700 text-xs uppercase tracking-wider mb-2">{t('staff.paymentHistory.bankDialog.sessionInfo')}</p>
+              <div className="bg-slate-50 border border-slate-100 rounded-3xl p-4 text-sm space-y-2">
+                <p className="font-bold text-slate-700 text-xs uppercase tracking-wider mb-2">{t('staff.paymentHistory.bankDialog.sessionInfo')}</p>
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">{t('staff.paymentHistory.bankDialog.fieldSession')}</span>
+                  <span className="text-slate-500">{t('staff.paymentHistory.bankDialog.fieldSession')}</span>
                   <span className="font-bold font-mono">{session.SessionCode}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">{t('staff.paymentHistory.bankDialog.fieldPlate')}</span>
+                  <span className="text-slate-500">{t('staff.paymentHistory.bankDialog.fieldPlate')}</span>
                   <span className="font-bold">{session.PlateNumber}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">{t('staff.paymentHistory.bankDialog.fieldSurcharge')}</span>
+                  <span className="text-slate-500">{t('staff.paymentHistory.bankDialog.fieldSurcharge')}</span>
                   <span className="font-black text-orange-600">{formatVND(session.SurchargeAmount)}</span>
                 </div>
               </div>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-2 text-xs text-yellow-800">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex gap-2 text-xs text-yellow-800">
                 <AlertTriangle size={14} className="shrink-0 mt-0.5 text-yellow-600" />
                 <span>{t('staff.paymentHistory.bankDialog.hintAction')}</span>
               </div>
-              <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
                 <Loader2 size={11} className="animate-spin" />
                 {t('staff.paymentHistory.bankDialog.waiting')}
               </div>
               <div className="flex gap-3">
                 <button onClick={onCancel}
-                  className="flex-1 py-2.5 border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 text-sm flex items-center justify-center gap-1.5">
+                  className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-bold rounded-3xl hover:bg-slate-50 text-sm flex items-center justify-center gap-1.5">
                   <X size={13} /> {t('staff.paymentHistory.bankDialog.reject')}
                 </button>
                 <button onClick={onSwitchCash}
-                  className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-1.5">
+                  className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/20 hover:shadow-orange-500/40 font-bold rounded-3xl text-sm flex items-center justify-center gap-1.5">
                   <Banknote size={13} /> {t('staff.paymentHistory.bankDialog.switchCash')}
                 </button>
               </div>
@@ -297,7 +297,7 @@ const BankingConfirmDialog = ({ session, onConfirm, onCancel, onSwitchCash, load
 const SurchargeCard = ({ session, onConfirmCash, onConfirmBanking, onPrint }) => {
   const { t } = useTranslation()
   return (
-    <div className="bg-white border border-orange-200 rounded-xl shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-all">
+    <div className="bg-white border border-orange-200 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 flex flex-col gap-3 hover:shadow-md transition-all">
       <div className="flex items-start justify-between gap-2">
         <div>
           <span className="text-blue-600 font-black text-sm font-mono">{session.SessionCode}</span>
@@ -308,50 +308,50 @@ const SurchargeCard = ({ session, onConfirmCash, onConfirmBanking, onPrint }) =>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-xs text-gray-400">{t('staff.paymentHistory.surchargeCard.needToCollect')}</p>
+          <p className="text-xs text-slate-400">{t('staff.paymentHistory.surchargeCard.needToCollect')}</p>
           <p className="text-xl font-black text-orange-600">{formatVND(session.SurchargeAmount)}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <div className="bg-gray-800 text-white rounded-lg px-3 py-1.5 flex items-center gap-2">
+        <div className="bg-slate-800 text-white rounded-xl px-3 py-1.5 flex items-center gap-2">
           <Car size={12} />
           <span className="font-black text-sm tracking-wider">{session.PlateNumber}</span>
         </div>
-        <span className="text-xs text-gray-500">{session.VehicleName}</span>
+        <span className="text-xs text-slate-500">{session.VehicleName}</span>
       </div>
-      <div className="bg-orange-50 rounded-lg p-3 space-y-1.5 text-xs">
+      <div className="bg-orange-50 rounded-xl p-3 space-y-1.5 text-xs">
         <div className="flex justify-between">
-          <span className="text-gray-400">{t('staff.paymentHistory.surchargeCard.prepaidQr')}</span>
+          <span className="text-slate-400">{t('staff.paymentHistory.surchargeCard.prepaidQr')}</span>
           <span className="font-bold text-green-600">{formatVND(session.PrepaidAmount)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-400">{t('staff.paymentHistory.surchargeCard.realFee')}</span>
-          <span className="font-bold text-gray-700">{formatVND(session.FinalAmount)}</span>
+          <span className="text-slate-400">{t('staff.paymentHistory.surchargeCard.realFee')}</span>
+          <span className="font-bold text-slate-700">{formatVND(session.FinalAmount)}</span>
         </div>
         <div className="flex justify-between border-t border-orange-200 pt-1.5">
-          <span className="font-bold text-gray-600">{t('staff.paymentHistory.surchargeCard.surcharge')}</span>
+          <span className="font-bold text-slate-600">{t('staff.paymentHistory.surchargeCard.surcharge')}</span>
           <span className="font-black text-orange-600">{formatVND(session.SurchargeAmount)}</span>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 text-xs text-gray-400">
+      <div className="flex items-center gap-1.5 text-xs text-slate-400">
         <MapPin size={11} />
         <span>{session.SlotCode} · {session.ZoneName} · {session.FloorName}</span>
       </div>
-      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+      <div className="flex items-center gap-1.5 text-xs text-slate-500">
         <span className="font-medium">{session.DriverName}</span>
-        {session.PhoneNumber && <span className="text-gray-400">· {session.PhoneNumber}</span>}
+        {session.PhoneNumber && <span className="text-slate-400">· {session.PhoneNumber}</span>}
       </div>
       <div className="flex gap-2 mt-1">
         <button onClick={() => onConfirmCash(session)}
-          className="flex-1 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors">
+          className="flex-1 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors">
           <Banknote size={13} /> {t('staff.paymentHistory.surchargeCard.cash')}
         </button>
         <button onClick={() => onConfirmBanking(session)}
-          className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors">
+          className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors">
           <QrCode size={13} /> {t('staff.paymentHistory.surchargeCard.banking')}
         </button>
         <button onClick={() => onPrint(session)}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors" title={t('staff.paymentHistory.surchargeCard.printTitle')}>
+          className="px-3 py-2 border border-slate-100 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors" title={t('staff.paymentHistory.surchargeCard.printTitle')}>
           <Printer size={13} />
         </button>
       </div>
@@ -370,9 +370,9 @@ const PaymentBadge = ({ status, surchargeStatus }) => {
   const map = {
     Completed: { label: t('staff.paymentHistory.badges.completed'), cls: 'bg-green-100 text-green-700 border-green-200' },
     Prepaid: { label: t('staff.paymentHistory.badges.prepaid'), cls: 'bg-blue-100 text-blue-700 border-blue-200' },
-    Pending: { label: t('staff.paymentHistory.badges.pending'), cls: 'bg-gray-100 text-gray-600 border-gray-200' },
+    Pending: { label: t('staff.paymentHistory.badges.pending'), cls: 'bg-slate-100 text-slate-600 border-slate-100' },
     Failed: { label: t('staff.paymentHistory.badges.failed'), cls: 'bg-red-100 text-red-600 border-red-200' },
-    Cancelled: { label: t('staff.paymentHistory.badges.cancelled'), cls: 'bg-gray-100 text-gray-500 border-gray-200' }
+    Cancelled: { label: t('staff.paymentHistory.badges.cancelled'), cls: 'bg-slate-100 text-slate-500 border-slate-100' }
   }
   const s = map[status] || map.Pending
   return <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${s.cls}`}>{s.label}</span>
@@ -383,26 +383,26 @@ const HistoryRow = ({ session, onPrint }) => {
   const { t } = useTranslation()
   const minuteLabel = t('staff.paymentHistory.minute')
   return (
-    <tr className="hover:bg-gray-50/50 transition-colors">
+    <tr className="hover:bg-slate-50/50 transition-colors">
       <td className="py-3 px-4">
         <p className="font-bold text-blue-600 text-sm font-mono">{session.SessionCode}</p>
-        <p className="text-xs text-gray-400">{formatDateTime(session.EntryTime)}</p>
+        <p className="text-xs text-slate-400">{formatDateTime(session.EntryTime)}</p>
       </td>
       <td className="py-3 px-4">
-        <div className="bg-gray-800 text-white rounded px-2 py-0.5 text-xs font-bold tracking-wider inline-block">
+        <div className="bg-slate-800 text-white rounded px-2 py-0.5 text-xs font-bold tracking-wider inline-block">
           {session.PlateNumber}
         </div>
-        <p className="text-xs text-gray-400 mt-0.5">{session.VehicleName}</p>
+        <p className="text-xs text-slate-400 mt-0.5">{session.VehicleName}</p>
       </td>
       <td className="py-3 px-4">
-        <p className="text-sm font-medium text-gray-700">{session.DriverName || '—'}</p>
-        <p className="text-xs text-gray-400">{session.SlotCode}</p>
+        <p className="text-sm font-medium text-slate-700">{session.DriverName || '—'}</p>
+        <p className="text-xs text-slate-400">{session.SlotCode}</p>
       </td>
-      <td className="py-3 px-4 text-xs text-gray-500">
+      <td className="py-3 px-4 text-xs text-slate-500">
         {formatDuration(session.EntryTime, session.ExitTime, minuteLabel)}
       </td>
       <td className="py-3 px-4">
-        <p className="font-black text-gray-800 text-sm">{formatVND(session.FinalAmount || session.Amount)}</p>
+        <p className="font-black text-slate-800 text-sm">{formatVND(session.FinalAmount || session.Amount)}</p>
         {Number(session.PrepaidAmount) > 0 && (
           <p className="text-xs text-green-600">{t('staff.paymentHistory.row.qrPrefix')} {formatVND(session.PrepaidAmount)}</p>
         )}
@@ -413,10 +413,10 @@ const HistoryRow = ({ session, onPrint }) => {
       <td className="py-3 px-4">
         <PaymentBadge status={session.PaymentStatus} surchargeStatus={session.SurchargeStatus} />
       </td>
-      <td className="py-3 px-4 text-xs text-gray-500">{session.PaymentMethod || '—'}</td>
+      <td className="py-3 px-4 text-xs text-slate-500">{session.PaymentMethod || '—'}</td>
       <td className="py-3 px-4">
         <button onClick={() => onPrint(session)}
-          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title={t('staff.paymentHistory.row.printTitle')}>
+          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title={t('staff.paymentHistory.row.printTitle')}>
           <Printer size={15} />
         </button>
       </td>
@@ -516,17 +516,17 @@ const SurchargeTab = () => {
       <div className="space-y-5">
         {sessions.length > 0 && (
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 text-center">
+            <div className="bg-orange-50 border border-orange-100 rounded-3xl p-4 text-center">
               <p className="text-2xl font-black text-orange-600">{sessions.length}</p>
               <p className="text-xs text-orange-700 font-semibold mt-1">{t('staff.paymentHistory.surcharge.pendingCount')}</p>
             </div>
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
+            <div className="bg-blue-50 border border-blue-100 rounded-3xl p-4 text-center">
               <p className="text-xl font-black text-blue-600">{formatVND(totalSurcharge)}</p>
               <p className="text-xs text-blue-700 font-semibold mt-1">{t('staff.paymentHistory.surcharge.totalDue')}</p>
             </div>
-            <div className="bg-white border border-gray-100 rounded-xl p-4 flex items-center justify-center">
+            <div className="bg-white border border-slate-50 rounded-3xl p-4 flex items-center justify-center">
               <button onClick={reload} disabled={loading}
-                className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 font-semibold">
+                className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 font-semibold">
                 <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} /> {t('staff.paymentHistory.surcharge.refresh')}
               </button>
             </div>
@@ -538,10 +538,10 @@ const SurchargeTab = () => {
             <Loader2 className="animate-spin text-blue-400" size={28} />
           </div>
         ) : sessions.length === 0 ? (
-          <div className="bg-white rounded-xl border border-dashed border-gray-200 p-16 text-center">
+          <div className="bg-white rounded-3xl border border-dashed border-slate-100 p-16 text-center">
             <CheckCircle2 size={40} className="text-green-300 mx-auto mb-3" />
-            <p className="text-base font-bold text-gray-700">{t('staff.paymentHistory.surcharge.emptyTitle')}</p>
-            <p className="text-sm text-gray-400 mt-1">{t('staff.paymentHistory.surcharge.emptyDesc')}</p>
+            <p className="text-base font-bold text-slate-700">{t('staff.paymentHistory.surcharge.emptyTitle')}</p>
+            <p className="text-sm text-slate-400 mt-1">{t('staff.paymentHistory.surcharge.emptyDesc')}</p>
             <button onClick={reload} className="mt-4 text-sm text-blue-600 hover:underline flex items-center gap-1 mx-auto">
               <RefreshCcw size={13} /> {t('staff.paymentHistory.surcharge.refresh')}
             </button>
@@ -618,17 +618,17 @@ const HistoryTab = () => {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div className="bg-white rounded-3xl border border-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5">
         <div className="flex flex-wrap gap-3 mb-3">
           <div className="relative flex-1 min-w-50">
-            <Search className="absolute left-3.5 top-3 text-gray-400" size={15} />
+            <Search className="absolute left-3.5 top-3 text-slate-400" size={15} />
             <input type="text" value={keyword} onChange={e => setKeyword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
               placeholder={t('staff.paymentHistory.history.searchPlaceholder')}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 text-sm" />
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 text-sm" />
           </div>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500">
+            className="border border-slate-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500">
             <option value="all">{t('staff.paymentHistory.history.filterAll')}</option>
             <option value="cash">{t('staff.paymentHistory.history.filterCash')}</option>
             <option value="banking">{t('staff.paymentHistory.history.filterBanking')}</option>
@@ -636,44 +636,44 @@ const HistoryTab = () => {
             <option value="surcharge">{t('staff.paymentHistory.history.filterSurcharge')}</option>
           </select>
           <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500" />
-          <span className="text-gray-400 self-center text-sm">→</span>
+            className="border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500" />
+          <span className="text-slate-400 self-center text-sm">→</span>
           <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500" />
+            className="border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500" />
           <button onClick={handleSearch} disabled={loading}
-            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+            className="px-5 py-2.5 bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} {t('staff.paymentHistory.history.search')}
           </button>
           {(keyword || fromDate || toDate || statusFilter !== 'all') && (
             <button onClick={() => { setKeyword(''); setFromDate(''); setToDate(''); setStatusFilter('all') }}
-              className="px-4 py-2.5 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1.5">
+              className="px-4 py-2.5 border border-slate-300 text-slate-600 rounded-xl text-sm hover:bg-slate-50 flex items-center gap-1.5">
               <X size={13} /> {t('staff.paymentHistory.history.clear')}
             </button>
           )}
         </div>
         {filtered.length > 0 && (
-          <div className="flex items-center gap-4 text-sm text-gray-500 border-t border-gray-100 pt-3">
+          <div className="flex items-center gap-4 text-sm text-slate-500 border-t border-slate-50 pt-3">
             <span>{t('staff.paymentHistory.history.txCount', { n: filtered.length })}</span>
             <span className="flex items-center gap-1">
               <TrendingUp size={13} className="text-green-500" />
-              {t('staff.paymentHistory.history.total')} <strong className="text-gray-800 ml-1">{formatVND(totalRevenue)}</strong>
+              {t('staff.paymentHistory.history.total')} <strong className="text-slate-800 ml-1">{formatVND(totalRevenue)}</strong>
             </span>
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-3xl border border-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 className="animate-spin text-blue-400" size={28} /></div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
+          <div className="text-center py-16 text-slate-400">
             <FileText size={36} className="mx-auto mb-3 opacity-30" />
             <p className="text-sm font-medium">{t('staff.paymentHistory.history.empty')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100">
+              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-50">
                 <tr>
                   <th className="py-3 px-4">{t('staff.paymentHistory.history.colSession')}</th>
                   <th className="py-3 px-4">{t('staff.paymentHistory.history.colPlate')}</th>
@@ -685,7 +685,7 @@ const HistoryTab = () => {
                   <th className="py-3 px-4"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-slate-50">
                 {filtered.map(s => (
                   <HistoryRow key={s.SessionID} session={s} onPrint={(sess) => printInvoice(sess, t)} />
                 ))}
@@ -719,23 +719,23 @@ export default function StaffPaymentHistory() {
   }, [tab])
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 pb-8">
+    <div className="flex flex-col h-full bg-slate-50 pb-8">
       <header className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <CreditCard size={24} className="text-blue-600" /> {t('staff.paymentHistory.title')}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">{t('staff.paymentHistory.subtitle')}</p>
+          <p className="text-sm text-slate-500 mt-1">{t('staff.paymentHistory.subtitle')}</p>
         </div>
         <button onClick={() => navigate('/staff/checkout')}
-          className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 flex items-center gap-2 shadow-sm">
+          className="px-4 py-2 bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 rounded-3xl text-sm font-bold hover:bg-blue-700 flex items-center gap-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <Receipt size={15} /> {t('staff.paymentHistory.newCheckout')}
         </button>
       </header>
 
-      <div className="flex bg-white rounded-xl border border-gray-200 shadow-sm p-1 gap-1 mb-6 w-fit">
+      <div className="flex bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-1 gap-1 mb-6 w-fit">
         <button onClick={() => setTab(0)}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${tab === 0 ? 'bg-orange-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 0 ? 'bg-orange-500 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
           }`}>
           <AlertCircle size={15} />
           {t('staff.paymentHistory.tabSurcharge')}
@@ -745,7 +745,7 @@ export default function StaffPaymentHistory() {
           )}
         </button>
         <button onClick={() => setTab(1)}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${tab === 1 ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 1 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 shadow-md' : 'text-slate-500 hover:bg-slate-50'
           }`}>
           <Clock size={15} /> {t('staff.paymentHistory.tabHistory')}
         </button>

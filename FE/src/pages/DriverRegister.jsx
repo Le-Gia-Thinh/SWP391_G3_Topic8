@@ -7,12 +7,8 @@
 // src/pages/DriverRegister.jsx
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Alert, Box, Button, Checkbox, FormControl, FormControlLabel,
-  IconButton, InputAdornment, MenuItem, Paper, Select, TextField
-} from '@mui/material'
-import { Eye, EyeOff, Info, User } from 'lucide-react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { Eye, EyeOff, Info, User, ArrowLeft, ShieldCheck, Mail, Lock, Phone, Car } from 'lucide-react'
+import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { registerAPI } from '../apis/authApi'
 import { useAuth } from '../contexts/AuthContext'
@@ -29,54 +25,6 @@ const INITIAL_FORM = {
   plateNumber: '',
   vehicleType: 'motorbike', // key i18n, không phải label
   acceptedTerms: false
-}
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const sx = {
-  input: {
-    '& .MuiOutlinedInput-root': {
-      minHeight: 58,
-      borderRadius: '0.75rem',
-      backgroundColor: '#f9fafb',
-      fontSize: '0.875rem',
-      transition: 'all 0.2s ease',
-      '& fieldset': { borderColor: '#e5e7eb' },
-      '&:hover fieldset': { borderColor: '#d1d5db' },
-      '&.Mui-focused': { backgroundColor: '#ffffff' },
-      '&.Mui-focused fieldset': { borderWidth: 2, borderColor: '#3b82f6' },
-      '& input:-webkit-autofill': {
-        WebkitBoxShadow: '0 0 0 100px white inset',
-        WebkitTextFillColor: 'black'
-      }
-    },
-    '& .MuiFormHelperText-root': { marginLeft: 0, fontSize: '0.75rem' }
-  },
-  primaryBtn: {
-    height: 56,
-    borderRadius: '0.75rem',
-    backgroundColor: '#2563eb',
-    boxShadow: '0 10px 15px -3px rgb(191 219 254), 0 4px 6px -4px rgb(191 219 254)',
-    fontWeight: 600,
-    textTransform: 'none',
-    fontSize: '1rem',
-    '&:hover': { backgroundColor: '#1d4ed8' },
-    '&.Mui-disabled': { backgroundColor: '#93c5fd', color: '#fff' }
-  },
-  secondaryBtn: {
-    borderRadius: '0.5rem',
-    color: '#4b5563',
-    backgroundColor: '#f3f4f6',
-    fontWeight: 500,
-    textTransform: 'none',
-    px: 3,
-    py: 1,
-    '&:hover': { color: '#2563eb', backgroundColor: '#e5e7eb' }
-  },
-  checkbox: {
-    color: '#9ca3af',
-    '&.Mui-checked': { color: '#2563eb' }
-  }
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────────
@@ -115,43 +63,51 @@ function validate(data, t) {
 function FieldItem({ field, value, error, onChange, showPassword, onTogglePassword }) {
   const isPassword = field.type === 'password'
   const inputType = isPassword && showPassword ? 'text' : (field.type || 'text')
+  
+  const getIcon = () => {
+    switch(field.name) {
+      case 'fullName': return <User className="w-5 h-5 text-slate-400" />
+      case 'phoneNumber': return <Phone className="w-5 h-5 text-slate-400" />
+      case 'email': return <Mail className="w-5 h-5 text-slate-400" />
+      case 'password': 
+      case 'confirmPassword': return <Lock className="w-5 h-5 text-slate-400" />
+      case 'plateNumber': return <Car className="w-5 h-5 text-slate-400" />
+      default: return null
+    }
+  }
 
   return (
-    <Box className={field.fullWidth ? 'sm:col-span-2' : ''}>
-      <Box component="label" className="block text-xs font-bold text-gray-700 mb-1.5">
+    <div className={field.fullWidth ? 'sm:col-span-2' : ''}>
+      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5 pl-1">
         {field.label}
-      </Box>
-      <TextField
-        fullWidth
-        name={field.name}
-        type={inputType}
-        value={value}
-        onChange={onChange}
-        placeholder={field.placeholder}
-        error={Boolean(error)}
-        helperText={error || ' '}
-        sx={sx.input}
-        InputProps={{
-          startAdornment: field.hasUserIcon
-            ? <InputAdornment position="start"><User className="w-4 h-4 text-gray-400" /></InputAdornment>
-            : undefined,
-          endAdornment: isPassword
-            ? (
-              <InputAdornment position="end">
-                <IconButton
-                  edge="end"
-                  type="button"
-                  onClick={onTogglePassword}
-                  aria-label="toggle password visibility"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </IconButton>
-              </InputAdornment>
-            )
-            : undefined
-        }}
-      />
-    </Box>
+      </label>
+      <div className="relative">
+        <div className="absolute left-3.5 top-1/2 -translate-y-1/2">
+          {getIcon()}
+        </div>
+        <input
+          name={field.name}
+          type={inputType}
+          value={value}
+          onChange={onChange}
+          placeholder={field.placeholder}
+          className={`w-full pl-11 pr-10 py-3 rounded-xl border text-sm font-medium outline-none transition-all shadow-inner
+            bg-slate-50 dark:bg-slate-700/50 dark:text-white
+            focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 dark:focus:ring-blue-900/30
+            ${error ? 'border-red-400 focus:border-red-500 bg-red-50/50' : 'border-slate-200/60 dark:border-slate-600 focus:border-blue-500 hover:border-slate-300 dark:hover:border-slate-500'}`}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={onTogglePassword}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        )}
+      </div>
+      {error && <p className="mt-1.5 text-xs font-medium text-red-500 pl-1">{error}</p>}
+    </div>
   )
 }
 
@@ -237,54 +193,60 @@ export default function DriverRegister() {
   }
 
   return (
-    <Box className="flex justify-center py-12 px-4 bg-[#fbf9f1]/50">
-      <Paper
-        elevation={0}
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-10 relative"
+    <div className="min-h-screen flex items-center justify-center bg-[#fbf9f1] dark:bg-slate-900 p-4 py-12 transition-colors duration-300 relative overflow-hidden">
+      
+      {/* Background glow effects */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-400/20 rounded-full blur-[120px] mix-blend-multiply opacity-50 dark:opacity-20 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-emerald-400/20 rounded-full blur-[120px] mix-blend-multiply opacity-50 dark:opacity-20 pointer-events-none" />
+
+      <Link
+        to="/"
+        className="absolute top-6 left-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-white/50 dark:bg-slate-800/50 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/60 dark:border-slate-700/60 transition-all hover:shadow-sm z-10"
       >
+        <ArrowLeft size={16} />
+        {t('auth.login.backToHome', 'Quay lại trang chủ')}
+      </Link>
+
+      <div className="w-full max-w-2xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-slate-200/60 dark:border-slate-700/60 p-8 sm:p-12 transition-all duration-300 relative z-10">
 
         {/* Header */}
-        <Box className="text-center mb-8">
-          <Box component="h1" className="text-2xl font-bold text-gray-900 mb-2">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2">
             {t('auth.register.title')}
-          </Box>
-          <Box component="p" className="text-sm text-gray-500">
+          </h1>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
             {t('auth.register.subtitle')}
-          </Box>
-        </Box>
+          </p>
+        </div>
 
         {/* Section label */}
-        <Box className="flex items-center gap-4 mb-8 bg-blue-50/50 p-4 rounded-xl border border-blue-100/50">
-          <Box className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-            <User className="w-5 h-5" />
-          </Box>
-          <Box>
-            <Box component="h2" className="font-bold text-gray-900 text-sm">{t('auth.register.personalInfoTitle')}</Box>
-            <Box component="p" className="text-xs text-gray-500">
+        <div className="flex items-center gap-4 mb-10 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 p-4 rounded-2xl border border-blue-100/50 dark:border-blue-800/30">
+          <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-sm border border-slate-100 dark:border-slate-700">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="font-bold text-slate-900 dark:text-white text-sm">{t('auth.register.personalInfoTitle')}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
               {t('auth.register.personalInfoSubtitle')}
-            </Box>
-          </Box>
-        </Box>
+            </p>
+          </div>
+        </div>
 
         {/* Server errors */}
         {serverErrors.length > 0 && (
-          <Alert
-            severity="error"
-            icon={<Info className="w-4 h-4" />}
-            className="mb-8 rounded-xl"
-            onClose={() => setServerErrors([])}
-          >
-            <Box component="ul" className="list-disc pl-5 space-y-1 text-xs font-medium">
+          <div className="mb-8 p-4 rounded-xl bg-red-50/50 border border-red-100 text-red-600 flex gap-3">
+            <Info className="w-5 h-5 shrink-0 mt-0.5" />
+            <ul className="list-disc pl-5 space-y-1 text-sm font-medium">
               {serverErrors.map((err, i) => (
-                <Box component="li" key={i}>{err}</Box>
+                <li key={i}>{err}</li>
               ))}
-            </Box>
-          </Alert>
+            </ul>
+          </div>
         )}
 
         {/* Form */}
-        <Box component="form" onSubmit={handleSubmit} className="space-y-5" noValidate>
-          <Box className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
 
             {FIELDS.map(field => (
               <FieldItem
@@ -298,95 +260,94 @@ export default function DriverRegister() {
               />
             ))}
 
-            {/* Vehicle type — hiển thị UI nhưng chưa lưu DB */}
-            <Box>
-              <Box component="label" className="block text-xs font-bold text-gray-700 mb-1.5">
+            {/* Vehicle type */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5 pl-1">
                 {t('auth.register.vehicleType')}
-              </Box>
-              <FormControl fullWidth sx={sx.input}>
-                <Select
-                  name="vehicleType"
-                  value={formData.vehicleType}
-                  onChange={handleChange}
-                  displayEmpty
-                >
-                  {VEHICLE_OPTIONS.map(opt => (
-                    <MenuItem key={opt.key} value={opt.key}>{opt.label}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
+              </label>
+              <select
+                name="vehicleType"
+                value={formData.vehicleType}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200/60 dark:border-slate-600 text-sm font-medium outline-none transition-all shadow-inner bg-slate-50 dark:bg-slate-700/50 text-slate-700 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 dark:focus:ring-blue-900/30 focus:border-blue-500 appearance-none cursor-pointer"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+              >
+                {VEHICLE_OPTIONS.map(opt => (
+                  <option key={opt.key} value={opt.key}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
 
-          </Box>
+          </div>
 
           {/* Terms */}
-          <Box>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  name="acceptedTerms"
-                  checked={formData.acceptedTerms}
-                  onChange={handleChange}
-                  sx={sx.checkbox}
-                />
-              }
-              label={
-                <Box component="span" className="text-sm text-gray-600 select-none">
-                  {t('auth.register.acceptTermsPrefix')}{' '}
-                  <Box component="a" href="#" className="text-blue-600 font-medium hover:underline">
-                    {t('auth.register.termsOfService')}
-                  </Box>
-                  {' '}{t('auth.register.and')}{' '}
-                  <Box component="a" href="#" className="text-blue-600 font-medium hover:underline">
-                    {t('auth.register.privacyPolicy')}
-                  </Box>
-                </Box>
-              }
-            />
+          <div className="pt-2">
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                name="acceptedTerms"
+                checked={formData.acceptedTerms}
+                onChange={handleChange}
+                className="mt-1 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-700 cursor-pointer"
+              />
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed select-none">
+                {t('auth.register.acceptTermsPrefix')}{' '}
+                <a href="#" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">
+                  {t('auth.register.termsOfService')}
+                </a>
+                {' '}{t('auth.register.and')}{' '}
+                <a href="#" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">
+                  {t('auth.register.privacyPolicy')}
+                </a>
+              </span>
+            </label>
             {fieldErrors.acceptedTerms && (
-              <Box component="p" className="text-xs text-red-600 mt-1 ml-8">
+              <p className="text-xs font-medium text-red-500 mt-1.5 ml-7">
                 {fieldErrors.acceptedTerms}
-              </Box>
+              </p>
             )}
-          </Box>
+          </div>
 
-          <Button
+          <button
             type="submit"
-            variant="contained"
-            fullWidth
             disabled={isSubmitting}
-            sx={sx.primaryBtn}
+            className="w-full py-4 px-4 mt-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-[0_8px_30px_rgb(37,99,235,0.24)] hover:shadow-[0_8px_30px_rgb(37,99,235,0.36)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 group relative overflow-hidden"
           >
-            {isSubmitting ? t('auth.register.submitting') : t('auth.register.submit')}
-          </Button>
+            <div className="absolute inset-0 w-full h-full bg-white/20 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+            {isSubmitting ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin relative z-10" />
+            ) : <span className="relative z-10 tracking-wide">{t('auth.register.submit')}</span>}
+          </button>
 
-          <Box className="text-center">
-            <Button
+          <div className="text-center mt-6">
+            <button
               type="button"
               onClick={() => navigate('/login')}
-              sx={sx.secondaryBtn}
+              className="text-sm font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors"
             >
               {t('auth.register.backToLogin')}
-            </Button>
-          </Box>
-        </Box>
+            </button>
+          </div>
+        </form>
 
         {/* Info note */}
-        <Box className="mt-8 bg-blue-50 p-6 rounded-xl border border-blue-100">
-          <Box className="flex gap-3 items-start">
-            <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-            <Box>
-              <Box component="h3" className="text-sm font-bold text-blue-800 mb-1">
+        <div className="mt-10 bg-emerald-50/50 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-100 dark:border-emerald-800/30">
+          <div className="flex gap-4 items-start">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+              <Info className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-400 mb-1">
                 {t('auth.register.approvalNoticeTitle')}
-              </Box>
-              <Box component="p" className="text-xs text-blue-600 leading-relaxed">
+              </h3>
+              <p className="text-xs font-medium text-emerald-600/80 dark:text-emerald-400/80 leading-relaxed">
                 {t('auth.register.approvalNoticeBody')}
-              </Box>
-            </Box>
-          </Box>
-        </Box>
+              </p>
+            </div>
+          </div>
+        </div>
 
-      </Paper>
-    </Box>
+      </div>
+    </div>
   )
 }

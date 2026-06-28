@@ -125,13 +125,13 @@ const AdminRoles = () => {
   return (
     <div className={`space-y-6 pb-12 transition-all duration-700 ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
       {/* Header */}
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-sm border border-slate-200/60">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">
         <div className="px-2">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('admin.roles.eyebrow')}</p>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('admin.roles.title')}</h1>
         </div>
         <button onClick={applyFilters}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition self-start">
+          className="inline-flex items-center gap-2 rounded-3xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 font-bold hover:bg-slate-50 transition self-start">
           <RefreshCcw size={16} /> {t('admin.roles.refresh')}
         </button>
       </div>
@@ -146,52 +146,52 @@ const AdminRoles = () => {
       {/* Thống kê nhanh */}
       <div className="grid gap-4 sm:grid-cols-3">
         {counts.map((c) => (
-          <div key={c.role} className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex items-center justify-between">
+          <div key={c.role} className="rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users size={16} className="text-slate-400" />
               <Badge variant={roleBadge[c.role]}>{t(`roles.${c.role}`, c.role)}</Badge>
             </div>
-            <p className="text-2xl font-black text-slate-800">{c.count}</p>
+            <p className="text-2xl font-black text-slate-800 font-black">{c.count}</p>
           </div>
         ))}
       </div>
 
       {/* Filters + Table */}
-      <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200/60">
+      <div className="rounded-3xl bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center mb-5">
           <div className="relative flex-1 max-w-md">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
               placeholder={t('admin.roles.searchPlaceholder')}
-              className="w-full rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white dark:focus:bg-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+              className="w-full rounded-3xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white dark:focus:bg-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
           <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setTrigger((tt) => tt + 1) }}
-            className="rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
+            className="rounded-3xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 font-bold outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
             <option value="">{t('admin.roles.allRoles')}</option>
             {roles.map((r) => <option key={r.RoleID} value={r.RoleID}>{t(`roles.${r.RoleName}`, r.RoleName)}</option>)}
           </select>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-slate-200">
+        <div className="overflow-hidden rounded-3xl border border-slate-200">
           <div className="overflow-x-auto overflow-y-auto max-h-130">
             {loading ? (
               <div className="py-16 flex items-center justify-center">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
               </div>
             ) : rows.length === 0 ? (
-              <div className="py-16 flex flex-col items-center justify-center text-center text-slate-500">
+              <div className="py-16 flex flex-col items-center justify-center text-center text-slate-500 font-medium">
                 <Search size={44} className="text-slate-300 mb-3" />
-                <p className="font-bold text-slate-700">{t('admin.roles.emptyTitle')}</p>
-                <p className="text-sm mt-1 text-slate-500">{t('admin.roles.emptyHint')}</p>
+                <p className="font-bold text-slate-700 font-bold">{t('admin.roles.emptyTitle')}</p>
+                <p className="text-sm mt-1 text-slate-500 font-medium">{t('admin.roles.emptyHint')}</p>
               </div>
             ) : (
-              <table className="min-w-full text-left text-sm text-slate-700">
+              <table className="min-w-full text-left text-sm text-slate-700 font-bold">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.roles.col.user')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.roles.col.role')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.roles.col.status')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50 text-right">{t('admin.roles.col.actions')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.roles.col.user')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.roles.col.role')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.roles.col.status')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50 text-right">{t('admin.roles.col.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -215,7 +215,7 @@ const AdminRoles = () => {
                             value={u.RoleID}
                             disabled={busyId === u.UserID}
                             onChange={(e) => changeRole(u, e.target.value)}
-                            className="rounded-lg bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none border border-slate-200 hover:border-blue-300 focus:border-blue-500 transition disabled:opacity-50"
+                            className="rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-2.5 py-1.5 text-xs font-semibold text-slate-700 font-bold outline-none border border-slate-200 hover:border-blue-300 focus:border-blue-500 transition disabled:opacity-50"
                           >
                             {roles.map((r) => <option key={r.RoleID} value={r.RoleID}>{t(`roles.${r.RoleName}`, r.RoleName)}</option>)}
                           </select>
@@ -227,12 +227,12 @@ const AdminRoles = () => {
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => openResetPassword(u)} disabled={busyId === u.UserID} title={t('admin.roles.resetPasswordTitle')}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition disabled:opacity-50">
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition disabled:opacity-50">
                             <KeyRound size={14} /> {t('admin.roles.resetPassword')}
                           </button>
                           <button onClick={() => toggleStatus(u)} disabled={busyId === u.UserID}
                             title={u.IsActive ? t('admin.roles.lockTitle') : t('admin.roles.unlockTitle')}
-                            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${u.IsActive
+                            className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${u.IsActive
                               ? 'border-rose-200 text-rose-600 hover:bg-rose-50'
                               : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
                             }`}>
@@ -268,21 +268,21 @@ const AdminRoles = () => {
             {t('admin.roles.resetPasswordModal.description')} <span className="font-bold text-slate-900">{resetTarget?.FullName}</span>.
           </p>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.roles.resetPasswordModal.newPasswordLabel')}</label>
+            <label className="block text-sm font-semibold text-slate-700 font-bold dark:text-slate-200 mb-1.5">{t('admin.roles.resetPasswordModal.newPasswordLabel')}</label>
             <input type="password" {...register('NewPassword', {
               required: t('admin.roles.resetPasswordModal.newPasswordRequired'),
               minLength: { value: 6, message: t('admin.roles.resetPasswordModal.newPasswordMinLength') }
             })}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            className="w-full rounded-3xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.NewPassword && <p className="text-xs text-red-500 mt-1">{errors.NewPassword.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.roles.resetPasswordModal.confirmPasswordLabel')}</label>
+            <label className="block text-sm font-semibold text-slate-700 font-bold dark:text-slate-200 mb-1.5">{t('admin.roles.resetPasswordModal.confirmPasswordLabel')}</label>
             <input type="password" {...register('ConfirmPassword', {
               required: t('admin.roles.resetPasswordModal.confirmPasswordRequired'),
               validate: (val, formVals) => val === formVals.NewPassword || t('admin.roles.resetPasswordModal.confirmPasswordMismatch')
             })}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            className="w-full rounded-3xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.ConfirmPassword && <p className="text-xs text-red-500 mt-1">{errors.ConfirmPassword.message}</p>}
           </div>
         </form>

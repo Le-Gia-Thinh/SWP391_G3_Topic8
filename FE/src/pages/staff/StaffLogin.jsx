@@ -44,8 +44,8 @@ const StaffLogin = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-sans">
-      <div className="max-w-5xl w-full bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row border border-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 font-sans">
+      <div className="max-w-5xl w-full bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row border border-slate-50">
 
         {/* Left Side - Image/Branding */}
         <div className="md:w-1/2 bg-blue-600 p-12 text-white flex-col justify-between relative overflow-hidden hidden md:flex">
@@ -55,7 +55,7 @@ const StaffLogin = () => {
 
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-12">
-              <div className="w-10 h-10 bg-white text-blue-600 rounded-xl flex items-center justify-center font-bold text-2xl shadow-md">
+              <div className="w-10 h-10 bg-white text-blue-600 rounded-3xl flex items-center justify-center font-bold text-2xl shadow-md">
                 P
               </div>
               <span className="text-2xl font-bold tracking-tight">PBMS</span>
@@ -85,29 +85,29 @@ const StaffLogin = () => {
         {/* Right Side - Login Form */}
         <div className="md:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center">
           <div className="md:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-2xl shadow-md">
+            <div className="w-10 h-10 bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 rounded-3xl flex items-center justify-center font-bold text-2xl shadow-md">
               P
             </div>
             <span className="text-2xl font-bold text-blue-600 tracking-tight">PBMS</span>
           </div>
 
           <div className="mb-10 text-center md:text-left">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('staff.login.title')}</h2>
-            <p className="text-gray-500">{t('staff.login.subtitle')}</p>
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">{t('staff.login.title')}</h2>
+            <p className="text-slate-500">{t('staff.login.subtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('staff.login.emailLabel')}</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">{t('staff.login.emailLabel')}</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  <Mail className="h-5 w-5 text-slate-400" />
                 </div>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-transparent transition-all"
+                  className="block w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-3xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-transparent transition-all"
                   placeholder={t('staff.login.emailPlaceholder')}
                   required
                 />
@@ -115,23 +115,23 @@ const StaffLogin = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('staff.login.passwordLabel')}</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">{t('staff.login.passwordLabel')}</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5 text-slate-400" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-11 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-transparent transition-all"
+                  className="block w-full pl-11 pr-12 py-3.5 bg-slate-50 border border-slate-100 rounded-3xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white focus:border-transparent transition-all"
                   placeholder={t('staff.login.passwordPlaceholder')}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -144,9 +144,9 @@ const StaffLogin = () => {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded cursor-pointer"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-600 cursor-pointer">
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600 cursor-pointer">
                   {t('staff.login.rememberMe')}
                 </label>
               </div>
@@ -165,14 +165,14 @@ const StaffLogin = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 py-4 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors mt-8 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-4 px-4 border border-transparent rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors mt-8 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isLoading ? t('staff.login.submitting') : t('staff.login.submit')} <ArrowRight className="w-5 h-5" />
             </button>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-gray-100 text-center">
-            <p className="text-sm text-gray-500">
+          <div className="mt-8 pt-8 border-t border-slate-50 text-center">
+            <p className="text-sm text-slate-500">
               {t('staff.login.supportPrompt')}{' '}
               <button
                 type="button"
@@ -192,7 +192,7 @@ const StaffLogin = () => {
         title={infoModal.title}
         footer={<Button variant="primary" onClick={() => setInfoModal({ isOpen: false, title: '', message: '' })}>{t('staff.login.close')}</Button>}
       >
-        <p className="text-gray-700">{infoModal.message}</p>
+        <p className="text-slate-700">{infoModal.message}</p>
       </Modal>
     </div>
   )

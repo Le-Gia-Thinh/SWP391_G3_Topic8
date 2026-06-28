@@ -170,18 +170,18 @@ const AdminUsers = () => {
   return (
     <div className={`space-y-6 pb-12 transition-all duration-700 ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
       {/* Header */}
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-sm border border-slate-200/60">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">
         <div className="px-2">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('admin.users.eyebrow')}</p>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('admin.users.title')}</h1>
         </div>
         <div className="flex gap-3">
           <button onClick={applyFilters}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
+            className="inline-flex items-center gap-2 rounded-3xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 font-bold hover:bg-slate-50 transition">
             <RefreshCcw size={16} /> {t('admin.users.refresh')}
           </button>
           <button onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:-translate-y-0.5 active:scale-95 transition-all">
+            className="inline-flex items-center gap-2 rounded-3xl bg-linear-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:-translate-y-0.5 active:scale-95 transition-all">
             <UserPlus size={16} /> {t('admin.users.addNew')}
           </button>
         </div>
@@ -195,50 +195,50 @@ const AdminUsers = () => {
       )}
 
       {/* Filters + Table */}
-      <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200/60">
+      <div className="rounded-3xl bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center mb-5">
           <div className="relative flex-1 max-w-md">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()}
               placeholder={t('admin.users.searchPlaceholder')}
-              className="w-full rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white dark:focus:bg-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+              className="w-full rounded-3xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white dark:focus:bg-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
           <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setTrigger(tt => tt + 1) }}
-            className="rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
+            className="rounded-3xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 font-bold outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
             <option value="">{t('admin.users.allRoles')}</option>
             {roles.map(r => <option key={r.RoleID} value={r.RoleID}>{t(`roles.${r.RoleName}`, r.RoleName)}</option>)}
           </select>
           <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setTrigger(tt => tt + 1) }}
-            className="rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
+            className="rounded-3xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-700 font-bold outline-none border border-slate-200 hover:border-slate-300 focus:border-blue-500 transition">
             <option value="">{t('admin.users.allStatuses')}</option>
             <option value="1">{t('admin.users.statusActive')}</option>
             <option value="0">{t('admin.users.statusLocked')}</option>
           </select>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-slate-200">
+        <div className="overflow-hidden rounded-3xl border border-slate-200">
           <div className="overflow-x-auto overflow-y-auto max-h-130">
             {loading ? (
               <div className="py-16 flex items-center justify-center">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
               </div>
             ) : rows.length === 0 ? (
-              <div className="py-16 flex flex-col items-center justify-center text-center text-slate-500">
+              <div className="py-16 flex flex-col items-center justify-center text-center text-slate-500 font-medium">
                 <Search size={44} className="text-slate-300 mb-3" />
-                <p className="font-bold text-slate-700">{t('admin.users.emptyTitle')}</p>
-                <p className="text-sm mt-1 text-slate-500">{t('admin.users.emptyHint')}</p>
+                <p className="font-bold text-slate-700 font-bold">{t('admin.users.emptyTitle')}</p>
+                <p className="text-sm mt-1 text-slate-500 font-medium">{t('admin.users.emptyHint')}</p>
               </div>
             ) : (
-              <table className="min-w-full text-left text-sm text-slate-700">
+              <table className="min-w-full text-left text-sm text-slate-700 font-bold">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.user')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.contact')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.role')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.email')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.status')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('admin.users.col.createdAt')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50 text-right">{t('admin.users.col.actions')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.users.col.user')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.users.col.contact')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.users.col.role')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.users.col.email')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.users.col.status')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.users.col.createdAt')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50 text-right">{t('admin.users.col.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -255,7 +255,7 @@ const AdminUsers = () => {
                           </div>
                         </td>
                         <td className="px-5 py-4">
-                          <p className="font-medium text-slate-700">{u.Email}</p>
+                          <p className="font-medium text-slate-700 font-bold">{u.Email}</p>
                           <p className="text-xs text-slate-400">{u.PhoneNumber || '—'}</p>
                         </td>
                         <td className="px-5 py-4">
@@ -275,22 +275,22 @@ const AdminUsers = () => {
                             <Badge variant="danger">{t('admin.users.statusLocked')}</Badge>
                           )}
                         </td>
-                        <td className="px-5 py-4 text-slate-500 text-xs">{fmtDate(u.CreatedAt)}</td>
+                        <td className="px-5 py-4 text-slate-500 font-medium text-xs">{fmtDate(u.CreatedAt)}</td>
                         <td className="px-5 py-4">
                           {system ? (
                             <div className="flex items-center justify-end">
-                              <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                              <span className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500 font-medium">
                                 <ShieldCheck size={13} /> {t('admin.users.systemAccountBadge')}
                               </span>
                             </div>
                           ) : (
                             <div className="flex items-center justify-end gap-2">
                               <button onClick={() => openEdit(u)} title={t('admin.users.editTitle')}
-                                className="rounded-lg p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition">
+                                className="rounded-xl p-2 text-slate-500 font-medium hover:bg-blue-50 hover:text-blue-600 transition">
                                 <Pencil size={16} />
                               </button>
                               <button onClick={() => toggleStatus(u)} title={u.IsActive ? t('admin.users.lockTitle') : t('admin.users.unlockTitle')}
-                                className={`rounded-lg p-2 transition ${u.IsActive ? 'text-slate-500 hover:bg-rose-50 hover:text-rose-600' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-600'}`}>
+                                className={`rounded-xl p-2 transition ${u.IsActive ? 'text-slate-500 font-medium hover:bg-rose-50 hover:text-rose-600' : 'text-slate-500 font-medium hover:bg-emerald-50 hover:text-emerald-600'}`}>
                                 {u.IsActive ? <Lock size={16} /> : <Unlock size={16} />}
                               </button>
                             </div>
@@ -322,47 +322,47 @@ const AdminUsers = () => {
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.fullNameLabel')}</label>
+            <label className="block text-sm font-semibold text-slate-700 font-bold dark:text-slate-200 mb-1.5">{t('admin.users.modal.fullNameLabel')}</label>
             <input {...register('FullName', { required: t('admin.users.modal.fullNameRequired') })}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              className="w-full rounded-3xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.FullName && <p className="text-xs text-red-500 mt-1">{errors.FullName.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.emailLabel')}</label>
+            <label className="block text-sm font-semibold text-slate-700 font-bold dark:text-slate-200 mb-1.5">{t('admin.users.modal.emailLabel')}</label>
             <input disabled={!!editing} {...register('Email', {
               required: t('admin.users.modal.emailRequired'),
               pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: t('admin.users.modal.emailInvalid') }
             })}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition disabled:bg-slate-100 disabled:text-slate-400" />
+            className="w-full rounded-3xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition disabled:bg-slate-100 disabled:text-slate-400" />
             {errors.Email && <p className="text-xs text-red-500 mt-1">{errors.Email.message}</p>}
             {editing && <p className="text-xs text-slate-400 mt-1">{t('admin.users.modal.emailEditHint')}</p>}
           </div>
           {!editing && (
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.passwordLabel')}</label>
+              <label className="block text-sm font-semibold text-slate-700 font-bold dark:text-slate-200 mb-1.5">{t('admin.users.modal.passwordLabel')}</label>
               <input type="password" {...register('Password', {
                 required: t('admin.users.modal.passwordRequired'),
                 minLength: { value: 6, message: t('admin.users.modal.passwordMinLength') }
               })}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+              className="w-full rounded-3xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
               {errors.Password && <p className="text-xs text-red-500 mt-1">{errors.Password.message}</p>}
             </div>
           )}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.phoneLabel')}</label>
+            <label className="block text-sm font-semibold text-slate-700 font-bold dark:text-slate-200 mb-1.5">{t('admin.users.modal.phoneLabel')}</label>
             <input {...register('PhoneNumber', {
               pattern: {
                 value: /^(0|84)(3|5|7|8|9)[0-9]{8}$/,
                 message: t('admin.users.modal.phoneInvalid')
               }
             })}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+            className="w-full rounded-3xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
             {errors.PhoneNumber && <p className="text-xs text-red-500 mt-1">{errors.PhoneNumber.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.roleLabel')}</label>
+            <label className="block text-sm font-semibold text-slate-700 font-bold dark:text-slate-200 mb-1.5">{t('admin.users.modal.roleLabel')}</label>
             <select {...register('RoleID', { required: t('admin.users.modal.roleRequired') })}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+              className="w-full rounded-3xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
               <option value="">{t('admin.users.modal.rolePlaceholder')}</option>
               {roles.map(r => <option key={r.RoleID} value={r.RoleID}>{t(`roles.${r.RoleName}`, r.RoleName)}</option>)}
             </select>
@@ -374,23 +374,23 @@ const AdminUsers = () => {
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.dobLabel')}</label>
+                  <label className="block text-sm font-semibold text-slate-700 font-bold dark:text-slate-200 mb-1.5">{t('admin.users.modal.dobLabel')}</label>
                   <input type="date" {...register('DateOfBirth', {
                     required: needsDates ? t('admin.users.modal.dateRequired') : false
                   })}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                  className="w-full rounded-3xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
                   {errors.DateOfBirth && <p className="text-xs text-red-500 mt-1">{errors.DateOfBirth.message}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">{t('admin.users.modal.hireDateLabel')}</label>
+                  <label className="block text-sm font-semibold text-slate-700 font-bold dark:text-slate-200 mb-1.5">{t('admin.users.modal.hireDateLabel')}</label>
                   <input type="date" {...register('HireDate', {
                     required: needsDates ? t('admin.users.modal.dateRequired') : false
                   })}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
+                  className="w-full rounded-3xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
                   {errors.HireDate && <p className="text-xs text-red-500 mt-1">{errors.HireDate.message}</p>}
                 </div>
               </div>
-              <p className="text-[12px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
+              <p className="text-[12px] text-slate-500 font-medium bg-slate-50 rounded-xl px-3 py-2">
                 {t('admin.users.modal.dateHint')}
               </p>
             </>

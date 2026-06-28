@@ -7,8 +7,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { QrCode, Copy, CheckCircle2, AlertCircle, ArrowLeft, Clock, XCircle } from 'lucide-react'
-import { CircularProgress, Box } from '@mui/material'
+import { QrCode, Copy, CheckCircle2, AlertCircle, ArrowLeft, Clock, XCircle, Loader2 } from 'lucide-react'
 import walletApi from '../../apis/walletApi'
 
 // ── QR Canvas ───────────────
@@ -28,13 +27,13 @@ const QRCanvas = ({ data, size = 220 }) => {
   }, [data, size]);
 
   if (error) return (
-    <div className="flex items-center justify-center bg-slate-100 rounded-xl p-4 text-sm text-slate-500" style={{ width: size, height: size }}>
+    <div className="flex items-center justify-center bg-slate-100 rounded-xl p-4 text-sm text-slate-500 font-medium text-center" style={{ width: size, height: size }}>
       Không thể tạo mã QR.<br />Vui lòng thử lại.
     </div>
   );
   return (
-    <div className="rounded-xl overflow-hidden shadow-lg bg-white p-1.5 inline-block">
-      <canvas ref={canvasRef}></canvas>
+    <div className="rounded-xl overflow-hidden shadow-md bg-white border border-slate-100 p-1.5 inline-block">
+      <canvas ref={canvasRef} className="block"></canvas>
     </div>
   );
 };
@@ -49,6 +48,7 @@ const DriverTopUpPayment = () => {
   const [payment, setPayment] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [copiedField, setCopiedField] = useState(null)
 
   const amount = location.state?.amount || 100000
 
@@ -123,129 +123,142 @@ const DriverTopUpPayment = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
-  const handleCopy = (text) => {
+  const handleCopy = (text, fieldName) => {
     navigator.clipboard.writeText(text)
+    setCopiedField(fieldName)
+    setTimeout(() => setCopiedField(null), 2000)
   }
 
   if (loading) {
      return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-           <CircularProgress />
-        </Box>
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center py-12 px-4">
+           <Loader2 size={32} className="animate-spin text-blue-500 mb-4" />
+           <p className="text-slate-500 font-medium">Đang khởi tạo thanh toán...</p>
+        </div>
      )
   }
 
   if (error) {
      return (
-        <div className="p-6 max-w-3xl mx-auto min-h-[60vh] flex flex-col items-center justify-center text-center">
-            <XCircle className="w-16 h-16 text-red-500 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Đã xảy ra lỗi</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
-            <button onClick={() => navigate(-1)} className="px-6 py-2 bg-blue-600 text-white rounded-lg">Quay lại</button>
+        <div className="min-h-screen bg-slate-50 pt-10 pb-12 px-4 flex flex-col items-center justify-center text-center">
+            <XCircle className="w-20 h-20 text-red-500 mb-4 drop-shadow-md" />
+            <h2 className="text-2xl font-black text-slate-800 mb-2">Đã xảy ra lỗi</h2>
+            <p className="text-slate-500 font-medium mb-8 max-w-sm">{error}</p>
+            <button onClick={() => navigate(-1)} className="px-8 py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl shadow-md transition-colors">
+              Quay lại
+            </button>
         </div>
      )
   }
 
   if (payment?.status === 'PAID') {
     return (
-      <div className="p-6 max-w-3xl mx-auto min-h-[60vh] flex flex-col items-center justify-center animate-in fade-in duration-500 text-center">
-        <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6">
-          <CheckCircle2 className="w-16 h-16 text-green-500" />
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 text-center animate-in fade-in duration-500">
+        <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
+          <CheckCircle2 size={56} className="text-green-500" />
         </div>
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+        <h2 className="text-3xl font-black text-slate-800 mb-4 tracking-tight">
           Nạp tiền thành công!
         </h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">
-          Bạn đã nạp thành công <strong>{payment.amount.toLocaleString('vi-VN')} VNĐ</strong> vào tài khoản.
+        <p className="text-slate-600 mb-8 text-lg font-medium">
+          Bạn đã nạp thành công <strong className="text-green-600 text-xl">{payment.amount.toLocaleString('vi-VN')} VNĐ</strong> vào tài khoản ví.
         </p>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Đang tự động chuyển hướng về trang chủ...</p>
+        <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-full border border-slate-200 shadow-sm">
+          <Loader2 size={16} className="animate-spin text-slate-400" />
+          <span className="text-sm font-bold text-slate-500">Đang tự động chuyển hướng về trang chủ...</span>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-      <button 
-        onClick={() => navigate(-1)} 
-        className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 transition-colors mb-4"
-      >
-        <ArrowLeft className="w-5 h-5" /> Quay lại
-      </button>
+    <div className="min-h-screen bg-slate-50 pt-6 pb-12 px-4 font-sans animate-in slide-in-from-bottom-4 duration-500">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors mb-4 group"
+        >
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Quay lại
+        </button>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Thanh toán nạp tiền ví</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Mã đơn hàng: {payment?.orderCode}</p>
-          </div>
-          <div className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-2 rounded-full font-medium">
-            <Clock className="w-4 h-4" />
-            Thời gian còn lại: {formatTime(timeLeft)}
-          </div>
-        </div>
-
-        <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* QR Code Section */}
-          <div className="flex flex-col items-center justify-center space-y-6">
-            <div className="bg-white p-4 rounded-2xl shadow-md border border-gray-100 flex flex-col items-center">
-              <QRCanvas data={payment?.qrCode} size={256} />
+        <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100 overflow-hidden">
+          {/* Header */}
+          <div className="p-6 md:px-8 border-b border-slate-100 bg-slate-50/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Thanh toán nạp tiền ví</h1>
+              <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">Mã đơn hàng: <span className="text-slate-600">{payment?.orderCode}</span></p>
             </div>
-            <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-              Sử dụng ứng dụng ngân hàng hoặc ví điện tử để quét mã QR này
-            </p>
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-sm border ${timeLeft < 120 ? 'bg-red-50 text-red-600 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+              <Clock size={16} className={timeLeft < 120 ? 'animate-pulse' : ''} />
+              Thời gian còn lại: <span className="font-mono text-base">{formatTime(timeLeft)}</span>
+            </div>
           </div>
 
-          {/* Payment Details Section */}
-          <div className="space-y-6 flex flex-col justify-center">
-            <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-xl space-y-4">
-              <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3">
-                <span className="text-gray-500 dark:text-gray-400">Ngân hàng:</span>
-                <span className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  {payment?.bankBin}
-                  <button onClick={() => handleCopy(payment?.bankBin)} className="text-gray-400 hover:text-blue-600"><Copy className="w-4 h-4"/></button>
-                </span>
+          <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+            {/* QR Code Section */}
+            <div className="flex flex-col items-center justify-center space-y-6">
+              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center">
+                <QRCanvas data={payment?.qrCode} size={256} />
               </div>
-              <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3">
-                <span className="text-gray-500 dark:text-gray-400">Số tài khoản:</span>
-                <span className="font-semibold text-blue-600 flex items-center gap-2">
-                  {payment?.accountNumber}
-                  <button onClick={() => handleCopy(payment?.accountNumber)} className="text-gray-400 hover:text-blue-600"><Copy className="w-4 h-4"/></button>
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3">
-                <span className="text-gray-500 dark:text-gray-400">Tên tài khoản:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {payment?.accountName}
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3">
-                <span className="text-gray-500 dark:text-gray-400">Nội dung chuyển khoản:</span>
-                <span className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  {payment?.description}
-                  <button onClick={() => handleCopy(payment?.description)} className="text-gray-400 hover:text-blue-600"><Copy className="w-4 h-4"/></button>
-                </span>
-              </div>
-              <div className="flex justify-between items-center pt-2">
-                <span className="text-gray-500 dark:text-gray-400 text-lg">Số tiền cần thanh toán:</span>
-                <span className="font-bold text-2xl text-blue-600">
-                  {payment?.amount?.toLocaleString('vi-VN')} đ
-                </span>
-              </div>
+              <p className="text-sm font-medium text-center text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                Sử dụng ứng dụng ngân hàng hoặc ví điện tử để quét mã QR này
+              </p>
             </div>
 
-            <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-xl text-sm">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <p>Hệ thống sẽ tự động cập nhật số dư sau khi nhận được tiền. Vui lòng giữ lại biên lai để đối chiếu nếu cần.</p>
+            {/* Payment Details Section */}
+            <div className="flex flex-col justify-center space-y-6">
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                {[
+                  { label: 'Ngân hàng', value: payment?.bankBin, field: 'bank' },
+                  { label: 'Số tài khoản', value: payment?.accountNumber, field: 'account', highlight: true },
+                  { label: 'Tên tài khoản', value: payment?.accountName, field: 'name' },
+                  { label: 'Nội dung CK', value: payment?.description, field: 'desc', highlight: true }
+                ].map(({ label, value, field, highlight }) => (
+                  <div key={field} className="flex justify-between items-center pb-4 border-b border-slate-200/60 last:border-0 last:pb-0">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">{label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${highlight ? 'text-blue-600 font-mono text-base' : 'text-slate-800'}`}>
+                        {value}
+                      </span>
+                      {value && field !== 'name' && field !== 'bank' && (
+                        <button 
+                          onClick={() => handleCopy(value, field)} 
+                          className={`p-1.5 rounded-lg transition-colors relative group ${copiedField === field ? 'bg-green-100 text-green-600' : 'bg-white border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                        >
+                          {copiedField === field ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity">
+                            {copiedField === field ? 'Đã copy' : 'Copy'}
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex justify-between items-center pt-4 mt-2 border-t border-slate-200/60">
+                  <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Số tiền thanh toán</span>
+                  <span className="font-black text-2xl text-blue-600">
+                    {payment?.amount?.toLocaleString('vi-VN')} đ
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-4 bg-blue-50 text-blue-800 rounded-2xl border border-blue-100 text-sm">
+                <AlertCircle size={20} className="shrink-0 mt-0.5 text-blue-500" />
+                <p className="font-medium text-xs leading-relaxed">
+                  Hệ thống sẽ tự động cập nhật số dư sau khi nhận được tiền. Vui lòng giữ lại biên lai để đối chiếu nếu cần.
+                </p>
+              </div>
+              
+              <a 
+                href={payment?.checkoutUrl} 
+                target="_blank" 
+                rel="noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-4 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold transition-all shadow-md active:scale-[0.98]"
+              >
+                Mở link thanh toán PayOS <ExternalLinkIcon size={18} />
+              </a>
             </div>
-            
-            <a 
-              href={payment?.checkoutUrl} 
-              target="_blank" 
-              rel="noreferrer"
-              className="w-full text-center block py-4 bg-gray-900 hover:bg-black dark:bg-blue-600 dark:hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-md"
-            >
-              Mở link thanh toán PayOS
-            </a>
           </div>
         </div>
       </div>
@@ -253,5 +266,9 @@ const DriverTopUpPayment = () => {
   )
 }
 
-export default DriverTopUpPayment
+// Dummy component for ExternalLinkIcon if not imported
+const ExternalLinkIcon = ({ size }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+)
 
+export default DriverTopUpPayment

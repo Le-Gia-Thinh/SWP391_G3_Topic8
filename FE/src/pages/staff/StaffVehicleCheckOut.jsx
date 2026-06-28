@@ -180,14 +180,14 @@ const FeeBreakdownModal = ({ session, onClose }) => {
       let dayIdx = 0
       return (
         <div>
-          <p className="text-xs font-bold text-gray-500 uppercase mb-2 flex items-center gap-1.5">
+          <p className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1.5">
             <Receipt size={12} /> {t('staff.checkout.feeModal.segmentTitle')}
           </p>
-          <p className="text-[11px] text-gray-400 mb-2">{t('staff.checkout.feeModal.multiDayNote')}</p>
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <p className="text-[11px] text-slate-400 mb-2">{t('staff.checkout.feeModal.multiDayNote')}</p>
+          <div className="border border-slate-100 rounded-3xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 text-gray-500 text-xs">
+                <tr className="bg-slate-50 text-slate-500 text-xs">
                   <th className="text-left px-3.5 py-2 font-semibold">{t('staff.checkout.feeModal.colTime')}</th>
                   <th className="text-left px-3.5 py-2 font-semibold text-[11px]">{t('staff.checkout.feeModal.colBracket')}</th>
                   <th className="text-right px-3.5 py-2 font-semibold">{t('staff.checkout.feeModal.colFee')}</th>
@@ -197,7 +197,7 @@ const FeeBreakdownModal = ({ session, onClose }) => {
                 {bd.segments.map((seg, i) => {
                   if (seg.type === 'night') {
                     return (
-                      <tr key={i} className="border-t border-gray-100 bg-indigo-50/60">
+                      <tr key={i} className="border-t border-slate-50 bg-indigo-50/60">
                         <td className="px-3.5 py-2.5 font-medium text-indigo-700 flex items-center gap-1.5">
                           <Moon size={11} /> {t('staff.checkout.feeModal.nightPart')}
                           <span className="text-[11px] text-indigo-500">
@@ -214,16 +214,16 @@ const FeeBreakdownModal = ({ session, onClose }) => {
                   const dH = Math.floor(seg.minutes / 60)
                   const dM = seg.minutes % 60
                   return (
-                    <tr key={i} className="border-t border-gray-100">
-                      <td className="px-3.5 py-2.5 font-medium text-gray-700 flex items-center gap-1.5">
+                    <tr key={i} className="border-t border-slate-50">
+                      <td className="px-3.5 py-2.5 font-medium text-slate-700 flex items-center gap-1.5">
                         <Sun size={11} className="text-yellow-500" />
                         {t('staff.checkout.feeModal.dayPart')} {dayIdx}
-                        <span className="text-[11px] text-gray-400">({dH}h{dM > 0 ? ` ${dM}m` : ''})</span>
+                        <span className="text-[11px] text-slate-400">({dH}h{dM > 0 ? ` ${dM}m` : ''})</span>
                       </td>
-                      <td className="px-3.5 py-2.5 text-[11px] text-gray-500">
+                      <td className="px-3.5 py-2.5 text-[11px] text-slate-500">
                         {detail ? bracketLabels[detail.bracketIdx] : '—'}
                       </td>
-                      <td className="px-3.5 py-2.5 text-right font-black text-gray-800">
+                      <td className="px-3.5 py-2.5 text-right font-black text-slate-800">
                         {detail ? formatVND(detail.fee) : '—'}
                       </td>
                     </tr>
@@ -239,13 +239,13 @@ const FeeBreakdownModal = ({ session, onClose }) => {
     // Trường hợp đơn giản: bracket table
     return (
       <div>
-        <p className="text-xs font-bold text-gray-500 uppercase mb-2 flex items-center gap-1.5">
+        <p className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1.5">
           <Sun size={12} className="text-yellow-500" /> {t('staff.checkout.feeModal.dayBracketTitle')}
         </p>
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <div className="border border-slate-100 rounded-3xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs">
+              <tr className="bg-slate-50 text-slate-500 text-xs">
                 <th className="text-left px-3.5 py-2 font-semibold">{t('staff.checkout.feeModal.colTime')}</th>
                 <th className="text-right px-3.5 py-2 font-semibold">{t('staff.checkout.feeModal.colFee')}</th>
                 <th className="w-8" />
@@ -255,14 +255,14 @@ const FeeBreakdownModal = ({ session, onClose }) => {
               {bd.brackets.map((b, i) => {
                 const isCurrent = bd.dayDetails[0] && i === bd.dayDetails[0].bracketIdx
                 return (
-                  <tr key={i} className={isCurrent ? 'bg-blue-50' : 'border-t border-gray-100'}>
-                    <td className={`px-3.5 py-2.5 font-medium ${isCurrent ? 'text-blue-700 border-t border-blue-100' : 'text-gray-700'}`}>
+                  <tr key={i} className={isCurrent ? 'bg-blue-50' : 'border-t border-slate-50'}>
+                    <td className={`px-3.5 py-2.5 font-medium ${isCurrent ? 'text-blue-700 border-t border-blue-100' : 'text-slate-700'}`}>
                       {bracketLabels[i] ?? `Bracket ${i + 1}`}
                     </td>
-                    <td className={`px-3.5 py-2.5 text-right font-black ${isCurrent ? 'text-blue-800 border-t border-blue-100' : 'text-gray-800'}`}>
+                    <td className={`px-3.5 py-2.5 text-right font-black ${isCurrent ? 'text-blue-800 border-t border-blue-100' : 'text-slate-800'}`}>
                       {formatVND(b.fee)}
                     </td>
-                    <td className={`pr-3 py-2.5 text-center ${isCurrent ? 'border-t border-blue-100' : 'border-t border-gray-100'}`}>
+                    <td className={`pr-3 py-2.5 text-center ${isCurrent ? 'border-t border-blue-100' : 'border-t border-slate-50'}`}>
                       {isCurrent && <CheckCircle2 size={14} className="text-blue-500 inline" />}
                     </td>
                   </tr>
@@ -294,21 +294,21 @@ const FeeBreakdownModal = ({ session, onClose }) => {
 
         <div className="p-5 space-y-4 overflow-y-auto">
           {/* Thông tin phiên */}
-          <div className="bg-gray-50 rounded-xl p-3.5 space-y-2 text-sm">
+          <div className="bg-slate-50 rounded-3xl p-3.5 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">{t('staff.checkout.feeModal.plate')}</span>
-              <span className="font-black font-mono text-gray-800">{session.PlateNumber}</span>
+              <span className="text-slate-500">{t('staff.checkout.feeModal.plate')}</span>
+              <span className="font-black font-mono text-slate-800">{session.PlateNumber}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">{t('staff.checkout.feeModal.vehicleType')}</span>
-              <span className="font-semibold text-gray-800">{session.VehicleName}</span>
+              <span className="text-slate-500">{t('staff.checkout.feeModal.vehicleType')}</span>
+              <span className="font-semibold text-slate-800">{session.VehicleName}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">{t('staff.checkout.feeModal.entryTime')}</span>
-              <span className="font-semibold text-gray-800">{fmtModalTime(session.EntryTime)}</span>
+              <span className="text-slate-500">{t('staff.checkout.feeModal.entryTime')}</span>
+              <span className="font-semibold text-slate-800">{fmtModalTime(session.EntryTime)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-500">{t('staff.checkout.feeModal.duration')}</span>
+              <span className="text-slate-500">{t('staff.checkout.feeModal.duration')}</span>
               <span className="font-black text-blue-700 flex items-center gap-1">
                 <Clock size={13} />
                 {totalH > 0 ? `${totalH}h ${totalM}m` : `${totalM} ${t('staff.checkout.feeModal.minute')}`}
@@ -320,21 +320,21 @@ const FeeBreakdownModal = ({ session, onClose }) => {
           {renderFeeDetail()}
 
           {/* Tổng hợp phí */}
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <div className="border border-slate-100 rounded-3xl overflow-hidden">
             {!isPrepaid && (
-              <div className="flex justify-between px-4 py-2.5 text-sm border-b border-gray-100">
-                <span className="text-gray-600">{t('staff.checkout.feeModal.baseFee')}</span>
-                <span className="font-bold text-gray-800">{formatVND(bd.baseFee)}</span>
+              <div className="flex justify-between px-4 py-2.5 text-sm border-b border-slate-50">
+                <span className="text-slate-600">{t('staff.checkout.feeModal.baseFee')}</span>
+                <span className="font-bold text-slate-800">{formatVND(bd.baseFee)}</span>
               </div>
             )}
             {isPrepaid && (
-              <div className="flex justify-between px-4 py-2.5 text-sm border-b border-gray-100 bg-green-50">
+              <div className="flex justify-between px-4 py-2.5 text-sm border-b border-slate-50 bg-green-50">
                 <span className="text-green-700 font-medium">{t('staff.checkout.feeModal.prepaidLabel')}</span>
                 <span className="font-bold text-green-800">{formatVND(prepaid)}</span>
               </div>
             )}
             {surcharge > 0 && (
-              <div className="flex justify-between px-4 py-2.5 text-sm border-b border-gray-100 bg-orange-50">
+              <div className="flex justify-between px-4 py-2.5 text-sm border-b border-slate-50 bg-orange-50">
                 <span className="text-orange-700 font-medium flex items-center gap-1.5">
                   <AlertCircle size={12} /> {t('staff.checkout.feeModal.surcharge')}
                 </span>
@@ -351,7 +351,7 @@ const FeeBreakdownModal = ({ session, onClose }) => {
             </div>
           </div>
 
-          <p className="text-[11px] text-gray-400 text-center">{t('staff.checkout.feeModal.finalNote')}</p>
+          <p className="text-[11px] text-slate-400 text-center">{t('staff.checkout.feeModal.finalNote')}</p>
         </div>
       </div>
     </div>
@@ -378,27 +378,27 @@ const FilterPopover = ({ vehicleType, setVehicleType, sortKey, setSortKey, onClo
   ]
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 z-30 p-4">
+    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-3xl shadow-xl border border-slate-50 z-30 p-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="font-bold text-gray-800 text-sm">{t('staff.checkout.filter.title')}</span>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={15} /></button>
+        <span className="font-bold text-slate-800 text-sm">{t('staff.checkout.filter.title')}</span>
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={15} /></button>
       </div>
-      <p className="text-xs font-bold text-gray-400 uppercase mb-1.5">{t('staff.checkout.filter.vehicleType')}</p>
+      <p className="text-xs font-bold text-slate-400 uppercase mb-1.5">{t('staff.checkout.filter.vehicleType')}</p>
       <div className="flex flex-col gap-0.5 mb-4">
         {VEHICLE_FILTER_OPTIONS.map(opt => (
           <button key={opt.value} onClick={() => { setVehicleType(opt.value); onClose() }}
-            className={`text-left px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${vehicleType === opt.value ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
+            className={`text-left px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${vehicleType === opt.value ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
             {opt.label}
           </button>
         ))}
       </div>
-      <p className="text-xs font-bold text-gray-400 uppercase mb-1.5">{t('staff.checkout.filter.sortBy')}</p>
+      <p className="text-xs font-bold text-slate-400 uppercase mb-1.5">{t('staff.checkout.filter.sortBy')}</p>
       <div className="flex flex-col gap-0.5">
         {SORT_OPTIONS.map(opt => {
           const Icon = opt.icon
           return (
             <button key={opt.value} onClick={() => { setSortKey(opt.value); onClose() }}
-              className={`text-left px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${sortKey === opt.value ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>
+              className={`text-left px-3 py-1.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${sortKey === opt.value ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
               <Icon size={13} /> {opt.label}
             </button>
           )
@@ -435,7 +435,7 @@ const SessionCard = ({ session, onCheckout, onShowFee }) => {
   const isOvernight = vnDay(session.EntryTime) !== vnDay(new Date()) || durationMin >= 16 * 60
 
   return (
-    <div className={`bg-white border rounded-xl shadow-sm hover:shadow-md transition-all p-4 flex flex-col gap-3 ${isOverdue ? 'border-orange-200 hover:border-orange-400' : 'border-gray-100 hover:border-blue-200'}`}>
+    <div className={`bg-white border rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-md transition-all p-4 flex flex-col gap-3 ${isOverdue ? 'border-orange-200 hover:border-orange-400' : 'border-slate-50 hover:border-blue-200'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <span className="text-blue-600 font-black text-sm shrink-0 font-mono">{session.SessionCode}</span>
@@ -447,31 +447,31 @@ const SessionCard = ({ session, onCheckout, onShowFee }) => {
           </span>
           {isBooking && <span className="text-xs text-purple-500 font-semibold">{bookingCode}</span>}
         </div>
-        <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full shrink-0 ${isOverdue ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600'}`}>
+        <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full shrink-0 ${isOverdue ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'}`}>
           <Clock size={11} /> {formatDuration(session.EntryTime)}
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <div className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${isUnknown ? 'bg-yellow-600 text-white' : 'bg-gray-800 text-white'}`}>
+        <div className={`flex items-center gap-2 rounded-xl px-3 py-1.5 ${isUnknown ? 'bg-yellow-600 text-white' : 'bg-slate-800 text-white'}`}>
           <Car size={13} />
           <span className="font-black text-sm tracking-wider">{isUnknown ? t('staff.checkout.card.unknownPlate') : session.PlateNumber}</span>
         </div>
-        <span className="text-xs text-gray-500 font-medium">{session.VehicleName}</span>
+        <span className="text-xs text-slate-500 font-medium">{session.VehicleName}</span>
       </div>
-      <div className="space-y-1 text-xs text-gray-600">
+      <div className="space-y-1 text-xs text-slate-600">
         <div className="flex items-center gap-1.5">
-          <MapPin size={11} className="text-gray-400 shrink-0" />
+          <MapPin size={11} className="text-slate-400 shrink-0" />
           <span className="font-semibold">{session.SlotCode}</span>
-          <span className="text-gray-400 truncate">· {session.ZoneName} · {session.FloorName} · {session.BuildingName}</span>
+          <span className="text-slate-400 truncate">· {session.ZoneName} · {session.FloorName} · {session.BuildingName}</span>
         </div>
-        <div className="flex items-center gap-1.5"><Clock size={11} className="text-gray-400 shrink-0" /><span>{t('staff.checkout.card.entryTime')} {formatTime(session.EntryTime)}</span></div>
+        <div className="flex items-center gap-1.5"><Clock size={11} className="text-slate-400 shrink-0" /><span>{t('staff.checkout.card.entryTime')} {formatTime(session.EntryTime)}</span></div>
         <div className="flex items-center gap-1.5 truncate">
-          <span className="text-gray-400">{t('staff.checkout.card.driver')}</span>
+          <span className="text-slate-400">{t('staff.checkout.card.driver')}</span>
           <span className="font-medium truncate">{session.DriverName}</span>
-          {session.PhoneNumber && <span className="text-gray-400 ml-1">{session.PhoneNumber}</span>}
+          {session.PhoneNumber && <span className="text-slate-400 ml-1">{session.PhoneNumber}</span>}
         </div>
       </div>
-      <div className={`rounded-lg px-3 py-2 flex items-center justify-between ${isPrepaid ? 'bg-green-50' : 'bg-blue-50'}`}>
+      <div className={`rounded-xl px-3 py-2 flex items-center justify-between ${isPrepaid ? 'bg-green-50' : 'bg-blue-50'}`}>
         <div className="flex items-center gap-1.5">
           <span className={`text-xs font-semibold ${isPrepaid ? 'text-green-700' : 'text-blue-600'}`}>{isPrepaid ? t('staff.checkout.card.prepaidLabel') : t('staff.checkout.card.estimatedFeeLabel')}</span>
           {!isPrepaid && (
@@ -484,7 +484,7 @@ const SessionCard = ({ session, onCheckout, onShowFee }) => {
         <span className={`font-black text-sm ${isPrepaid ? 'text-green-800' : 'text-blue-800'}`}>{feeDisplay > 0 ? formatVND(feeDisplay) : '—'}</span>
       </div>
       <button onClick={() => onCheckout(session)}
-        className={`w-full py-2 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2 ${isPrepaid ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+        className={`w-full py-2 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 ${isPrepaid ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
         <Receipt size={14} />
         {isPrepaid ? t('staff.checkout.card.finishBtn') : t('staff.checkout.card.payBtn')}
       </button>
@@ -597,14 +597,14 @@ const StaffVehicleCheckOut = () => {
   ]
 
   return (
-    <div className="flex flex-col min-h-full bg-gray-50 pb-12">
-      <div className="mb-2 text-sm text-gray-500 flex items-center gap-2">
+    <div className="flex flex-col min-h-full bg-slate-50 pb-12">
+      <div className="mb-2 text-sm text-slate-500 flex items-center gap-2">
         <span>{t('staff.checkout.breadcrumb').split(' / ')[0]}</span><ChevronRight size={14} /><span>{t('staff.checkout.breadcrumb').split(' / ')[1]}</span><ChevronRight size={14} />
         <span className="text-blue-600 font-medium">{t('staff.checkout.title')}</span>
       </div>
 
       <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">{t('staff.checkout.title')}</h1>
+        <h1 className="text-2xl font-bold text-slate-800">{t('staff.checkout.title')}</h1>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 text-sm font-medium">
           {t('staff.checkout.syncStatus')} <span className="w-2 h-2 rounded-full bg-green-500 ml-1 animate-pulse" />
         </div>
@@ -612,47 +612,47 @@ const StaffVehicleCheckOut = () => {
 
       <div className="flex gap-6">
         <div className="flex-3 flex flex-col gap-5">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <h3 className="text-base font-bold text-gray-800 flex items-center gap-2 mb-1"><FileSearch size={18} className="text-blue-600" /> {t('staff.checkout.searchTitle')}</h3>
-            <p className="text-xs text-gray-500 mb-3">
-              {t('staff.checkout.searchHint')} <span className="font-semibold text-gray-700">{t('staff.checkout.searchHint2')}</span>
+          <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-50 p-5">
+            <h3 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-1"><FileSearch size={18} className="text-blue-600" /> {t('staff.checkout.searchTitle')}</h3>
+            <p className="text-xs text-slate-500 mb-3">
+              {t('staff.checkout.searchHint')} <span className="font-semibold text-slate-700">{t('staff.checkout.searchHint2')}</span>
             </p>
 
             <div className="flex gap-3 mb-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-3 text-gray-400" size={16} />
+                <Search className="absolute left-3.5 top-3 text-slate-400" size={16} />
                 <input type="text" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}
                   placeholder={t('staff.checkout.searchPlaceholder')}
-                  className="w-full pl-10 pr-9 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 text-sm font-medium" />
-                {query && <button onClick={() => setQuery('')} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"><X size={15} /></button>}
+                  className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 text-sm font-medium" />
+                {query && <button onClick={() => setQuery('')} className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"><X size={15} /></button>}
               </div>
 
               <div className="relative" ref={filterRef}>
                 <button onClick={() => setShowFilter(v => !v)}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${activeFilters > 0 ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${activeFilters > 0 ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'}`}>
                   <SlidersHorizontal size={15} /> {t('staff.checkout.filterBtn')}
-                  {activeFilters > 0 && <span className="bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-black">{activeFilters}</span>}
+                  {activeFilters > 0 && <span className="bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 text-xs rounded-full w-4 h-4 flex items-center justify-center font-black">{activeFilters}</span>}
                 </button>
                 {showFilter && <FilterPopover vehicleType={vehicleType} setVehicleType={setVehicleType} sortKey={sortKey} setSortKey={setSortKey} onClose={() => setShowFilter(false)} />}
               </div>
 
               <button onClick={handleSearch} disabled={loading}
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-md shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+                className="px-5 py-2.5 bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 rounded-xl text-sm font-bold shadow-md shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
                 {loading ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />} {t('staff.checkout.searchBtn')}
               </button>
 
               <button onClick={handleReset} disabled={loading}
-                className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1.5">
+                className="px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 disabled:opacity-50 flex items-center gap-1.5">
                 <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} /> {t('staff.checkout.resetBtn')}
               </button>
             </div>
 
             <div className="flex items-center gap-3">
-              <CalendarRange size={14} className="text-gray-400 shrink-0" />
-              <span className="text-xs text-gray-500 font-medium">{t('staff.checkout.filterDateHint')}</span>
-              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500" />
-              <span className="text-gray-400 text-sm">→</span>
-              <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500" />
+              <CalendarRange size={14} className="text-slate-400 shrink-0" />
+              <span className="text-xs text-slate-500 font-medium">{t('staff.checkout.filterDateHint')}</span>
+              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="border border-slate-300 rounded-xl px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500" />
+              <span className="text-slate-400 text-sm">→</span>
+              <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} className="border border-slate-300 rounded-xl px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500" />
               {(fromDate || toDate) && <button onClick={() => { setFromDate(''); setToDate('') }} className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1"><X size={11} /> {t('staff.checkout.filterClear')}</button>}
             </div>
 
@@ -682,12 +682,12 @@ const StaffVehicleCheckOut = () => {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-gray-700">{t('staff.checkout.activeSessions')}</h3>
+              <h3 className="text-sm font-bold text-slate-700">{t('staff.checkout.activeSessions')}</h3>
               {searched && <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full">{displayed.length} {t('staff.checkout.sessionCount')}</span>}
               {prepaidCount > 0 && <span className="bg-green-100 text-green-700 text-xs font-bold px-2.5 py-0.5 rounded-full">{prepaidCount} {t('staff.checkout.prepaidCount')}</span>}
             </div>
             {displayed.length > 0 && totalFee > 0 && (
-              <span className="text-xs text-gray-500">{t('staff.checkout.totalFeeLabel')} <span className="font-black text-gray-800">{formatVND(totalFee)}</span></span>
+              <span className="text-xs text-slate-500">{t('staff.checkout.totalFeeLabel')} <span className="font-black text-slate-800">{formatVND(totalFee)}</span></span>
             )}
           </div>
 
@@ -696,7 +696,7 @@ const StaffVehicleCheckOut = () => {
               <div className="flex justify-center items-center py-20">
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 className="animate-spin text-blue-500" size={28} />
-                  <p className="text-sm text-gray-400">{t('staff.checkout.loadingList')}</p>
+                  <p className="text-sm text-slate-400">{t('staff.checkout.loadingList')}</p>
                 </div>
               </div>
             ) : displayed.length > 0 ? (
@@ -708,15 +708,15 @@ const StaffVehicleCheckOut = () => {
                 ))}
               </div>
             ) : (
-              <div className="border border-dashed border-gray-300 rounded-xl p-10 flex flex-col items-center text-center bg-gray-50">
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-gray-400 mb-4 shadow-sm"><Search size={24} /></div>
-                <h4 className="text-base font-bold text-gray-800 mb-2">
+              <div className="border border-dashed border-slate-300 rounded-3xl p-10 flex flex-col items-center text-center bg-slate-50">
+                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-slate-400 mb-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"><Search size={24} /></div>
+                <h4 className="text-base font-bold text-slate-800 mb-2">
                   {query || fromDate || toDate ? t('staff.checkout.noSessionSearch') : t('staff.checkout.noSessionEmpty')}
                 </h4>
-                <p className="text-sm text-gray-500 max-w-md mb-5">{t('staff.checkout.noSessionHint')}</p>
+                <p className="text-sm text-slate-500 max-w-md mb-5">{t('staff.checkout.noSessionHint')}</p>
                 <div className="flex gap-3">
-                  <button onClick={handleReset} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-gray-50"><RefreshCcw size={15} /> {t('staff.checkout.retryBtn')}</button>
-                  <button onClick={() => navigate('/staff/create-incident')} className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-red-100"><AlertTriangle size={15} /> {t('staff.checkout.createIncidentBtn')}</button>
+                  <button onClick={handleReset} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-slate-50"><RefreshCcw size={15} /> {t('staff.checkout.retryBtn')}</button>
+                  <button onClick={() => navigate('/staff/create-incident')} className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-red-100"><AlertTriangle size={15} /> {t('staff.checkout.createIncidentBtn')}</button>
                 </div>
               </div>
             )}
@@ -724,7 +724,7 @@ const StaffVehicleCheckOut = () => {
         </div>
 
         <div className="flex-1 flex flex-col gap-4">
-          <div className="bg-blue-50 rounded-xl border border-blue-100 p-5">
+          <div className="bg-blue-50 rounded-3xl border border-blue-100 p-5">
             <h3 className="text-sm font-bold text-blue-900 mb-4 flex items-center gap-2"><ChevronRight size={16} className="text-blue-500" /> {t('staff.checkout.guidanceTitle')}</h3>
             <ul className="space-y-4 text-sm text-blue-800">
               {[t('staff.checkout.guidance1'), t('staff.checkout.guidance2'), t('staff.checkout.guidance3'), t('staff.checkout.guidance4')].map((txt, i) => (
@@ -734,33 +734,33 @@ const StaffVehicleCheckOut = () => {
                 </li>
               ))}
             </ul>
-            <div className="mt-5 bg-white rounded-lg p-4 border border-red-200 flex items-start gap-3 shadow-sm">
+            <div className="mt-5 bg-white rounded-xl p-4 border border-red-200 flex items-start gap-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
               <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-bold text-gray-800 mb-1">{t('staff.checkout.notFoundTitle')}</p>
-                <p className="text-[11px] text-gray-600 leading-relaxed">{t('staff.checkout.notFoundDesc')}</p>
+                <p className="text-xs font-bold text-slate-800 mb-1">{t('staff.checkout.notFoundTitle')}</p>
+                <p className="text-[11px] text-slate-600 leading-relaxed">{t('staff.checkout.notFoundDesc')}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-            <p className="text-xs font-bold text-gray-500 uppercase mb-3">{t('staff.checkout.quickStats')}</p>
+          <div className="bg-white rounded-3xl border border-slate-50 p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+            <p className="text-xs font-bold text-slate-500 uppercase mb-3">{t('staff.checkout.quickStats')}</p>
             <div className="space-y-2.5 text-sm">
               {[
-                { label: t('staff.checkout.statTotal'), value: allSessions.length, color: 'text-gray-800' },
+                { label: t('staff.checkout.statTotal'), value: allSessions.length, color: 'text-slate-800' },
                 { label: t('staff.checkout.statWalkin'), value: allSessions.filter(s => !getBookingCode(s)).length, color: 'text-blue-600' },
                 { label: t('staff.checkout.statBooking'), value: allSessions.filter(s => !!getBookingCode(s)).length, color: 'text-purple-600' },
                 { label: t('staff.checkout.statPrepaid'), value: allSessions.filter(hasPrepaid).length, color: 'text-green-600' },
-                { label: t('staff.checkout.statDisplayed'), value: displayed.length, color: 'text-gray-800' }
+                { label: t('staff.checkout.statDisplayed'), value: displayed.length, color: 'text-slate-800' }
               ].map(item => (
                 <div key={item.label} className="flex justify-between">
-                  <span className="text-gray-500">{item.label}</span>
+                  <span className="text-slate-500">{item.label}</span>
                   <span className={`font-bold ${item.color}`}>{item.value}</span>
                 </div>
               ))}
               {totalFee > 0 && (
-                <div className="border-t border-gray-100 pt-2 flex justify-between">
-                  <span className="text-gray-500 flex items-center gap-1"><TrendingUp size={12} /> {t('staff.checkout.totalFeeLabel')}</span>
+                <div className="border-t border-slate-50 pt-2 flex justify-between">
+                  <span className="text-slate-500 flex items-center gap-1"><TrendingUp size={12} /> {t('staff.checkout.totalFeeLabel')}</span>
                   <span className="font-black text-green-700 text-xs">{formatVND(totalFee)}</span>
                 </div>
               )}
@@ -769,8 +769,8 @@ const StaffVehicleCheckOut = () => {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-64 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
-        <div className="flex items-center justify-between px-6 py-2.5 text-xs text-gray-500 font-medium">
+      <div className="fixed bottom-0 left-64 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
+        <div className="flex items-center justify-between px-6 py-2.5 text-xs text-slate-500 font-medium">
           <div className="flex items-center gap-6">
             <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500" /> {t('staff.checkout.bottomReading')}</span>
             <span>{t('staff.checkout.bottomSync')}</span>

@@ -65,7 +65,7 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-8 pb-10">
       {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('admin.dashboardPage.eyebrow')}</p>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight mt-1">{t('admin.dashboardPage.title')}</h1>
@@ -103,7 +103,7 @@ const AdminDashboard = () => {
                 <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{item.title}</p>
                 <Icon size={20} className={item.tint} />
               </div>
-              <p className="text-3xl font-black text-slate-800 tracking-tight mt-2">{item.value}</p>
+              <p className="text-3xl font-black text-slate-800 font-black tracking-tight mt-2">{item.value}</p>
               <div className={`mt-3 h-1.5 w-full rounded-full bg-linear-to-r ${item.color}`} />
             </div>
           )
@@ -111,7 +111,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Người dùng theo vai trò */}
-      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="flex items-center gap-2 mb-6">
           <Users className="text-blue-500" size={22} />
           <h2 className="text-lg font-bold text-slate-900">{t('admin.dashboardPage.byRoleTitle')}</h2>
@@ -121,7 +121,7 @@ const AdminDashboard = () => {
             const pct = Math.round((r.Count / maxRole) * 100)
             return (
               <div key={r.RoleID}>
-                <div className="flex items-center justify-between text-sm font-bold text-slate-700 mb-2">
+                <div className="flex items-center justify-between text-sm font-bold text-slate-700 font-bold mb-2">
                   <span>{t(`roles.${r.RoleName}`, r.RoleName)}</span>
                   <span className="bg-slate-100 px-2.5 py-0.5 rounded-md">{r.Count}</span>
                 </div>

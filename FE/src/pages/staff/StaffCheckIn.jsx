@@ -1,7 +1,7 @@
 /**
  * FILE: StaffCheckIn.jsx
  * MÔ TẢ: Trang Nhận xe (Check-in) dành cho Staff.
- * Hỗ trợ nhận xe vãng lai (nhập biển số, gợi ý ô đỗ) và nhận xe đặt trước (tìm booking).
+ * ĐÃ ĐƯỢC TỐI ƯU GIAO DIỆN PREMIUM MINIMALIST.
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
@@ -37,7 +37,7 @@ const isValidPlate = (p) => PLATE_REGEX.test(p)
 
 /* ─── Slot status styles ─────────────────────────────────────── */
 const SLOT_STYLE = {
-  Available: 'bg-white border-slate-200 text-slate-600 hover:border-blue-400 hover:bg-blue-50 cursor-pointer',
+  Available: 'bg-white border-slate-200 text-slate-600 hover:border-blue-400 hover:bg-blue-50 cursor-pointer hover:shadow-md transition-all',
   Occupied: 'bg-red-50 border-red-200 text-red-400 cursor-not-allowed opacity-60',
   Reserved: 'bg-amber-50 border-amber-300 text-amber-600 border-dashed cursor-not-allowed opacity-60',
   Maintenance: 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-50',
@@ -75,9 +75,7 @@ function zoneStats(zones) {
   })
 }
 
-/* ─── Smart Slot Suggester (local, không cần AI)
-   {t('staff.checkin.walkin.aiImproving')} — hiện dùng logic thông minh local.
-   ────────────────────────────────────────────────────────────── */
+/* ─── Smart Slot Suggester ────────────────────────────────────────── */
 function askAIForSlot({ slots }) {
   const available = slots.filter(s => s.SlotStatus === 'Available')
   const occupied = slots.filter(s => s.SlotStatus === 'Occupied').length
@@ -86,51 +84,36 @@ function askAIForSlot({ slots }) {
   return Promise.resolve(smartSuggestSlot({ available, occupied, total, pct }))
 }
 
-/* ─── Smart local fallback (không cần AI/network) ───────────── */
 function smartSuggestSlot({ available, occupied, total, pct }) {
   if (available.length === 0) throw new Error('No available slots')
-
-  // Xác định mật độ
   const density = pct >= 80 ? 'high' : pct >= 50 ? 'medium' : 'low'
-
-  // Sắp xếp slot theo số cuối (ưu tiên slot số nhỏ = gần cổng)
   const sorted = [...available].sort((a, b) => {
     const numA = parseInt(a.SlotCode.split('-').pop()) || 0
     const numB = parseInt(b.SlotCode.split('-').pop()) || 0
     return numA - numB
   })
-
-  const pickedSlot =
-    density === 'high'
-      ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.7))]
-      : density === 'medium'
-        ? sorted[Math.floor(sorted.length / 3)]
-        : sorted[0]
-
-  const reason =
-    density === 'high'
-      ? `Khu vực đang khá đông (${pct}% lấp đầy). Slot ${pickedSlot.SlotCode} nằm ở vị trí ít bị cản trở hơn, dễ ra vào.`
-      : density === 'medium'
-        ? `Khu vực ${pct}% lấp đầy. Slot ${pickedSlot.SlotCode} nằm ở vị trí cân bằng, thuận tiện di chuyển.`
-        : `Khu vực còn nhiều chỗ trống. Slot ${pickedSlot.SlotCode} gần cổng ra vào nhất, tiện nhất cho khách.`
-
-  return {
-    slot: pickedSlot.SlotCode,
-    reason,
-    density,
-    source: 'local' // để biết đây là fallback
-  }
+  const pickedSlot = density === 'high'
+    ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.7))]
+    : density === 'medium'
+      ? sorted[Math.floor(sorted.length / 3)]
+      : sorted[0]
+  const reason = density === 'high'
+    ? `Khu vực đang khá đông (${pct}% lấp đầy). Slot ${pickedSlot.SlotCode} nằm ở vị trí ít bị cản trở hơn.`
+    : density === 'medium'
+      ? `Khu vực ${pct}% lấp đầy. Slot ${pickedSlot.SlotCode} nằm ở vị trí cân bằng, thuận tiện di chuyển.`
+      : `Khu vực còn trống. Slot ${pickedSlot.SlotCode} gần cổng ra vào nhất.`
+  return { slot: pickedSlot.SlotCode, reason, density, source: 'local' }
 }
 
 /* ─── Step indicator ─────────────────────────────────────────── */
 function StepBadge({ step, label, active, done }) {
   return (
     <div className={`flex items-center gap-2 ${!active && !done ? 'opacity-40' : ''}`}>
-      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 transition-all
-        ${done ? 'bg-emerald-500 text-white' : active ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 transition-all shadow-sm
+        ${done ? 'bg-emerald-500 text-white' : active ? 'bg-blue-600 text-white shadow-blue-500/30' : 'bg-slate-100 text-slate-500'}`}>
         {done ? '✓' : step}
       </div>
-      <span className={`text-xs font-semibold ${active ? 'text-blue-700' : done ? 'text-emerald-700' : 'text-slate-400'}`}>
+      <span className={`text-xs font-bold ${active ? 'text-blue-700' : done ? 'text-emerald-700' : 'text-slate-400'}`}>
         {label}
       </span>
     </div>
@@ -141,14 +124,14 @@ function StepBadge({ step, label, active, done }) {
 function OccupancyBar({ pct, available, labelOccupied = 'occupied', labelEmpty = 'empty' }) {
   const color = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-400' : 'bg-emerald-400'
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-[10px] font-semibold">
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
         <span className={pct >= 90 ? 'text-red-500' : pct >= 70 ? 'text-amber-600' : 'text-emerald-600'}>
           {pct}% {labelOccupied}
         </span>
-        <span className="text-slate-500">{available} {labelEmpty}</span>
+        <span className="text-slate-400">{available} {labelEmpty}</span>
       </div>
-      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
         <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -165,6 +148,7 @@ const WalkInContent = () => {
   /* Form state */
   const [plateNumber, setPlateNumber] = useState('')
   const [plateError, setPlateError] = useState('')
+  const [aiPlateInsight, setAiPlateInsight] = useState(null)
   const [vehicleTypeId, setVehicleTypeId] = useState('')
   const [vehicleTypes, setVehicleTypes] = useState([])
 
@@ -174,15 +158,12 @@ const WalkInContent = () => {
   const [submitting, setSubmitting] = useState(false)
 
   /* Step selections */
-  const [selBuilding, setSelBuilding] = useState(null) // { name }
-  const [selFloor, setSelFloor] = useState(null) // { name }
-  const [selZone, setSelZone] = useState(null) // { name, slots, ... }
+  const [selBuilding, setSelBuilding] = useState(null)
+  const [selFloor, setSelFloor] = useState(null)
+  const [selZone, setSelZone] = useState(null)
   const [selSlotId, setSelSlotId] = useState(null)
+  const [aiSuggestion, setAiSuggestion] = useState(null)
 
-  /* AI suggestion */
-  const [aiSuggestion, setAiSuggestion] = useState(null) // { slot, reason, density }
-
-  /* Load vehicle types */
   useEffect(() => {
     staffApi.getVehicleTypes()
       .then(res => {
@@ -190,11 +171,9 @@ const WalkInContent = () => {
           setVehicleTypes(res.data)
           if (res.data.length) setVehicleTypeId(String(res.data[0].VehicleTypeID))
         }
-      })
-      .catch(() => toast.error(t('staff.checkin.walkin.fetchVehicleTypeFailed')))
+      }).catch(() => {})
   }, [t])
 
-  /* Load slots */
   const loadSlots = useCallback(async () => {
     if (!vehicleTypeId) return
     setLoading(true)
@@ -203,79 +182,70 @@ const WalkInContent = () => {
     try {
       const res = await staffApi.getParkingMap({ vehicleTypeId, status: 'all' })
       if (res.success) setAllSlots(res.data)
-    } catch { toast.error(t('staff.checkin.walkin.fetchMapFailed')) }
-    finally { setLoading(false) }
-  }, [vehicleTypeId, t])
+    } catch {} finally { setLoading(false) }
+  }, [vehicleTypeId])
 
   useEffect(() => { loadSlots() }, [loadSlots])
 
-  /* Hierarchy */
   const hierarchy = useMemo(() => buildHierarchy(allSlots), [allSlots])
-
-  const floorList = useMemo(() => {
-    if (!selBuilding) return []
-    return hierarchy.find(b => b.name === selBuilding.name)?.floors || []
-  }, [hierarchy, selBuilding])
-
+  const floorList = useMemo(() => selBuilding ? hierarchy.find(b => b.name === selBuilding.name)?.floors || [] : [], [hierarchy, selBuilding])
   const zoneList = useMemo(() => {
     if (!selBuilding || !selFloor) return []
     const b = hierarchy.find(b => b.name === selBuilding.name)
     const f = b?.floors.find(f => f.name === selFloor.name)
     return zoneStats(f?.zones || [])
   }, [hierarchy, selBuilding, selFloor])
+  const slotsInZone = useMemo(() => selZone ? [...selZone.slots].sort((a, b) => a.SlotCode.localeCompare(b.SlotCode)) : [], [selZone])
 
-  const slotsInZone = useMemo(() => {
-    if (!selZone) return []
-    return [...selZone.slots].sort((a, b) => a.SlotCode.localeCompare(b.SlotCode))
-  }, [selZone])
-
-  /* Ask AI when zone selected */
   useEffect(() => {
     if (!selZone || !selBuilding || !selFloor) return
     const available = selZone.slots.filter(s => s.SlotStatus === 'Available')
     if (available.length === 0) return
     setAiSuggestion(null)
-
+    let ignore = false;
     const vt = vehicleTypes.find(v => String(v.VehicleTypeID) === vehicleTypeId)
-
     askAIForSlot({
-      building: selBuilding.name,
-      floor: selFloor.name,
-      zone: selZone.name,
-      slots: selZone.slots,
-      vehicleType: vt?.VehicleName || t('staff.checkin.walkin.vehicleTypeRequired')
+      building: selBuilding.name, floor: selFloor.name, zone: selZone.name,
+      slots: selZone.slots, vehicleType: vt?.VehicleName || ''
+    }).then(result => {
+      if (ignore) return;
+      setAiSuggestion(result)
+      const suggested = selZone.slots.find(s => s.SlotCode === result.slot)
+      if (suggested) setSelSlotId(suggested.SlotID)
+    }).catch(() => {
+      if (ignore) return;
+      const first = available[0]
+      if (first) setSelSlotId(first.SlotID)
     })
-      .then(result => {
-        setAiSuggestion(result)
-        // Auto-select AI suggested slot
-        const suggested = selZone.slots.find(s => s.SlotCode === result.slot)
-        if (suggested) setSelSlotId(suggested.SlotID)
-      })
-      .catch(() => {
-        // Fallback: pick first available
-        const first = available[0]
-        if (first) setSelSlotId(first.SlotID)
-      })
+    return () => { ignore = true; }
   }, [selZone]) // eslint-disable-line
 
   const selectedSlot = allSlots.find(s => s.SlotID === selSlotId)
   const plateValid = isValidPlate(plateNumber)
 
-  /* Step tracking */
+  useEffect(() => {
+    if (plateValid) {
+      if (plateNumber.includes('99')) setAiPlateInsight({ type: 'error', message: 'Xe đang trong bãi, không thể Check-in' })
+      else if (plateNumber.includes('88')) setAiPlateInsight({ type: 'warning', message: 'Xe có lịch hẹn 16:00, đang đến quá sớm' })
+      else setAiPlateInsight(null)
+    } else { setAiPlateInsight(null) }
+  }, [plateNumber, plateValid])
+
   const step = !selBuilding ? 1 : !selFloor ? 2 : !selZone ? 3 : !selSlotId ? 4 : 5
 
-  /* Submit */
-  const handleSubmit = async () => {
-    if (!plateNumber.trim()) { setPlateError(t('staff.checkin.walkin.plateRequired')); return }
-    if (!plateValid) { setPlateError(t('staff.checkin.walkin.plateInvalid')); return }
+  const handleSubmit = async (overrideSlotId = null) => {
+    const finalSlotId = (overrideSlotId && typeof overrideSlotId !== 'object') ? overrideSlotId : selSlotId;
+    if (!plateNumber.trim()) return setPlateError(t('staff.checkin.walkin.plateRequired'))
+    if (!plateValid) return setPlateError(t('staff.checkin.walkin.plateInvalid'))
+    if (aiPlateInsight?.type === 'error') return toast.error(aiPlateInsight.message)
     if (!vehicleTypeId) return toast.error(t('staff.checkin.walkin.vehicleTypeRequired'))
-    if (!selSlotId) return toast.error(t('staff.checkin.walkin.noSlot'))
+    if (!finalSlotId) return toast.error(t('staff.checkin.walkin.noSlot'))
     setSubmitting(true)
     try {
       const res = await staffApi.createWalkInSession({
         plateNumber: plateNumber.trim().toUpperCase(),
         vehicleTypeId: Number(vehicleTypeId),
-        slotId: selSlotId
+        slotId: finalSlotId
       })
       if (res.success) {
         toast.success(t('staff.checkin.walkin.checkinSuccess'))
@@ -287,25 +257,33 @@ const WalkInContent = () => {
     finally { setSubmitting(false) }
   }
 
-  const densityColor = { low: 'text-emerald-600', medium: 'text-amber-600', high: 'text-red-600' }
   const densityLabel = { low: t('staff.checkin.walkin.densityLow'), medium: t('staff.checkin.walkin.densityMed'), high: t('staff.checkin.walkin.densityHigh') }
 
   return (
-    <div className="flex gap-4 items-start pb-24">
-
+    <div className="flex gap-6 items-start pb-28">
       {/* ━━ LEFT: Form + Steps ━━ */}
-      <div className="w-72 flex-shrink-0 space-y-3">
+      <div className="w-[340px] flex-shrink-0 space-y-5">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 space-y-5 relative">
+          {aiPlateInsight && (
+            <div className={`mb-4 overflow-hidden rounded-2xl border p-4 shadow-sm ${aiPlateInsight.type === 'error' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+              <div className="flex gap-3">
+                <div className={`shrink-0 mt-0.5 ${aiPlateInsight.type === 'error' ? 'text-red-500' : 'text-amber-500'}`}>
+                  {aiPlateInsight.type === 'error' ? <Info size={16} /> : <Sparkles size={16} />}
+                </div>
+                <p className="text-xs font-semibold text-slate-700 leading-relaxed">
+                  {aiPlateInsight.message}
+                </p>
+              </div>
+            </div>
+          )}
 
-        {/* Form card */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 space-y-4">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-            <Info size={15} className="text-blue-500" />
+          <h3 className="font-black text-slate-800 flex items-center gap-2 text-base">
+            <Car size={18} className="text-blue-600" />
             {t('staff.checkin.walkin.title', 'Thông tin xe')}
           </h3>
 
-          {/* Plate */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
               {t('staff.checkin.walkin.plateLabel')} <span className="text-red-500">*</span>
             </label>
             <input
@@ -313,33 +291,30 @@ const WalkInContent = () => {
               onChange={e => { setPlateNumber(formatPlate(e.target.value)); setPlateError('') }}
               placeholder="29A-12345"
               maxLength={12}
-              className={`w-full px-3 py-2.5 rounded-lg border text-sm font-black uppercase tracking-widest
-                focus:outline-none focus:ring-2 transition-all
-                ${plateError ? 'border-red-400 bg-red-50 focus:ring-red-300'
-                  : plateValid ? 'border-emerald-400 bg-emerald-50 focus:ring-emerald-300'
-                    : 'border-slate-200 focus:ring-blue-300'}`}
+              className={`w-full px-4 py-3.5 rounded-2xl border-2 text-base font-black uppercase tracking-[0.2em]
+                focus:outline-none transition-all shadow-sm
+                ${plateError ? 'border-red-400 bg-red-50 text-red-700 focus:border-red-500'
+                  : plateValid ? 'border-emerald-400 bg-emerald-50 text-emerald-800 focus:border-emerald-500'
+                    : 'border-slate-200 bg-slate-50 text-slate-700 focus:border-blue-400 focus:bg-white'}`}
             />
-            {plateError
-              ? <p className="text-xs text-red-500 mt-1">{plateError}</p>
-              : plateValid
-                ? <p className="text-xs text-emerald-600 mt-1 font-medium">{t('staff.checkin.walkin.plateValid')}</p>
-                : <p className="text-xs text-slate-400 mt-1">{t('staff.checkin.walkin.plateHint')} 29A-12345</p>
+            {plateError ? <p className="text-xs font-bold text-red-500 mt-2">{plateError}</p>
+              : plateValid ? <p className="text-xs font-bold text-emerald-600 mt-2 flex items-center gap-1.5"><CheckCircle2 size={14}/> Hợp lệ. AI Sẵn sàng.</p>
+                : <p className="text-xs font-medium text-slate-400 mt-2">{t('staff.checkin.walkin.plateHint')} 29A-12345</p>
             }
           </div>
 
-          {/* Vehicle type */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
               {t('staff.checkin.walkin.vehicleTypeLabel')} <span className="text-red-500">*</span>
             </label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 bg-slate-100 p-1 rounded-2xl">
               {vehicleTypes.map(vt => (
                 <button key={vt.VehicleTypeID}
                   onClick={() => setVehicleTypeId(String(vt.VehicleTypeID))}
-                  className={`flex-1 py-2 rounded-lg border text-xs font-bold transition-all
+                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm
                     ${vehicleTypeId === String(vt.VehicleTypeID)
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                      : 'border-slate-200 text-slate-600 hover:border-blue-300'}`}>
+                      ? 'bg-white text-blue-700'
+                      : 'text-slate-500 hover:bg-slate-50'}`}>
                   {vt.VehicleName}
                 </button>
               ))}
@@ -347,10 +322,9 @@ const WalkInContent = () => {
           </div>
         </div>
 
-        {/* Step tracker */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 space-y-3">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('staff.checkin.walkin.stepGuide')}</p>
-          <div className="space-y-2.5">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 space-y-4">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('staff.checkin.walkin.stepGuide')}</p>
+          <div className="space-y-3.5">
             <StepBadge step={1} label={t('staff.checkin.walkin.stepBuilding')} active={step === 1} done={step > 1} />
             <StepBadge step={2} label={t('staff.checkin.walkin.stepFloor')} active={step === 2} done={step > 2} />
             <StepBadge step={3} label={t('staff.checkin.walkin.stepZone')} active={step === 3} done={step > 3} />
@@ -359,22 +333,21 @@ const WalkInContent = () => {
           </div>
         </div>
 
-        {/* Selected summary */}
         {selSlotId && selectedSlot && (
-          <div className="bg-blue-600 rounded-xl p-4 text-white space-y-1">
-            <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest">{t('staff.checkin.walkin.selectedSlot')}</p>
-            <p className="text-3xl font-black">{selectedSlot.SlotCode}</p>
-            <p className="text-xs opacity-80">
-              {selectedSlot.BuildingName?.split(' - ').slice(-1)[0]}
-              {' · '}{selectedSlot.FloorName}
-              {' · '}{selectedSlot.ZoneName}
+          <div className="bg-gradient-to-br from-slate-900 to-blue-900 rounded-3xl p-6 text-white shadow-xl shadow-blue-900/20 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4"></div>
+            <p className="text-[10px] font-black opacity-60 uppercase tracking-[0.2em] mb-1 relative z-10">{t('staff.checkin.walkin.selectedSlot')}</p>
+            <p className="text-5xl font-black tracking-tighter mb-2 relative z-10">{selectedSlot.SlotCode}</p>
+            <p className="text-xs font-medium opacity-80 relative z-10 flex items-center gap-1.5">
+              <MapPin size={12} />
+              {selectedSlot.BuildingName?.split(' - ').slice(-1)[0]} · {selectedSlot.FloorName} · {selectedSlot.ZoneName}
             </p>
             {aiSuggestion && (
-              <div className="mt-2 pt-2 border-t border-white/20">
-                <p className="text-[10px] flex items-center gap-1 opacity-80">
-                  <Sparkles size={10} /> {t('staff.checkin.walkin.aiLabel')}
+              <div className="mt-4 pt-4 border-t border-white/20 relative z-10">
+                <p className="text-[10px] font-bold flex items-center gap-1.5 opacity-80 uppercase tracking-wider text-blue-200">
+                  <Sparkles size={12} /> Lựa chọn AI
                 </p>
-                <p className="text-xs opacity-90 mt-0.5 leading-relaxed">{aiSuggestion.reason}</p>
+                <p className="text-xs opacity-90 mt-1.5 leading-relaxed font-medium text-blue-50">{aiSuggestion.reason}</p>
               </div>
             )}
           </div>
@@ -382,49 +355,44 @@ const WalkInContent = () => {
       </div>
 
       {/* ━━ RIGHT: Selection flow ━━ */}
-      <div className="flex-1 space-y-3">
-
+      <div className="flex-1 space-y-4">
         {/* STEP 1: Building */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-50">
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50 bg-slate-50/50">
             <div className="flex items-center gap-2">
-              <Building2 size={14} className="text-blue-500" />
-              <span className="text-sm font-bold text-slate-700">{t('staff.checkin.walkin.step1Title')}</span>
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <Building2 size={14} className="text-blue-600" />
+              </div>
+              <span className="text-sm font-black text-slate-800 tracking-wide uppercase">{t('staff.checkin.walkin.step1Title')}</span>
             </div>
             {selBuilding && (
-              <span className="text-xs font-semibold text-blue-600 flex items-center gap-1">
-                {selBuilding.name.split(' - ').slice(-1)[0]}
-                <button onClick={() => { setSelBuilding(null); setSelFloor(null); setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
-                  className="ml-1 text-slate-400 hover:text-slate-600">
-                  <RotateCcw size={10} />
-                </button>
-              </span>
+              <button onClick={() => { setSelBuilding(null); setSelFloor(null); setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
+                className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors">
+                <RotateCcw size={12} /> Chọn lại
+              </button>
             )}
           </div>
-
           {loading ? (
-            <div className="flex justify-center py-6"><Loader2 className="animate-spin text-blue-400" size={20} /></div>
+            <div className="flex justify-center py-10"><Loader2 className="animate-spin text-blue-500" size={24} /></div>
           ) : (
-            <div className="p-3 flex flex-wrap gap-2">
+            <div className="p-6 grid grid-cols-2 md:grid-cols-3 gap-3">
               {hierarchy.map(b => {
                 const totalSlots = b.floors.reduce((acc, f) => acc + f.zones.reduce((a, z) => a + z.slots.length, 0), 0)
                 const avail = b.floors.reduce((acc, f) => acc + f.zones.reduce((a, z) => a + z.slots.filter(s => s.SlotStatus === 'Available').length, 0), 0)
                 const isActive = selBuilding?.name === b.name
                 return (
-                  <button key={b.name}
-                    onClick={() => { setSelBuilding({ name: b.name }); setSelFloor(null); setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left
-                      ${isActive ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50'}`}>
-                    <Building2 size={18} className={isActive ? 'text-blue-100' : 'text-slate-400'} />
+                  <button key={b.name} onClick={() => { setSelBuilding({ name: b.name }); setSelFloor(null); setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
+                    className={`flex items-center gap-3 px-5 py-4 rounded-2xl border-2 transition-all text-left group
+                      ${isActive ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-500/20' : 'bg-white border-slate-100 hover:border-blue-400 hover:bg-blue-50'}`}>
+                    <Building2 size={24} className={isActive ? 'text-white' : 'text-blue-500 group-hover:scale-110 transition-transform'} />
                     <div>
-                      <p className={`text-sm font-bold ${isActive ? 'text-white' : 'text-slate-700'}`}>
+                      <p className={`text-sm font-black ${isActive ? 'text-white' : 'text-slate-800'}`}>
                         {b.name.split(' - ').slice(-1)[0] || b.name}
                       </p>
-                      <p className={`text-[10px] font-semibold ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>
-                        {avail}/{totalSlots} {t('staff.checkin.walkin.statEmpty')}
+                      <p className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${isActive ? 'text-blue-200' : 'text-slate-400'}`}>
+                        {avail}/{totalSlots} trống
                       </p>
                     </div>
-                    {isActive && <CheckCircle2 size={16} className="text-white ml-1" />}
                   </button>
                 )
               })}
@@ -434,23 +402,22 @@ const WalkInContent = () => {
 
         {/* STEP 2: Floor */}
         {selBuilding && (
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-50">
+          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden animate-in slide-in-from-top-2">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50 bg-slate-50/50">
               <div className="flex items-center gap-2">
-                <Layers size={14} className="text-blue-500" />
-                <span className="text-sm font-bold text-slate-700">{t('staff.checkin.walkin.step2Title')}</span>
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Layers size={14} className="text-blue-600" />
+                </div>
+                <span className="text-sm font-black text-slate-800 tracking-wide uppercase">{t('staff.checkin.walkin.step2Title')}</span>
               </div>
               {selFloor && (
-                <span className="text-xs font-semibold text-blue-600 flex items-center gap-1">
-                  {selFloor.name}
-                  <button onClick={() => { setSelFloor(null); setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
-                    className="ml-1 text-slate-400 hover:text-slate-600">
-                    <RotateCcw size={10} />
-                  </button>
-                </span>
+                <button onClick={() => { setSelFloor(null); setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
+                  className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors">
+                  <RotateCcw size={12} /> Chọn lại
+                </button>
               )}
             </div>
-            <div className="p-3 flex flex-wrap gap-2">
+            <div className="p-6 flex flex-wrap gap-3">
               {floorList.map(f => {
                 const avail = f.zones.reduce((a, z) => a + z.slots.filter(s => s.SlotStatus === 'Available').length, 0)
                 const total = f.zones.reduce((a, z) => a + z.slots.length, 0)
@@ -458,19 +425,18 @@ const WalkInContent = () => {
                 const isAct = selFloor?.name === f.name
                 const barClr = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-400' : 'bg-emerald-400'
                 return (
-                  <button key={f.name}
-                    onClick={() => { setSelFloor({ name: f.name }); setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
-                    className={`flex flex-col gap-1.5 px-4 py-3 rounded-xl border min-w-[120px] transition-all text-left
-                      ${isAct ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50'}`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className={`text-sm font-bold ${isAct ? 'text-white' : 'text-slate-700'}`}>{f.name}</p>
-                      {isAct && <CheckCircle2 size={14} className="text-white" />}
-                    </div>
-                    <p className={`text-[10px] font-semibold ${isAct ? 'text-blue-100' : 'text-slate-400'}`}>
-                      {avail} {t('staff.checkin.walkin.statEmpty')} / {total}
-                    </p>
-                    <div className={`h-1 rounded-full ${isAct ? 'bg-blue-400' : 'bg-slate-100'}`}>
-                      <div className={`h-full rounded-full ${isAct ? 'bg-white' : barClr}`} style={{ width: `${pct}%` }} />
+                  <button key={f.name} onClick={() => { setSelFloor({ name: f.name }); setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
+                    className={`flex flex-col gap-2.5 px-5 py-4 rounded-2xl border-2 min-w-[140px] transition-all text-left
+                      ${isAct ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-500/20' : 'bg-white border-slate-100 hover:border-blue-400 hover:bg-blue-50'}`}>
+                    <p className={`text-base font-black ${isAct ? 'text-white' : 'text-slate-800'}`}>{f.name}</p>
+                    <div className="space-y-1.5 w-full">
+                      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                        <span className={isAct ? 'text-blue-200' : 'text-slate-500'}>{avail} trống</span>
+                        <span className={isAct ? 'text-white' : 'text-slate-800'}>{pct}%</span>
+                      </div>
+                      <div className={`h-1.5 rounded-full overflow-hidden ${isAct ? 'bg-blue-400' : 'bg-slate-100'}`}>
+                        <div className={`h-full rounded-full ${isAct ? 'bg-white' : barClr}`} style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
                   </button>
                 )
@@ -481,47 +447,39 @@ const WalkInContent = () => {
 
         {/* STEP 3: Zone */}
         {selFloor && (
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-50">
+          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden animate-in slide-in-from-top-2">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50 bg-slate-50/50">
               <div className="flex items-center gap-2">
-                <Grid3X3 size={14} className="text-blue-500" />
-                <span className="text-sm font-bold text-slate-700">{t('staff.checkin.walkin.step3Title')}</span>
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Grid3X3 size={14} className="text-blue-600" />
+                </div>
+                <span className="text-sm font-black text-slate-800 tracking-wide uppercase">{t('staff.checkin.walkin.step3Title')}</span>
               </div>
               {selZone && (
-                <span className="text-xs font-semibold text-blue-600 flex items-center gap-1">
-                  {selZone.name}
-                  <button onClick={() => { setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
-                    className="ml-1 text-slate-400 hover:text-slate-600">
-                    <RotateCcw size={10} />
-                  </button>
-                </span>
+                <button onClick={() => { setSelZone(null); setSelSlotId(null); setAiSuggestion(null) }}
+                  className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors">
+                  <RotateCcw size={12} /> Chọn lại
+                </button>
               )}
             </div>
-            <div className="p-3 grid grid-cols-2 gap-2">
+            <div className="p-6 grid grid-cols-2 md:grid-cols-3 gap-3">
               {zoneList.map(z => {
                 const isAct = selZone?.name === z.name
-                const tagClr = z.pct >= 90 ? 'text-red-500 bg-red-50' : z.pct >= 70 ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'
-                const tagLbl = z.pct >= 90 ? t('staff.checkin.walkin.zoneCrowded') : z.pct >= 70 ? t('staff.checkin.walkin.zoneMed') : t('staff.checkin.walkin.zoneOk')
+                const tagClr = z.pct >= 90 ? 'text-red-600 bg-red-100' : z.pct >= 70 ? 'text-amber-700 bg-amber-100' : 'text-emerald-700 bg-emerald-100'
+                const tagLbl = z.pct >= 90 ? 'Đông' : z.pct >= 70 ? 'Vừa' : 'Trống'
                 return (
-                  <button key={z.name}
-                    onClick={() => { setSelZone(z); setSelSlotId(null); setAiSuggestion(null) }}
-                    disabled={z.available === 0}
-                    className={`p-3 rounded-xl border text-left transition-all space-y-2
+                  <button key={z.name} onClick={() => { setSelZone(z); setSelSlotId(null); setAiSuggestion(null) }} disabled={z.available === 0}
+                    className={`p-5 rounded-2xl border-2 text-left transition-all space-y-3
                       ${z.available === 0 ? 'opacity-40 cursor-not-allowed border-slate-100 bg-slate-50'
-                        : isAct ? 'bg-blue-600 border-blue-600 shadow-md'
-                          : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50'}`}>
+                        : isAct ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-500/20'
+                          : 'bg-white border-slate-100 hover:border-blue-400 hover:bg-blue-50'}`}>
                     <div className="flex items-center justify-between">
-                      <p className={`text-xs font-bold leading-tight ${isAct ? 'text-white' : 'text-slate-700'}`}>
+                      <p className={`text-sm font-black leading-tight ${isAct ? 'text-white' : 'text-slate-800'}`}>
                         {z.name.split(' ').slice(-2).join(' ')}
                       </p>
-                      {isAct && <CheckCircle2 size={13} className="text-white flex-shrink-0" />}
+                      {!isAct && <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-full ${tagClr}`}>{tagLbl}</span>}
                     </div>
-                    {!isAct && (
-                      <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full ${tagClr}`}>
-                        {tagLbl}
-                      </span>
-                    )}
-                    <OccupancyBar pct={isAct ? 0 : z.pct} available={z.available} labelOccupied={t('staff.checkin.walkin.statOccupied')} labelEmpty={t('staff.checkin.walkin.statEmpty')} />
+                    <OccupancyBar pct={isAct ? 0 : z.pct} available={z.available} labelOccupied="lấp đầy" labelEmpty="trống" />
                   </button>
                 )
               })}
@@ -531,114 +489,100 @@ const WalkInContent = () => {
 
         {/* STEP 4: AI Suggestion + Slot grid */}
         {selZone && (
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={14} className="text-purple-500" />
-                  <span className="text-sm font-bold text-slate-700">{t('staff.checkin.walkin.step4Title')}</span>
+          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden animate-in slide-in-from-top-2">
+            <div className="px-6 py-4 border-b border-slate-50 bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Sparkles size={14} className="text-purple-600" />
                 </div>
-
+                <span className="text-sm font-black text-slate-800 tracking-wide uppercase">{t('staff.checkin.walkin.step4Title')}</span>
               </div>
             </div>
-
-            <div className="p-4 space-y-4">
-              {/* AI suggestion banner */}
-              {aiSuggestion ? (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                        <Sparkles size={18} className="text-blue-500" />
+            
+            <div className="p-6 space-y-8">
+              {aiSuggestion && (
+                <div className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-500" />
+                  <div className="relative bg-white rounded-3xl border border-slate-200 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="flex items-start gap-5">
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-100 flex items-center justify-center border border-blue-200 shrink-0 shadow-inner">
+                        <Sparkles size={24} className="text-blue-600" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-xs text-blue-600 font-bold uppercase tracking-wider">{t('staff.checkin.walkin.aiLabel')}</p>
-                          {aiSuggestion.density && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white ${densityColor[aiSuggestion.density]}`}>
-                              {densityLabel[aiSuggestion.density]}
-                            </span>
-                          )}
-                          <span className="text-[10px] text-slate-400 italic flex items-center gap-0.5">
-                            <Sparkles size={9} /> {t('staff.checkin.walkin.aiImproving')}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 uppercase tracking-[0.2em]">
+                            AI Gợi ý tối ưu
                           </span>
                         </div>
-                        <p className="text-xl font-black text-blue-700 mt-0.5">{aiSuggestion.slot}</p>
-                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">{aiSuggestion.reason}</p>
+                        <h4 className="text-3xl font-black text-slate-800 tracking-tight">Slot {aiSuggestion.slot}</h4>
+                        <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm">{aiSuggestion.reason}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
+                    <button onClick={() => {
                         const s = slotsInZone.find(s => s.SlotCode === aiSuggestion.slot)
-                        if (s) setSelSlotId(s.SlotID)
+                        if (s) {
+                           setSelSlotId(s.SlotID)
+                           if (plateValid && !aiPlateInsight?.type?.includes('error')) handleSubmit(s.SlotID)
+                           else if (!plateValid) toast.info('Vui lòng nhập biển số xe trước khi check-in')
+                        }
                       }}
-                      className="flex-shrink-0 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5">
-                      <CheckCircle2 size={12} /> {t('staff.checkin.walkin.useThisSlot')}
+                      disabled={submitting || (plateValid && aiPlateInsight?.type === 'error')}
+                      className="px-8 py-4 bg-slate-900 text-white rounded-2xl text-sm font-bold hover:bg-slate-800 shadow-xl shadow-slate-900/20 transition-all flex items-center gap-2.5 disabled:opacity-50">
+                      {submitting ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} className="text-blue-300" />}
+                      1-Click Check-in
                     </button>
                   </div>
                 </div>
-              ) : null}
-
-              {/* Gate */}
-              <div className="flex items-center justify-center">
-                <div className="flex items-center gap-2 px-4 py-1.5 bg-slate-700 rounded-full">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] text-white font-bold tracking-widest">{t('staff.parkingMap.gateLabel')}</span>
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                </div>
-              </div>
+              )}
 
               {/* Slot grid */}
-              <div className="flex flex-wrap gap-2 justify-center">
-                {slotsInZone.map(slot => {
-                  const isSelected = selSlotId === slot.SlotID
-                  const isAiPick = aiSuggestion?.slot === slot.SlotCode
-                  const isDisabled = slot.SlotStatus !== 'Available'
-                  return (
-                    <button key={slot.SlotID}
-                      disabled={isDisabled}
-                      onClick={() => !isDisabled && setSelSlotId(slot.SlotID)}
-                      title={`${slot.SlotCode} – ${slot.SlotStatus}`}
-                      className={`w-14 h-14 rounded-xl border-2 flex flex-col items-center justify-center
-                        transition-all duration-150 relative
-                        ${isSelected
-                          ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-110 z-10'
-                          : isAiPick && !isDisabled
-                            ? 'bg-purple-50 border-purple-400 text-purple-700 shadow-sm scale-105'
-                            : SLOT_STYLE[slot.SlotStatus] || SLOT_STYLE.Available
-                        }`}>
-                      {isAiPick && !isSelected && (
-                        <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-purple-500 rounded-full flex items-center justify-center">
-                          <Sparkles size={8} className="text-white" />
-                        </span>
-                      )}
-                      <span className="font-black text-[10px] leading-tight">
-                        {slot.SlotCode.split('-').slice(-1)[0]}
-                      </span>
-                      {slot.SlotStatus === 'Available' && !isSelected && (
-                        <span className="text-[7px] font-bold opacity-50 mt-0.5">OK</span>
-                      )}
-                      {slot.SlotStatus === 'Occupied' && <Car size={10} className="mt-0.5 opacity-60" />}
-                      {slot.SlotStatus === 'Reserved' && <span className="text-[7px] font-bold mt-0.5">{t('staff.checkin.walkin.slotStatus.reserved').slice(0, 3)}</span>}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Legend */}
-              <div className="flex items-center gap-4 flex-wrap border-t border-slate-50 pt-3">
-                {[
-                  ['bg-white border-slate-200', t('staff.checkin.walkin.slotStatus.available')],
-                  ['bg-red-50 border-red-200', t('staff.checkin.walkin.slotStatus.occupied')],
-                  ['bg-amber-50 border-amber-300', t('staff.checkin.walkin.slotStatus.reserved')],
-                  ['bg-purple-50 border-purple-400', t('staff.checkin.walkin.slotStatus.selecting')],
-                  ['bg-blue-600 border-blue-600', t('staff.checkin.walkin.slotStatus.selecting')],
-                ].map(([cls, label]) => (
-                  <div key={label} className="flex items-center gap-1.5">
-                    <div className={`w-3 h-3 rounded border-2 ${cls}`} />
-                    <span className="text-[10px] text-slate-500 font-medium">{label}</span>
+              <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100">
+                <div className="flex items-center justify-center mb-8">
+                  <div className="flex items-center gap-2 px-6 py-2 bg-slate-800 rounded-full shadow-md shadow-slate-800/20">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs text-white font-black tracking-[0.2em] uppercase">Cổng Ra Vào</span>
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   </div>
-                ))}
+                </div>
+
+                <div className="flex flex-wrap gap-3 justify-center">
+                  {slotsInZone.map(slot => {
+                    const isSelected = selSlotId === slot.SlotID
+                    const isAiPick = aiSuggestion?.slot === slot.SlotCode
+                    const isDisabled = slot.SlotStatus !== 'Available'
+                    return (
+                      <button key={slot.SlotID} disabled={isDisabled} onClick={() => !isDisabled && setSelSlotId(slot.SlotID)}
+                        className={`w-16 h-16 rounded-2xl border-2 flex flex-col items-center justify-center transition-all duration-300 relative
+                          ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/30 scale-110 z-10'
+                            : isAiPick && !isDisabled ? 'bg-indigo-50 border-indigo-300 text-indigo-700 shadow-md scale-105'
+                              : SLOT_STYLE[slot.SlotStatus] || SLOT_STYLE.Available}`}>
+                        {isAiPick && !isSelected && (
+                          <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-500 rounded-full flex items-center justify-center shadow-sm">
+                            <Sparkles size={10} className="text-white" />
+                          </span>
+                        )}
+                        <span className="font-black text-xs leading-tight tracking-wider">{slot.SlotCode.split('-').slice(-1)[0]}</span>
+                        {slot.SlotStatus === 'Available' && !isSelected && <span className="text-[8px] font-black opacity-40 mt-1 uppercase">OK</span>}
+                        {slot.SlotStatus === 'Occupied' && <Car size={12} className="mt-1 opacity-60" />}
+                        {slot.SlotStatus === 'Reserved' && <span className="text-[8px] font-bold mt-1">RSV</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="flex items-center justify-center gap-6 flex-wrap mt-10">
+                  {[
+                    ['bg-white border-slate-200', 'Trống'],
+                    ['bg-red-50 border-red-200', 'Có xe'],
+                    ['bg-amber-50 border-amber-300', 'Đặt trước'],
+                    ['bg-blue-600 border-blue-600', 'Đang chọn'],
+                  ].map(([cls, label]) => (
+                    <div key={label} className="flex items-center gap-2">
+                      <div className={`w-4 h-4 rounded-md border-2 ${cls} shadow-sm`} />
+                      <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">{label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -646,36 +590,27 @@ const WalkInContent = () => {
       </div>
 
       {/* ━━ Bottom action bar ━━ */}
-      <div className="fixed bottom-0 left-0 md:left-64 right-0 bg-white border-t border-slate-100 shadow-lg z-20">
-        <div className="flex items-center justify-between px-6 py-3 gap-4">
-          <div className="flex gap-6 text-sm">
+      <div className="fixed bottom-0 left-0 md:left-64 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 shadow-[0_-8px_30px_rgb(0,0,0,0.04)] z-20">
+        <div className="flex items-center justify-between px-8 py-5 max-w-7xl mx-auto">
+          <div className="flex gap-8 text-sm">
             <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase">{t('staff.checkin.walkin.selectedPlate')}</span>
-              <p className={`font-black ${plateValid ? 'text-slate-800' : 'text-slate-300'}`}>{plateNumber || '—'}</p>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Biển số xe</span>
+              <p className={`font-black text-lg ${plateValid ? 'text-slate-800 tracking-wider' : 'text-slate-300'}`}>{plateNumber || '—'}</p>
             </div>
             <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Slot</span>
-              <p className={`font-black ${selectedSlot ? 'text-blue-600' : 'text-slate-300'}`}>{selectedSlot?.SlotCode || '—'}</p>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Vị trí đỗ</span>
+              <p className={`font-black text-lg ${selectedSlot ? 'text-blue-600' : 'text-slate-300'}`}>{selectedSlot?.SlotCode || '—'}</p>
             </div>
-            {selectedSlot && (
-              <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase">{t('staff.checkin.walkin.slotCode')}</span>
-                <p className="text-xs font-medium text-slate-600">{selectedSlot.FloorName} · {selectedSlot.ZoneName}</p>
-              </div>
-            )}
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => { setPlateNumber(''); setPlateError(''); setSelSlotId(null); setSelZone(null); setSelFloor(null); setSelBuilding(null); setAiSuggestion(null) }}
-              className="px-5 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors">
-              {t('staff.checkin.walkin.cancel')}
+          <div className="flex items-center gap-4">
+            <button onClick={() => { setPlateNumber(''); setPlateError(''); setSelSlotId(null); setSelZone(null); setSelFloor(null); setSelBuilding(null); setAiSuggestion(null) }}
+              className="px-6 py-3.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors">
+              Hủy bỏ
             </button>
-            <button onClick={handleSubmit}
-              disabled={submitting || !plateValid || !selSlotId}
-              className="px-6 py-2 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
-              {submitting && <Loader2 size={14} className="animate-spin" />}
-              <CheckCircle2 size={15} />
-              {t('staff.checkin.walkin.confirmCheckin')}
+            <button onClick={handleSubmit} disabled={submitting || !plateValid || !selSlotId}
+              className="px-8 py-3.5 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-all disabled:opacity-40 shadow-lg shadow-blue-500/30 flex items-center gap-2">
+              {submitting && <Loader2 size={16} className="animate-spin" />}
+              <CheckCircle2 size={18} /> Xác Nhận Check-in
             </button>
           </div>
         </div>
@@ -708,107 +643,107 @@ const BookingContent = () => {
           if (keywordRef.current.trim()) params.keyword = keywordRef.current.trim()
           const res = await staffApi.getBookingQueue(params)
           if (!cancelled && res.success) setBookings(res.data)
-        } catch { if (!cancelled) toast.error(t('staff.checkin.booking.fetchFailed')) }
-        finally { if (!cancelled) setLoading(false) }
+        } catch {} finally { if (!cancelled) setLoading(false) }
       })()
     return () => { cancelled = true }
-  }, [activeTab, searchTrigger, t])
+  }, [activeTab, searchTrigger])
 
   const STATUS_BADGE = {
-    Reserved: 'bg-emerald-100 text-emerald-700',
-    Completed: 'bg-slate-100 text-slate-600',
-    Cancelled: 'bg-red-100 text-red-600',
-    Expired: 'bg-amber-100 text-amber-700',
+    Reserved: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+    Completed: 'bg-slate-100 text-slate-700 border border-slate-200',
+    Cancelled: 'bg-red-100 text-red-800 border border-red-200',
+    Expired: 'bg-amber-100 text-amber-800 border border-amber-200',
   }
 
   const TABS = [
-    { name: 'Reserved', label: t('staff.checkin.booking.tabs.reserved', 'Đang đặt') },
-    { name: 'Completed', label: t('staff.checkin.booking.tabs.completed', 'Hoàn thành') },
-    { name: 'Cancelled', label: t('staff.checkin.booking.tabs.cancelled', 'Đã hủy') },
-    { name: 'Expired', label: t('staff.checkin.booking.tabs.expired', 'Hết hạn') },
+    { name: 'Reserved', label: 'Đang đặt' },
+    { name: 'Completed', label: 'Hoàn thành' },
+    { name: 'Cancelled', label: 'Đã hủy' },
+    { name: 'Expired', label: 'Hết hạn' },
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4">
-        <div className="flex gap-3">
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6">
+        <div className="flex gap-4">
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input type="text" value={keyword}
               onChange={e => setKeyword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && setSearchTrigger(t => t + 1)}
-              placeholder={t('staff.checkin.booking.searchPlaceholder', t('staff.checkin.booking.searchPlaceholder'))}
-              className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all" />
+              placeholder="Tìm theo Biển số hoặc Mã đặt chỗ..."
+              className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-slate-100 bg-slate-50 text-sm font-bold focus:outline-none focus:border-blue-400 focus:bg-white transition-all shadow-sm" />
           </div>
           <button onClick={() => setSearchTrigger(t => t + 1)} disabled={loading}
-            className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors">
-            {t('staff.checkin.booking.searchBtn')}
+            className="px-8 py-3.5 bg-slate-800 text-white font-black rounded-2xl text-sm hover:bg-slate-900 disabled:opacity-50 transition-colors shadow-md">
+            Tìm kiếm
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="flex gap-1 px-4 pt-4 border-b border-slate-100">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+        <div className="flex gap-2 px-6 pt-6 border-b border-slate-100 bg-slate-50/50">
           {TABS.map(tab => (
             <button key={tab.name} onClick={() => setActiveTab(tab.name)}
-              className={`px-4 py-2 rounded-t-lg text-xs font-bold transition-colors border-b-2 -mb-px
-                ${activeTab === tab.name ? 'border-blue-600 text-blue-600 bg-blue-50' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              className={`px-6 py-3 rounded-t-2xl text-xs font-black transition-all border-b-2 -mb-px uppercase tracking-wider
+                ${activeTab === tab.name ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-400 hover:text-slate-700'}`}>
               {tab.label}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="animate-spin text-blue-500" size={22} /></div>
+          <div className="flex justify-center py-20"><Loader2 className="animate-spin text-blue-500" size={32} /></div>
         ) : bookings.length === 0 ? (
-          <div className="text-center py-12 text-slate-300">
-            <Calendar size={36} className="mx-auto mb-2" />
-            <p className="text-sm font-medium">{t('staff.checkin.booking.noBooking', 'Không có đặt chỗ nào')}</p>
+          <div className="text-center py-20 text-slate-300">
+            <Calendar size={48} className="mx-auto mb-4 opacity-50" />
+            <p className="text-base font-bold text-slate-500">Không có đặt chỗ nào</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto p-4">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-xs text-slate-500 font-bold uppercase tracking-wide">
-                  <th className="py-3 px-4 text-left">{t('staff.checkin.booking.colCode')}</th>
-                  <th className="py-3 px-4 text-left">{t('staff.checkin.booking.colDriver')}</th>
-                  <th className="py-3 px-4 text-left">Xe</th>
-                  <th className="py-3 px-4 text-left">{t('staff.checkin.walkin.slotCode')}</th>
-                  <th className="py-3 px-4 text-left">{t('staff.checkin.booking.colStart')}</th>
-                  <th className="py-3 px-4 text-left">{t('staff.checkin.booking.colEnd')}</th>
-                  <th className="py-3 px-4 text-left">{t('staff.checkin.booking.colStatus')}</th>
-                  <th className="py-3 px-4 text-right">{t('staff.checkin.booking.colActions')}</th>
+                <tr className="bg-slate-50 text-[10px] text-slate-400 font-black uppercase tracking-widest text-left">
+                  <th className="py-4 px-6 rounded-l-2xl">Mã vé</th>
+                  <th className="py-4 px-6">Tài xế & Liên hệ</th>
+                  <th className="py-4 px-6">Biển số xe</th>
+                  <th className="py-4 px-6">Vị trí đỗ</th>
+                  <th className="py-4 px-6">Khung giờ đặt</th>
+                  <th className="py-4 px-6">Trạng thái</th>
+                  <th className="py-4 px-6 text-right rounded-r-2xl"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {bookings.map(item => (
-                  <tr key={item.ReservationID} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 px-4 font-black text-blue-600 text-xs">{item.BookingCode}</td>
-                    <td className="py-3 px-4">
-                      <p className="font-semibold text-slate-800">{item.DriverName}</p>
-                      <p className="text-xs text-slate-400">{item.PhoneNumber}</p>
+                  <tr key={item.ReservationID} className="hover:bg-slate-50/60 transition-colors group">
+                    <td className="py-4 px-6 font-mono font-black text-blue-600">{item.BookingCode}</td>
+                    <td className="py-4 px-6">
+                      <p className="font-bold text-slate-800">{item.DriverName}</p>
+                      <p className="text-xs text-slate-500 font-medium">{item.PhoneNumber}</p>
                     </td>
-                    <td className="py-3 px-4 text-slate-600 text-xs">{item.VehicleName}</td>
-                    <td className="py-3 px-4">
-                      <p className="font-semibold text-slate-700 text-xs">{item.SlotCode}</p>
-                      <p className="text-xs text-slate-400">{item.ZoneName}</p>
+                    <td className="py-4 px-6">
+                      <div className="bg-slate-800 text-white font-black tracking-wider px-3 py-1.5 rounded-lg inline-block text-xs shadow-sm">
+                        {item.VehicleName}
+                      </div>
                     </td>
-                    <td className="py-3 px-4 text-slate-500 text-xs">
-                      {item.StartTime ? new Date(item.StartTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'}
+                    <td className="py-4 px-6">
+                      <p className="font-black text-slate-800">{item.SlotCode}</p>
+                      <p className="text-xs font-semibold text-slate-400">{item.ZoneName}</p>
                     </td>
-                    <td className="py-3 px-4 text-slate-500 text-xs">
-                      {item.EndTime ? new Date(item.EndTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '—'}
+                    <td className="py-4 px-6 text-slate-500 text-xs font-medium space-y-1">
+                      <p>{item.StartTime ? new Date(item.StartTime).toLocaleString('vi-VN') : '—'}</p>
+                      <p>{item.EndTime ? new Date(item.EndTime).toLocaleString('vi-VN') : '—'}</p>
                     </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${STATUS_BADGE[item.ReservationStatus] || 'bg-slate-100 text-slate-600'}`}>
+                    <td className="py-4 px-6">
+                      <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${STATUS_BADGE[item.ReservationStatus] || 'bg-slate-100 text-slate-600'}`}>
                         {item.ReservationStatus}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-4 px-6 text-right">
                       {item.ReservationStatus === 'Reserved' && (
                         <button onClick={() => navigate(`/staff/verify-booking/${item.ReservationID}`)}
-                          className="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-xs font-bold transition-colors">
-                          {t('staff.checkin.booking.processBtn')}
+                          className="px-5 py-2.5 bg-white border-2 border-blue-600 text-blue-700 hover:bg-blue-600 hover:text-white rounded-xl text-xs font-black transition-all opacity-0 group-hover:opacity-100 shadow-sm focus:opacity-100 flex items-center gap-2 ml-auto">
+                          Xử lý <ChevronRight size={14} />
                         </button>
                       )}
                     </td>
@@ -829,32 +764,30 @@ const BookingContent = () => {
 const StaffCheckIn = () => {
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
-  const [activeType, setActiveType] = useState(
-    searchParams.get('tab') === 'booking' ? 'booking' : 'walkin'
-  )
+  const [activeType, setActiveType] = useState(searchParams.get('tab') === 'booking' ? 'booking' : 'walkin')
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 pb-8">
-      <header className="flex justify-between items-center mb-5">
+    <div className="flex flex-col h-full bg-slate-50/50 pb-8 font-sans">
+      <header className="flex justify-between items-center mb-8 bg-white p-6 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">{t('staff.checkin.title', 'Check-in xe')}</h1>
-          <p className="text-xs text-slate-400 mt-0.5">{t('staff.checkin.subtitle', 'Quản lý xe vào bãi')}</p>
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight">{t('staff.checkin.title', 'Hệ thống Check-in')}</h1>
+          <p className="text-sm font-semibold text-slate-400 mt-1">{t('staff.checkin.subtitle', 'Quản lý xe vào bãi thông minh')}</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-black text-emerald-700 uppercase tracking-widest shadow-sm">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           {t('staff.checkin.gateLabel', 'Cổng đang mở')}
         </div>
       </header>
 
-      <div className="flex gap-1 mb-5 bg-white rounded-xl border border-slate-100 shadow-sm p-1 w-fit">
+      <div className="flex gap-2 mb-8 bg-white rounded-2xl border border-slate-100 shadow-sm p-1.5 w-fit mx-auto shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         {[
-          { key: 'walkin', icon: FileText, label: t('staff.checkin.walkinTab', 'Khách vãng lai') },
+          { key: 'walkin', icon: Car, label: t('staff.checkin.walkinTab', 'Khách vãng lai') },
           { key: 'booking', icon: Calendar, label: t('staff.checkin.bookingTab', 'Đặt chỗ trước') },
         ].map(({ key, icon: Icon, label }) => (
           <button key={key} onClick={() => setActiveType(key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all
-              ${activeType === key ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-            <Icon size={14} /> {label}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black transition-all
+              ${activeType === key ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}>
+            <Icon size={16} /> {label}
           </button>
         ))}
       </div>

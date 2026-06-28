@@ -5,24 +5,17 @@
  * giao dịch (Thành công/Hủy) cùng với các thông tin thanh toán (biển số, ô đỗ, số tiền...).
  */
 
-// src/pages/driver/DriverPaymentResult.jsx
-// Trang redirect từ PayOS về sau khi quét QR
-// Route: /driver/payment-result?sessionId=X&status=success|cancel
-
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  Box, Button, Card, CardContent, CircularProgress,
-  Container, Divider, Stack, Typography, Chip
-} from '@mui/material'
-import {
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
+  CheckCircle2 as CheckCircleIcon,
+  XCircle as CancelIcon,
   History as HistoryIcon,
   Home as HomeIcon,
-  Refresh as RefreshIcon
-} from '@mui/icons-material'
+  RefreshCw as RefreshIcon,
+  Loader2
+} from 'lucide-react'
 import authorizeAxios from '../../utils/authorizeAxios'
 
 const DriverPaymentResult = () => {
@@ -70,7 +63,6 @@ const DriverPaymentResult = () => {
       const fetchPaymentInfo = async () => {
         try {
           const r = await authorizeAxios.get(`/driver/payment/session-info/${sessionId}`)
-
           if (!ignore) {
             setInfo(r.data?.data || null)
           }
@@ -95,177 +87,120 @@ const DriverPaymentResult = () => {
   }, [sessionId])
 
   if (loading) return (
-    <Container maxWidth="sm" sx={{ py: 6, textAlign: 'center' }}>
-      <CircularProgress />
-      <Typography mt={2} color="text.secondary">{t('driver.paymentResult.checking')}</Typography>
-    </Container>
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center py-12 px-4">
+      <Loader2 size={32} className="animate-spin text-blue-500 mb-4" />
+      <p className="text-slate-500 font-medium">{t('driver.paymentResult.checking')}</p>
+    </div>
   )
 
   return (
-    <Container maxWidth="sm" sx={{ py: 0 }}>
-      <Card sx={{ borderRadius: 3, overflow: 'hidden', boxShadow: 4 }}>
-        {/* ── Header ── */}
-        <Box sx={{
-          background: isSuccess
-            ? 'linear-gradient(135deg, #16a34a, #059669)'
-            : 'linear-gradient(135deg, #dc2626, #b91c1c)',
-          px: 5, py: 7, textAlign: 'center', color: '#fff'
-        }}>
-          <Box sx={{
-            width: 88, height: 88, borderRadius: '50%',
-            bgcolor: 'rgba(255,255,255,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            mx: 'auto', mb: 2.5
-          }}>
-            {isSuccess
-              ? <CheckCircleIcon sx={{ fontSize: 52 }} />
-              : <CancelIcon sx={{ fontSize: 52 }} />
-            }
-          </Box>
-          <Typography variant="h5" fontWeight={900} mb={1}>
-            {isSuccess ? t('driver.paymentResult.successTitle') : t('driver.paymentResult.cancelTitle')}
-          </Typography>
-          <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
-            {isSuccess
-              ? t('driver.paymentResult.successBody')
-              : t('driver.paymentResult.cancelBody')}
-          </Typography>
-          {isSuccess && (
-            <Chip
-              label={t('driver.paymentResult.statusPrepaid')}
-              size="small"
-              sx={{
-                mt: 2, bgcolor: 'rgba(255,255,255,0.2)',
-                color: '#fff', fontWeight: 700, border: '1px solid rgba(255,255,255,0.4)'
-              }}
-            />
-          )}
-        </Box>
-
-        {/* ── Body ── */}
-        <CardContent sx={{ p: 4 }}>
-          {/* Thông tin giao dịch */}
-          {isSuccess && info && (
-            <Box
-              sx={{
-                bgcolor: 'success.50', borderRadius: 2,
-                border: '1px solid', borderColor: 'success.200',
-                p: 2.5, mb: 3
-              }}
-            >
-              <Typography variant="overline" color="success.dark" fontWeight={800} display="block" mb={1.5}>
-                {t('driver.paymentResult.txDetails')}
-              </Typography>
-              <Stack spacing={1.5}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body2" color="text.secondary">{t('driver.payment.paidAmount')}</Typography>
-                  <Typography fontWeight={800} color="success.main" fontSize={18}>
-                    {fmt(info.PrepaidAmount || info.Amount)}
-                  </Typography>
-                </Stack>
-                <Divider />
-                {info.PlateNumber && (
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">{t('driver.paymentResult.plate')}</Typography>
-                    <Typography fontWeight={700} fontFamily="monospace">{info.PlateNumber}</Typography>
-                  </Stack>
-                )}
-                {info.SlotCode && (
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">{t('driver.paymentResult.slot')}</Typography>
-                    <Typography fontWeight={700}>{info.SlotCode}</Typography>
-                  </Stack>
-                )}
-                {info.VehicleName && (
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">{t('driver.paymentResult.vehicle')}</Typography>
-                    <Typography fontWeight={700}>{info.VehicleName}</Typography>
-                  </Stack>
-                )}
-                {info.EntryTime && (
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">{t('driver.paymentResult.entryAt')}</Typography>
-                    <Typography fontWeight={700}>{fmtTime(info.EntryTime)}</Typography>
-                  </Stack>
-                )}
-                <Divider />
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">{t('driver.payment.paidAt')}</Typography>
-                  <Typography fontWeight={700}>{fmtTime(info.PrepaidAt || new Date())}</Typography>
-                </Stack>
-                {info.SnapshotDurationH != null && (
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">{t('driver.paymentResult.billedHours')}</Typography>
-                    <Typography fontWeight={700}>
-                      {Number(info.SnapshotDurationH).toFixed(1)}h
-                    </Typography>
-                  </Stack>
-                )}
-              </Stack>
-            </Box>
-          )}
-
-          {/* Lưu ý prepaid */}
-          {isSuccess && (
-            <Box sx={{
-              bgcolor: 'warning.50', borderRadius: 2,
-              border: '1px solid', borderColor: 'warning.300',
-              p: 2, mb: 3
-            }}>
-              <Typography variant="body2" color="warning.dark" fontWeight={600}>
-                {t('driver.paymentResult.prepayNoteTitle')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" mt={0.5}>
-                {t('driver.paymentResult.prepayNoteBody')}
-              </Typography>
-            </Box>
-          )}
-
-          {/* Buttons */}
-          <Stack spacing={1.5}>
-            {isSuccess ? (
-              <>
-                <Button
-                  fullWidth variant="contained" color="success"
-                  startIcon={<HomeIcon />}
-                  onClick={() => navigate('/driver/home')}
-                  sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}
-                >
-                  {t('driver.common.goHome')}
-                </Button>
-                <Button
-                  fullWidth variant="outlined"
-                  startIcon={<HistoryIcon />}
-                  onClick={() => navigate('/driver/history')}
-                  sx={{ py: 1.25, borderRadius: 2 }}
-                >
-                  {t('driver.common.viewHistory')}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  fullWidth variant="contained"
-                  startIcon={<RefreshIcon />}
-                  onClick={() => navigate('/driver/payment')}
-                  sx={{ py: 1.5, borderRadius: 2, fontWeight: 700 }}
-                >
-                  {t('driver.paymentResult.retry')}
-                </Button>
-                <Button
-                  fullWidth variant="outlined"
-                  startIcon={<HomeIcon />}
-                  onClick={() => navigate('/driver/home')}
-                  sx={{ py: 1.25, borderRadius: 2 }}
-                >
-                  {t('driver.common.goHome')}
-                </Button>
-              </>
+    <div className="min-h-screen bg-slate-50 pt-10 pb-12 font-sans px-4">
+      <div className="max-w-sm mx-auto">
+        <div className="bg-white rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100">
+          {/* ── Header ── */}
+          <div className={`px-6 py-10 text-center text-white relative overflow-hidden ${isSuccess ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-red-500 to-rose-700'}`}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4"></div>
+            <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-5 relative z-10 backdrop-blur-sm border border-white/20">
+              {isSuccess ? <CheckCircleIcon size={52} className="text-white" /> : <CancelIcon size={52} className="text-white" />}
+            </div>
+            <h2 className="text-2xl font-black mb-2 relative z-10 tracking-tight">
+              {isSuccess ? t('driver.paymentResult.successTitle') : t('driver.paymentResult.cancelTitle')}
+            </h2>
+            <p className={`text-sm font-medium relative z-10 ${isSuccess ? 'text-green-50' : 'text-red-50'}`}>
+              {isSuccess ? t('driver.paymentResult.successBody') : t('driver.paymentResult.cancelBody')}
+            </p>
+            {isSuccess && (
+              <div className="inline-block mt-5 px-4 py-1.5 bg-white/20 text-white border border-white/40 rounded-full text-xs font-bold uppercase tracking-wider relative z-10">
+                {t('driver.paymentResult.statusPrepaid')}
+              </div>
             )}
-          </Stack>
-        </CardContent>
-      </Card>
-    </Container>
+          </div>
+
+          {/* ── Body ── */}
+          <div className="p-6">
+            {/* Thông tin giao dịch */}
+            {isSuccess && info && (
+              <div className="bg-green-50 rounded-2xl border border-green-200 p-5 mb-6">
+                <p className="text-[11px] font-black text-green-700 uppercase tracking-widest mb-4">
+                  {t('driver.paymentResult.txDetails')}
+                </p>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center pb-3 border-b border-green-200/60 border-dashed">
+                    <span className="text-xs font-bold text-slate-500">{t('driver.payment.paidAmount')}</span>
+                    <span className="text-lg font-black text-green-600">{fmt(info.PrepaidAmount || info.Amount)}</span>
+                  </div>
+                  {info.PlateNumber && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500">{t('driver.paymentResult.plate')}</span>
+                      <span className="text-sm font-bold text-slate-800 font-mono">{info.PlateNumber}</span>
+                    </div>
+                  )}
+                  {info.SlotCode && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500">{t('driver.paymentResult.slot')}</span>
+                      <span className="text-sm font-bold text-slate-800">{info.SlotCode}</span>
+                    </div>
+                  )}
+                  {info.VehicleName && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500">{t('driver.paymentResult.vehicle')}</span>
+                      <span className="text-sm font-bold text-slate-800">{info.VehicleName}</span>
+                    </div>
+                  )}
+                  {info.EntryTime && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500">{t('driver.paymentResult.entryAt')}</span>
+                      <span className="text-sm font-bold text-slate-800">{fmtTime(info.EntryTime)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center pt-3 border-t border-green-200/60 border-dashed">
+                    <span className="text-xs font-bold text-slate-500">{t('driver.payment.paidAt')}</span>
+                    <span className="text-sm font-bold text-slate-800">{fmtTime(info.PrepaidAt || new Date())}</span>
+                  </div>
+                  {info.SnapshotDurationH != null && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-500">{t('driver.paymentResult.billedHours')}</span>
+                      <span className="text-sm font-bold text-slate-800">{Number(info.SnapshotDurationH).toFixed(1)}h</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Lưu ý prepaid */}
+            {isSuccess && (
+              <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4 mb-6">
+                <h4 className="text-sm font-bold text-amber-800 mb-1">{t('driver.paymentResult.prepayNoteTitle')}</h4>
+                <p className="text-xs font-medium text-amber-700/80">{t('driver.paymentResult.prepayNoteBody')}</p>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="space-y-3">
+              {isSuccess ? (
+                <>
+                  <button onClick={() => navigate('/driver/home')} className="w-full flex items-center justify-center gap-2 py-3.5 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-colors shadow-md shadow-green-500/20">
+                    <HomeIcon size={18} /> {t('driver.common.goHome')}
+                  </button>
+                  <button onClick={() => navigate('/driver/history')} className="w-full flex items-center justify-center gap-2 py-3.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-bold rounded-xl transition-colors shadow-sm">
+                    <HistoryIcon size={18} /> {t('driver.common.viewHistory')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => navigate('/driver/payment')} className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors shadow-md shadow-blue-500/20">
+                    <RefreshIcon size={18} /> {t('driver.paymentResult.retry')}
+                  </button>
+                  <button onClick={() => navigate('/driver/home')} className="w-full flex items-center justify-center gap-2 py-3.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-bold rounded-xl transition-colors shadow-sm">
+                    <HomeIcon size={18} /> {t('driver.common.goHome')}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 

@@ -6,14 +6,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import {
-  Box, Typography, Button, TextField, Select, MenuItem,
-  FormControl, InputLabel, Tabs, Tab, Chip, IconButton,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, InputAdornment, CircularProgress, Tooltip, Dialog,
-  DialogTitle, DialogContent, DialogActions, Divider, Alert,
-  FormHelperText, Stack, Badge, Collapse, Autocomplete
-} from '@mui/material'
-import {
   AlertTriangle, ArrowLeft, Plus, Search, RefreshCw,
   Clock, Eye, Edit2, UploadCloud, Trash2,
   Image as ImageIcon, X, ZoomIn,
@@ -36,9 +28,9 @@ const INCIDENT_TYPES = [
   'other'
 ]
 const PRIORITIES = [
-  { value: 'Low', labelKey: 'low', color: '#4caf50' },
-  { value: 'Normal', labelKey: 'normal', color: '#2196f3' },
-  { value: 'High', labelKey: 'high', color: '#f44336' }
+  { value: 'Low', labelKey: 'low', color: 'bg-emerald-500' },
+  { value: 'Normal', labelKey: 'normal', color: 'bg-blue-500' },
+  { value: 'High', labelKey: 'high', color: 'bg-red-500' }
 ]
 const STATUSES = [
   { value: 'all', labelKey: 'all', color: 'default' },
@@ -51,7 +43,6 @@ const MAX_IMAGES = 15
 const MAX_FILE_MB = 5
 
 // ─── Biển số & mã phiên helpers ───────────────────────────────────────────────
-// Biển số: gõ 51a12345 → 51A-123.45 (hoa + tự '-' + tự '.')
 const formatPlate = (raw) => {
   const clean = (raw || '').toUpperCase().replace(/[^0-9A-Z]/g, '')
   if (!clean) return ''
@@ -71,7 +62,6 @@ const formatPlate = (raw) => {
 const PLATE_REGEX = /^(\d{2}[A-Z]{1,2}-?\d{3}\.?\d{2}|\d{2}[A-Z]{1,2}-?\d{4,5})$/i
 const isValidPlate = (p) => PLATE_REGEX.test(p)
 
-// Mã phiên: gõ ss123 / SS123 / 123 → SS-00123 (hoa + tự 'SS-' + đệm 0)
 const formatSessionCode = (raw) => {
   const digits = (raw || '').replace(/[^0-9]/g, '')
   if (!digits) return ''
@@ -108,28 +98,23 @@ function fileToBase64(file) {
 function StatusChip({ status }) {
   const { t } = useTranslation()
   const map = {
-    Open: { label: t('staff.createIncident.statuses.open'), color: 'error' },
-    InProgress: { label: t('staff.createIncident.statuses.inProgress'), color: 'warning' },
-    Resolved: { label: t('staff.createIncident.statuses.resolved'), color: 'success' }
+    Open: { label: t('staff.createIncident.statuses.open'), style: 'bg-red-50 text-red-600 border-red-200' },
+    InProgress: { label: t('staff.createIncident.statuses.inProgress'), style: 'bg-amber-50 text-amber-600 border-amber-200' },
+    Resolved: { label: t('staff.createIncident.statuses.resolved'), style: 'bg-emerald-50 text-emerald-600 border-emerald-200' }
   }
-  const s = map[status] || { label: status, color: 'default' }
-  return <Chip label={s.label} color={s.color} size="small" />
+  const s = map[status] || { label: status, style: 'bg-slate-50 text-slate-600 border-slate-200' }
+  return <span className={`px-2 py-0.5 rounded-full border text-xs font-bold ${s.style}`}>{s.label}</span>
 }
 
 function PriorityBadge({ priority }) {
   const { t } = useTranslation()
   const map = {
-    Low: { label: t('staff.createIncident.priorities.low'), bg: '#e8f5e9', color: '#2e7d32', border: '#a5d6a7' },
-    Normal: { label: t('staff.createIncident.priorities.normal'), bg: '#e3f2fd', color: '#1565c0', border: '#90caf9' },
-    High: { label: t('staff.createIncident.priorities.high'), bg: '#fde8e8', color: '#c62828', border: '#ef9a9a' }
+    Low: { label: t('staff.createIncident.priorities.low'), style: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    Normal: { label: t('staff.createIncident.priorities.normal'), style: 'bg-blue-50 text-blue-700 border-blue-200' },
+    High: { label: t('staff.createIncident.priorities.high'), style: 'bg-red-50 text-red-700 border-red-200' }
   }
   const s = map[priority] || map.Normal
-  return (
-    <Chip label={s.label} size="small" sx={{
-      bgcolor: s.bg, color: s.color, fontWeight: 600,
-      fontSize: '0.7rem', border: `1px solid ${s.border}`
-    }} />
-  )
+  return <span className={`px-2 py-0.5 rounded border text-[11px] font-bold ${s.style}`}>{s.label}</span>
 }
 
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
@@ -148,33 +133,34 @@ function Lightbox({ images, startIndex, onClose }) {
 
   if (!images.length) return null
   return (
-    <Box onClick={onClose} sx={{ position: 'fixed', inset: 0, bgcolor: 'rgba(0,0,0,0.92)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <IconButton onClick={onClose} sx={{ position: 'absolute', top: 16, right: 16, color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }}>
-        <X size={22} />
-      </IconButton>
-      <Typography sx={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>
+    <div onClick={onClose} className="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center">
+      <button onClick={onClose} className="absolute top-4 right-4 p-2 text-white bg-white/10 hover:bg-white/20 rounded-3xl transition-colors">
+        <X size={24} />
+      </button>
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
         {idx + 1} / {images.length}
-      </Typography>
+      </div>
       {idx > 0 && (
-        <IconButton onClick={e => { e.stopPropagation(); setIdx(i => i - 1) }} sx={{ position: 'absolute', left: 16, color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }}>
-          <ChevronLeft size={28} />
-        </IconButton>
+        <button onClick={e => { e.stopPropagation(); setIdx(i => i - 1) }} className="absolute left-4 p-3 text-white bg-white/10 hover:bg-white/20 rounded-3xl transition-colors">
+          <ChevronLeft size={32} />
+        </button>
       )}
-      <Box component="img" src={images[idx]} onClick={e => e.stopPropagation()} sx={{ maxWidth: '90vw', maxHeight: '88vh', objectFit: 'contain', borderRadius: 2, boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }} />
+      <img src={images[idx]} onClick={e => e.stopPropagation()} className="max-w-[90vw] max-h-[88vh] object-contain rounded-3xl shadow-2xl" alt="Incident attachment" />
       {idx < images.length - 1 && (
-        <IconButton onClick={e => { e.stopPropagation(); setIdx(i => i + 1) }} sx={{ position: 'absolute', right: 16, color: 'white', bgcolor: 'rgba(255,255,255,0.1)' }}>
-          <ChevronRight size={28} />
-        </IconButton>
+        <button onClick={e => { e.stopPropagation(); setIdx(i => i + 1) }} className="absolute right-4 p-3 text-white bg-white/10 hover:bg-white/20 rounded-3xl transition-colors">
+          <ChevronRight size={32} />
+        </button>
       )}
       {images.length > 1 && (
-        <Box sx={{ position: 'absolute', bottom: 16, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', px: 2 }}>
+        <div className="absolute bottom-6 flex gap-2 flex-wrap justify-center px-4">
           {images.map((src, i) => (
-            <Box key={i} component="img" src={src} onClick={e => { e.stopPropagation(); setIdx(i) }}
-              sx={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 1, cursor: 'pointer', opacity: i === idx ? 1 : 0.45, border: i === idx ? '2px solid white' : '2px solid transparent', transition: 'all 0.15s' }} />
+            <img key={i} src={src} onClick={e => { e.stopPropagation(); setIdx(i) }}
+              className={`w-14 h-14 object-cover rounded-xl cursor-pointer transition-all ${i === idx ? 'opacity-100 ring-2 ring-white scale-110' : 'opacity-50 hover:opacity-100 ring-2 ring-transparent'}`}
+              alt={`Thumbnail ${i + 1}`} />
           ))}
-        </Box>
+        </div>
       )}
-    </Box>
+    </div>
   )
 }
 
@@ -213,45 +199,46 @@ function AttachmentGrid({ images = [], editable = false, onChange }) {
   if (!editable && images.length === 0) return null
 
   return (
-    <Box>
+    <div>
       {editable && (
-        <Box onDrop={handleDrop} onDragOver={e => e.preventDefault()}
+        <div onDrop={handleDrop} onDragOver={e => e.preventDefault()}
           onClick={() => images.length < MAX_IMAGES && fileRef.current?.click()}
-          sx={{ border: '2px dashed', borderColor: images.length >= MAX_IMAGES ? 'divider' : 'primary.light', borderRadius: 2, p: 2, textAlign: 'center', cursor: images.length >= MAX_IMAGES ? 'not-allowed' : 'pointer', bgcolor: images.length >= MAX_IMAGES ? '#f8fafc' : 'primary.50', transition: 'all 0.2s', '&:hover': images.length < MAX_IMAGES ? { borderColor: 'primary.main', bgcolor: '#eff6ff' } : {}, mb: 1.5 }}>
-          <UploadCloud size={22} style={{ margin: '0 auto 6px', display: 'block', color: '#94a3b8' }} />
-          <Typography variant="body2" color="text.secondary">
+          className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all ${images.length >= MAX_IMAGES ? 'border-slate-200 bg-slate-50 cursor-not-allowed' : 'border-blue-200 bg-blue-50/50 hover:bg-blue-50 cursor-pointer hover:border-blue-400'} mb-4`}
+        >
+          <UploadCloud size={28} className="mx-auto mb-2 text-slate-400" />
+          <p className="text-sm font-medium text-slate-600 mb-1">
             {images.length >= MAX_IMAGES ? t('staff.createIncident.attachments.maxReached', { max: MAX_IMAGES }) : t('staff.createIncident.attachments.dropOrClick', { current: images.length, max: MAX_IMAGES })}
-          </Typography>
-          <Typography variant="caption" color="text.disabled">{t('staff.createIncident.attachments.limitLabel', { maxMb: MAX_FILE_MB })}</Typography>
-        </Box>
+          </p>
+          <p className="text-xs text-slate-400">{t('staff.createIncident.attachments.limitLabel', { maxMb: MAX_FILE_MB })}</p>
+        </div>
       )}
       <input ref={fileRef} type="file" multiple hidden accept="image/*" onChange={handleAdd} />
       {images.length > 0 && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 1 }}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-3">
           {images.map((src, i) => (
-            <Box key={i} sx={{ position: 'relative', borderRadius: 1.5, overflow: 'hidden', aspectRatio: '1' }}>
-              <Box component="img" src={src} sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-              <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0)', transition: 'background 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, '&:hover': { bgcolor: 'rgba(0,0,0,0.45)' }, '&:hover .img-actions': { opacity: 1 } }}>
-                <Box className="img-actions" sx={{ opacity: 0, transition: 'opacity 0.2s', display: 'flex', gap: 0.5 }}>
-                  <IconButton size="small" onClick={() => setLightbox(i)} sx={{ bgcolor: 'rgba(255,255,255,0.9)', '&:hover': { bgcolor: 'white' }, p: 0.5 }}>
-                    <ZoomIn size={14} />
-                  </IconButton>
+            <div key={i} className="relative rounded-3xl overflow-hidden aspect-square group bg-slate-100">
+              <img src={src} className="w-full h-full object-cover block" alt={`Attachment ${i + 1}`} />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1.5">
+                  <button onClick={() => setLightbox(i)} className="p-1.5 bg-white/90 hover:bg-white rounded-xl text-slate-700 transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                    <ZoomIn size={16} />
+                  </button>
                   {editable && (
-                    <IconButton size="small" onClick={() => handleRemove(i)} sx={{ bgcolor: 'rgba(255,255,255,0.9)', '&:hover': { bgcolor: '#fee2e2' }, p: 0.5 }}>
-                      <Trash2 size={14} color="#ef4444" />
-                    </IconButton>
+                    <button onClick={() => handleRemove(i)} className="p-1.5 bg-white/90 hover:bg-red-50 hover:text-red-600 rounded-xl text-red-500 transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                      <Trash2 size={16} />
+                    </button>
                   )}
-                </Box>
-              </Box>
-              <Box sx={{ position: 'absolute', top: 3, left: 3, bgcolor: 'rgba(0,0,0,0.5)', color: 'white', fontSize: '0.6rem', px: 0.6, py: 0.2, borderRadius: 0.5, lineHeight: 1.4 }}>
+                </div>
+              </div>
+              <div className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                 {i + 1}
-              </Box>
-            </Box>
+              </div>
+            </div>
           ))}
-        </Box>
+        </div>
       )}
       {lightbox !== null && <Lightbox images={images} startIndex={lightbox} onClose={() => setLightbox(null)} />}
-    </Box>
+    </div>
   )
 }
 
@@ -266,12 +253,11 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
   const [errors, setErrors] = useState({})
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
-
   const [sessionOptions, setSessionOptions] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(false)
   const [lookupLoading, setLookupLoading] = useState(false)
 
-  // Tải danh sách phiên Active 1 lần (bỏ qua nếu đã gắn sẵn sessionId)
+  // 1. Tải danh sách phiên Active 1 lần (để cho combobox)
   useEffect(() => {
     if (sessionId) return
     let cancelled = false
@@ -283,7 +269,7 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
         const raw = res?.data ?? res ?? []
         setSessionOptions(Array.isArray(raw) ? raw : [])
       } catch {
-        /* bỏ qua */
+        // bỏ qua
       } finally {
         if (!cancelled) setLoadingSessions(false)
       }
@@ -292,12 +278,11 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
     return () => { cancelled = true }
   }, [sessionId])
 
-  const set = (field) => (e) => {
+  const setField = (field) => (e) => {
     setForm(f => ({ ...f, [field]: e.target.value }))
     setErrors(err => ({ ...err, [field]: '' }))
   }
 
-  // Gắn 1 phiên (object đầy đủ) → tự điền + lưu để hiện thẻ xác nhận
   const linkSession = (s) => {
     if (!s) return
     setForm(f => ({
@@ -310,22 +295,21 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
     }))
   }
 
-  // Chọn phiên từ dropdown
-  const handlePickSession = (session) => {
-    if (!session) {
+  const handlePickSession = (e) => {
+    const val = e.target.value
+    if (!val) {
       setForm(f => ({ ...f, sessionCode: '', plateNumber: '', _driverName: '', _sessionId: undefined, _linkedSession: null }))
       return
     }
-    linkSession(session)
+    const session = sessionOptions.find(o => String(o.SessionID) === val)
+    if (session) linkSession(session)
   }
 
-  // Gõ MÃ PHIÊN: tự format khi gõ (SS-xxxxx)
   const handleSessionChange = (e) => {
     setForm(f => ({ ...f, sessionCode: formatSessionCode(e.target.value), _linkedSession: null }))
     setErrors(err => ({ ...err, sessionCode: '' }))
   }
 
-  // Rời ô mã phiên → đệm 0 + tra ra biển số & tài xế
   const handleSessionLookup = async () => {
     if (sessionId) return
     const padded = padSessionCode(form.sessionCode)
@@ -349,13 +333,11 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
     }
   }
 
-  // Gõ BIỂN SỐ: tự format khi gõ (51A-123.45)
   const handlePlateChange = (e) => {
     setForm(f => ({ ...f, plateNumber: formatPlate(e.target.value), _linkedSession: null }))
     setErrors(err => ({ ...err, plateNumber: '' }))
   }
 
-  // Rời ô biển số → tra ra mã phiên & tài xế
   const handlePlateLookup = async () => {
     if (sessionId) return
     const plate = (form.plateNumber || '').trim().toUpperCase()
@@ -414,170 +396,180 @@ function CreateIncidentForm({ sessionId, driverId, onSuccess }) {
   const descLen = form.description.trim().length
 
   return (
-    <Box>
-      <Stack spacing={2.5}>
-        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: '#f8fafc' }}>
-          <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
-            <AlertTriangle size={16} color="#f59e0b" />
-            <Typography variant="subtitle2" fontWeight={700} color="text.secondary">{t('staff.createIncident.form.linkedInfo')}</Typography>
-          </Stack>
+    <div className="space-y-6">
+      {/* Block Linked Session */}
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle size={18} className="text-amber-500" />
+          <h3 className="font-bold text-slate-700">{t('staff.createIncident.form.linkedInfo')}</h3>
+        </div>
 
-          {/* 🔍 Dropdown tìm nhanh phiên đang đỗ */}
-          {!sessionId && (
-            <Autocomplete
-              options={sessionOptions}
-              loading={loadingSessions}
-              size="small"
-              fullWidth
-              sx={{ mb: 2 }}
-              onChange={(_, value) => handlePickSession(value)}
-              isOptionEqualToValue={(a, b) => a.SessionID === b.SessionID}
-              getOptionLabel={(o) =>
-                o?.PlateNumber ? `${o.PlateNumber} · ${o.SessionCode || ''}` : (o?.SessionCode || '')
-              }
-              filterOptions={(opts, { inputValue }) => {
-                const q = inputValue.toLowerCase().trim()
-                const list = !q ? opts : opts.filter(o =>
-                  (o.PlateNumber || '').toLowerCase().includes(q) ||
-                  (o.SessionCode || '').toLowerCase().includes(q) ||
-                  (o.DriverName || '').toLowerCase().includes(q) ||
-                  (o.SlotCode || '').toLowerCase().includes(q) ||
-                  String(o.SessionID || '').includes(q)
-                )
-                return list.slice(0, 50)
-              }}
-              renderOption={(props, o) => (
-                <li {...props} key={o.SessionID} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Car size={16} color="#2563eb" style={{ flexShrink: 0 }} />
-                  <span style={{ minWidth: 0 }}>
-                    <Typography variant="body2" fontWeight={700} noWrap>
-                      {o.PlateNumber || 'UNKNOWN'}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" noWrap display="block">
-                      {[o.SessionCode, o.DriverName, o.SlotCode].filter(Boolean).join(' · ')}
-                    </Typography>
-                  </span>
-                </li>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={t('staff.createIncident.form.searchSession')}
-                  placeholder={t('staff.createIncident.form.searchSessionPlaceholder')}
-                  helperText={loadingSessions ? t('staff.createIncident.form.loadingSessions') : t('staff.createIncident.form.sessionOptionsCount', { count: sessionOptions.length })}
-                />
-              )}
-              noOptionsText={t('staff.createIncident.form.noSessionMatch')}
-              loadingText={t('staff.createIncident.form.loading')}
-            />
-          )}
+        {!sessionId && (
+          <div className="mb-5 relative">
+            <select
+              value={form._sessionId || ''}
+              onChange={handlePickSession}
+              disabled={loadingSessions}
+              className="w-full bg-white border border-slate-300 rounded-3xl px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:opacity-50 appearance-none"
+            >
+              <option value="">{t('staff.createIncident.form.searchSessionPlaceholder')}</option>
+              {sessionOptions.map(o => (
+                <option key={o.SessionID} value={o.SessionID}>
+                  {o.PlateNumber ? `${o.PlateNumber} · ${o.SessionCode || ''}` : (o.SessionCode || '')}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
+        )}
 
-          {/* Hai ô gõ tay — tự format + tra chéo 2 chiều */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              label={t('staff.createIncident.form.sessionCodeLabel')}
-              value={form.sessionCode}
-              onChange={handleSessionChange}
-              onBlur={handleSessionLookup}
-              size="small" fullWidth placeholder={t('staff.createIncident.form.sessionCodePlaceholder')}
-              InputProps={{
-                readOnly: !!sessionId,
-                endAdornment: lookupLoading ? <CircularProgress size={14} /> : null
-              }}
-              helperText={sessionId ? t('staff.createIncident.form.sessionCodeLinked') : t('staff.createIncident.form.sessionCodeHint')}
-            />
-            <TextField
-              label={t('staff.createIncident.form.plateLabel')}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500">{t('staff.createIncident.form.sessionCodeLabel')}</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={form.sessionCode}
+                onChange={handleSessionChange}
+                onBlur={handleSessionLookup}
+                readOnly={!!sessionId}
+                placeholder={t('staff.createIncident.form.sessionCodePlaceholder')}
+                className="w-full bg-white border border-slate-300 rounded-3xl px-4 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all read-only:bg-slate-100"
+              />
+              {lookupLoading && <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 animate-spin" />}
+            </div>
+            <p className="text-[11px] text-slate-400">{sessionId ? t('staff.createIncident.form.sessionCodeLinked') : t('staff.createIncident.form.sessionCodeHint')}</p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500">{t('staff.createIncident.form.plateLabel')}</label>
+            <input
+              type="text"
               value={form.plateNumber}
               onChange={handlePlateChange}
               onBlur={handlePlateLookup}
-              size="small" fullWidth placeholder={t('staff.createIncident.form.platePlaceholder')}
-              inputProps={{ maxLength: 12, style: { textTransform: 'uppercase' } }}
-              error={!!errors.plateNumber}
-              helperText={errors.plateNumber || (sessionId ? '' : t('staff.createIncident.form.plateHint'))}
+              placeholder={t('staff.createIncident.form.platePlaceholder')}
+              className={`w-full bg-white border rounded-3xl px-4 py-2.5 text-sm font-bold uppercase outline-none transition-all ${errors.plateNumber ? 'border-red-400 focus:ring-2 focus:ring-red-500/20 focus:border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'}`}
+              maxLength={12}
             />
-          </Stack>
+            <p className={`text-[11px] ${errors.plateNumber ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
+              {errors.plateNumber || (sessionId ? '' : t('staff.createIncident.form.plateHint'))}
+            </p>
+          </div>
+        </div>
 
-          {/* ✅ Thẻ xác nhận phiên đã liên kết */}
-          {form._linkedSession && (
-            <Paper variant="outlined" sx={{ p: 1.75, borderRadius: 2, bgcolor: '#f0f9ff', borderColor: '#bae6fd', mt: 1.5 }}>
-              <Stack direction="row" alignItems="center" spacing={1} mb={1.25}>
-                <CheckCircle2 size={16} color="#0284c7" />
-                <Typography variant="caption" fontWeight={700} color="#0369a1" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  {t('staff.createIncident.form.linkedConfirm')}
-                </Typography>
-              </Stack>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.25 }}>
-                {[
-                  { icon: Car, label: t('staff.createIncident.form.plate'), value: form._linkedSession.PlateNumber || '—', strong: true },
-                  { icon: User, label: t('staff.createIncident.form.driver'), value: form._linkedSession.DriverName || '—' },
-                  { icon: AlertTriangle, label: t('staff.createIncident.form.sessionCode'), value: form._linkedSession.SessionCode || form.sessionCode || '—' },
-                  { icon: MapPin, label: t('staff.createIncident.form.slot'), value: [form._linkedSession.ZoneName, form._linkedSession.FloorName, form._linkedSession.SlotCode].filter(Boolean).join(' · ') || form._linkedSession.SlotCode || '—' },
-                  { icon: Car, label: t('staff.createIncident.form.vehicle'), value: form._linkedSession.VehicleName || '—' },
-                  { icon: ClockIcon, label: t('staff.createIncident.form.entryTime'), value: form._linkedSession.EntryTime ? fmtDate(form._linkedSession.EntryTime) : '—' }
-                ].map(({ icon: Icon, label, value, strong }) => (
-                  <Stack key={label} direction="row" spacing={1} alignItems="flex-start">
-                    <Icon size={13} color="#0284c7" style={{ marginTop: 3, flexShrink: 0 }} />
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="caption" color="#0369a1" sx={{ opacity: 0.8 }}>{label}</Typography>
-                      <Typography variant="body2" fontWeight={strong ? 700 : 500} color="#075985" sx={{ lineHeight: 1.3 }}>
-                        {value}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                ))}
-              </Box>
-            </Paper>
-          )}
-        </Paper>
+        {/* Thẻ xác nhận phiên đã liên kết */}
+        {form._linkedSession && (
+          <div className="mt-5 bg-blue-50 border border-blue-200 rounded-3xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle2 size={16} className="text-blue-600" />
+              <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">{t('staff.createIncident.form.linkedConfirm')}</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex gap-2.5 items-start">
+                <Car size={16} className="text-blue-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-semibold text-blue-400">{t('staff.createIncident.form.plate')}</p>
+                  <p className="text-sm font-black text-blue-900">{form._linkedSession.PlateNumber || '—'}</p>
+                </div>
+              </div>
+              <div className="flex gap-2.5 items-start">
+                <User size={16} className="text-blue-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-semibold text-blue-400">{t('staff.createIncident.form.driver')}</p>
+                  <p className="text-sm font-bold text-blue-900">{form._linkedSession.DriverName || '—'}</p>
+                </div>
+              </div>
+              <div className="flex gap-2.5 items-start">
+                <AlertTriangle size={16} className="text-blue-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-semibold text-blue-400">{t('staff.createIncident.form.sessionCode')}</p>
+                  <p className="text-sm font-bold text-blue-900">{form._linkedSession.SessionCode || form.sessionCode || '—'}</p>
+                </div>
+              </div>
+              <div className="flex gap-2.5 items-start">
+                <MapPin size={16} className="text-blue-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[11px] font-semibold text-blue-400">{t('staff.createIncident.form.slot')}</p>
+                  <p className="text-sm font-bold text-blue-900">{[form._linkedSession.ZoneName, form._linkedSession.FloorName, form._linkedSession.SlotCode].filter(Boolean).join(' · ') || form._linkedSession.SlotCode || '—'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <FormControl fullWidth size="small" error={!!errors.incidentType}>
-            <InputLabel>{t('staff.createIncident.form.incidentTypeLabel')}</InputLabel>
-            <Select value={form.incidentType} label={t('staff.createIncident.form.incidentTypeLabel')} onChange={set('incidentType')}>
-              {INCIDENT_TYPES.map(key => <MenuItem key={key} value={key}>{t(`staff.createIncident.types.${key}`)}</MenuItem>)}
-            </Select>
-            {errors.incidentType && <FormHelperText>{errors.incidentType}</FormHelperText>}
-          </FormControl>
-          <FormControl fullWidth size="small">
-            <InputLabel>{t('staff.createIncident.form.priorityLabel')}</InputLabel>
-            <Select value={form.priority} label={t('staff.createIncident.form.priorityLabel')} onChange={set('priority')}>
+      {/* Block Thông tin sự cố */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700">{t('staff.createIncident.form.incidentTypeLabel')}</label>
+          <div className="relative">
+            <select
+              value={form.incidentType}
+              onChange={setField('incidentType')}
+              className={`w-full bg-white border rounded-3xl px-4 py-2.5 text-sm font-medium outline-none appearance-none transition-all ${errors.incidentType ? 'border-red-400 focus:ring-2 focus:ring-red-500/20 focus:border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'}`}
+            >
+              <option value="" disabled>{t('staff.createIncident.form.incidentTypeLabel')}</option>
+              {INCIDENT_TYPES.map(key => <option key={key} value={key}>{t(`staff.createIncident.types.${key}`)}</option>)}
+            </select>
+            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
+          {errors.incidentType && <p className="text-[11px] text-red-500 font-medium">{errors.incidentType}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-700">{t('staff.createIncident.form.priorityLabel')}</label>
+          <div className="relative">
+            <select
+              value={form.priority}
+              onChange={setField('priority')}
+              className="w-full bg-white border border-slate-300 rounded-3xl px-4 py-2.5 text-sm font-medium outline-none appearance-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            >
               {PRIORITIES.map(p => (
-                <MenuItem key={p.value} value={p.value}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: p.color, flexShrink: 0 }} />
-                    {t(`staff.createIncident.priorities.${p.labelKey}`)}
-                  </Box>
-                </MenuItem>
+                <option key={p.value} value={p.value}>{t(`staff.createIncident.priorities.${p.labelKey}`)}</option>
               ))}
-            </Select>
-          </FormControl>
-        </Stack>
+            </select>
+            <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
+        </div>
+      </div>
 
-        <Box>
-          <TextField label={t('staff.createIncident.form.descLabel')} multiline rows={4} fullWidth value={form.description} onChange={set('description')} placeholder={t('staff.createIncident.form.descPlaceholder')} error={!!errors.description} helperText={errors.description} inputProps={{ maxLength: 500 }} />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
-            <Typography variant="caption" color={descLen < 20 ? 'error' : 'text.secondary'}>
-              {descLen < 20 ? t('staff.createIncident.form.descLengthHint', { current: descLen, count: 20 - descLen }) : `${descLen}/500`}
-            </Typography>
-          </Box>
-        </Box>
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold text-slate-700">{t('staff.createIncident.form.descLabel')}</label>
+        <textarea
+          rows={4}
+          value={form.description}
+          onChange={setField('description')}
+          placeholder={t('staff.createIncident.form.descPlaceholder')}
+          maxLength={500}
+          className={`w-full bg-white border rounded-3xl px-4 py-3 text-sm outline-none resize-none transition-all ${errors.description ? 'border-red-400 focus:ring-2 focus:ring-red-500/20 focus:border-red-500' : 'border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'}`}
+        />
+        <div className="flex justify-between items-center px-1">
+          <p className="text-[11px] text-red-500 font-medium">{errors.description}</p>
+          <p className={`text-[11px] ${descLen < 20 ? 'text-red-400' : 'text-slate-400'}`}>
+            {descLen < 20 ? t('staff.createIncident.form.descLengthHint', { current: descLen, count: 20 - descLen }) : `${descLen}/500`}
+          </p>
+        </div>
+      </div>
 
-        <Box>
-          <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-            <ImageIcon size={16} color="#64748b" />
-            <Typography variant="subtitle2" color="text.secondary">{t('staff.createIncident.form.attachmentHint', { max: MAX_IMAGES })}</Typography>
-          </Stack>
-          <AttachmentGrid images={images} editable onChange={setImages} />
-        </Box>
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <ImageIcon size={16} className="text-slate-500" />
+          <h3 className="text-sm font-bold text-slate-700">{t('staff.createIncident.form.attachmentHint', { max: MAX_IMAGES })}</h3>
+        </div>
+        <AttachmentGrid images={images} editable onChange={setImages} />
+      </div>
 
-        <Button variant="contained" size="large" fullWidth onClick={handleSubmit} disabled={loading}
-          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <Plus size={16} />}
-          sx={{ mt: 1, py: 1.5, fontWeight: 700, fontSize: '1rem', bgcolor: form.priority === 'High' ? '#dc2626' : 'primary.main', '&:hover': { bgcolor: form.priority === 'High' ? '#b91c1c' : 'primary.dark' } }}>
-          {loading ? t('staff.createIncident.form.submitLoading') : `${t('staff.createIncident.form.submitBtn')}${images.length ? ` (${images.length})` : ''}`}
-        </Button>
-      </Stack>
-    </Box>
+      <button
+        onClick={handleSubmit}
+        disabled={loading}
+        className={`w-full flex items-center justify-center gap-2 rounded-3xl py-3.5 text-sm font-bold text-white transition-all shadow-md active:scale-[0.98] ${
+          loading ? 'bg-slate-400 cursor-not-allowed shadow-none' :
+          form.priority === 'High' ? 'bg-red-600 hover:bg-red-700 shadow-red-500/30' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30'
+        }`}
+      >
+        {loading ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+        {loading ? t('staff.createIncident.form.submitLoading') : `${t('staff.createIncident.form.submitBtn')}${images.length ? ` (${images.length})` : ''}`}
+      </button>
+    </div>
   )
 }
 
@@ -630,77 +622,130 @@ function IncidentDetailModal({ incidentId, open, onClose, onUpdated }) {
     } finally { setUpdating(false) }
   }
 
+  if (!open) return null
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-      <DialogTitle sx={{ pb: 1 }}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <AlertTriangle size={20} color="#f59e0b" />
-          <Typography fontWeight={700}>{t('staff.createIncident.detail.title', { id: incidentId })}</Typography>
-        </Stack>
-      </DialogTitle>
-      <Divider />
-      <DialogContent sx={{ pt: 2.5 }}>
-        {loading ? (
-          <Box sx={{ py: 6, textAlign: 'center' }}><CircularProgress size={32} /></Box>
-        ) : incident ? (
-          <Stack spacing={2.5}>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <StatusChip status={incident.IncidentStatus} />
-              <PriorityBadge priority={incident.Priority} />
-              <Chip label={incident.IncidentType} size="small" variant="outlined" />
-            </Stack>
-            <Box sx={{ bgcolor: '#f8fafc', borderRadius: 2, p: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-              {[
-                [t('staff.createIncident.detail.code'), `#${incident.IncidentID}`], [t('staff.createIncident.detail.session'), incident.SessionCode || '—'],
-                [t('staff.createIncident.detail.driver'), incident.DriverName || '—'], [t('staff.createIncident.detail.phone'), incident.DriverPhone || '—'],
-                [t('staff.createIncident.detail.plate'), incident.PlateNumber || '—'], [t('staff.createIncident.detail.staff'), incident.AssignedStaffName || t('staff.createIncident.detail.unassigned')],
-                [t('staff.createIncident.detail.createdAt'), fmtDate(incident.CreatedAt)], [t('staff.createIncident.detail.updatedAt'), fmtDate(incident.UpdatedAt)]
-              ].map(([label, value]) => (
-                <Box key={label}>
-                  <Typography variant="caption" color="text.secondary">{label}</Typography>
-                  <Typography variant="body2" fontWeight={500}>{value}</Typography>
-                </Box>
-              ))}
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" mb={0.5} display="block">{t('staff.createIncident.detail.desc')}</Typography>
-              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 1.5, whiteSpace: 'pre-wrap' }}>
-                <Typography variant="body2">{incident.Description}</Typography>
-              </Paper>
-            </Box>
-            <Box>
-              <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-                <ImageIcon size={15} color="#64748b" />
-                <Typography variant="subtitle2" color="text.secondary">
-                  {t('staff.createIncident.attachments.title')}
-                  {imagesDirty && <Chip label={t('staff.createIncident.attachments.changed')} size="small" color="warning" sx={{ ml: 1, height: 18, fontSize: '0.65rem' }} />}
-                </Typography>
-              </Stack>
-              <AttachmentGrid images={editImages} editable onChange={(imgs) => { setEditImages(imgs); setImagesDirty(true) }} />
-              {editImages.length === 0 && !imagesDirty && <Typography variant="caption" color="text.disabled">{t('staff.createIncident.attachments.noImages')}</Typography>}
-            </Box>
-            <Divider />
-            <Typography variant="subtitle2" fontWeight={700}>{t('staff.createIncident.detail.updateStatusTitle')}</Typography>
-            <FormControl size="small" fullWidth>
-              <InputLabel>{t('staff.createIncident.detail.newStatus')}</InputLabel>
-              <Select value={editStatus} label={t('staff.createIncident.detail.newStatus')} onChange={e => setEditStatus(e.target.value)}>
-                {UPDATE_STATUSES.map(s => <MenuItem key={s} value={s}><StatusChip status={s} /></MenuItem>)}
-              </Select>
-            </FormControl>
-            <TextField label={t('staff.createIncident.detail.updateNote')} multiline rows={2} size="small" fullWidth value={editNote} onChange={e => setEditNote(e.target.value)} placeholder={t('staff.createIncident.detail.updateNotePlaceholder')} />
-          </Stack>
-        ) : (
-          <Alert severity="error">{t('staff.createIncident.detail.loadError')}</Alert>
-        )}
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-        <Button onClick={onClose} variant="outlined" color="inherit">{t('staff.createIncident.detail.close')}</Button>
-        <Button onClick={handleUpdate} variant="contained" disabled={updating || loading || !incident}
-          startIcon={updating ? <CircularProgress size={14} color="inherit" /> : <Edit2 size={14} />}>
-          {updating ? t('staff.createIncident.detail.saving') : t('staff.createIncident.detail.saveBtn')}
-        </Button>
-      </DialogActions>
-    </Dialog>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-100 text-amber-600 rounded-3xl">
+              <AlertTriangle size={20} />
+            </div>
+            <h2 className="text-lg font-black text-slate-800">{t('staff.createIncident.detail.title', { id: incidentId })}</h2>
+          </div>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 size={32} className="animate-spin text-blue-500 mb-4" />
+              <p className="text-slate-500 font-medium">Đang tải dữ liệu...</p>
+            </div>
+          ) : incident ? (
+            <div className="space-y-6">
+              {/* Badges */}
+              <div className="flex flex-wrap gap-2">
+                <StatusChip status={incident.IncidentStatus} />
+                <PriorityBadge priority={incident.Priority} />
+                <span className="px-2 py-0.5 rounded border border-slate-200 text-[11px] font-bold text-slate-600 bg-white">{incident.IncidentType}</span>
+              </div>
+
+              {/* Grid Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                {[
+                  [t('staff.createIncident.detail.code'), `#${incident.IncidentID}`],
+                  [t('staff.createIncident.detail.session'), incident.SessionCode || '—'],
+                  [t('staff.createIncident.detail.driver'), incident.DriverName || '—'],
+                  [t('staff.createIncident.detail.phone'), incident.DriverPhone || '—'],
+                  [t('staff.createIncident.detail.plate'), incident.PlateNumber || '—'],
+                  [t('staff.createIncident.detail.staff'), incident.AssignedStaffName || t('staff.createIncident.detail.unassigned')],
+                  [t('staff.createIncident.detail.createdAt'), fmtDate(incident.CreatedAt)],
+                  [t('staff.createIncident.detail.updatedAt'), fmtDate(incident.UpdatedAt)]
+                ].map(([label, value], i) => (
+                  <div key={i}>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
+                    <p className="text-sm font-semibold text-slate-800">{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Description */}
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">{t('staff.createIncident.detail.desc')}</p>
+                <div className="bg-white border border-slate-200 rounded-3xl p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                  {incident.Description}
+                </div>
+              </div>
+
+              {/* Attachments */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <ImageIcon size={16} className="text-slate-500" />
+                  <h3 className="text-sm font-bold text-slate-700">
+                    {t('staff.createIncident.attachments.title')}
+                    {imagesDirty && <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded-full">{t('staff.createIncident.attachments.changed')}</span>}
+                  </h3>
+                </div>
+                <AttachmentGrid images={editImages} editable onChange={(imgs) => { setEditImages(imgs); setImagesDirty(true) }} />
+                {editImages.length === 0 && !imagesDirty && <p className="text-xs text-slate-400 italic">{t('staff.createIncident.attachments.noImages')}</p>}
+              </div>
+
+              <hr className="border-slate-100" />
+
+              {/* Update Status */}
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 mb-3">{t('staff.createIncident.detail.updateStatusTitle')}</h3>
+                <div className="space-y-4">
+                  <div className="relative max-w-xs">
+                    <select
+                      value={editStatus}
+                      onChange={e => setEditStatus(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-3xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 appearance-none transition-all"
+                    >
+                      {UPDATE_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={editNote}
+                    onChange={e => setEditNote(e.target.value)}
+                    placeholder={t('staff.createIncident.detail.updateNotePlaceholder')}
+                    className="w-full bg-white border border-slate-300 rounded-3xl px-4 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  />
+                </div>
+              </div>
+
+            </div>
+          ) : (
+            <div className="p-4 bg-red-50 text-red-600 rounded-3xl flex items-center gap-2">
+              <AlertTriangle size={18} /> {t('staff.createIncident.detail.loadError')}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
+          <button onClick={onClose} className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-3xl hover:bg-slate-50 transition-colors">
+            {t('staff.createIncident.detail.close')}
+          </button>
+          <button
+            onClick={handleUpdate}
+            disabled={updating || loading || !incident}
+            className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-3xl transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:shadow-none"
+          >
+            {updating ? <Loader2 size={16} className="animate-spin" /> : <Edit2 size={16} />}
+            {updating ? t('staff.createIncident.detail.saving') : t('staff.createIncident.detail.saveBtn')}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -778,162 +823,163 @@ function IncidentHistory({ refreshTrigger }) {
   const hasActiveFilters = statusFilter !== 'all' || priorityFilter !== 'all' || keyword || fromDate || toDate
 
   return (
-    <Box>
-      <Stack direction="row" spacing={1.5} mb={1.5} alignItems="center">
-        <TextField size="small" placeholder={t('staff.createIncident.history.localSearch')} value={localSearch} onChange={e => setLocalSearch(e.target.value)} sx={{ flex: 1 }}
-          InputProps={{
-            startAdornment: <InputAdornment position="start"><Search size={16} color="#94a3b8" /></InputAdornment>,
-            endAdornment: localSearch ? <InputAdornment position="end"><IconButton size="small" onClick={() => setLocalSearch('')}><X size={14} /></IconButton></InputAdornment> : null
-          }} />
-        <Tooltip title={showFilters ? t('staff.createIncident.history.hideFilters') : t('staff.createIncident.history.showFilters')}>
-          <Badge color="error" variant="dot" invisible={!hasActiveFilters}>
-            <Button variant={showFilters ? 'contained' : 'outlined'} size="small" startIcon={<Filter size={15} />} onClick={() => setShowFilters(v => !v)} sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-              {t('staff.createIncident.history.filters')}
-            </Button>
-          </Badge>
-        </Tooltip>
-        <Tooltip title={t('staff.createIncident.history.refresh')}>
-          <IconButton onClick={handleSearch} size="small" sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-            <RefreshCw size={16} />
-          </IconButton>
-        </Tooltip>
-      </Stack>
+    <div>
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder={t('staff.createIncident.history.localSearch')}
+            value={localSearch}
+            onChange={e => setLocalSearch(e.target.value)}
+            className="w-full bg-slate-50 border border-slate-200 rounded-3xl pl-10 pr-10 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          />
+          {localSearch && (
+            <button onClick={() => setLocalSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <button
+          onClick={() => setShowFilters(v => !v)}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-3xl border transition-colors ${showFilters || hasActiveFilters ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+        >
+          <Filter size={16} />
+          {t('staff.createIncident.history.filters')}
+          {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-red-500" />}
+        </button>
+        <button onClick={handleSearch} className="p-2 border border-slate-200 rounded-3xl bg-white text-slate-600 hover:bg-slate-50 transition-colors">
+          <RefreshCw size={18} />
+        </button>
+      </div>
 
-      <Collapse in={showFilters}>
-        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 2, bgcolor: '#fafbfc' }}>
-          <Stack spacing={1.5}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-              <TextField size="small" label={t('staff.createIncident.history.keyword')} value={keyword} onChange={e => setKeyword(e.target.value)} sx={{ flex: 2 }}
-                InputProps={{ startAdornment: <InputAdornment position="start"><Search size={14} color="#94a3b8" /></InputAdornment> }} />
-              <FormControl size="small" sx={{ flex: 1, minWidth: 130 }}>
-                <InputLabel>{t('staff.createIncident.history.status')}</InputLabel>
-                <Select value={statusFilter} label={t('staff.createIncident.history.status')} onChange={e => setStatusFilter(e.target.value)}>
-                  {STATUSES.map(s => <MenuItem key={s.value} value={s.value}>{t(`staff.createIncident.statuses.${s.labelKey}`)}</MenuItem>)}
-                </Select>
-              </FormControl>
-              <FormControl size="small" sx={{ flex: 1, minWidth: 120 }}>
-                <InputLabel>{t('staff.createIncident.history.priority')}</InputLabel>
-                <Select value={priorityFilter} label={t('staff.createIncident.history.priority')} onChange={e => setPriorityFilter(e.target.value)}>
-                  <MenuItem value="all">{t('staff.createIncident.priorities.all') || 'All'}</MenuItem>
-                  <MenuItem value="High">{t('staff.createIncident.priorities.high')}</MenuItem>
-                  <MenuItem value="Normal">{t('staff.createIncident.priorities.normal')}</MenuItem>
-                  <MenuItem value="Low">{t('staff.createIncident.priorities.low')}</MenuItem>
-                </Select>
-              </FormControl>
-            </Stack>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="center">
-              <TextField size="small" label={t('staff.createIncident.history.fromDate')} type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ flex: 1 }}
-                InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={14} color="#94a3b8" /></InputAdornment> }} />
-              <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>—</Typography>
-              <TextField size="small" label={t('staff.createIncident.history.toDate')} type="date" value={toDate} onChange={e => setToDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ flex: 1 }}
-                InputProps={{ startAdornment: <InputAdornment position="start"><Calendar size={14} color="#94a3b8" /></InputAdornment> }} />
-              <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
-                <Button variant="contained" size="small" onClick={handleSearch} sx={{ fontWeight: 600 }}>{t('staff.createIncident.history.searchBtn')}</Button>
-                {hasActiveFilters && <Button variant="outlined" size="small" color="inherit" onClick={handleReset}>{t('staff.createIncident.history.clearBtn')}</Button>}
-              </Stack>
-            </Stack>
-          </Stack>
-        </Paper>
-      </Collapse>
+      {showFilters && (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-5 animate-in slide-in-from-top-2 duration-200">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div className="relative">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="text" placeholder={t('staff.createIncident.history.keyword')} value={keyword} onChange={e => setKeyword(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm outline-none focus:border-blue-500" />
+            </div>
+            <div className="relative">
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm outline-none appearance-none focus:border-blue-500">
+                {STATUSES.map(s => <option key={s.value} value={s.value}>{t(`staff.createIncident.statuses.${s.labelKey}`)}</option>)}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+            <div className="relative">
+              <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm outline-none appearance-none focus:border-blue-500">
+                <option value="all">{t('staff.createIncident.priorities.all') || 'All Priorities'}</option>
+                <option value="High">{t('staff.createIncident.priorities.high')}</option>
+                <option value="Normal">{t('staff.createIncident.priorities.normal')}</option>
+                <option value="Low">{t('staff.createIncident.priorities.low')}</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[150px]">
+              <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm outline-none focus:border-blue-500" />
+            </div>
+            <span className="text-slate-400">—</span>
+            <div className="relative flex-1 min-w-[150px]">
+              <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-sm outline-none focus:border-blue-500" />
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={handleSearch} className="px-4 py-2 bg-slate-800 text-white text-sm font-bold rounded-xl hover:bg-slate-900 transition-colors">{t('staff.createIncident.history.searchBtn')}</button>
+              {hasActiveFilters && <button onClick={handleReset} className="px-4 py-2 bg-white border border-slate-300 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-50 transition-colors">{t('staff.createIncident.history.clearBtn')}</button>}
+            </div>
+          </div>
+        </div>
+      )}
 
-      <Stack direction="row" spacing={1} mb={2} flexWrap="wrap" useFlexGap alignItems="center">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         {STATUSES.filter(s => s.value !== 'all').map(s => {
           const count = incidents.filter(i => i.IncidentStatus === s.value).length
           if (!count) return null
           return (
-            <Chip key={s.value} label={`${t(`staff.createIncident.statuses.${s.labelKey}`)}: ${count}`} color={s.color} size="small" variant="outlined"
-              onClick={() => setStatusFilter(s.value)} sx={{ cursor: 'pointer', fontWeight: 600 }} />
+            <button key={s.value} onClick={() => setStatusFilter(s.value)} className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+              {t(`staff.createIncident.statuses.${s.labelKey}`)}: <span className="text-slate-900">{count}</span>
+            </button>
           )
         })}
-        {filtered.length !== incidents.length && (
-          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-            {t('staff.createIncident.history.showing', { current: filtered.length, total: incidents.length })}
-          </Typography>
-        )}
-        {incidents.length > 0 && (
-          <Typography variant="caption" color="text.disabled" sx={{ alignSelf: 'center', ml: 'auto' }}>
-            {t('staff.createIncident.history.total', { total: incidents.length })}
-          </Typography>
-        )}
-      </Stack>
+        <div className="ml-auto text-xs font-medium text-slate-400">
+          {filtered.length !== incidents.length ? t('staff.createIncident.history.showing', { current: filtered.length, total: incidents.length }) : t('staff.createIncident.history.total', { total: incidents.length })}
+        </div>
+      </div>
 
       {loading ? (
-        <Box sx={{ py: 6, textAlign: 'center' }}>
-          <CircularProgress size={32} />
-          <Typography variant="body2" color="text.secondary" mt={1.5}>{t('staff.createIncident.history.loading')}</Typography>
-        </Box>
+        <div className="py-12 flex flex-col items-center justify-center">
+          <Loader2 size={32} className="animate-spin text-blue-500 mb-3" />
+          <p className="text-sm text-slate-500 font-medium">{t('staff.createIncident.history.loading')}</p>
+        </div>
       ) : filtered.length === 0 ? (
-        <Box sx={{ py: 6, textAlign: 'center', bgcolor: '#f8fafc', borderRadius: 2, border: '1px dashed', borderColor: 'divider' }}>
-          <AlertTriangle size={36} color="#94a3b8" style={{ margin: '0 auto 12px' }} />
-          <Typography color="text.secondary">
-            {incidents.length === 0 ? t('staff.createIncident.history.empty') : t('staff.createIncident.history.noMatch')}
-          </Typography>
-          {hasActiveFilters && <Button size="small" onClick={handleReset} sx={{ mt: 1 }}>{t('staff.createIncident.history.clearBtn')}</Button>}
-        </Box>
+        <div className="py-12 flex flex-col items-center justify-center bg-slate-50 border border-dashed border-slate-300 rounded-2xl">
+          <AlertTriangle size={48} className="text-slate-300 mb-3" />
+          <p className="text-slate-500 font-medium">{incidents.length === 0 ? t('staff.createIncident.history.empty') : t('staff.createIncident.history.noMatch')}</p>
+          {hasActiveFilters && <button onClick={handleReset} className="mt-3 text-sm text-blue-600 font-bold hover:underline">{t('staff.createIncident.history.clearBtn')}</button>}
+        </div>
       ) : (
-        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                {[
-                  t('staff.createIncident.history.colId'),
-                  t('staff.createIncident.history.colType'),
-                  t('staff.createIncident.history.colDriver'),
-                  t('staff.createIncident.history.colPriority'),
-                  t('staff.createIncident.history.colStatus'),
-                  t('staff.createIncident.history.colImage'),
-                  t('staff.createIncident.history.colTime'),
-                  ''
-                ].map((h, i) => (
-                  <TableCell key={i} sx={{ fontWeight: 700, fontSize: '0.78rem', py: 1.5 }}>{h}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filtered.map(inc => (
-                <TableRow key={inc.IncidentID} hover sx={{ '&:last-child td': { border: 0 } }}>
-                  <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.78rem' }}>
-                    #{inc.IncidentID}
-                    {inc.SessionCode && <Typography variant="caption" display="block" color="primary.main">{inc.SessionCode}</Typography>}
-                  </TableCell>
-                  <TableCell><Typography variant="body2" fontWeight={500} noWrap sx={{ maxWidth: 170 }}>{inc.IncidentType}</Typography></TableCell>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={500}>{inc.DriverName || '—'}</Typography>
-                    {inc.PlateNumber && <Typography variant="caption" color="text.secondary">{inc.PlateNumber}</Typography>}
-                  </TableCell>
-                  <TableCell><PriorityBadge priority={inc.Priority} /></TableCell>
-                  <TableCell><StatusChip status={inc.IncidentStatus} /></TableCell>
-                  <TableCell>
-                    {Array.isArray(inc.Attachments) && inc.Attachments.length > 0 ? (
-                      <Stack direction="row" spacing={0.5} alignItems="center">
-                        {inc.Attachments.slice(0, 3).map((src, i) => (
-                          <Box key={i} component="img" src={src}
-                            sx={{ width: 28, height: 28, borderRadius: 0.75, objectFit: 'cover', border: '1px solid #e2e8f0', cursor: 'pointer' }}
-                            onClick={() => { setSelectedId(inc.IncidentID); setDetailOpen(true) }} />
-                        ))}
-                        {inc.Attachments.length > 3 && <Typography variant="caption" color="text.secondary" sx={{ ml: 0.3 }}>+{inc.Attachments.length - 3}</Typography>}
-                      </Stack>
-                    ) : (
-                      <Typography variant="caption" color="text.disabled">—</Typography>
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem', color: 'text.secondary', whiteSpace: 'nowrap' }}>{fmtDate(inc.CreatedAt)}</TableCell>
-                  <TableCell>
-                    <Tooltip title={t('staff.createIncident.history.viewUpdate')}>
-                      <IconButton size="small" onClick={() => { setSelectedId(inc.IncidentID); setDetailOpen(true) }} sx={{ color: 'primary.main' }}>
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  {[
+                    t('staff.createIncident.history.colId'),
+                    t('staff.createIncident.history.colType'),
+                    t('staff.createIncident.history.colDriver'),
+                    t('staff.createIncident.history.colPriority'),
+                    t('staff.createIncident.history.colStatus'),
+                    t('staff.createIncident.history.colImage'),
+                    t('staff.createIncident.history.colTime'),
+                    ''
+                  ].map((h, i) => (
+                    <th key={i} className="px-4 py-3 text-[11px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map(inc => (
+                  <tr key={inc.IncidentID} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-bold text-slate-700">#{inc.IncidentID}</p>
+                      {inc.SessionCode && <p className="text-[10px] font-bold text-blue-500">{inc.SessionCode}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-semibold text-slate-700 max-w-[150px] truncate">{inc.IncidentType}</td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-bold text-slate-800">{inc.DriverName || '—'}</p>
+                      {inc.PlateNumber && <p className="text-xs font-semibold text-slate-500">{inc.PlateNumber}</p>}
+                    </td>
+                    <td className="px-4 py-3"><PriorityBadge priority={inc.Priority} /></td>
+                    <td className="px-4 py-3"><StatusChip status={inc.IncidentStatus} /></td>
+                    <td className="px-4 py-3">
+                      {Array.isArray(inc.Attachments) && inc.Attachments.length > 0 ? (
+                        <div className="flex items-center gap-1">
+                          {inc.Attachments.slice(0, 3).map((src, i) => (
+                            <img key={i} src={src} className="w-8 h-8 rounded-xl object-cover border border-slate-200 cursor-pointer hover:scale-110 transition-transform" onClick={() => { setSelectedId(inc.IncidentID); setDetailOpen(true) }} alt="Attachment" />
+                          ))}
+                          {inc.Attachments.length > 3 && <span className="text-[10px] font-bold text-slate-500 ml-1">+{inc.Attachments.length - 3}</span>}
+                        </div>
+                      ) : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-xs font-medium text-slate-500 whitespace-nowrap">{fmtDate(inc.CreatedAt)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button onClick={() => { setSelectedId(inc.IncidentID); setDetailOpen(true) }} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors opacity-0 group-hover:opacity-100">
                         <Eye size={16} />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       <IncidentDetailModal incidentId={selectedId} open={detailOpen} onClose={() => setDetailOpen(false)} onUpdated={handleSearch} />
-    </Box>
+    </div>
   )
 }
 
@@ -950,37 +996,42 @@ export default function StaffCreateIncident({ sessionId, driverId }) {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f1f5f9', pb: 6 }}>
-      <Box sx={{ bgcolor: 'white', borderBottom: '1px solid', borderColor: 'divider', px: { xs: 2, md: 4 }, py: 2 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <IconButton size="small" onClick={() => navigate('/staff/dashboard')} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-              <ArrowLeft size={18} />
-            </IconButton>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <AlertTriangle size={22} color="#f59e0b" />
-              <Typography variant="h6" fontWeight={700}>{t('staff.createIncident.tabs.pageTitle')}</Typography>
-            </Stack>
-          </Stack>
-          <Button variant="contained" size="small" startIcon={<Plus size={15} />} onClick={() => setTab(0)} sx={{ fontWeight: 600, display: { xs: 'none', sm: 'flex' } }}>
-            {t('staff.createIncident.tabs.create')}
-          </Button>
-        </Stack>
-      </Box>
+    <div className="min-h-screen bg-[#fbf9f1] dark:bg-slate-900 pb-10 transition-colors duration-300 font-sans">
+      <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-700/60 px-4 md:px-8 py-4 sticky top-0 z-20 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div className="flex items-center justify-between max-w-6xl mx-auto">
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate('/staff/dashboard')} className="p-2.5 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-500 dark:text-slate-300 rounded-3xl transition-colors border border-slate-200/60 dark:border-slate-600/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <ArrowLeft size={20} />
+            </button>
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-3xl shadow-md shadow-orange-500/20">
+                <AlertTriangle size={22} strokeWidth={2.5} />
+              </div>
+              <h1 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white tracking-tight">{t('staff.createIncident.tabs.pageTitle')}</h1>
+            </div>
+          </div>
+          <button onClick={() => setTab(0)} className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-3xl transition-colors shadow-md shadow-blue-500/30">
+            <Plus size={18} /> {t('staff.createIncident.tabs.create')}
+          </button>
+        </div>
+      </div>
 
-      <Box sx={{ maxWidth: 1000, mx: 'auto', px: { xs: 2, md: 3 }, pt: 3 }}>
-        <Paper variant="outlined" sx={{ borderRadius: 2.5, overflow: 'hidden' }}>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)}
-            sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: '#f8fafc', px: 1, '& .MuiTab-root': { fontWeight: 600, minHeight: 48 } }}>
-            <Tab label={t('staff.createIncident.tabs.create')} icon={<Plus size={16} />} iconPosition="start" />
-            <Tab label={<Stack direction="row" alignItems="center" spacing={0.75}><Clock size={16} /><span>{t('staff.createIncident.tabs.history')}</span></Stack>} />
-          </Tabs>
-          <Box sx={{ p: { xs: 2, md: 3 } }}>
+      <div className="max-w-6xl mx-auto px-4 md:px-8 pt-8">
+        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-slate-700/60 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="flex items-center gap-2 p-2 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100/60 dark:border-slate-700/60">
+            <button onClick={() => setTab(0)} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all ${tab === 0 ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60 dark:border-slate-700/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50 dark:hover:bg-slate-800'}`}>
+              <Plus size={18} /> {t('staff.createIncident.tabs.create')}
+            </button>
+            <button onClick={() => setTab(1)} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all ${tab === 1 ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60 dark:border-slate-700/60' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50 dark:hover:bg-slate-800'}`}>
+              <Clock size={18} /> {t('staff.createIncident.tabs.history')}
+            </button>
+          </div>
+          <div className="p-6 md:p-8">
             {tab === 0 && <CreateIncidentForm sessionId={sessionId} driverId={driverId} onSuccess={handleCreated} />}
             {tab === 1 && <IncidentHistory refreshTrigger={refreshKey} />}
-          </Box>
-        </Paper>
-      </Box>
-    </Box>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
