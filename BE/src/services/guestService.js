@@ -42,10 +42,13 @@ export async function trackSession(searchTerm) {
   const request = pool.request();
   const term = searchTerm.trim().toUpperCase();
 
-  // Kiểm tra xem có phải mã phiên không (Bắt đầu bằng SS-)
-  const match = term.match(/^SS-(\d+)$/i);
-  if (match) {
-    request.input('SessionID', sql.Int, parseInt(match[1], 10));
+  // Kiểm tra xem có phải mã phiên không (Hỗ trợ cả SESS-YYYYMMDD-XXXX và SS-XXXX)
+  const matchNew = term.match(/^SESS-\d{8}-(\d+)$/i);
+  const matchOld = term.match(/^SS-(\d+)$/i);
+  const matchID = matchNew ? matchNew[1] : (matchOld ? matchOld[1] : null);
+
+  if (matchID) {
+    request.input('SessionID', sql.Int, parseInt(matchID, 10));
     query += ` AND ps.SessionID = @SessionID`;
   } else {
     request.input('PlateNumber', sql.NVarChar(20), term);

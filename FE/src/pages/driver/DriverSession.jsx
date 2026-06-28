@@ -117,7 +117,7 @@ const getSessionStatusKey = (status) => {
 }
 
 const getSessionTitle = (session) => {
-  return session?.SessionCode || `SESS-${session?.SessionID || '--'}`
+  return session?.SessionCode || `SS-${session?.SessionID || '--'}`
 }
 
 const getSessionSubTitle = (session, t) => {

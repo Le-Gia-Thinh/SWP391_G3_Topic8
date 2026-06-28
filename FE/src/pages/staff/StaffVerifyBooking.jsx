@@ -465,7 +465,7 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
               setPlateError('')
             }}
             placeholder={t('staff.verifyBooking.actualPlatePlaceholder')}
-            className={`w-full px-3 py-2.5 border rounded-lg text-sm font-bold uppercase focus:ring-2 focus:ring-blue-500 outline-none ${plateError ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
+            className={`w-full px-3 py-2.5 border rounded-lg text-sm font-bold uppercase focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 ${plateError ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white'}`}
           />
           {plateError && (
             <p className="text-xs text-red-500 mt-1.5 font-medium">{plateError}</p>
@@ -650,11 +650,11 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
                           placeholder="29A-12345"
                           maxLength={12}
                           autoFocus
-                          className={`w-full px-3 py-2.5 rounded-lg border text-sm font-black uppercase tracking-widest
+                          className={`w-full px-3 py-2.5 rounded-lg border text-sm font-black uppercase tracking-widest text-gray-900
                             focus:outline-none focus:ring-2 transition-all
                             ${walkInPlateError ? 'border-red-400 bg-red-50 focus:ring-red-200'
                               : walkInPlate.length >= 8 ? 'border-emerald-400 bg-emerald-50 focus:ring-emerald-200'
-                                : 'border-slate-200 focus:ring-blue-200'}`}
+                                : 'border-slate-200 focus:ring-blue-200 bg-white'}`}
                         />
                         {walkInPlateError
                           ? <p className="text-xs text-red-500 mt-1">{walkInPlateError}</p>
@@ -1191,7 +1191,7 @@ const StaffVerifyBooking = () => {
           onChange={e => setSearchId(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSearch()}
           placeholder={t('staff.verifyBooking.searchPlaceholder')}
-          className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
+          className="flex-1 text-sm outline-none bg-transparent text-gray-900 placeholder-gray-400"
         />
         {searchId && (
           <button onClick={() => { setSearchId(''); setSearchResult(null) }} className="text-gray-300 hover:text-gray-500">

@@ -94,16 +94,16 @@ async function applySubscriptionDiscount(pool, driverId, baseFee) {
             SELECT COUNT(*) as SessionCount
             FROM ParkingSessions
             WHERE DriverID = @DriverID 
-              AND EntryTime >= @StartDate
-              AND EntryTime <= @EndDate
+              AND MONTH(EntryTime) = MONTH(GETDATE())
+              AND YEAR(EntryTime) = YEAR(GETDATE())
         `);
         
     const sessionCount = countRes.recordset[0].SessionCount; // bao gồm cả lượt hiện tại đang Active
     let discountPercent = 0;
 
     if (sub.PlanID === 'basic') {
-        if (sessionCount <= 5) discountPercent = 10;
-        else discountPercent = 0;
+        if (sessionCount <= 5) discountPercent = 100;
+        else discountPercent = 10;
     } else if (sub.PlanID === 'pro') {
         if (sessionCount <= 15) discountPercent = 100;
         else discountPercent = 25;

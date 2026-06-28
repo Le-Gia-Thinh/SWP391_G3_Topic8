@@ -25,14 +25,7 @@ export function buildBookingCode(reservationId) {
  * @returns {string} Session code có format SESS-YYYYMMDD-XXXX
  */
 export function buildSessionCode(sessionId, entryTime) {
-  const date = new Date(entryTime);
-
-  // Lấy các thành phần ngày tháng năm để tạo chuỗi YYYYMMDD
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0"); // getMonth() trả về 0-11
-  const dd = String(date.getDate()).padStart(2, "0");
-
-  return `SESS-${yyyy}${mm}${dd}-${String(sessionId).padStart(4, "0")}`;
+  return `SS-${String(sessionId).padStart(5, "0")}`;
 }
 
 /**

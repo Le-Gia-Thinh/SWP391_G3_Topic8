@@ -489,6 +489,7 @@ const DriverPayment = () => {
   const [now, setNow] = useState(new Date())
   const [showPricing, setShowPricing] = useState(false)
   const [walletBalance, setWalletBalance] = useState(0)
+  const [isWalletPaying, setIsWalletPaying] = useState(false)
   const pollerRef = useRef(null)
 
   // Clock — cập nhật "đã đỗ" mỗi giây
@@ -738,6 +739,54 @@ const DriverPayment = () => {
             </Stack>
           )}
         </Box>
+
+        {payment.checkoutUrl !== 'FREE' && (
+          <Box sx={{ px: 4, pt: 3 }}>
+            <Button
+              fullWidth
+              variant="contained"
+              disabled={isWalletPaying}
+              onClick={async () => {
+                try {
+                  if (walletBalance < payment.amount) {
+                    toast.error(t('driver.payment.walletInsufficient', 'Số dư ví không đủ!'));
+                    return;
+                  }
+                  setIsWalletPaying(true);
+                  const res = await walletApi.payParking(paying.SessionID);
+                  if (res.success) {
+                    setStep('done');
+                    clearInterval(pollerRef.current);
+                    toast.success(t('driver.payment.walletSuccess', 'Thanh toán bằng ví thành công!'));
+                  }
+                } catch (e) {
+                  toast.error(t('driver.payment.walletFail', 'Thanh toán bằng ví thất bại!'));
+                } finally {
+                  setIsWalletPaying(false);
+                }
+              }}
+              startIcon={<WalletIcon />}
+              sx={{
+                bgcolor: '#4f46e5',
+                color: 'white',
+                py: 1.5,
+                fontWeight: 'bold',
+                borderRadius: 2,
+                '&:hover': { bgcolor: '#4338ca' }
+              }}
+            >
+              {isWalletPaying ? 'Đang xử lý...' : `Thanh toán bằng Ví (Số dư: ${fmt(walletBalance)})`}
+            </Button>
+            
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mt: 3, mb: 1 }}>
+              <Divider sx={{ flex: 1 }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                HOẶC CHUYỂN KHOẢN PAYOS
+              </Typography>
+              <Divider sx={{ flex: 1 }} />
+            </Stack>
+          </Box>
+        )}
 
         {payment.checkoutUrl === 'FREE' ? (
           <Box sx={{ p: 5, textAlign: 'center' }}>

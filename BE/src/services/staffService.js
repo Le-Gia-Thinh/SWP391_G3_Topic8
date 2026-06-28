@@ -1342,6 +1342,7 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
                     WHEN EXISTS (
                         SELECT 1 FROM Reservations r
                         WHERE r.SlotID = ps.SlotID AND r.ReservationStatus = 'Reserved'
+                        AND r.StartTime <= DATEADD(HOUR, 8, GETDATE())
                     ) THEN 'Reserved'
                     ELSE 'Available'
                 END AS SlotStatus,
@@ -1355,6 +1356,7 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
                 ON sess.SlotID = ps.SlotID AND sess.SessionStatus = 'Active'
             LEFT JOIN Reservations rsv
                 ON rsv.SlotID = ps.SlotID AND rsv.ReservationStatus = 'Reserved'
+                AND rsv.StartTime <= DATEADD(HOUR, 8, GETDATE())
             WHERE f.IsActive = 1
               AND (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
               AND (@FloorID IS NULL OR z.FloorID = @FloorID)
@@ -1412,6 +1414,7 @@ export async function getSlotDetail(slotCode) {
             LEFT JOIN Reservations r 
                 ON r.SlotID = ps.SlotID 
                 AND r.ReservationStatus = 'Reserved'
+                AND r.StartTime <= DATEADD(HOUR, 8, GETDATE())
                 AND s.SessionID IS NULL  -- Chỉ lấy reservation khi không có active session
             LEFT JOIN Users u 
                 ON u.UserID = COALESCE(s.DriverID, r.DriverID)

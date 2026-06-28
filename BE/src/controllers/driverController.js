@@ -29,13 +29,7 @@ function buildReportCode(incidentId) {
 }
 
 function formatSessionCode(sessionId, entryTime) {
-  const date = new Date(entryTime);
-
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-
-  return `SESS-${yyyy}${mm}${dd}-${String(sessionId).padStart(4, "0")}`;
+  return `SS-${String(sessionId).padStart(5, "0")}`;
 }
 
 function normalizeReportPriority(issueType) {
@@ -486,10 +480,8 @@ export async function getDriverReportContext(req, res, next) {
         SELECT
           s.SessionID,
           CONCAT(
-            'SESS-',
-            CONVERT(CHAR(8), s.EntryTime, 112),
-            '-',
-            RIGHT('0000' + CAST(s.SessionID AS VARCHAR(10)), 4)
+            'SS-',
+            RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)), 5)
           ) AS SessionCode,
 
           s.DriverID,

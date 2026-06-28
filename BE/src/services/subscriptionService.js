@@ -66,7 +66,7 @@ export const subscriptionService = {
   },
 
   // Create a PayOS payment link for subscription
-  createPayment: async (userId, planId, durationMonths) => {
+  createPayment: async (userId, planId, durationMonths, deductionAmount = 0, excessValue = 0, extraDays = 0) => {
     const pool = await getPool();
     
     // Validate plan
@@ -91,7 +91,12 @@ export const subscriptionService = {
     // Calculate amount with discount
     const discountPercent = discountMap[durationMonths] || 0;
     const totalBase = plan.BasePrice * durationMonths;
-    const amount = Math.round(totalBase * (1 - discountPercent / 100));
+    let amount = Math.round(totalBase * (1 - discountPercent / 100));
+    
+    // Khấu trừ số dư từ gói cũ (nếu có)
+    if (deductionAmount > 0) {
+        amount = Math.max(0, amount - deductionAmount);
+    }
 
     const orderCode = makeOrderCode(userId);
     // PayOS description: max 25 chars, English letters/numbers only, no spaces or special chars if possible (spaces are sometimes allowed, but safer without accents)
@@ -145,6 +150,7 @@ export const subscriptionService = {
     const expiredMs = expiredAt * 1000;
     pendingSubOrders.set(orderCode, {
         userId, planId, durationMonths, amount,
+        extraDays,
         status: 'PENDING',
         expiredAt: expiredMs,
     });
@@ -229,40 +235,78 @@ export const subscriptionService = {
     const resultStatus = await pool.request()
       .input("UserID", sql.Int, userId)
       .query(`
-        SELECT top 1 EndDate 
+        SELECT top 1 UserSubscriptionID, PlanID, EndDate 
         FROM UserSubscriptions 
         WHERE UserID = @UserID AND Status = 'Active'
         ORDER BY EndDate DESC
       `);
       
     let startDate = new Date();
+    let oldSubId = null;
+    let oldPlanId = null;
+
     if (resultStatus.recordset.length > 0) {
-        const currentEnd = new Date(resultStatus.recordset[0].EndDate);
-        if (currentEnd > startDate) {
-            startDate = currentEnd;
-        }
+        const row = resultStatus.recordset[0];
+        oldSubId = row.UserSubscriptionID;
+        oldPlanId = row.PlanID;
+        const currentEnd = new Date(row.EndDate);
+        
+        // Nếu cùng gói (Gia hạn) -> Cộng dồn thời gian nối tiếp
+        if (oldPlanId === planId) {
+            if (currentEnd > startDate) {
+                startDate = currentEnd;
+            }
+        } 
+        // Nếu khác gói (Nâng cấp) -> Bắt đầu ngay lập tức từ hôm nay
     }
     
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + durationMonths);
+    if (order.extraDays) {
+        endDate.setDate(endDate.getDate() + order.extraDays);
+    }
 
-    const result = await pool.request()
-      .input("UserID", sql.Int, userId)
-      .input("PlanID", sql.NVarChar, planId)
-      .input("StartDate", sql.DateTime, startDate)
-      .input("EndDate", sql.DateTime, endDate)
-      .input("AmountPaid", sql.Decimal(10, 2), order.amount || 0)
-      .query(`
-        INSERT INTO UserSubscriptions (UserID, PlanID, StartDate, EndDate, AmountPaid, Status)
-        OUTPUT inserted.UserSubscriptionID
-        VALUES (@UserID, @PlanID, @StartDate, @EndDate, @AmountPaid, 'Active')
-      `);
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
 
-    return {
-        success: true,
-        userSubscriptionId: result.recordset[0].UserSubscriptionID,
-        startDate,
-        endDate
-    };
+    try {
+        // 1. Nếu là nâng cấp, hủy gói cũ
+        if (oldSubId && oldPlanId !== planId) {
+            await new sql.Request(transaction)
+              .input("OldSubID", sql.Int, oldSubId)
+              .query(`
+                UPDATE UserSubscriptions 
+                SET Status = 'Upgraded', EndDate = GETDATE() 
+                WHERE UserSubscriptionID = @OldSubID
+              `);
+        }
+
+        // 2. Tạo gói mới
+        const result = await new sql.Request(transaction)
+          .input("UserID", sql.Int, userId)
+          .input("PlanID", sql.NVarChar, planId)
+          .input("StartDate", sql.DateTime, startDate)
+          .input("EndDate", sql.DateTime, endDate)
+          .input("AmountPaid", sql.Decimal(10, 2), order.amount || 0)
+          .query(`
+            INSERT INTO UserSubscriptions (UserID, PlanID, StartDate, EndDate, AmountPaid, Status)
+            OUTPUT inserted.UserSubscriptionID
+            VALUES (@UserID, @PlanID, @StartDate, @EndDate, @AmountPaid, 'Active')
+          `);
+          
+        await transaction.commit();
+
+        return {
+            success: true,
+            userSubscriptionId: result.recordset[0].UserSubscriptionID,
+            startDate,
+            endDate
+        };
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
+
+    // return is handled inside try block
   }
 };
