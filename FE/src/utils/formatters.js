@@ -4,38 +4,34 @@
  * Bao gồm hàm chuẩn hóa định dạng biển số xe.
  */
 
+// Định dạng chuẩn: 51A-123.45 (xe máy) hoặc 51A-12345 (ô tô 5 số liền)
+// Logic: 2 số tỉnh + 1-2 chữ cái dòng xe + '-' + tối đa 5 chữ số
+// Nếu có 4-5 số → tự chèn '.' trước 2 số cuối (chuẩn xe máy VN)
 export function formatPlateNumber(value) {
   if (!value) return ''
 
-  // Lấy giá trị gốc và chuyển thành chữ hoa
-  let raw = String(value).toUpperCase()
+  const clean = String(value).toUpperCase().replace(/[^0-9A-Z]/g, '')
+  if (!clean) return ''
 
-  // Giữ lại dấu '-' ở cuối nếu user cố tình gõ
-  const endsWithHyphen = raw.endsWith('-')
+  // 2 chữ số mã tỉnh
+  const prov = clean.slice(0, 2).replace(/[^0-9]/g, '')
+  if (prov.length < 2) return prov
 
-  // Loại bỏ các ký tự không hợp lệ (chỉ giữ chữ cái, số, và dấu chấm)
-  raw = raw.replace(/[^A-Z0-9.]/g, '')
-
-  // 1. 2 ký tự đầu tiên phải là số
-  let p1 = raw.substring(0, 2).replace(/[^0-9]/g, '')
-  if (p1.length < 2) return p1
-
-  // 2. Ký tự tiếp theo là chữ cái (1 hoặc 2 chữ)
-  let restAfterP1 = raw.substring(p1.length)
-  let letterMatch = restAfterP1.match(/^[A-Z]{1,2}/)
-  let letters = letterMatch ? letterMatch[0] : ''
-
-  if (letters.length === 0) {
-    return p1
+  // 1-2 chữ cái series
+  let i = 2, series = ''
+  while (i < clean.length && /[A-Z]/.test(clean[i]) && series.length < 2) {
+    series += clean[i]; i++
   }
+  if (!series) return prov
 
-  // 3. Các số còn lại
-  let restAfterLetters = restAfterP1.substring(letters.length)
-  let digits = restAfterLetters.replace(/[^0-9.]/g, '')
+  // Phần số (tối đa 5 chữ số)
+  const nums = clean.slice(i).replace(/[^0-9]/g, '').slice(0, 5)
+  if (!nums.length) return `${prov}${series}`
 
-  if (digits.length > 0) {
-    return `${p1}${letters}-${digits}`
-  } else {
-    return endsWithHyphen ? `${p1}${letters}-` : `${p1}${letters}`
-  }
+  // ≤3 số → giữ nguyên; 4-5 số → chèn '.' trước 2 số cuối
+  const formatted = nums.length <= 3
+    ? nums
+    : nums.slice(0, nums.length - 2) + '.' + nums.slice(nums.length - 2)
+
+  return `${prov}${series}-${formatted}`
 }

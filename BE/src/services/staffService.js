@@ -244,10 +244,13 @@ export async function checkInWalkIn({ driverId, plateNumber, licensePlate, vehic
         throw badRequest('Vui lòng chọn slot.', 'SLOT_REQUIRED')
     }
 
-    // Chặn cùng biển số check-in 2 slot cùng lúc
+    // Chặn cùng biển số check-in 2 slot cùng lúc (so sánh sau khi chuẩn hóa: bỏ -, .)
+    const plateNorm = finalPlate.trim().toUpperCase().replace(/[^0-9A-Z]/g, '')
     const activeCheck = await pool.request()
-        .input('plate', sql.NVarChar(20), finalPlate.trim().toUpperCase())
-        .query(`SELECT 1 FROM ParkingSessions WHERE PlateNumber = @plate AND SessionStatus = 'Active' AND ExitTime IS NULL`)
+        .input('plateNorm', sql.NVarChar(20), plateNorm)
+        .query(`SELECT 1 FROM ParkingSessions
+                WHERE REPLACE(REPLACE(UPPER(PlateNumber), '-', ''), '.', '') = @plateNorm
+                  AND SessionStatus = 'Active' AND ExitTime IS NULL`)
     if (activeCheck.recordset.length > 0) {
         throw badRequest('Xe này đang trong bãi, không thể check-in lại.', 'PLATE_ALREADY_PARKED')
     }
@@ -281,7 +284,7 @@ const LATE_CHECKIN_MIN = 60    // no-show nếu đến trễ hơn 60 phút
 const GRACE_PERIOD_MIN = 15    // ân hạn 15 phút: đến sớm nhưng miễn phí
 const EARLY_FEE_FLAT = 5000    // phụ phí cố định 5.000đ nếu đến sớm > 15 phút
 
-export async function getBookings({ status, keyword, timeWindowHours, dateFrom, dateTo }) {
+export async function getBookings({ status, keyword, timeWindowHours, dateFrom, dateTo, vehicleTypeId }) {
     const pool = await getPool()
     const request = pool.request()
 
@@ -304,6 +307,11 @@ export async function getBookings({ status, keyword, timeWindowHours, dateFrom, 
         `
     }
 
+    if (vehicleTypeId && vehicleTypeId !== 'all') {
+        request.input('vehicleTypeId', sql.Int, Number(vehicleTypeId))
+        where += ' AND r.VehicleTypeID = @vehicleTypeId'
+    }
+
     const hours = Number(timeWindowHours)
     if (hours > 0) {
         request.input('timeWindowHours', sql.Int, hours)
@@ -311,17 +319,17 @@ export async function getBookings({ status, keyword, timeWindowHours, dateFrom, 
     }
 
     if (dateFrom) {
-        request.input('dateFrom', sql.DateTime, new Date(dateFrom))
-        where += ' AND r.StartTime >= @dateFrom'
+        request.input('dateFrom', sql.Date, new Date(dateFrom))
+        where += ' AND CAST(r.StartTime AS DATE) >= @dateFrom'
     }
 
     if (dateTo) {
-        request.input('dateTo', sql.DateTime, new Date(dateTo))
-        where += ' AND r.StartTime <= @dateTo'
+        request.input('dateTo', sql.Date, new Date(dateTo))
+        where += ' AND CAST(r.StartTime AS DATE) <= @dateTo'
     }
 
     const result = await request.query(`
-        SELECT TOP 100
+        SELECT TOP 200
         r.ReservationID,
         CONCAT('BK-', RIGHT('0000' + CAST(r.ReservationID AS VARCHAR(10)), 4)) AS BookingCode,
         r.DriverID,
@@ -566,7 +574,7 @@ export async function cancelAndWalkIn(reservationId, plateNumber, slotId) {
         const bookingResult = await new sql.Request(transaction)
             .input('reservationId', sql.Int, id)
             .query(`
-                SELECT r.*, sl.SlotStatus, sl.SlotCode, vt.VehicleTypeName
+                SELECT r.*, sl.SlotStatus, sl.SlotCode, vt.VehicleName
                 FROM Reservations r WITH (UPDLOCK, ROWLOCK)
                 LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
                 LEFT JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
@@ -590,6 +598,17 @@ export async function cancelAndWalkIn(reservationId, plateNumber, slotId) {
         if (!booking.VehicleTypeID) throw badRequest('Booking chưa có loại xe.', 'BOOKING_VEHICLE_TYPE_REQUIRED')
 
         const finalPlate = plateNumber.trim().toUpperCase()
+        const plateNorm = finalPlate.replace(/[^0-9A-Z]/g, '')
+
+        // Chặn biển số đang active (chuẩn hóa: bỏ -, .)
+        const activeCheck = await new sql.Request(transaction)
+            .input('plateNorm', sql.NVarChar(20), plateNorm)
+            .query(`SELECT 1 FROM ParkingSessions
+                    WHERE REPLACE(REPLACE(UPPER(PlateNumber), '-', ''), '.', '') = @plateNorm
+                      AND SessionStatus = 'Active' AND ExitTime IS NULL`)
+        if (activeCheck.recordset.length > 0) {
+            throw badRequest('Xe này đang trong bãi, không thể check-in lại.', 'PLATE_ALREADY_PARKED')
+        }
 
         // 1. Hủy booking gốc — giải phóng slot đó khỏi bảng Reservations
         await new sql.Request(transaction)
@@ -689,7 +708,7 @@ export async function cancelAndWalkIn(reservationId, plateNumber, slotId) {
             sessionId: session.SessionID,
             sessionCode: formatSessionCode(session.SessionID),
             cancelledBooking: true,
-            session: { ...session, SlotCode: availableSlot.SlotCode, VehicleName: booking.VehicleTypeName }
+            session: { ...session, SlotCode: availableSlot.SlotCode, VehicleName: booking.VehicleName }
         }
     } catch (error) {
         if (!committed) await transaction.rollback()

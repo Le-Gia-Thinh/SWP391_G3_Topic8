@@ -39,15 +39,16 @@ const fmt = (n, currency = 'VNĐ') =>
 
 const fmtTime = (val) => {
   if (!val) return '--'
-  const d = new Date(String(val).replace(/Z$/, ''))
+  const d = new Date(val)
   return isNaN(d.getTime()) ? '--' : d.toLocaleString('vi-VN', {
     hour: '2-digit', minute: '2-digit',
-    day: '2-digit', month: '2-digit', year: 'numeric'
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    timeZone: 'Asia/Ho_Chi_Minh'
   })
 }
 
 const getDuration = (entry, now = new Date()) => {
-  const e = new Date(String(entry).replace(/Z$/, ''))
+  const e = new Date(entry)
   if (isNaN(e.getTime())) return { text: '--', h: 0, m: 0, s: 0 }
   const totalSec = Math.max(0, Math.floor((now - e) / 1000))
   const h = Math.floor(totalSec / 3600)
@@ -91,7 +92,7 @@ const splitDayNightSegs = (start, end) => {
 
 const calcBreakdown = (entryTime, vehicleTypeId) => {
   if (!entryTime || !vehicleTypeId) return null
-  const entry = new Date(String(entryTime).replace(/Z$/, ''))
+  const entry = new Date(entryTime)
   const now = new Date()
   const totalMinutes = Math.max(0, Math.floor((now - entry) / 60000))
   const segs = splitDayNightSegs(entry, now)

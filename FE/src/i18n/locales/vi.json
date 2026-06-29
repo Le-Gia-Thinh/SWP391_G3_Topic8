@@ -783,7 +783,7 @@
       "formTitleEdit": "Cập nhật phương tiện",
       "formTitleAdd": "Thêm phương tiện mới",
       "plateLabel": "Biển số xe *",
-      "platePlaceholder": "VD: 29A-12345",
+      "platePlaceholder": "VD: 51A-123.45",
       "typeLabel": "Loại xe *",
       "typeSelect": "-- Chọn loại xe --",
       "brandLabel": "Hãng xe",
