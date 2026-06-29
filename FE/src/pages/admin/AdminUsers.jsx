@@ -14,7 +14,7 @@ import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import {
-  getUsersAPI, getRolesAPI, createUserAPI, updateUserAPI, toggleUserStatusAPI, USE_MOCK
+  getUsersAPI, getRolesAPI, createUserAPI, updateUserAPI, toggleUserStatusAPI
 } from '../../apis/adminApi'
 
 const roleBadge = {
@@ -187,12 +187,6 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      {USE_MOCK && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-semibold text-amber-700 flex items-center gap-2">
-          <ShieldCheck size={18} />
-          {t('admin.users.mockNotice')}
-        </div>
-      )}
 
       {/* Filters + Table */}
       <div className="rounded-3xl bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">

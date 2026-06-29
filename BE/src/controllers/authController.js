@@ -19,6 +19,8 @@
 import { StatusCodes } from "http-status-codes"; // Mã HTTP status chuẩn
 import * as authService from "../services/authService.js"; // Service xử lý logic xác thực
 import JwtProvider from "../providers/JwtProvider.js"; // Module quản lý JWT
+import { getPool } from "../config/db.js"; // Kết nối database (để ghi audit log)
+import { logAudit } from "../utils/auditLogger.js"; // Hàm ghi nhật ký hệ thống
 
 // ========================= BIẾN CẤU HÌNH =========================
 
@@ -59,6 +61,26 @@ function getClientIp(req) {
   return req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || null;
 }
 
+// Ghi audit log cho sự kiện xác thực (best-effort — không bao giờ chặn response).
+// `actor` có thể là user của authService ({ userId, fullName, roleName, email })
+// hoặc payload đã giải mã từ access token ({ userId, email, roleName }).
+async function auditAuth(actor, action, target, description, ip) {
+  if (!actor) return;
+  try {
+    const pool = await getPool();
+    await logAudit(
+      pool,
+      {
+        UserID: actor.userId ?? null,
+        // Token không chứa fullName → fallback sang email / "User #id" để cột Người thực hiện luôn có dữ liệu
+        FullName: actor.fullName || actor.email || (actor.userId ? `User #${actor.userId}` : null),
+        RoleName: actor.roleName || null,
+      },
+      action, target, description, ip
+    );
+  } catch { /* logAudit đã tự nuốt lỗi */ }
+}
+
 // ── Bắt lỗi EMAIL_NOT_VERIFIED từ SP hoặc service ────────────────
 // mssql ném lỗi dạng: err.message = "EMAIL_NOT_VERIFIED"
 // hoặc service set err.code = "EMAIL_NOT_VERIFIED"
@@ -73,6 +95,7 @@ function isEmailNotVerifiedError(err) {
 export async function register(req, res, next) {
   try {
     const user = await authService.registerService(req.body);
+    await auditAuth(user, "Register", "Tài khoản", `Đăng ký tài khoản mới (${user.email})`, getClientIp(req));
     return res.status(StatusCodes.CREATED).json({
       success: true,
       message: "Đăng ký thành công! Vui lòng kiểm tra email để xác minh tài khoản.",
@@ -87,6 +110,7 @@ export async function login(req, res, next) {
     const { accessToken, refreshToken, user } =
       await authService.loginService(req.body, getClientIp(req));
     setTokenCookies(res, accessToken, refreshToken);
+    await auditAuth(user, "Login", "Xác thực", "Đăng nhập bằng email/mật khẩu", getClientIp(req));
     return res.status(StatusCodes.OK).json({
       success: true,
       message: "Đăng nhập thành công",
@@ -111,6 +135,7 @@ export async function googleLogin(req, res, next) {
     const { accessToken, refreshToken, user, message } =
       await authService.googleLoginService(req.body.idToken, getClientIp(req));
     setTokenCookies(res, accessToken, refreshToken);
+    await auditAuth(user, "Login", "Xác thực", "Đăng nhập bằng Google", getClientIp(req));
     return res.status(StatusCodes.OK).json({
       success: true,
       message: message || "Đăng nhập Google thành công",
@@ -135,6 +160,7 @@ export async function facebookLogin(req, res, next) {
     const { accessToken, refreshToken, user, message } =
       await authService.facebookLoginService(req.body.accessToken, getClientIp(req));
     setTokenCookies(res, accessToken, refreshToken);
+    await auditAuth(user, "Login", "Xác thực", "Đăng nhập bằng Facebook", getClientIp(req));
     return res.status(StatusCodes.OK).json({
       success: true,
       message: message || "Đăng nhập Facebook thành công",
@@ -224,9 +250,17 @@ export async function refreshToken(req, res, next) {
 }
 // POST /api/auth/logout
 export async function logout(req, res, next) {
+  // Route logout không qua isAuthorized nên không có req.user.
+  // Giải mã access token (nếu còn hợp lệ) để biết AI vừa đăng xuất; token hỏng/hết hạn vẫn cho logout.
+  let actor = null;
+  try {
+    const token = req.cookies?.accessToken;
+    if (token) actor = JwtProvider.verifyAccessToken(token);
+  } catch { /* token hết hạn / không hợp lệ → bỏ qua, không ghi được actor */ }
   try {
     await authService.logoutService(req.cookies?.refreshToken);
     clearTokenCookies(res);
+    await auditAuth(actor, "Logout", "Xác thực", "Đăng xuất", getClientIp(req));
     return res.status(StatusCodes.OK).json({
       success: true,
       message: "Đăng xuất thành công",

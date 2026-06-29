@@ -7,10 +7,10 @@
 // src/pages/admin/AdminDashboard.jsx
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Users, UserCheck, UserX, MailCheck, RefreshCcw, ShieldCheck } from 'lucide-react'
+import { Users, UserCheck, UserX, MailCheck, RefreshCcw } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useAuth } from '../../contexts/AuthContext'
-import { getAdminStatsAPI, USE_MOCK } from '../../apis/adminApi'
+import { getAdminStatsAPI } from '../../apis/adminApi'
 
 const roleStyle = {
   Driver: 'from-sky-500 to-blue-600',
@@ -80,14 +80,6 @@ const AdminDashboard = () => {
           <RefreshCcw size={16} /> {t('admin.dashboardPage.refresh')}
         </button>
       </div>
-
-      {/* Cảnh báo mock data */}
-      {USE_MOCK && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-semibold text-amber-700 flex items-center gap-2">
-          <ShieldCheck size={18} />
-          {t('admin.dashboardPage.mockNotice')}
-        </div>
-      )}
 
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
