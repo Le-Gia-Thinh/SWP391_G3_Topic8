@@ -8,11 +8,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Search, RefreshCcw, ScrollText, ShieldCheck, LogIn, LogOut, Plus, Pencil, Trash2, Lock, Unlock, Activity
+  Search, RefreshCcw, ScrollText, LogIn, LogOut, UserPlus, Plus, Pencil, Trash2, Lock, Unlock, Activity
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import Badge from '../../components/ui/Badge'
-import { getAuditLogsAPI, USE_MOCK } from '../../apis/adminApi'
+import { getAuditLogsAPI } from '../../apis/adminApi'
 
 const roleBadge = {
   Driver: 'primary',
@@ -25,6 +25,7 @@ const roleBadge = {
 const actionMeta = {
   Login: { icon: LogIn, cls: 'bg-sky-50 text-sky-600 border-sky-200/60' },
   Logout: { icon: LogOut, cls: 'bg-slate-50 text-slate-600 border-slate-200/60' },
+  Register: { icon: UserPlus, cls: 'bg-violet-50 text-violet-600 border-violet-200/60' },
   Create: { icon: Plus, cls: 'bg-emerald-50 text-emerald-600 border-emerald-200/60' },
   Update: { icon: Pencil, cls: 'bg-amber-50 text-amber-600 border-amber-200/60' },
   Delete: { icon: Trash2, cls: 'bg-rose-50 text-rose-600 border-rose-200/60' },
@@ -82,13 +83,6 @@ const AdminAuditLog = () => {
         </button>
       </div>
 
-      {USE_MOCK && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-semibold text-amber-700 flex items-center gap-2">
-          <ShieldCheck size={18} />
-          {t('admin.auditLog.mockNotice')}
-        </div>
-      )}
-
       {/* Filters + Table */}
       <div className="rounded-3xl bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center mb-5">
@@ -123,7 +117,7 @@ const AdminAuditLog = () => {
                   <tr>
                     <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.auditLog.col.actor')}</th>
                     <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.auditLog.col.action')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.auditLog.col.target')}</th>
+                    {/* <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.auditLog.col.target')}</th> */}
                     <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.auditLog.col.detail')}</th>
                     <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('admin.auditLog.col.time')}</th>
                   </tr>
@@ -151,7 +145,7 @@ const AdminAuditLog = () => {
                             <Icon size={13} /> {label}
                           </span>
                         </td>
-                        <td className="px-5 py-4 font-semibold text-slate-700 font-bold">{log.Target || '—'}</td>
+                        {/* <td className="px-5 py-4 font-semibold text-slate-700 font-bold">{log.Target || '—'}</td> */}
                         <td className="px-5 py-4 text-slate-600">{log.Description}</td>
                         <td className="px-5 py-4 text-slate-500 font-medium text-xs whitespace-nowrap">{fmtDateTime(log.CreatedAt)}</td>
                       </tr>

@@ -8,12 +8,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
-import { Search, RefreshCcw, Building2, Plus, Pencil, Trash2, MapPin, Clock, Layers, ShieldCheck } from 'lucide-react'
+import { Search, RefreshCcw, Building2, Plus, Pencil, Trash2, MapPin, Clock, Layers } from 'lucide-react'
 import { toast } from 'react-toastify'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import {
-  getBuildingsAPI, createBuildingAPI, updateBuildingAPI, deleteBuildingAPI, USE_MOCK
+  getBuildingsAPI, createBuildingAPI, updateBuildingAPI, deleteBuildingAPI
 } from '../../apis/adminApi'
 
 const fmtDate = (d) => d
@@ -127,12 +127,6 @@ const AdminBuildings = () => {
         </div>
       </div>
 
-      {USE_MOCK && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-semibold text-amber-700 flex items-center gap-2">
-          <ShieldCheck size={18} />
-          {t('admin.buildings.mockNotice')}
-        </div>
-      )}
 
       {/* Search */}
       <div className="rounded-3xl bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">

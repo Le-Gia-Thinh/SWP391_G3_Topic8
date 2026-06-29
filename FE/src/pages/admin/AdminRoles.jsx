@@ -8,13 +8,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
-import { Search, RefreshCcw, ShieldCheck, Lock, Unlock, KeyRound, Users } from 'lucide-react'
+import { Search, RefreshCcw, Lock, Unlock, KeyRound, Users } from 'lucide-react'
 import { toast } from 'react-toastify'
 import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import {
-  getUsersAPI, getRolesAPI, updateUserAPI, toggleUserStatusAPI, resetUserPasswordAPI, USE_MOCK
+  getUsersAPI, getRolesAPI, updateUserAPI, toggleUserStatusAPI, resetUserPasswordAPI
 } from '../../apis/adminApi'
 
 const roleBadge = {
@@ -136,12 +136,6 @@ const AdminRoles = () => {
         </button>
       </div>
 
-      {USE_MOCK && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-semibold text-amber-700 flex items-center gap-2">
-          <ShieldCheck size={18} />
-          {t('admin.roles.mockNotice')}
-        </div>
-      )}
 
       {/* Thống kê nhanh */}
       <div className="grid gap-4 sm:grid-cols-3">

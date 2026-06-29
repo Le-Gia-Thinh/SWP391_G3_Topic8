@@ -10,10 +10,6 @@ import authorizeAxios from '../utils/authorizeAxios'
 // authorizeAxios đã có baseURL kết thúc bằng /api → KHÔNG thêm /api ở đây.
 const BASE = '/admin'
 
-// Đặt false để gọi API thật (mặc định). Đổi true khi backend admin chưa sẵn sàng
-// để các trang admin tự dùng dữ liệu mẫu nội bộ (nếu trang có cài fallback).
-export const USE_MOCK = false
-
 /* ── Stats ───────────────────────────────────────────────────── */
 export const getAdminStatsAPI = () =>
   authorizeAxios.get(`${BASE}/stats`)
