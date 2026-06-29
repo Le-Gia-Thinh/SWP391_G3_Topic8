@@ -89,9 +89,11 @@ export async function trackSession(searchTerm) {
       if (vtResult.recordset.length > 0) {
         const feeCalc = pool.request();
         feeCalc.input('VehicleTypeID', sql.Int, vtResult.recordset[0].VehicleTypeID);
-        feeCalc.input('DurationH', sql.Decimal(10, 2), durationMs / (1000 * 60 * 60));
+        feeCalc.input('EntryTime', sql.DateTime, entryTime);
+        feeCalc.input('ExitTime', sql.DateTime, endTime);
         feeCalc.output('Fee', sql.Decimal(10, 2));
-        const feeResult = await feeCalc.execute('sp_CalcParkingFee');
+        feeCalc.output('Breakdown', sql.NVarChar(sql.MAX));
+        const feeResult = await feeCalc.execute('sp_CalcParkingFeeV2');
         estimatedFee = Number(feeResult.output.Fee || 0);
       }
     } catch (err) {
