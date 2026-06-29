@@ -1,26 +1,48 @@
-import { getPool, sql } from "../config/db.js";
-import * as sessionService from "../services/sessionService.js";
+/**
+ * FILE: sessionController.js
+ * MÔ TẢ: Controller xử lý phiên đỗ xe (Parking Session).
+ * 
+ * Chức năng:
+ * - getSessions: Lấy tất cả phiên đỗ xe
+ * - checkInVehicle: Check-in xe vào bãi (tạo phiên mới)
+ * - checkOutVehicle: Check-out xe ra khỏi bãi (kết thúc phiên)
+ * - getCurrentDriverSession: Lấy phiên đỗ xe đang hoạt động của tài xế (1 phiên)
+ * - getCurrentDriverSessions: Lấy TẤT CẢ phiên đang hoạt động của tài xế
+ * 
+ * @access Driver, Staff
+ */
 
+import { getPool, sql } from "../config/db.js"; // Kết nối database
+import * as sessionService from "../services/sessionService.js"; // Service xử lý logic session
+
+/**
+ * Hàm helper: Lấy HTTP status code từ error object.
+ * @param {Error} err - Đối tượng lỗi
+ * @returns {number} HTTP status code
+ */
 function getErrorStatus(err) {
   return err.status || err.statusCode || 500;
 }
 
+/**
+ * Hàm helper: Gửi response lỗi client (4xx). Trả null nếu lỗi server (5xx).
+ */
 function sendClientError(res, err) {
   const status = getErrorStatus(err);
-
   if (status < 500) {
-    return res.status(status).json({
-      success: false,
-      message: err.message,
-    });
+    return res.status(status).json({ success: false, message: err.message });
   }
-
   return null;
 }
 
+/**
+ * Hàm helper: Lấy UserID từ request.
+ */
 function getUserIdFromToken(req) {
   return req.user?.UserID || req.user?.userId || req.user?.id;
 }
+
+/** @route GET /api/sessions - Lấy tất cả phiên đỗ xe */
 
 export async function getSessions(req, res, next) {
   try {
@@ -85,10 +107,8 @@ export async function getCurrentDriverSession(req, res, next) {
         SELECT TOP 1
           s.SessionID,
           CONCAT(
-            'SESS-',
-            CONVERT(CHAR(8), s.EntryTime, 112),
-            '-',
-            RIGHT('0000' + CAST(s.SessionID AS VARCHAR(10)), 4)
+            'SS-',
+            RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)), 5)
           ) AS SessionCode,
 
           s.DriverID,
@@ -199,10 +219,8 @@ export async function getCurrentDriverSessions(req, res, next) {
         SELECT
           s.SessionID,
           CONCAT(
-            'SESS-',
-            CONVERT(CHAR(8), s.EntryTime, 112),
-            '-',
-            RIGHT('0000' + CAST(s.SessionID AS VARCHAR(10)), 4)
+            'SS-',
+            RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)), 5)
           ) AS SessionCode,
 
           s.DriverID,

@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffParkingMap.jsx
+ * MÔ TẢ: Bản đồ hiển thị tình trạng bãi đỗ xe theo thời gian thực (Staff).
+ * Phân cấp theo Tòa nhà > Tầng > Khu vực. Cho phép xem chi tiết trạng thái từng ô đỗ, 
+ * phiên đỗ xe hiện tại, hoặc thông tin đặt chỗ trước.
+ */
+
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import axios from '../../utils/authorizeAxios'
@@ -70,7 +77,7 @@ function buildHierarchy(slots) {
 /* ─── Stat pill ─────────────────────────────────────────────── */
 function StatPill({ value, label, color }) {
   return (
-    <div className="flex items-center gap-2 bg-white rounded-lg border border-slate-100 px-3 py-1.5 shadow-sm">
+    <div className="flex items-center gap-2 bg-white rounded-xl border border-slate-100 px-3 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
       <span className={`text-lg font-black ${color}`}>{value}</span>
       <span className="text-xs text-slate-400 font-medium">{label}</span>
     </div>
@@ -82,10 +89,10 @@ function NavItem({ icon: Icon, label, active, onClick, count, indent = 0 }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all text-sm
+      className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all text-sm
         ${indent === 1 ? 'pl-6' : indent === 2 ? 'pl-9' : ''}
         ${active
-          ? 'bg-blue-600 text-white shadow-sm shadow-blue-200 font-semibold'
+          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-blue-200 font-semibold'
           : 'text-slate-600 hover:bg-slate-100 font-medium'}`}
     >
       <Icon size={14} className={active ? 'text-blue-100' : 'text-slate-400'} />
@@ -195,7 +202,7 @@ const StaffParkingMap = () => {
     }
   }
 
-  const fmt = (ds) => { try { return new Date(ds).toLocaleString('vi-VN') } catch { return ds || 'N/A' } }
+  const fmt = (ds) => { try { return new Date(ds).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) } catch { return ds || 'N/A' } }
   const fmtCurrency = (v) => v != null ? Number(v).toLocaleString('vi-VN') + ' ₫' : '—'
 
   /* ── Toggle helpers ── */
@@ -229,7 +236,7 @@ const StaffParkingMap = () => {
           <p className="text-xs text-slate-400 mt-0.5">{t('staff.parkingMap.subtitle')}</p>
         </div>
         <button onClick={handleRefresh}
-          className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors shadow-sm">
+          className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <RefreshCcw size={13} /> {t('staff.parkingMap.refresh')}
         </button>
       </header>
@@ -238,7 +245,7 @@ const StaffParkingMap = () => {
       <div className="flex gap-3 flex-1 min-h-0">
 
         {/* ━━ LEFT SIDEBAR: Building > Floor > Zone ━━ */}
-        <aside className="w-56 flex-shrink-0 bg-white rounded-xl border border-slate-100 shadow-sm overflow-y-auto p-2">
+        <aside className="w-56 flex-shrink-0 bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-y-auto p-2">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1 mb-1">{t('staff.parkingMap.locationLabel')}</p>
 
           {hierarchy.map(building => {
@@ -341,7 +348,7 @@ const StaffParkingMap = () => {
               <StatPill value={counts.reserved} label={t('staff.parkingMap.statusReserved')} color="text-amber-600" />
               {counts.maintenance > 0 && <StatPill value={counts.maintenance} label={t('staff.parkingMap.statusMaintenance')} color="text-slate-500" />}
 
-              <div className="flex items-center gap-0.5 bg-white border border-slate-200 rounded-lg px-1.5">
+              <div className="flex items-center gap-0.5 bg-white border border-slate-200 rounded-xl px-1.5">
                 <button onClick={() => setZoom(z => Math.max(0.6, z - 0.1))} className="p-1 text-slate-400 hover:text-slate-700"><ZoomOut size={14} /></button>
                 <span className="text-xs font-bold text-slate-600 w-9 text-center">{Math.round(zoom * 100)}%</span>
                 <button onClick={() => setZoom(z => Math.min(1.8, z + 0.1))} className="p-1 text-slate-400 hover:text-slate-700"><ZoomIn size={14} /></button>
@@ -360,7 +367,7 @@ const StaffParkingMap = () => {
           </div>
 
           {/* Map canvas */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex-1 overflow-auto p-5">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex-1 overflow-auto p-5">
             {activeZoneData ? (
               <>
                 {/* Gate indicator */}
@@ -383,7 +390,7 @@ const StaffParkingMap = () => {
                             key={slot.code}
                             onClick={() => handleSelectSlot(slot)}
                             title={`${slot.code} – ${t(cfg.labelKey)}`}
-                            className={`w-14 h-14 rounded-xl border-2 flex flex-col items-center justify-center
+                            className={`w-14 h-14 rounded-3xl border-2 flex flex-col items-center justify-center
                               transition-all duration-150 hover:scale-110 hover:shadow-lg hover:z-10 relative
                               ${isSelected
                                 ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-300 scale-110 z-10'
@@ -417,7 +424,7 @@ const StaffParkingMap = () => {
         {/* ━━ RIGHT: Slot detail panel ━━ */}
         <div className="w-60 flex-shrink-0">
           {selectedSlot ? (
-            <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden h-full flex flex-col">
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden h-full flex flex-col">
               {/* Panel header */}
               <div className={`px-4 py-3 flex items-center justify-between
                 ${STATUS_CONFIG[selectedSlot.status]?.bg} border-b ${STATUS_CONFIG[selectedSlot.status]?.border}`}>
@@ -428,7 +435,7 @@ const StaffParkingMap = () => {
                   </p>
                 </div>
                 <button onClick={() => setSelectedSlot(null)}
-                  className="p-1 rounded-lg hover:bg-black/10 transition-colors">
+                  className="p-1 rounded-xl hover:bg-black/10 transition-colors">
                   <X size={14} className={STATUS_CONFIG[selectedSlot.status]?.text} />
                 </button>
               </div>
@@ -490,8 +497,8 @@ const StaffParkingMap = () => {
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-3 p-6 h-full text-center">
-              <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center">
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col items-center justify-center gap-3 p-6 h-full text-center">
+              <div className="w-12 h-12 rounded-3xl bg-slate-50 flex items-center justify-center">
                 <Info size={22} className="text-slate-300" />
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">{t('staff.parkingMap.clickHint', t('staff.parkingMap.clickHint'))}</p>

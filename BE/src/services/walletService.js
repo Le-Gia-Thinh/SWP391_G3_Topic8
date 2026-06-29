@@ -1,4 +1,10 @@
-// src/services/walletService.js
+/**
+ * FILE: walletService.js
+ * MÔ TẢ: Service xử lý nghiệp vụ Ví điện tử (Wallet) của người dùng.
+ * Chức năng: Nạp tiền (Topup) qua PayOS, xử lý Webhook Topup, thanh toán phiên gửi xe
+ * và mua gói hội viên bằng số dư ví.
+ */
+
 import crypto from 'crypto';
 import axios from 'axios';
 import { getPool, sql } from '../config/db.js';
@@ -234,12 +240,17 @@ export async function payParkingByWalletService(sessionId, driverId) {
         const countRes = await pool.request()
             .input('DriverID', sql.Int, driverId)
             .input('StartDate', sql.DateTime, sub.StartDate)
-            .input('EndDate', sql.DateTime, sub.EndDate)
-            .query('SELECT COUNT(*) as SessionCount FROM ParkingSessions WHERE DriverID = @DriverID AND EntryTime >= @StartDate AND EntryTime <= @EndDate');
+            .query(`
+                SELECT COUNT(*) as SessionCount 
+                FROM ParkingSessions 
+                WHERE DriverID = @DriverID 
+                  AND MONTH(EntryTime) = MONTH(GETDATE()) 
+                  AND YEAR(EntryTime) = YEAR(GETDATE())
+            `);
         const sessionCount = countRes.recordset[0].SessionCount;
 
         if (sub.PlanID === 'basic') {
-            discountPercent = sessionCount <= 5 ? 10 : 0;
+            discountPercent = sessionCount <= 5 ? 100 : 10;
         } else if (sub.PlanID === 'pro') {
             discountPercent = sessionCount <= 15 ? 100 : 25;
         } else if (sub.PlanID === 'premium') {
@@ -283,6 +294,18 @@ export async function payParkingByWalletService(sessionId, driverId) {
         .input('ReferenceID', sql.NVarChar(100), String(sessionId))
         .input('Description', sql.NVarChar(200), `Thanh toán đỗ xe - Session #${sessionId}`)
         .execute('sp_PayByWallet');
+
+    // Thêm thông báo
+    await pool.request()
+        .input('UserID', sql.Int, driverId)
+        .input('Title', sql.NVarChar, 'Thanh toán phí đỗ xe')
+        .input('Message', sql.NVarChar, `Bạn đã thanh toán ${amount.toLocaleString('vi-VN')} VNĐ phí đỗ xe qua Ví cho phiên #${sessionId}.`)
+        .input('Type', sql.NVarChar, 'SYSTEM')
+        .input('RefID', sql.Int, sessionId)
+        .query(`
+            INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType)
+            VALUES (@UserID, @Title, @Message, @Type, @RefID, 'PAYMENT')
+        `);
 
     // Mark payment as prepaid
     const durationH = parseFloat(diffH.toFixed(2));
@@ -360,6 +383,18 @@ export async function paySubscriptionByWalletService(userId, planId, durationMon
             INSERT INTO UserSubscriptions (UserID, PlanID, StartDate, EndDate, AmountPaid, Status)
             OUTPUT inserted.UserSubscriptionID
             VALUES (@UserID, @PlanID, @StartDate, @EndDate, @AmountPaid, 'Active')
+        `);
+
+    // Thêm thông báo
+    await pool.request()
+        .input('UserID', sql.Int, userId)
+        .input('Title', sql.NVarChar, 'Gia hạn/Mua gói hội viên')
+        .input('Message', sql.NVarChar, `Bạn đã thanh toán ${amount.toLocaleString('vi-VN')} VNĐ qua Ví để mua/gia hạn gói ${plan.Name} (${durationMonths} tháng).`)
+        .input('Type', sql.NVarChar, 'SYSTEM')
+        .input('RefID', sql.Int, result.recordset[0].UserSubscriptionID)
+        .query(`
+            INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType)
+            VALUES (@UserID, @Title, @Message, @Type, @RefID, 'subscription')
         `);
 
     const newBalance = await getBalanceService(userId);

@@ -1,5 +1,14 @@
-// src/controllers/paymentController.js
-import { StatusCodes } from 'http-status-codes'
+/**
+ * FILE: paymentController.js
+ * MÔ TẢ: Controller xử lý thanh toán (Payment) qua PayOS và tiền mặt.
+ * 
+ * Chức năng:
+ * - Driver: Lấy phiên đang hoạt động, tạo link thanh toán PayOS, kiểm tra trạng thái thanh toán, hủy thanh toán, xem lịch sử.
+ * - Staff: Xác nhận checkout bằng tiền mặt/chuyển khoản, xác nhận thu tiền phụ trội (surcharge), tạo link thanh toán PayOS cho tài xế.
+ * - Webhook: Nhận thông báo (callback) từ PayOS khi thanh toán thành công/thất bại.
+ */
+
+import { StatusCodes } from 'http-status-codes'; // Mã HTTP status chuẩn
 import {
     createPaymentService,
     createPaymentServiceByStaff,
@@ -10,8 +19,9 @@ import {
     getPaymentHistoryService,
     staffCheckoutService,
     confirmSurchargeService,
-} from '../services/paymentService.js'
-import { getSessionPaymentInfoService } from '../services/paymentService.js'
+    getSessionPaymentInfoService
+} from '../services/paymentService.js'; // Các service xử lý logic thanh toán
+
 // ── GET /api/driver/active-sessions ─────────────────────────────
 export async function getActiveSessions(req, res, next) {
     try {

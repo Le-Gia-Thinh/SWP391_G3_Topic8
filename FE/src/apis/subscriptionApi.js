@@ -1,3 +1,9 @@
+/**
+ * FILE: subscriptionApi.js
+ * MÔ TẢ: Tập hợp API xử lý đăng ký Gói hội viên (Subscriptions).
+ * Lấy danh sách gói, kiểm tra trạng thái và thanh toán qua PayOS/Ví.
+ */
+
 import authorizeAxios from '../utils/authorizeAxios'
 
 const unwrap = (response) => response.data

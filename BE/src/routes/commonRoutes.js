@@ -1,5 +1,9 @@
-// src/routes/commonRoutes.js
-//
+/**
+ * FILE: commonRoutes.js
+ * MÔ TẢ: Định nghĩa các đường dẫn API dùng chung cho nhiều phân hệ.
+ * Thường dùng để tải dữ liệu tham chiếu (Reference Data) như loại xe, tòa nhà...
+ */
+
 // Reference data dùng chung. Chỉ cần đăng nhập (isAuthorized), không phân quyền role
 // vì đây là dữ liệu tra cứu (loại xe, tòa nhà, slot...) mà mọi role đều cần cho form.
 //

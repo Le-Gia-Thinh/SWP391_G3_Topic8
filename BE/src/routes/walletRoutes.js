@@ -1,4 +1,9 @@
-// src/routes/walletRoutes.js
+/**
+ * FILE: walletRoutes.js
+ * MÔ TẢ: Định nghĩa các đường dẫn API liên quan đến Ví điện tử (Wallet).
+ * Hỗ trợ nạp tiền, kiểm tra số dư, và thanh toán từ ví.
+ */
+
 import express from 'express';
 import { isAuthorized, isDriver } from '../middlewares/authMiddleware.js';
 import * as walletController from '../controllers/walletController.js';

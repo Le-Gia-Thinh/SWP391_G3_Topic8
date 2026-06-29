@@ -1,5 +1,21 @@
-import { getPool, sql } from "../config/db.js";
+/**
+ * FILE: notificationController.js
+ * MÔ TẢ: Controller xử lý thông báo (Notifications) cho người dùng (đặc biệt là Driver).
+ * 
+ * Chức năng:
+ * - getNotifications: Lấy danh sách thông báo của người dùng (có phân trang, lọc theo loại).
+ * - getUnreadCount: Lấy số lượng thông báo chưa đọc.
+ * - markAsRead: Đánh dấu một thông báo là đã đọc.
+ * - markAllAsRead: Đánh dấu tất cả thông báo là đã đọc.
+ * 
+ * @access Driver, Staff, Manager
+ */
 
+import { getPool, sql } from "../config/db.js"; // Kết nối database
+
+/**
+ * Hàm helper: Lấy UserID từ request.
+ */
 function getUserIdFromToken(req) {
   return req.user?.UserID || req.user?.userId || req.user?.id;
 }

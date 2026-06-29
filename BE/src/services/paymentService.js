@@ -1,4 +1,9 @@
-// src/services/paymentService.js
+/**
+ * FILE: paymentService.js
+ * MÔ TẢ: Service xử lý nghiệp vụ thanh toán (PayOS, tiền mặt, phụ phí).
+ * Tính toán phí gửi xe, áp dụng giảm giá gói hội viên, sinh mã QR PayOS và xử lý Webhook.
+ */
+
 import crypto from 'crypto'
 import axios from 'axios'
 import { getPool, sql } from '../config/db.js'
@@ -46,27 +51,19 @@ function makeOrderCode(sessionId) {
     return parseInt(`${sessionId}${String(suffix).padStart(6, '0')}`, 10)
 }
 
-// ── Tính phí theo bảng PricingPolicies ───────────────────────────
-async function calcFee(pool, vehicleTypeId, entryTime) {
-    const diffH = Math.max(0.017, (Date.now() - new Date(entryTime).getTime()) / 3_600_000)
-
-    const r = await pool.request()
-        .input('VehicleTypeID', sql.Int, vehicleTypeId)
-        .input('DurationH', sql.Decimal(10, 2), parseFloat(diffH.toFixed(2)))
-        .query(`
-      SELECT TOP 1 Fee, MinHours, MaxHours, IsOvernight
-      FROM PricingPolicies
-      WHERE VehicleTypeID = @VehicleTypeID
-        AND IsActive = 1
-        AND (
-              (IsOvernight = 1 AND @DurationH > 8)
-              OR (@DurationH BETWEEN MinHours AND MaxHours)
-            )
-      ORDER BY IsOvernight DESC, MaxHours
-    `)
-
-    const fee = Math.round(Number(r.recordset[0]?.Fee || 2000))
-    return { fee: Math.max(2000, fee), durationH: parseFloat(diffH.toFixed(2)) }
+// ── Tính phí theo sp_CalcParkingFeeV2 (chia đoạn ngày/đêm đúng) ──
+async function calcFeeV2(pool, vehicleTypeId, entryTime) {
+    const exitTime = new Date()
+    const request = pool.request()
+    request.input('VehicleTypeID', sql.Int, Number(vehicleTypeId))
+    request.input('EntryTime', sql.DateTime, new Date(entryTime))
+    request.input('ExitTime', sql.DateTime, exitTime)
+    request.output('Fee', sql.Decimal(10, 2))
+    request.output('Breakdown', sql.NVarChar(sql.MAX))
+    const result = await request.execute('sp_CalcParkingFeeV2')
+    const fee = Number(result.output.Fee || 0)
+    const durationH = Math.max(0.017, (exitTime.getTime() - new Date(entryTime).getTime()) / 3_600_000)
+    return { fee: Math.max(2000, fee), durationH: parseFloat(durationH.toFixed(2)) }
 }
 
 // ── Tính giảm giá từ gói Hội viên ──────────────────────────────
@@ -97,16 +94,16 @@ async function applySubscriptionDiscount(pool, driverId, baseFee) {
             SELECT COUNT(*) as SessionCount
             FROM ParkingSessions
             WHERE DriverID = @DriverID 
-              AND EntryTime >= @StartDate
-              AND EntryTime <= @EndDate
+              AND MONTH(EntryTime) = MONTH(GETDATE())
+              AND YEAR(EntryTime) = YEAR(GETDATE())
         `);
         
     const sessionCount = countRes.recordset[0].SessionCount; // bao gồm cả lượt hiện tại đang Active
     let discountPercent = 0;
 
     if (sub.PlanID === 'basic') {
-        if (sessionCount <= 5) discountPercent = 10;
-        else discountPercent = 0;
+        if (sessionCount <= 5) discountPercent = 100;
+        else discountPercent = 10;
     } else if (sub.PlanID === 'pro') {
         if (sessionCount <= 15) discountPercent = 100;
         else discountPercent = 25;
@@ -226,7 +223,7 @@ export async function createPaymentService(sessionId, driverId) {
     }
 
     // Tính phí hiện tại + lấy bảng giá
-    const { fee: baseFee, durationH } = await calcFee(pool, session.VehicleTypeID, session.EntryTime)
+    const { fee: baseFee, durationH } = await calcFeeV2(pool, session.VehicleTypeID, session.EntryTime)
     const pricingTable = await getPricingTable(pool, session.VehicleTypeID)
 
     // Áp dụng giảm giá Member
@@ -402,7 +399,7 @@ export async function createPaymentServiceByStaff(sessionId) {
         err.statusCode = 400; throw err
     }
 
-    const { fee: amount, durationH } = await calcFee(pool, session.VehicleTypeID, session.EntryTime)
+    const { fee: amount, durationH } = await calcFeeV2(pool, session.VehicleTypeID, session.EntryTime)
     const pricingTable = await getPricingTable(pool, session.VehicleTypeID)
 
     const orderCode = makeOrderCode(sessionId)

@@ -1,3 +1,9 @@
+/**
+ * FILE: GuestTracking.jsx
+ * MÔ TẢ: Trang Theo dõi Phiên đỗ xe dành cho Khách (Guest).
+ * Cho phép khách vãng lai tra cứu thông tin phiên đỗ xe hiện tại dựa vào biển số xe hoặc mã phiên.
+ */
+
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {

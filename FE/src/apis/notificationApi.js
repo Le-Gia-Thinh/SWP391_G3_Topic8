@@ -1,3 +1,9 @@
+/**
+ * FILE: notificationApi.js
+ * MÔ TẢ: Tập hợp các API xử lý thông báo (Notifications).
+ * Cho phép lấy danh sách thông báo, số lượng chưa đọc và đánh dấu đã đọc.
+ */
+
 import authorizeAxios from '../utils/authorizeAxios';
 
 const unwrap = (response) => response.data || response;

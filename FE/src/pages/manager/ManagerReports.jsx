@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerReports.jsx
+ * MÔ TẢ: Trang Báo cáo Thống kê dành cho Manager.
+ * Xem báo cáo doanh thu, lượt xe vào/ra, tỷ lệ lấp đầy (theo tầng/loại xe) và mật độ sử dụng theo giờ. Hỗ trợ xuất CSV.
+ */
+
 // src/pages/manager/ManagerReports.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -92,22 +98,22 @@ const ManagerReports = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('manager.reports.eyebrow')}</p>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('manager.reports.title')}</h1>
-          <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
+          <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <Sparkles size={16} className="text-amber-500 animate-pulse" />
             {t('manager.reports.subtitle')}
           </p>
         </div>
         <button onClick={() => fetchReport(tab)}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition self-start">
+          className="inline-flex items-center gap-2 rounded-3xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 font-bold hover:bg-slate-50 transition self-start">
           <RefreshCcw size={16} /> {t('manager.reports.refresh')}
         </button>
       </div>
 
-      <div className="rounded-3xl bg-white p-5 shadow-sm border border-slate-100">
+      <div className="rounded-3xl bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
         <div className="flex flex-col lg:flex-row lg:items-center gap-4">
           <div className="flex items-center gap-3 flex-wrap">
             {TABS.map(tb => {
@@ -115,7 +121,7 @@ const ManagerReports = () => {
               const active = tab === tb.key
               return (
                 <button key={tb.key} onClick={() => setTab(tb.key)}
-                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${active ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
+                  className={`inline-flex items-center gap-2 rounded-3xl px-4 py-2.5 text-sm font-semibold transition ${active ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)]' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>
                   <Icon size={15} /> {tb.label}
                 </button>
               )
@@ -125,10 +131,10 @@ const ManagerReports = () => {
             <div className="flex items-center gap-2 lg:ml-auto">
               <Calendar size={16} className="text-slate-400" />
               <input type="date" value={startDate} max={endDate} onChange={e => setStartDate(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500" />
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 font-bold outline-none focus:border-blue-500" />
               <span className="text-slate-400">→</span>
               <input type="date" value={endDate} min={startDate} max={todayStr()} onChange={e => setEndDate(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500" />
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 font-bold outline-none focus:border-blue-500" />
             </div>
           )}
         </div>
@@ -179,11 +185,11 @@ const RevenueTab = ({ data, mounted, exportCsv }) => {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm xl:col-span-2">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] xl:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-slate-900">{t('manager.reports.revenue.chartTitle')}</h2>
             <button onClick={() => exportCsv(t('manager.reports.revenue.csvName'), chart)}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+              className="inline-flex items-center gap-2 rounded-3xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
               <Download size={14} /> {t('manager.reports.exportCsv')}
             </button>
           </div>
@@ -193,7 +199,7 @@ const RevenueTab = ({ data, mounted, exportCsv }) => {
                 const pct = Math.round((Number(c.TotalRevenue) / max) * 100)
                 return (
                   <div key={i} className="group relative flex h-full w-full flex-col items-center justify-end gap-2">
-                    <div className="absolute -top-10 z-10 scale-0 rounded-lg bg-slate-800 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-all group-hover:scale-100 group-hover:opacity-100 whitespace-nowrap">
+                    <div className="absolute -top-10 z-10 scale-0 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-all group-hover:scale-100 group-hover:opacity-100 whitespace-nowrap">
                       {fmtVnd(c.TotalRevenue)}
                     </div>
                     <div className="relative h-[160px] w-full max-w-9 rounded-t-lg bg-slate-50 overflow-hidden border border-slate-100">
@@ -210,14 +216,14 @@ const RevenueTab = ({ data, mounted, exportCsv }) => {
           )}
         </div>
 
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <h2 className="text-lg font-bold text-slate-900 mb-5">{t('manager.reports.revenue.byVehicleTitle')}</h2>
           <div className="space-y-4">
             {byVehicle.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">{t('manager.reports.noData')}</p> :
               byVehicle.map((v, i) => (
-                <div key={i} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                <div key={i} className="flex items-center justify-between rounded-3xl bg-slate-50 px-4 py-3">
                   <div>
-                    <p className="font-bold text-slate-800">{v.VehicleName}</p>
+                    <p className="font-bold text-slate-800 font-black">{v.VehicleName}</p>
                     <p className="text-xs text-slate-400">{t('manager.reports.revenue.txCount', { n: fmtNum(v.TransactionCount) })}</p>
                   </div>
                   <p className="font-black text-slate-900">{fmtVnd(v.TotalRevenue)}</p>
@@ -245,25 +251,25 @@ const SessionsTab = ({ data, exportCsv }) => {
           { label: t('manager.reports.sessions.completed'), value: fmtNum(summary.CompletedSessions), color: 'from-violet-500 to-fuchsia-600' },
           { label: t('manager.reports.sessions.avgDuration'), value: `${Math.floor(avgMin / 60)}h${avgMin % 60}m`, color: 'from-orange-500 to-amber-600' }
         ].map(s => (
-          <div key={s.label} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div key={s.label} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">{s.label}</p>
-            <p className="text-3xl font-black text-slate-800">{s.value}</p>
-            <div className={`mt-2 inline-flex rounded-lg bg-linear-to-br ${s.color} px-2.5 py-1 text-xs font-bold text-white`}>—</div>
+            <p className="text-3xl font-black text-slate-800 font-black">{s.value}</p>
+            <div className={`mt-2 inline-flex rounded-xl bg-linear-to-br ${s.color} px-2.5 py-1 text-xs font-bold text-white`}>—</div>
           </div>
         ))}
       </div>
 
-      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-slate-900">{t('manager.reports.sessions.byVehicleTitle')}</h2>
           <button onClick={() => exportCsv(t('manager.reports.sessions.csvName'), byVehicle)}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+            className="inline-flex items-center gap-2 rounded-3xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
             <Download size={14} /> {t('manager.reports.exportCsv')}
           </button>
         </div>
         <div className="overflow-hidden rounded-2xl border border-slate-100">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+            <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
               <tr>
                 <th className="px-5 py-3 font-bold uppercase text-[11px]">{t('manager.reports.sessions.colVehicle')}</th>
                 <th className="px-5 py-3 font-bold uppercase text-[11px]">{t('manager.reports.sessions.colCount')}</th>
@@ -276,10 +282,10 @@ const SessionsTab = ({ data, exportCsv }) => {
               ) : byVehicle.map((v, i) => {
                 const m = Math.round(v.AvgMinutes || 0)
                 return (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="px-5 py-3 font-bold text-slate-800">{v.VehicleName}</td>
-                    <td className="px-5 py-3 font-semibold text-slate-700">{fmtNum(v.SessionCount)}</td>
-                    <td className="px-5 py-3 text-slate-500">{Math.floor(m / 60)}h{m % 60}m</td>
+                  <tr key={i} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="px-5 py-3 font-bold text-slate-800 font-black">{v.VehicleName}</td>
+                    <td className="px-5 py-3 font-semibold text-slate-700 font-bold">{fmtNum(v.SessionCount)}</td>
+                    <td className="px-5 py-3 text-slate-500 font-medium">{Math.floor(m / 60)}h{m % 60}m</td>
                   </tr>
                 )
               })}
@@ -289,11 +295,11 @@ const SessionsTab = ({ data, exportCsv }) => {
       </div>
 
       {dailyTrend.length > 0 && (
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <h2 className="text-lg font-bold text-slate-900 mb-4">{t('manager.reports.sessions.trendTitle')}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+              <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
                 <tr>
                   <th className="px-5 py-3 font-bold uppercase text-[11px]">{t('manager.reports.sessions.colDay')}</th>
                   <th className="px-5 py-3 font-bold uppercase text-[11px]">{t('manager.reports.sessions.colTotal')}</th>
@@ -302,8 +308,8 @@ const SessionsTab = ({ data, exportCsv }) => {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {dailyTrend.map((d, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="px-5 py-3 font-semibold text-slate-700">{new Date(d.Day).toLocaleDateString('vi-VN')}</td>
+                  <tr key={i} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="px-5 py-3 font-semibold text-slate-700 font-bold">{new Date(d.Day).toLocaleDateString('vi-VN')}</td>
                     <td className="px-5 py-3 font-bold text-slate-900">{fmtNum(d.TotalSessions)}</td>
                     <td className="px-5 py-3 text-emerald-600 font-semibold">{fmtNum(d.Completed)}</td>
                   </tr>
@@ -324,7 +330,7 @@ const OccupancyTab = ({ data, mounted }) => {
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">
-      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <h2 className="text-lg font-bold text-slate-900 mb-5">{t('manager.reports.occupancy.byFloorTitle')}</h2>
         <div className="space-y-5">
           {byFloor.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">{t('manager.reports.noData')}</p> :
@@ -343,7 +349,7 @@ const OccupancyTab = ({ data, mounted }) => {
         </div>
       </div>
 
-      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <h2 className="text-lg font-bold text-slate-900 mb-5">{t('manager.reports.occupancy.byVehicleTitle')}</h2>
         <div className="space-y-5">
           {byVehicleType.length === 0 ? <p className="text-sm text-slate-400 text-center py-6">{t('manager.reports.noData')}</p> :
@@ -374,18 +380,18 @@ const PeakTab = ({ data }) => {
   const heat = (n) => {
     if (n === 0) return 'bg-slate-50 text-slate-300'
     const ratio = n / globalMax
-    if (ratio > 0.75) return 'bg-blue-600 text-white'
+    if (ratio > 0.75) return 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40'
     if (ratio > 0.5) return 'bg-blue-400 text-white'
     if (ratio > 0.25) return 'bg-blue-200 text-blue-800'
     return 'bg-blue-50 text-blue-500'
   }
 
   return (
-    <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm overflow-x-auto">
+    <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-x-auto">
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="text-lg font-bold text-slate-900">{t('manager.reports.peak.title')}</h2>
-          <p className="text-xs text-slate-500 mt-1">{t('manager.reports.peak.subtitle')}</p>
+          <p className="text-xs text-slate-500 font-medium mt-1">{t('manager.reports.peak.subtitle')}</p>
         </div>
       </div>
       {byVehicle.length === 0 ? <p className="text-sm text-slate-400 text-center py-10">{t('manager.reports.noData')}</p> : (
@@ -397,7 +403,7 @@ const PeakTab = ({ data }) => {
           </div>
           {byVehicle.map(v => (
             <div key={v.vehicleTypeId} className="flex items-center gap-1">
-              <div className="w-28 text-sm font-bold text-slate-700 truncate pr-2">{v.vehicleName}</div>
+              <div className="w-28 text-sm font-bold text-slate-700 font-bold truncate pr-2">{v.vehicleName}</div>
               {v.hours.map((n, h) => (
                 <div key={h} title={t('manager.reports.peak.tooltip', { h, n })}
                   className={`flex-1 aspect-square min-w-[22px] rounded flex items-center justify-center text-[10px] font-bold ${heat(n)}`}>

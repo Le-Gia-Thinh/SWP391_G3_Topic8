@@ -1,5 +1,21 @@
-import { getPool, sql } from "../config/db.js";
+/**
+ * FILE: driverController.js
+ * MÔ TẢ: Controller xử lý các tính năng chính dành cho tài xế (Driver).
+ * 
+ * Chức năng:
+ * - getDriverHome: Trang chủ tài xế (thống kê tổng quan, phiên hiện tại, đặt chỗ sắp tới)
+ * - getDriverProfile / updateDriverProfile: Xem/Cập nhật thông tin cá nhân
+ * - getDriverReportContext: Lấy dữ liệu ngữ cảnh cho việc báo cáo sự cố (phiên, đặt chỗ gần đây)
+ * - createDriverReport: Tạo báo cáo sự cố
+ * 
+ * @access Driver only
+ */
 
+import { getPool, sql } from "../config/db.js"; // Kết nối database
+
+/**
+ * Hàm helper: Lấy UserID từ request.
+ */
 function getUserIdFromToken(req) {
   return req.user?.UserID || req.user?.userId || req.user?.id;
 }
@@ -13,13 +29,7 @@ function buildReportCode(incidentId) {
 }
 
 function formatSessionCode(sessionId, entryTime) {
-  const date = new Date(entryTime);
-
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-
-  return `SESS-${yyyy}${mm}${dd}-${String(sessionId).padStart(4, "0")}`;
+  return `SS-${String(sessionId).padStart(5, "0")}`;
 }
 
 function normalizeReportPriority(issueType) {
@@ -470,10 +480,8 @@ export async function getDriverReportContext(req, res, next) {
         SELECT
           s.SessionID,
           CONCAT(
-            'SESS-',
-            CONVERT(CHAR(8), s.EntryTime, 112),
-            '-',
-            RIGHT('0000' + CAST(s.SessionID AS VARCHAR(10)), 4)
+            'SS-',
+            RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)), 5)
           ) AS SessionCode,
 
           s.DriverID,

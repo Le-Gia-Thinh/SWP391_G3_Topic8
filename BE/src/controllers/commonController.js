@@ -1,11 +1,11 @@
-// src/controllers/commonController.js
-//
-// Controller dùng chung cho dữ liệu tham chiếu (reference data): Roles, VehicleTypes,
-// Buildings, Floors, Zones, Slots. Phục vụ các dropdown/form ở mọi role (Driver/Staff/Manager).
-//
-// dùng lại managerService cho Buildings/Floors/Zones/Slots/VehicleTypes thay vì
-// Chỉ getRoles là query trực tiếp vì
-// không service nào có sẵn.
+/**
+ * FILE: commonController.js
+ * MÔ TẢ: Controller dùng chung cho dữ liệu tham chiếu (reference data).
+ * 
+ * Cung cấp API cho: Roles, VehicleTypes, Buildings, Floors, Zones, Slots, Pricing.
+ * Phục vụ các dropdown/form ở mọi role (Driver/Staff/Manager).
+ * Tái sử dụng managerService cho các truy vấn phức tạp.
+ */
 
 import { getPool } from "../config/db.js";
 import * as managerService from "../services/managerService.js";

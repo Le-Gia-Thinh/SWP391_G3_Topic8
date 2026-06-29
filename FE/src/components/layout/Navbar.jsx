@@ -1,3 +1,10 @@
+/**
+ * FILE: Navbar.jsx
+ * MÔ TẢ: Component Navbar (Thanh điều hướng ngang) nằm phía trên cùng của DashboardLayout.
+ * Hiển thị nút Toggle Sidebar, thanh tìm kiếm, chế độ Light/Dark, đa ngôn ngữ,
+ * chuông thông báo và thông tin người dùng (Avatar).
+ */
+
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Menu, Search, Bell, Moon, Sun, Clock, CalendarDays, Wallet, AlertTriangle, CheckCheck, Info } from 'lucide-react'
@@ -87,33 +94,33 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-20 shrink-0 items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 transition-colors duration-300">
+    <header className="sticky top-0 z-30 flex h-20 shrink-0 items-center justify-between border-b border-slate-200/60 dark:border-gray-800 bg-white/80 backdrop-blur-md dark:bg-gray-900 px-6 transition-colors duration-300">
       <div className="flex items-center gap-4">
         <button
           onClick={toggleSidebar}
-          className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 text-gray-600 dark:text-gray-300 shadow-sm transition hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400"
+          className="rounded-xl border border-slate-200/60 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 text-slate-500 dark:text-gray-300 shadow-[0_2px_10px_rgb(0,0,0,0.02)] transition-all hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 dark:hover:bg-gray-700 dark:hover:text-blue-400"
         >
           <Menu size={20} />
         </button>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">{title}</h1>
+        <h1 className="text-xl font-bold text-slate-800 dark:text-white hidden sm:block tracking-tight">{title}</h1>
       </div>
 
       <div className="flex items-center gap-4">
         {/* Search */}
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
+        <div className="relative hidden md:block group">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 transition-colors group-focus-within:text-blue-500" size={18} />
           <input
             type="text"
             placeholder={t('navbar.searchPlaceholder')}
             onKeyDown={handleSearch}
-            className="h-10 w-64 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 pl-10 pr-4 text-sm text-gray-900 dark:text-gray-100 outline-none transition focus:border-blue-500 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900"
+            className="h-10 w-64 rounded-full border border-slate-200/60 dark:border-gray-700 bg-slate-50 dark:bg-gray-800 pl-10 pr-4 text-sm text-slate-700 dark:text-gray-100 outline-none transition-all focus:border-blue-500 focus:bg-white dark:focus:bg-gray-700 focus:ring-4 focus:ring-blue-500/10 dark:focus:ring-blue-900 shadow-inner"
           />
         </div>
 
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
-          className="relative rounded-full p-2 text-gray-500 dark:text-gray-400 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="relative rounded-full p-2.5 text-slate-500 dark:text-gray-400 transition-all hover:bg-slate-50 hover:text-slate-900 dark:hover:bg-gray-800"
           title={theme === 'dark' ? t('navbar.toLight') : t('navbar.toDark')}
         >
           {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -125,7 +132,7 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
         <div className="relative">
           <button
             onClick={handleNotificationClick}
-            className="relative rounded-full p-2 text-gray-500 dark:text-gray-400 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="relative rounded-full p-2.5 text-slate-500 dark:text-gray-400 transition-all hover:bg-slate-50 hover:text-slate-900 dark:hover:bg-gray-800"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -144,7 +151,7 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
                 onClick={() => setShowNotifications(false)}
               />
 
-              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl border border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-2 shadow-xl shadow-slate-900/10 dark:shadow-slate-900/30 z-50 animate-in fade-in slide-in-from-top-2">
+              <div className="absolute right-0 top-full mt-3 w-80 sm:w-96 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-2 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-slate-900/30 z-50 animate-in fade-in slide-in-from-top-2">
                 <div className="flex items-center justify-between px-4 py-3">
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('driver.notifications.title')}</h3>
                   {unreadCount > 0 && (
@@ -217,18 +224,18 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
           )}
         </div>
 
-        <div className="h-8 w-px bg-gray-200 dark:bg-gray-700"></div>
+        <div className="h-8 w-px bg-slate-200 dark:bg-gray-700"></div>
 
         {/* User Profile */}
         <Link to={profileLink} className="flex items-center gap-3 ml-2 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50 text-sm font-bold text-blue-600 dark:text-blue-400 ring-2 ring-white dark:ring-gray-800 transition group-hover:ring-blue-100 dark:group-hover:ring-blue-900">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:bg-blue-900/50 text-sm font-bold text-blue-600 dark:text-blue-400 border border-blue-100/50 transition-all group-hover:border-blue-300 group-hover:shadow-md">
             {getInitials(userName)}
           </div>
           <div className="hidden flex-col md:flex">
-            <span className="text-sm font-bold text-gray-700 dark:text-gray-200 transition group-hover:text-blue-600 dark:group-hover:text-blue-400">
+            <span className="text-sm font-bold text-slate-800 dark:text-gray-200 transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-400">
               {userName}
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 dark:text-gray-400">
               {user?.roleName || user?.RoleName || t('navbar.defaultRole')}
             </span>
           </div>

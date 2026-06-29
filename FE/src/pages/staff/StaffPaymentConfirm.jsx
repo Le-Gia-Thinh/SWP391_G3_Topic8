@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffPaymentConfirm.jsx
+ * MÔ TẢ: Trang Xác nhận Thanh toán dành cho nhân viên.
+ * Cho phép nhân viên xác nhận biển số, chọn phương thức thanh toán (Tiền mặt / Chuyển khoản QR)
+ * khi khách hàng lấy xe ra khỏi bãi đỗ.
+ */
+
 // src/pages/Staff/StaffPaymentConfirm.jsx
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -13,10 +20,11 @@ import ScrollToTopButton from '../common/ScrollToTopButton'
 
 const formatVND = (v) => Number(v || 0).toLocaleString('vi-VN') + ' ₫'
 
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000
 const formatTime = (dt) => {
   if (!dt) return '—'
-  const d = new Date(dt)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
+  const d = new Date(new Date(dt).getTime() + VN_OFFSET_MS)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} · ${d.getUTCDate()}/${d.getUTCMonth() + 1}/${d.getUTCFullYear()}`
 }
 
 const calcDuration = (entryTime, minuteLabel) => {
@@ -124,35 +132,35 @@ const QrModal = ({ qrData, onPaid, onCancel }) => {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                 <CheckCircle2 size={36} className="text-green-500" />
               </div>
-              <p className="font-bold text-gray-800">{t('staff.paymentConfirm.qr.paidTitle')}</p>
-              <p className="text-sm text-gray-500">{t('staff.paymentConfirm.qr.paidBody')}</p>
+              <p className="font-bold text-slate-800">{t('staff.paymentConfirm.qr.paidTitle')}</p>
+              <p className="text-sm text-slate-500">{t('staff.paymentConfirm.qr.paidBody')}</p>
               <Loader2 size={20} className="animate-spin text-blue-500 mt-2" />
             </div>
           )}
           {status === 'CANCELLED' && (
             <div className="flex flex-col items-center gap-3 py-6">
               <AlertCircle size={40} className="text-red-400" />
-              <p className="font-bold text-gray-800">{t('staff.paymentConfirm.qr.cancelledBody')}</p>
-              <button onClick={onCancel} className="mt-2 px-5 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200">{t('staff.paymentConfirm.qr.close')}</button>
+              <p className="font-bold text-slate-800">{t('staff.paymentConfirm.qr.cancelledBody')}</p>
+              <button onClick={onCancel} className="mt-2 px-5 py-2 bg-slate-100 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-200">{t('staff.paymentConfirm.qr.close')}</button>
             </div>
           )}
           {status === 'PENDING' && (
             <>
               {qrImgUrl && (
                 <div className="flex flex-col items-center mb-4">
-                  <button onClick={() => setZoom(true)} className="p-3 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-400 transition-colors">
+                  <button onClick={() => setZoom(true)} className="p-3 bg-white border-2 border-slate-100 rounded-3xl hover:border-blue-400 transition-colors">
                     <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData.qrCode)}`} alt="QR Code" className="w-48 h-48" />
                   </button>
-                  <p className="text-xs text-gray-400 mt-2">{t('staff.paymentConfirm.qr.zoomToScan')}</p>
+                  <p className="text-xs text-slate-400 mt-2">{t('staff.paymentConfirm.qr.zoomToScan')}</p>
                 </div>
               )}
-              <div className="bg-gray-50 rounded-xl p-4 space-y-2.5 mb-4 text-sm">
+              <div className="bg-slate-50 rounded-3xl p-4 space-y-2.5 mb-4 text-sm">
                 {qrData?.accountNumber && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-500 font-medium">{t('staff.paymentConfirm.qr.accountNumber')}</span>
+                    <span className="text-slate-500 font-medium">{t('staff.paymentConfirm.qr.accountNumber')}</span>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-black text-gray-800">{qrData.accountNumber}</span>
-                      <button onClick={() => handleCopy(qrData.accountNumber)} className="text-gray-400 hover:text-blue-600">
+                      <span className="font-black text-slate-800">{qrData.accountNumber}</span>
+                      <button onClick={() => handleCopy(qrData.accountNumber)} className="text-slate-400 hover:text-blue-600">
                         {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
                       </button>
                     </div>
@@ -160,30 +168,30 @@ const QrModal = ({ qrData, onPaid, onCancel }) => {
                 )}
                 {qrData?.accountName && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-500 font-medium">{t('staff.paymentConfirm.qr.accountName')}</span>
-                    <span className="font-bold text-gray-800">{qrData.accountName}</span>
+                    <span className="text-slate-500 font-medium">{t('staff.paymentConfirm.qr.accountName')}</span>
+                    <span className="font-bold text-slate-800">{qrData.accountName}</span>
                   </div>
                 )}
                 {qrData?.description && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-500 font-medium">{t('staff.paymentConfirm.qr.description')}</span>
+                    <span className="text-slate-500 font-medium">{t('staff.paymentConfirm.qr.description')}</span>
                     <div className="flex items-center gap-1.5">
                       <span className="font-black text-blue-700">{qrData.description}</span>
-                      <button onClick={() => handleCopy(qrData.description)} className="text-gray-400 hover:text-blue-600"><Copy size={13} /></button>
+                      <button onClick={() => handleCopy(qrData.description)} className="text-slate-400 hover:text-blue-600"><Copy size={13} /></button>
                     </div>
                   </div>
                 )}
-                <div className="flex justify-between items-center pt-1 border-t border-gray-200">
-                  <span className="text-gray-500 font-medium">{t('staff.paymentConfirm.qr.amount')}</span>
+                <div className="flex justify-between items-center pt-1 border-t border-slate-100">
+                  <span className="text-slate-500 font-medium">{t('staff.paymentConfirm.qr.amount')}</span>
                   <span className="font-black text-blue-700 text-base">{formatVND(qrData?.amount)}</span>
                 </div>
               </div>
               {qrData?.checkoutUrl && (
-                <a href={qrData.checkoutUrl} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 py-2.5 border border-blue-300 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-50 mb-3">
+                <a href={qrData.checkoutUrl} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 py-2.5 border border-blue-300 text-blue-600 rounded-3xl text-sm font-bold hover:bg-blue-50 mb-3">
                   <ExternalLink size={14} /> {t('staff.paymentConfirm.qr.openPayos')}
                 </a>
               )}
-              <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
                 <Loader2 size={12} className="animate-spin" />
                 {t('staff.paymentConfirm.qr.polling')}
               </div>
@@ -368,7 +376,7 @@ const StaffPaymentConfirm = () => {
     </div>
   )
 
-  const { session, estimatedFee = 0, surchargeAmount = 0, prepaidAmount = 0, checkoutTime, durationH } = sessionData
+  const { session, estimatedFee = 0, surchargeAmount = 0, prepaidAmount = 0, checkoutTime, durationH, durationMin, isEarlyExit } = sessionData
   const totalFee = Number(estimatedFee)
   const surcharge = Number(surchargeAmount)
   const prepaid = Number(prepaidAmount)
@@ -377,29 +385,29 @@ const StaffPaymentConfirm = () => {
   const minuteLabel = t('staff.paymentConfirm.minute')
 
   return (
-    <div className="flex flex-col min-h-full bg-gray-50 pb-24">
+    <div className="flex flex-col min-h-full bg-slate-50 pb-24">
       {showQr && qrData && <QrModal qrData={qrData} onPaid={handleQrPaid} onCancel={handleCancelQr} />}
 
-      <div className="mb-2 text-sm text-gray-500 flex items-center gap-2">
+      <div className="mb-2 text-sm text-slate-500 flex items-center gap-2">
         <span>{t('staff.paymentConfirm.breadcrumbStaff')}</span><ChevronRight size={14} />
         <span>{t('staff.paymentConfirm.breadcrumbPayment')}</span><ChevronRight size={14} />
         <span className="text-blue-600 font-medium">{t('staff.paymentConfirm.breadcrumbCurrent')}</span>
       </div>
 
       <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">{t('staff.paymentConfirm.title')}</h1>
-        <button onClick={() => navigate('/staff/checkout')} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
+        <h1 className="text-2xl font-bold text-slate-800">{t('staff.paymentConfirm.title')}</h1>
+        <button onClick={() => navigate('/staff/checkout')} className="text-sm text-slate-500 hover:text-slate-700 flex items-center gap-1">
           <RefreshCcw size={14} /> {t('staff.paymentConfirm.selectOther')}
         </button>
       </header>
 
       <div className="flex gap-6">
         <div className="flex-2 space-y-5 pb-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex justify-between items-start mb-5 pb-4 border-b border-gray-100">
+          <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-50 p-6">
+            <div className="flex justify-between items-start mb-5 pb-4 border-b border-slate-50">
               <div>
-                <h3 className="text-base font-bold text-gray-800">{t('staff.paymentConfirm.sessionTitle')}</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{t('staff.paymentConfirm.sessionDesc')}</p>
+                <h3 className="text-base font-bold text-slate-800">{t('staff.paymentConfirm.sessionTitle')}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{t('staff.paymentConfirm.sessionDesc')}</p>
               </div>
               <span className="bg-green-50 text-green-700 border border-green-200 text-xs font-bold px-3 py-1 rounded-full">{t('staff.paymentConfirm.statusActive')}</span>
             </div>
@@ -415,39 +423,48 @@ const StaffPaymentConfirm = () => {
                 { icon: Clock, label: t('staff.paymentConfirm.fieldDuration'), value: calcDuration(session.EntryTime, minuteLabel) }
               ].map(({ icon: Icon, label, value, highlight }) => (
                 <div key={label}>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Icon size={10} /> {label}</p>
-                  <p className={`text-sm font-bold ${highlight ? 'text-gray-900 text-base tracking-wider' : 'text-gray-700'}`}>{value}</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1"><Icon size={10} /> {label}</p>
+                  <p className={`text-sm font-bold ${highlight ? 'text-slate-900 text-base tracking-wider' : 'text-slate-700'}`}>{value}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-base font-bold text-gray-800 mb-5">{t('staff.paymentConfirm.feeTitle')}</h3>
+          {isEarlyExit && (
+            <div className="bg-amber-50 border border-amber-300 rounded-3xl p-4 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                <AlertCircle size={16} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-amber-800 mb-1">Khách ra sớm — miễn phụ phí đến sớm</p>
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  Khách đỗ <strong>{durationMin ?? '—'} phút</strong> và ra trước giờ booking bắt đầu.
+                  Phụ phí đến sớm 5.000đ đã được <strong>miễn</strong> — chỉ thu phí đỗ thực tế.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-50 p-6">
+            <h3 className="text-base font-bold text-slate-800 mb-5">{t('staff.paymentConfirm.feeTitle')}</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">{t('staff.paymentConfirm.feeByTime', { hours: durationH ? durationH.toFixed(1) : '—' })}</span>
-                <span className="font-bold text-gray-800">{formatVND(totalFee)}</span>
+                <span className="text-slate-500">{t('staff.paymentConfirm.feeByTime', { hours: durationH ? durationH.toFixed(1) : '—' })}</span>
+                <span className="font-bold text-slate-800">{formatVND(totalFee)}</span>
               </div>
               {prepaid > 0 && (
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">{t('staff.paymentConfirm.feePrepaid')}</span>
+                  <span className="text-slate-500">{t('staff.paymentConfirm.feePrepaid')}</span>
                   <span className="font-bold text-green-600">− {formatVND(prepaid)}</span>
                 </div>
               )}
-              {surcharge > 0 && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">{t('staff.paymentConfirm.feeSurcharge')}</span>
-                  <span className="font-bold text-orange-600">+ {formatVND(surcharge)}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                <span className="font-bold text-gray-800">{prepaid > 0 ? t('staff.paymentConfirm.feeRemain') : t('staff.paymentConfirm.feeTotal')}</span>
-                <span className="font-black text-blue-700 text-xl">{formatVND(prepaid > 0 ? amountDue + surcharge : totalFee)}</span>
+              <div className="flex justify-between items-center pt-3 border-t border-slate-100">
+                <span className="font-bold text-slate-800">{prepaid > 0 ? t('staff.paymentConfirm.feeRemain') : t('staff.paymentConfirm.feeTotal')}</span>
+                <span className="font-black text-blue-700 text-xl">{formatVND(prepaid > 0 ? amountDue : totalFee)}</span>
               </div>
             </div>
             {isPaid && (
-              <div className="mt-4 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5 flex items-center gap-2 text-sm text-green-700">
+              <div className="mt-4 bg-green-50 border border-green-200 rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm text-green-700">
                 <CheckCircle2 size={15} className="shrink-0" />
                 {t('staff.paymentConfirm.paidPrepaidNote', { amount: formatVND(prepaid) })}
               </div>
@@ -455,13 +472,13 @@ const StaffPaymentConfirm = () => {
           </div>
 
           <div onClick={() => setConfirmed(v => !v)}
-            className={`rounded-xl border p-4 flex items-start gap-3 cursor-pointer transition-all ${confirmedPlate ? 'bg-green-50 border-green-300' : 'bg-yellow-50 border-yellow-300'}`}>
+            className={`rounded-3xl border p-4 flex items-start gap-3 cursor-pointer transition-all ${confirmedPlate ? 'bg-green-50 border-green-300' : 'bg-yellow-50 border-yellow-300'}`}>
             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${confirmedPlate ? 'bg-green-500 border-green-500' : 'border-yellow-400 bg-white'}`}>
               {confirmedPlate && <Check size={12} className="text-white" />}
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-800">{t('staff.paymentConfirm.confirmPlate')} <span className="text-blue-700 tracking-wider">{session.PlateNumber}</span></p>
-              <p className="text-xs text-gray-500 mt-0.5">{t('staff.paymentConfirm.confirmPlateHint')}</p>
+              <p className="text-sm font-bold text-slate-800">{t('staff.paymentConfirm.confirmPlate')} <span className="text-blue-700 tracking-wider">{session.PlateNumber}</span></p>
+              <p className="text-xs text-slate-500 mt-0.5">{t('staff.paymentConfirm.confirmPlateHint')}</p>
             </div>
           </div>
         </div>
@@ -469,7 +486,7 @@ const StaffPaymentConfirm = () => {
         <div className="flex-1 space-y-5 pb-4">
           {isPaid ? (
             <>
-              <div className="bg-green-600 rounded-xl p-5 text-white">
+              <div className="bg-green-600 rounded-3xl p-5 text-white">
                 <p className="text-xs font-bold text-green-100 uppercase tracking-wider mb-1">{t('staff.paymentConfirm.paidTitle')}</p>
                 <p className="text-3xl font-black mb-1">{formatVND(prepaid)}</p>
                 <p className="text-xs text-green-100">
@@ -477,7 +494,7 @@ const StaffPaymentConfirm = () => {
                 </p>
               </div>
               <button onClick={handleQrPaid} disabled={processing || !confirmedPlate}
-                className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${confirmedPlate && !processing ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                className={`w-full py-4 rounded-3xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${confirmedPlate && !processing ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
                 {processing ? <><Loader2 size={18} className="animate-spin" /> {t('staff.paymentConfirm.processing')}</> : <><CheckCircle2 size={18} /> {t('staff.paymentConfirm.confirmExit')}</>}
               </button>
               {surcharge > 0 && (
@@ -488,36 +505,36 @@ const StaffPaymentConfirm = () => {
             </>
           ) : (
             <>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-base font-bold text-gray-800 mb-4">{t('staff.paymentConfirm.methodTitle')}</h3>
+              <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-50 p-6">
+                <h3 className="text-base font-bold text-slate-800 mb-4">{t('staff.paymentConfirm.methodTitle')}</h3>
                 <div className="space-y-3">
-                  <label className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === 'cash' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'}`}>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'cash' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}><Banknote size={20} /></div>
+                  <label className={`flex items-center gap-4 p-4 border-2 rounded-3xl cursor-pointer transition-all ${paymentMethod === 'cash' ? 'border-blue-500 bg-blue-50' : 'border-slate-100 hover:border-blue-200'}`}>
+                    <div className={`w-10 h-10 rounded-3xl flex items-center justify-center ${paymentMethod === 'cash' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40' : 'bg-slate-100 text-slate-500'}`}><Banknote size={20} /></div>
                     <div className="flex-1">
-                      <p className={`text-sm font-bold ${paymentMethod === 'cash' ? 'text-blue-900' : 'text-gray-700'}`}>{t('staff.paymentConfirm.methodCash')}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{t('staff.paymentConfirm.methodCashDesc')}</p>
+                      <p className={`text-sm font-bold ${paymentMethod === 'cash' ? 'text-blue-900' : 'text-slate-700'}`}>{t('staff.paymentConfirm.methodCash')}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{t('staff.paymentConfirm.methodCashDesc')}</p>
                     </div>
                     <input type="radio" name="method" checked={paymentMethod === 'cash'} onChange={() => setMethod('cash')} className="w-4 h-4 text-blue-600" />
                   </label>
-                  <label className={`flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === 'qr' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'}`}>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'qr' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}><QrCode size={20} /></div>
+                  <label className={`flex items-center gap-4 p-4 border-2 rounded-3xl cursor-pointer transition-all ${paymentMethod === 'qr' ? 'border-blue-500 bg-blue-50' : 'border-slate-100 hover:border-blue-200'}`}>
+                    <div className={`w-10 h-10 rounded-3xl flex items-center justify-center ${paymentMethod === 'qr' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40' : 'bg-slate-100 text-slate-500'}`}><QrCode size={20} /></div>
                     <div className="flex-1">
-                      <p className={`text-sm font-bold ${paymentMethod === 'qr' ? 'text-blue-900' : 'text-gray-700'}`}>{t('staff.paymentConfirm.methodQr')}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{t('staff.paymentConfirm.methodQrDesc')}</p>
+                      <p className={`text-sm font-bold ${paymentMethod === 'qr' ? 'text-blue-900' : 'text-slate-700'}`}>{t('staff.paymentConfirm.methodQr')}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{t('staff.paymentConfirm.methodQrDesc')}</p>
                     </div>
                     <input type="radio" name="method" checked={paymentMethod === 'qr'} onChange={() => setMethod('qr')} className="w-4 h-4 text-blue-600" />
                   </label>
                 </div>
               </div>
 
-              <div className="bg-blue-600 rounded-xl p-5 text-white">
+              <div className="bg-blue-600 rounded-3xl p-5 text-white">
                 <p className="text-xs font-bold text-blue-200 uppercase tracking-wider mb-1">{t('staff.paymentConfirm.toCollect')}</p>
-                <p className="text-3xl font-black mb-1">{formatVND(prepaid > 0 ? amountDue + surcharge : totalFee)}</p>
+                <p className="text-3xl font-black mb-1">{formatVND(prepaid > 0 ? amountDue : totalFee)}</p>
                 <p className="text-xs text-blue-200">{paymentMethod === 'cash' ? t('staff.paymentConfirm.cashHint') : t('staff.paymentConfirm.qrHint')}</p>
               </div>
 
               <button onClick={handleRecheck} disabled={rechecking}
-                className="w-full py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 border-2 border-blue-400 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-all">
+                className="w-full py-3 rounded-3xl font-bold text-base flex items-center justify-center gap-2 border-2 border-blue-400 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-all">
                 {rechecking
                   ? <><Loader2 size={18} className="animate-spin" /> {t('staff.paymentConfirm.rechecking')}</>
                   : <><RefreshCcw size={18} /> {t('staff.paymentConfirm.recheckBtn')}</>}
@@ -525,12 +542,12 @@ const StaffPaymentConfirm = () => {
 
               {paymentMethod === 'cash' ? (
                 <button onClick={handleCashCheckout} disabled={processing || !confirmedPlate}
-                  className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${confirmedPlate && !processing ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                  className={`w-full py-4 rounded-3xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${confirmedPlate && !processing ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
                   {processing ? <><Loader2 size={18} className="animate-spin" /> {t('staff.paymentConfirm.processing')}</> : <><Banknote size={18} /> {t('staff.paymentConfirm.confirmCash')}</>}
                 </button>
               ) : (
                 <button onClick={handleCreateQr} disabled={processing || !confirmedPlate}
-                  className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${confirmedPlate && !processing ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                  className={`w-full py-4 rounded-3xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${confirmedPlate && !processing ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
                   {processing ? <><Loader2 size={18} className="animate-spin" /> {t('staff.paymentConfirm.creatingQr')}</> : <><QrCode size={18} /> {t('staff.paymentConfirm.createQr')}</>}
                 </button>
               )}
@@ -539,8 +556,8 @@ const StaffPaymentConfirm = () => {
             </>
           )}
 
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 text-xs text-gray-500 space-y-2">
-            <p className="font-bold text-gray-700 text-sm mb-2">{t('staff.paymentConfirm.noteTitle')}</p>
+          <div className="bg-slate-50 rounded-3xl border border-slate-100 p-4 text-xs text-slate-500 space-y-2">
+            <p className="font-bold text-slate-700 text-sm mb-2">{t('staff.paymentConfirm.noteTitle')}</p>
             {isPaid ? (
               <><p>{t('staff.paymentConfirm.notePaid1')}</p><p>{t('staff.paymentConfirm.notePaid2')}</p></>
             ) : paymentMethod === 'cash' ? (

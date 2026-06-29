@@ -1,5 +1,10 @@
-import { getPool, sql } from '../config/db.js';
+/**
+ * FILE: guestService.js
+ * MÔ TẢ: Service xử lý các nghiệp vụ dành cho khách vãng lai (Guest).
+ * Bao gồm: Tra cứu phiên gửi xe hiện tại, xem số liệu thống kê chung của bãi đỗ.
+ */
 
+import { getPool, sql } from '../config/db.js';
 /**
  * Tra cứu phiên gửi xe cho khách vãng lai
  * @param {string} searchTerm - Biển số xe hoặc Mã phiên (VD: SS-00042)
@@ -37,10 +42,13 @@ export async function trackSession(searchTerm) {
   const request = pool.request();
   const term = searchTerm.trim().toUpperCase();
 
-  // Kiểm tra xem có phải mã phiên không (Bắt đầu bằng SS-)
-  const match = term.match(/^SS-(\d+)$/i);
-  if (match) {
-    request.input('SessionID', sql.Int, parseInt(match[1], 10));
+  // Kiểm tra xem có phải mã phiên không (Hỗ trợ cả SESS-YYYYMMDD-XXXX và SS-XXXX)
+  const matchNew = term.match(/^SESS-\d{8}-(\d+)$/i);
+  const matchOld = term.match(/^SS-(\d+)$/i);
+  const matchID = matchNew ? matchNew[1] : (matchOld ? matchOld[1] : null);
+
+  if (matchID) {
+    request.input('SessionID', sql.Int, parseInt(matchID, 10));
     query += ` AND ps.SessionID = @SessionID`;
   } else {
     request.input('PlateNumber', sql.NVarChar(20), term);
@@ -81,9 +89,11 @@ export async function trackSession(searchTerm) {
       if (vtResult.recordset.length > 0) {
         const feeCalc = pool.request();
         feeCalc.input('VehicleTypeID', sql.Int, vtResult.recordset[0].VehicleTypeID);
-        feeCalc.input('DurationH', sql.Decimal(10, 2), durationMs / (1000 * 60 * 60));
+        feeCalc.input('EntryTime', sql.DateTime, entryTime);
+        feeCalc.input('ExitTime', sql.DateTime, endTime);
         feeCalc.output('Fee', sql.Decimal(10, 2));
-        const feeResult = await feeCalc.execute('sp_CalcParkingFee');
+        feeCalc.output('Breakdown', sql.NVarChar(sql.MAX));
+        const feeResult = await feeCalc.execute('sp_CalcParkingFeeV2');
         estimatedFee = Number(feeResult.output.Fee || 0);
       }
     } catch (err) {

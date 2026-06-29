@@ -1,3 +1,10 @@
+/**
+ * FILE: StaffSearchSession.jsx
+ * MÔ TẢ: Trang Tìm kiếm Phiên đỗ xe (Search Session).
+ * Hỗ trợ lọc theo trạng thái (Active, Completed, Reserved), loại (Walk-in, Booking),
+ * xe, ô đỗ và ngày. Hiển thị thông tin chi tiết phiên bên phải màn hình.
+ */
+
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Search, XCircle, Car, Clock, MapPin, CheckCircle2, AlertTriangle, Calendar, User, Hash, Tag } from 'lucide-react'
 import staffApi from '../../apis/staffApi'
@@ -32,11 +39,11 @@ function normalizeRow(s) {
     vehicle: s.VehicleName || '',
     vehicleCode: s.VehicleCode || '',
     gate: s.SlotCode || '',
-    checkIn: s.EntryTime ? new Date(s.EntryTime).toLocaleString('vi-VN')
-      : s.StartTime ? new Date(s.StartTime).toLocaleString('vi-VN') : '',
-    checkOut: s.ExitTime ? new Date(s.ExitTime).toLocaleString('vi-VN')
+    checkIn: s.EntryTime ? new Date(s.EntryTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+      : s.StartTime ? new Date(s.StartTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '',
+    checkOut: s.ExitTime ? new Date(s.ExitTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
       : s.EndTime && status !== 'active' && status !== 'reserved'
-        ? new Date(s.EndTime).toLocaleString('vi-VN') : null,
+        ? new Date(s.EndTime).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : null,
     staff: s.DriverName || '',
     phone: s.PhoneNumber || '',
     _rawCheckIn: s.EntryTime || s.StartTime || ''
@@ -48,7 +55,7 @@ const StaffSearchSession = () => {
 
   const STATUS_CONFIG = {
     active:    { label: t('staff.searchSession.status.active'), icon: <Clock size={14} />, color: 'bg-green-50 text-green-700 border-green-200' },
-    completed: { label: t('staff.searchSession.status.completed'), icon: <CheckCircle2 size={14} />, color: 'bg-gray-100 text-gray-600 border-gray-200' },
+    completed: { label: t('staff.searchSession.status.completed'), icon: <CheckCircle2 size={14} />, color: 'bg-slate-100 text-slate-600 border-slate-100' },
     reserved:  { label: t('staff.searchSession.status.reserved'), icon: <Calendar size={14} />, color: 'bg-orange-50 text-orange-700 border-orange-200' },
     incident:  { label: t('staff.searchSession.status.incident'), icon: <AlertTriangle size={14} />, color: 'bg-red-50 text-red-600 border-red-200' }
   }
@@ -109,52 +116,52 @@ const StaffSearchSession = () => {
   const selectSession = session => setSelectedSession(prev => (prev?._key === session._key ? null : session))
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-3 mb-4 flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2 pl-2 whitespace-nowrap">
+    <div className="flex flex-col h-full bg-slate-50">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-3 mb-4 flex flex-wrap items-center gap-3">
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 pl-2 whitespace-nowrap">
           <Search size={20} className="text-blue-600" /> {t('staff.searchSession.title')}
         </h1>
         <div className="flex-1 min-w-55 relative">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input type="text" value={query} onChange={e => setQuery(e.target.value)}
             placeholder={t('staff.searchSession.searchPlaceholder')}
             className="w-full pl-12 pr-10 py-2.5 rounded-full bg-slate-50 border border-transparent focus:bg-white focus:border-blue-300 focus:ring-4 focus:ring-blue-50 transition-all text-sm outline-none" />
           {query && (
-            <button onClick={() => setQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <button onClick={() => setQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
               <XCircle size={16} />
             </button>
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <select value={filters.status} onChange={e => handleFilterChange('status', e.target.value)}
-            className="rounded-xl border border-gray-200 px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-300">
+            className="rounded-3xl border border-slate-100 px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-300">
             <option value="all">{t('staff.searchSession.filters.allStatus')}</option>
             <option value="active">{t('staff.searchSession.status.active')}</option>
             <option value="completed">{t('staff.searchSession.status.completed')}</option>
             <option value="reserved">{t('staff.searchSession.status.reserved')}</option>
           </select>
           <select value={filters.type} onChange={e => handleFilterChange('type', e.target.value)}
-            className="rounded-xl border border-gray-200 px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-300">
+            className="rounded-3xl border border-slate-100 px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-300">
             <option value="all">{t('staff.searchSession.filters.allType')}</option>
             <option value="Booking">{t('staff.searchSession.type.booking')}</option>
             <option value="Walk-in">{t('staff.searchSession.type.walkin')}</option>
           </select>
           {vehicleOptions.length > 0 && (
             <select value={filters.vehicle} onChange={e => handleFilterChange('vehicle', e.target.value)}
-              className="rounded-xl border border-gray-200 px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-300">
+              className="rounded-3xl border border-slate-100 px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-300">
               <option value="all">{t('staff.searchSession.filters.allVehicle')}</option>
               {vehicleOptions.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
           )}
           {gateOptions.length > 0 && (
             <select value={filters.gate} onChange={e => handleFilterChange('gate', e.target.value)}
-              className="rounded-xl border border-gray-200 px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-300">
+              className="rounded-3xl border border-slate-100 px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-300">
               <option value="all">{t('staff.searchSession.filters.allGate')}</option>
               {gateOptions.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
           )}
           <input type="date" value={filters.date} onChange={e => handleFilterChange('date', e.target.value)}
-            className="rounded-xl border border-gray-200 px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-300" />
+            className="rounded-3xl border border-slate-100 px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-300" />
           <button onClick={clearFilters} className="text-xs text-blue-600 hover:text-blue-800 underline whitespace-nowrap">{t('staff.searchSession.filters.clear')}</button>
         </div>
       </div>
@@ -162,15 +169,15 @@ const StaffSearchSession = () => {
       <div className="flex gap-6 flex-1 min-h-0">
         <div className="flex-1 min-w-0 space-y-3 overflow-auto pr-1 pb-4">
           {loading ? (
-            <div className="bg-white rounded-3xl border border-gray-200 p-12 flex flex-col items-center justify-center h-full">
+            <div className="bg-white rounded-3xl border border-slate-100 p-12 flex flex-col items-center justify-center h-full">
               <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-              <p className="text-gray-400 text-sm">{t('staff.searchSession.loading')}</p>
+              <p className="text-slate-400 text-sm">{t('staff.searchSession.loading')}</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="bg-white rounded-3xl border border-gray-200 p-12 text-center h-full flex flex-col justify-center items-center">
-              <Search size={48} className="text-gray-200 mb-4" />
-              <p className="text-gray-600 font-bold text-lg">{t('staff.searchSession.noSession')}</p>
-              <p className="text-gray-400 text-sm mt-1">{t('staff.searchSession.noSessionHint')}</p>
+            <div className="bg-white rounded-3xl border border-slate-100 p-12 text-center h-full flex flex-col justify-center items-center">
+              <Search size={48} className="text-slate-200 mb-4" />
+              <p className="text-slate-600 font-bold text-lg">{t('staff.searchSession.noSession')}</p>
+              <p className="text-slate-400 text-sm mt-1">{t('staff.searchSession.noSessionHint')}</p>
             </div>
           ) : (
             filtered.map(session => {
@@ -180,33 +187,33 @@ const StaffSearchSession = () => {
               return (
                 <div key={session._key} role="button" tabIndex={0}
                   onClick={() => selectSession(session)} onKeyDown={e => e.key === 'Enter' && selectSession(session)}
-                  className={`w-full text-left bg-white rounded-2xl border transition-all hover:shadow-md p-5 cursor-pointer outline-none ${isSelected ? 'border-blue-400 shadow-md ring-2 ring-blue-100' : 'border-gray-200 hover:border-blue-300'}`}>
+                  className={`w-full text-left bg-white rounded-2xl border transition-all hover:shadow-md p-5 cursor-pointer outline-none ${isSelected ? 'border-blue-400 shadow-md ring-2 ring-blue-100' : 'border-slate-100 hover:border-blue-300'}`}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className={`shrink-0 p-3 rounded-2xl ${isSelected ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-50 text-blue-600'}`}>
+                      <div className={`shrink-0 p-3 rounded-2xl ${isSelected ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 shadow-md' : 'bg-blue-50 text-blue-600'}`}>
                         <Car size={24} />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xl font-black text-gray-900 tracking-wide leading-none whitespace-nowrap">{session.plate}</div>
-                        <div className="text-xs font-semibold text-gray-400 mt-1.5 flex items-center gap-1.5 flex-wrap">
-                          {session.sessionCode && <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">{session.sessionCode}</span>}
+                        <div className="text-xl font-black text-slate-900 tracking-wide leading-none whitespace-nowrap">{session.plate}</div>
+                        <div className="text-xs font-semibold text-slate-400 mt-1.5 flex items-center gap-1.5 flex-wrap">
+                          {session.sessionCode && <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">{session.sessionCode}</span>}
                           {session.bookingCode && <span className="bg-blue-50 px-1.5 py-0.5 rounded text-blue-500">{session.bookingCode}</span>}
-                          {session.vehicle && (<><span className="w-1 h-1 rounded-full bg-gray-300 shrink-0" /><span>{session.vehicle}</span></>)}
+                          {session.vehicle && (<><span className="w-1 h-1 rounded-full bg-slate-300 shrink-0" /><span>{session.vehicle}</span></>)}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
-                      <span className={`text-xs font-bold px-3 py-1 rounded-lg border ${session.type === 'Booking' ? 'border-blue-200 text-blue-700 bg-blue-50' : 'border-gray-200 text-gray-600'}`}>{displayType}</span>
-                      <span className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-lg border ${stCfg.color}`}>{stCfg.icon} {stCfg.label}</span>
+                      <span className={`text-xs font-bold px-3 py-1 rounded-xl border ${session.type === 'Booking' ? 'border-blue-200 text-blue-700 bg-blue-50' : 'border-slate-100 text-slate-600'}`}>{displayType}</span>
+                      <span className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-xl border ${stCfg.color}`}>{stCfg.icon} {stCfg.label}</span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-4 text-sm bg-gray-50 rounded-xl p-3 border border-gray-100">
-                    <div><div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">{t('staff.searchSession.card.slot')}</div><div className="font-black text-blue-600">{session.gate || '—'}</div></div>
-                    <div><div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">{t('staff.searchSession.card.driver')}</div><div className="font-bold text-gray-700 truncate">{session.staff || '—'}</div></div>
-                    <div><div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">{t('staff.searchSession.card.entryTime')}</div><div className="font-bold text-gray-700">{session.checkIn || '—'}</div></div>
+                  <div className="grid grid-cols-4 gap-4 text-sm bg-slate-50 rounded-3xl p-3 border border-slate-50">
+                    <div><div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">{t('staff.searchSession.card.slot')}</div><div className="font-black text-blue-600">{session.gate || '—'}</div></div>
+                    <div><div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">{t('staff.searchSession.card.driver')}</div><div className="font-bold text-slate-700 truncate">{session.staff || '—'}</div></div>
+                    <div><div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">{t('staff.searchSession.card.entryTime')}</div><div className="font-bold text-slate-700">{session.checkIn || '—'}</div></div>
                     <div>
-                      <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">{t('staff.searchSession.card.exitTime')}</div>
-                      <div className={`font-bold ${session.checkOut ? 'text-gray-700' : 'text-green-600'}`}>
+                      <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">{t('staff.searchSession.card.exitTime')}</div>
+                      <div className={`font-bold ${session.checkOut ? 'text-slate-700' : 'text-green-600'}`}>
                         {session.checkOut ? session.checkOut : (
                           <span className="flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse block" />
@@ -224,10 +231,10 @@ const StaffSearchSession = () => {
 
         <div className="w-80 flex flex-col gap-4 pb-4 shrink-0">
           {selectedSession ? <DetailPanel session={selectedSession} /> : (
-            <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-8 text-center h-full flex flex-col justify-center items-center">
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 text-center h-full flex flex-col justify-center items-center">
               <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4"><Search size={28} className="text-blue-300" /></div>
-              <p className="text-gray-800 font-bold mb-1">{t('staff.searchSession.detail.placeholderTitle')}</p>
-              <p className="text-xs text-gray-400 leading-relaxed">{t('staff.searchSession.detail.placeholderDesc')}</p>
+              <p className="text-slate-800 font-bold mb-1">{t('staff.searchSession.detail.placeholderTitle')}</p>
+              <p className="text-xs text-slate-400 leading-relaxed">{t('staff.searchSession.detail.placeholderDesc')}</p>
             </div>
           )}
         </div>
@@ -240,7 +247,7 @@ function DetailPanel({ session }) {
   const { t } = useTranslation()
   const STATUS_CONFIG = {
     active:    { label: t('staff.searchSession.status.active'), icon: <Clock size={14} />, color: 'bg-green-50 text-green-700 border-green-200' },
-    completed: { label: t('staff.searchSession.status.completed'), icon: <CheckCircle2 size={14} />, color: 'bg-gray-100 text-gray-600 border-gray-200' },
+    completed: { label: t('staff.searchSession.status.completed'), icon: <CheckCircle2 size={14} />, color: 'bg-slate-100 text-slate-600 border-slate-100' },
     reserved:  { label: t('staff.searchSession.status.reserved'), icon: <Calendar size={14} />, color: 'bg-orange-50 text-orange-700 border-orange-200' },
     incident:  { label: t('staff.searchSession.status.incident'), icon: <AlertTriangle size={14} />, color: 'bg-red-50 text-red-600 border-red-200' }
   }
@@ -248,7 +255,7 @@ function DetailPanel({ session }) {
   const displayType = session.type === 'Booking' ? t('staff.searchSession.type.booking') : t('staff.searchSession.type.walkin')
 
   return (
-    <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+    <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
       <div className="bg-blue-600 p-6 text-center relative overflow-hidden">
         <div className="absolute top-0 right-0 p-4 opacity-20 pointer-events-none">
           <Car size={64} className="text-white transform rotate-12 scale-150 translate-x-4 -translate-y-4" />
@@ -258,38 +265,38 @@ function DetailPanel({ session }) {
         {session.vehicle && <p className="text-sm font-medium text-blue-100 mt-1 relative z-10">{session.vehicle}</p>}
       </div>
       <div className="p-5 overflow-auto">
-        <div className={`flex justify-center items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-bold mb-5 border ${stCfg.color}`}>{stCfg.icon} {stCfg.label}</div>
+        <div className={`flex justify-center items-center gap-2 py-2.5 px-4 rounded-3xl text-sm font-bold mb-5 border ${stCfg.color}`}>{stCfg.icon} {stCfg.label}</div>
         <div className="space-y-4">
-          <div className="space-y-2 border-b border-gray-100 pb-4">
+          <div className="space-y-2 border-b border-slate-50 pb-4">
             {session.sessionCode && (
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Hash size={10} /> {t('staff.searchSession.detail.sessionCode')}</span>
-                <span className="text-xs font-semibold text-gray-800 bg-gray-100 px-2 py-0.5 rounded font-mono">{session.sessionCode}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><Hash size={10} /> {t('staff.searchSession.detail.sessionCode')}</span>
+                <span className="text-xs font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded font-mono">{session.sessionCode}</span>
               </div>
             )}
             {session.bookingCode && (
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Tag size={10} /> {t('staff.searchSession.detail.bookingCode')}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><Tag size={10} /> {t('staff.searchSession.detail.bookingCode')}</span>
                 <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-mono">{session.bookingCode}</span>
               </div>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-4 border-b border-gray-100 pb-4">
-            <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{t('staff.searchSession.detail.type')}</p><p className="text-sm font-bold text-gray-800">{displayType}</p></div>
-            <div className="text-right"><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{t('staff.searchSession.detail.slot')}</p><p className="text-sm font-black text-blue-600">{session.gate || '—'}</p></div>
+          <div className="grid grid-cols-2 gap-4 border-b border-slate-50 pb-4">
+            <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{t('staff.searchSession.detail.type')}</p><p className="text-sm font-bold text-slate-800">{displayType}</p></div>
+            <div className="text-right"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{t('staff.searchSession.detail.slot')}</p><p className="text-sm font-black text-blue-600">{session.gate || '—'}</p></div>
           </div>
-          <div className="space-y-3 border-b border-gray-100 pb-4 text-sm">
+          <div className="space-y-3 border-b border-slate-50 pb-4 text-sm">
             <div className="flex justify-between items-center gap-2">
-              <span className="text-gray-500 font-medium flex items-center gap-2 shrink-0"><MapPin size={14} /> Slot</span>
-              <span className="font-bold text-gray-800">{session.gate || '—'}</span>
+              <span className="text-slate-500 font-medium flex items-center gap-2 shrink-0"><MapPin size={14} /> Slot</span>
+              <span className="font-bold text-slate-800">{session.gate || '—'}</span>
             </div>
             <div className="flex justify-between items-start gap-2">
-              <span className="text-gray-500 font-medium flex items-center gap-2 shrink-0"><Clock size={14} /> {t('staff.searchSession.detail.in')}</span>
-              <span className="font-bold text-gray-800 text-right">{session.checkIn || '—'}</span>
+              <span className="text-slate-500 font-medium flex items-center gap-2 shrink-0"><Clock size={14} /> {t('staff.searchSession.detail.in')}</span>
+              <span className="font-bold text-slate-800 text-right">{session.checkIn || '—'}</span>
             </div>
             <div className="flex justify-between items-start gap-2">
-              <span className="text-gray-500 font-medium flex items-center gap-2 shrink-0"><Clock size={14} /> {t('staff.searchSession.detail.out')}</span>
-              <span className="font-bold text-gray-800 text-right">
+              <span className="text-slate-500 font-medium flex items-center gap-2 shrink-0"><Clock size={14} /> {t('staff.searchSession.detail.out')}</span>
+              <span className="font-bold text-slate-800 text-right">
                 {session.checkOut || (
                   <span className={`flex items-center gap-1 justify-end ${session.status === 'reserved' ? 'text-orange-500' : 'text-green-600'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full animate-pulse block ${session.status === 'reserved' ? 'bg-orange-400' : 'bg-green-500'}`} />
@@ -301,13 +308,13 @@ function DetailPanel({ session }) {
           </div>
           <div className="space-y-2 pt-1 text-sm">
             <div className="flex justify-between items-center gap-2">
-              <span className="text-gray-500 font-medium flex items-center gap-2"><User size={14} /> {t('staff.searchSession.card.driver')}</span>
-              <span className="font-bold text-gray-800 text-right">{session.staff || '—'}</span>
+              <span className="text-slate-500 font-medium flex items-center gap-2"><User size={14} /> {t('staff.searchSession.card.driver')}</span>
+              <span className="font-bold text-slate-800 text-right">{session.staff || '—'}</span>
             </div>
             {session.phone && (
               <div className="flex justify-between items-center gap-2">
-                <span className="text-gray-500 font-medium flex items-center gap-2"><User size={14} /> {t('staff.searchSession.detail.phone')}</span>
-                <span className="font-bold text-gray-800">{session.phone}</span>
+                <span className="text-slate-500 font-medium flex items-center gap-2"><User size={14} /> {t('staff.searchSession.detail.phone')}</span>
+                <span className="font-bold text-slate-800">{session.phone}</span>
               </div>
             )}
           </div>

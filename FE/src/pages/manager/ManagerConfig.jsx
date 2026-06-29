@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerConfig.jsx
+ * MÔ TẢ: Trang Quản lý Cấu trúc Bãi Đỗ Xe dành cho Manager.
+ * Xem sơ đồ bãi đỗ (Tòa nhà > Tầng > Khu vực > Ô đỗ), đóng/mở tầng, đánh dấu bảo trì/khóa ô đỗ.
+ */
+
 import { useState, useEffect, useCallback } from 'react'
 import {
   Building, Layers, Map, RefreshCcw, ChevronRight, X, Info,
@@ -92,13 +98,13 @@ const ManagerConfig = () => {
     <div className={`space-y-6 pb-12 transition-all duration-700 ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
 
       {/* Header */}
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-sm border border-slate-200/60">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">
         <div className="px-2">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('manager.config.eyebrow')}</p>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('manager.config.title')}</h1>
         </div>
         <button onClick={loadAll}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition self-start">
+          className="inline-flex items-center gap-2 rounded-3xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 font-bold hover:bg-slate-50 transition self-start">
           <RefreshCcw size={16} /> {t('manager.config.refresh')}
         </button>
       </div>
@@ -114,14 +120,14 @@ const ManagerConfig = () => {
 
       {/* Chọn tòa nhà */}
       {buildings.length > 0 && (
-        <div className="rounded-3xl bg-white p-5 shadow-sm border border-slate-200/60">
+        <div className="rounded-3xl bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-3xl bg-blue-50 text-blue-600">
               <Building size={20} />
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900">{t('manager.config.buildingSection')}</h2>
-              <p className="text-[12px] font-medium text-slate-500 mt-0.5">{t('manager.config.buildingSectionHint')}</p>
+              <p className="text-[12px] font-medium text-slate-500 font-medium mt-0.5">{t('manager.config.buildingSectionHint')}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2.5">
@@ -129,10 +135,10 @@ const ManagerConfig = () => {
               const active = b.BuildingID === selectedBuildingId
               return (
                 <button key={b.BuildingID} onClick={() => setSelectedBuildingId(b.BuildingID)}
-                  className={`rounded-2xl border px-4 py-3 text-left transition ${active ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-slate-200 bg-white hover:border-blue-200'
+                  className={`rounded-2xl border px-4 py-3 text-left transition ${active ? 'border-blue-400 bg-blue-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)]' : 'border-slate-200 bg-white hover:border-blue-200'
                   }`}>
-                  <p className={`text-sm font-bold ${active ? 'text-blue-800' : 'text-slate-800'}`}>{b.BuildingName}</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className={`text-sm font-bold ${active ? 'text-blue-800' : 'text-slate-800 font-black'}`}>{b.BuildingName}</p>
+                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
                     {t('manager.config.buildingMeta', { floors: b.FloorCount ?? 0, slots: b.SlotCount ?? 0 })}
                   </p>
                 </button>
@@ -140,9 +146,9 @@ const ManagerConfig = () => {
             })}
           </div>
           {selectedBuilding && (
-            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-slate-500 border-t border-slate-100 pt-3">
-              <span>{t('manager.config.addressLabel')} <strong className="text-slate-700">{selectedBuilding.Address || '—'}</strong></span>
-              <span>{t('manager.config.operatingHoursLabel')} <strong className="text-slate-700">{selectedBuilding.OperatingHours || '—'}</strong></span>
+            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1.5 text-xs text-slate-500 font-medium border-t border-slate-100 pt-3">
+              <span>{t('manager.config.addressLabel')} <strong className="text-slate-700 font-bold">{selectedBuilding.Address || '—'}</strong></span>
+              <span>{t('manager.config.operatingHoursLabel')} <strong className="text-slate-700 font-bold">{selectedBuilding.OperatingHours || '—'}</strong></span>
             </div>
           )}
         </div>
@@ -150,7 +156,7 @@ const ManagerConfig = () => {
 
       {/* Các tầng + zone bên trong (phân cấp trực quan) */}
       {buildingFloors.length === 0 ? (
-        <div className="rounded-3xl bg-white p-10 shadow-sm border border-slate-200/60 text-center text-slate-400">
+        <div className="rounded-3xl bg-white p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60 text-center text-slate-400">
           <Layers size={40} className="mx-auto mb-3 text-slate-300" />
           <p className="font-semibold text-slate-600">{t('manager.config.noFloorsTitle')}</p>
           <p className="text-sm mt-1">{t('manager.config.noFloorsHint')}</p>
@@ -185,30 +191,30 @@ const FloorCard = ({ floor, zones, onToggle, onOpenZone }) => {
   const { t } = useTranslation()
   const inactive = !floor.IsActive
   return (
-    <section className={`rounded-3xl bg-white shadow-sm border transition-colors ${inactive ? 'border-slate-200/60 opacity-75' : 'border-slate-200/60 hover:border-blue-200'}`}>
+    <section className={`rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border transition-colors ${inactive ? 'border-slate-200/60 opacity-75' : 'border-slate-200/60 hover:border-blue-200'}`}>
       {/* Header tầng */}
       <div className="flex items-center justify-between p-5 border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${inactive ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600'}`}>
+          <div className={`flex h-10 w-10 items-center justify-center rounded-3xl ${inactive ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600'}`}>
             <Layers size={20} />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-lg font-bold text-slate-900">{floor.FloorName}</h3>
-              <span className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-[11px] font-semibold border ${floor.IsActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60' : 'bg-slate-100 text-slate-600 border-slate-200'
+              <span className={`inline-flex items-center gap-1.5 rounded-xl px-2 py-0.5 text-[11px] font-semibold border ${floor.IsActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60' : 'bg-slate-100 text-slate-600 border-slate-200'
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${floor.IsActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                 {floor.IsActive ? t('manager.config.floorActive') : t('manager.config.floorInactive')}
               </span>
             </div>
-            <p className="text-[12px] font-medium text-slate-500 mt-0.5">
+            <p className="text-[12px] font-medium text-slate-500 font-medium mt-0.5">
               {t('manager.config.floorMeta', { zones: floor.ZoneCount ?? zones.length, slots: floor.SlotCount ?? 0 })}
             </p>
           </div>
         </div>
         <button onClick={onToggle}
-          className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${floor.IsActive
-            ? 'border-slate-200 text-slate-700 hover:bg-slate-50'
+          className={`inline-flex items-center gap-2 rounded-3xl border px-4 py-2 text-sm font-semibold transition ${floor.IsActive
+            ? 'border-slate-200 text-slate-700 font-bold hover:bg-slate-50'
             : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
           }`}>
           <Power size={15} /> {floor.IsActive ? t('manager.config.turnOffFloor') : t('manager.config.turnOnFloor')}
@@ -241,15 +247,15 @@ const ZoneCard = ({ zone, onOpen }) => {
 
   return (
     <button onClick={onOpen}
-      className="text-left rounded-2xl border border-slate-200 p-4 hover:border-blue-300 hover:shadow-sm transition group">
+      className="text-left rounded-2xl border border-slate-200 p-4 hover:border-blue-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition group">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-50 text-slate-500 font-medium group-hover:bg-blue-50 group-hover:text-blue-600 transition">
             <Map size={16} />
           </div>
           <div>
             <p className="text-sm font-bold text-slate-900">{zone.ZoneName}</p>
-            <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+            <p className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
               <Car size={11} /> {zone.AllowedVehicleName}
             </p>
           </div>
@@ -260,8 +266,8 @@ const ZoneCard = ({ zone, onOpen }) => {
       {/* Thanh sức chứa */}
       <div className="mt-3">
         <div className="flex items-center justify-between text-[11px] font-semibold mb-1">
-          <span className="text-slate-500">{t('manager.config.capacityLabel')}</span>
-          <span className={full ? 'text-amber-600' : 'text-slate-700'}>
+          <span className="text-slate-500 font-medium">{t('manager.config.capacityLabel')}</span>
+          <span className={full ? 'text-amber-600' : 'text-slate-700 font-bold'}>
             {actual}<span className="text-slate-400 font-normal"> / {total || '—'}</span>
           </span>
         </div>
@@ -324,18 +330,18 @@ const ZoneSlotsModal = ({ zone, onClose }) => {
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
           <div>
             <h3 className="text-lg font-bold text-slate-900">{zone.ZoneName}</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
               {zone.FloorName} · {zone.AllowedVehicleName} · {zone.ActualSlots ?? 0}/{zone.TotalSlots ?? '—'} {t('manager.config.slotUnit')}
             </p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100 transition"><X size={18} /></button>
+          <button onClick={onClose} className="rounded-xl p-2 hover:bg-slate-100 transition"><X size={18} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 p-6">
           {/* Chú thích trạng thái */}
           <div className="flex flex-wrap gap-2 mb-5">
             {Object.entries(SLOT_CFG).map(([k, c]) => (
-              <span key={k} className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold border ${c.chip}`}>
+              <span key={k} className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-semibold border ${c.chip}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />{t(c.labelKey)}
               </span>
             ))}
@@ -366,31 +372,31 @@ const ZoneSlotsModal = ({ zone, onClose }) => {
                     </div>
                     <p className="text-[11px] font-semibold mt-0.5">{t(cfg.labelKey)}</p>
                     {slot.PlateNumber && (
-                      <p className="text-[10px] text-slate-500 mt-1 truncate">🚗 {slot.PlateNumber}</p>
+                      <p className="text-[10px] text-slate-500 font-medium mt-1 truncate">🚗 {slot.PlateNumber}</p>
                     )}
 
                     {/* Hành động: chỉ hiện khi slot rảnh để thao tác */}
                     {locked ? (
-                      <p className="mt-2 text-[10px] text-slate-500 flex items-center gap-1">
+                      <p className="mt-2 text-[10px] text-slate-500 font-medium flex items-center gap-1">
                         <ShieldAlert size={11} /> {t('manager.config.inUse')}
                       </p>
                     ) : (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {slot.SlotStatus !== 'Available' && (
                           <button disabled={busyId === slot.SlotID} onClick={() => changeStatus(slot, 'Available')}
-                            className="inline-flex items-center gap-1 rounded-lg bg-white/70 border border-emerald-200 px-2 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-50 transition disabled:opacity-50">
+                            className="inline-flex items-center gap-1 rounded-xl bg-white/70 border border-emerald-200 px-2 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-50 transition disabled:opacity-50">
                             <Unlock size={11} /> {t('manager.config.openBtn')}
                           </button>
                         )}
                         {slot.SlotStatus !== 'Maintenance' && (
                           <button disabled={busyId === slot.SlotID} onClick={() => changeStatus(slot, 'Maintenance')}
-                            className="inline-flex items-center gap-1 rounded-lg bg-white/70 border border-amber-200 px-2 py-1 text-[10px] font-bold text-amber-700 hover:bg-amber-50 transition disabled:opacity-50">
+                            className="inline-flex items-center gap-1 rounded-xl bg-white/70 border border-amber-200 px-2 py-1 text-[10px] font-bold text-amber-700 hover:bg-amber-50 transition disabled:opacity-50">
                             <Wrench size={11} /> {t('manager.config.maintenanceBtn')}
                           </button>
                         )}
                         {slot.SlotStatus !== 'Blocked' && (
                           <button disabled={busyId === slot.SlotID} onClick={() => changeStatus(slot, 'Blocked')}
-                            className="inline-flex items-center gap-1 rounded-lg bg-white/70 border border-red-200 px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-50 transition disabled:opacity-50">
+                            className="inline-flex items-center gap-1 rounded-xl bg-white/70 border border-red-200 px-2 py-1 text-[10px] font-bold text-red-700 hover:bg-red-50 transition disabled:opacity-50">
                             <Lock size={11} /> {t('manager.config.blockBtn')}
                           </button>
                         )}

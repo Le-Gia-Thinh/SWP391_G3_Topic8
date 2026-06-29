@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverLayout.jsx
+ * MÔ TẢ: Layout chính của phân hệ Driver.
+ * Chứa Sidebar điều hướng, Header (thông tin người dùng, đổi vị trí, thông báo),
+ * và phần nội dung chính (Outlet) cho các trang con.
+ */
+
 // File: /FE/src/pages/driver/DriverLayout.jsx
 
 import { useEffect, useRef, useState } from 'react'

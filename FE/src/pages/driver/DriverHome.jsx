@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverHome.jsx
+ * MÔ TẢ: Trang Chủ dành cho Driver.
+ * Cung cấp cái nhìn tổng quan: các hành động nhanh (đặt chỗ, phiên, lịch sử...), 
+ * tình trạng chỗ trống bãi đỗ, lượt đặt chỗ hiện tại và phiên đỗ xe đang diễn ra.
+ */
+
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {

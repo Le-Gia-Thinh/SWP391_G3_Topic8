@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerUnpaid.jsx
+ * MÔ TẢ: Trang Quản lý Xe chưa thanh toán dành cho Manager.
+ * Danh sách các lượt gửi xe đang trong bãi hoặc đã ra nhưng nợ phí phụ trội, giúp theo dõi và thu hồi nợ.
+ */
+
 // src/pages/manager/ManagerUnpaid.jsx
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -69,18 +75,18 @@ const ManagerUnpaid = () => {
   return (
     <div className={`space-y-6 pb-12 transition-all duration-700 ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
       {/* Header */}
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-sm border border-slate-200/60">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between bg-white p-4 py-5 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">
         <div className="px-2">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-500">{t('manager.unpaid.eyebrow')}</p>
           <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('manager.unpaid.title')}</h1>
         </div>
         <div className="flex gap-3">
           <button onClick={() => exportCsv(rows)}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
+            className="inline-flex items-center gap-2 rounded-3xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 font-bold hover:bg-slate-50 transition">
             <Download size={16} /> {t('manager.unpaid.exportCsv')}
           </button>
           <button onClick={doSearch}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
+            className="inline-flex items-center gap-2 rounded-3xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 font-bold hover:bg-slate-50 transition">
             <RefreshCcw size={16} /> {t('manager.unpaid.refresh')}
           </button>
         </div>
@@ -88,51 +94,51 @@ const ManagerUnpaid = () => {
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="flex items-center gap-2 mb-1"><AlertTriangle size={16} className="text-amber-500" /><p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('manager.unpaid.stats.total')}</p></div>
-          <p className="text-3xl font-black text-slate-800">{rows.length}</p>
+          <p className="text-3xl font-black text-slate-800 font-black">{rows.length}</p>
         </div>
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="flex items-center gap-2 mb-1"><Clock size={16} className="text-blue-500" /><p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('manager.unpaid.stats.stillParking')}</p></div>
-          <p className="text-3xl font-black text-slate-800">{stillParking}</p>
+          <p className="text-3xl font-black text-slate-800 font-black">{stillParking}</p>
         </div>
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="flex items-center gap-2 mb-1"><CircleDollarSign size={16} className="text-red-500" /><p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('manager.unpaid.stats.totalOwed')}</p></div>
           <p className="text-3xl font-black text-red-600">{fmtVnd(totalOwed)}</p>
         </div>
       </div>
 
-      <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200/60">
+      <div className="rounded-3xl bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">
         <div className="relative mb-5 max-w-md">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && doSearch()}
             placeholder={t('manager.unpaid.searchPlaceholder')}
-            className="w-full rounded-xl bg-slate-50 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+            className="w-full rounded-3xl bg-slate-50 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-slate-200">
+        <div className="overflow-hidden rounded-3xl border border-slate-200">
           <div className="overflow-x-auto overflow-y-auto max-h-130">
             {loading ? (
               <div className="py-16 flex items-center justify-center">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
               </div>
             ) : rows.length === 0 ? (
-              <div className="py-16 flex flex-col items-center justify-center text-center text-slate-500">
+              <div className="py-16 flex flex-col items-center justify-center text-center text-slate-500 font-medium">
                 <CircleDollarSign size={44} className="text-emerald-300 mb-3" />
-                <p className="font-bold text-slate-700">{t('manager.unpaid.emptyTitle')}</p>
-                <p className="text-sm mt-1 text-slate-500">{t('manager.unpaid.emptyDesc')}</p>
+                <p className="font-bold text-slate-700 font-bold">{t('manager.unpaid.emptyTitle')}</p>
+                <p className="text-sm mt-1 text-slate-500 font-medium">{t('manager.unpaid.emptyDesc')}</p>
               </div>
             ) : (
-              <table className="min-w-full text-left text-sm text-slate-700">
+              <table className="min-w-full text-left text-sm text-slate-700 font-bold">
                 <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                   <tr>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.session')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.driverPlate')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.slot')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.entryAt')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.duration')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50">{t('manager.unpaid.col.status')}</th>
-                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 bg-slate-50 text-right">{t('manager.unpaid.col.owed')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('manager.unpaid.col.session')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('manager.unpaid.col.driverPlate')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('manager.unpaid.col.slot')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('manager.unpaid.col.entryAt')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('manager.unpaid.col.duration')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50">{t('manager.unpaid.col.status')}</th>
+                    <th className="px-5 py-4 font-bold text-[12px] text-slate-500 font-medium bg-slate-50 text-right">{t('manager.unpaid.col.owed')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -147,22 +153,22 @@ const ManagerUnpaid = () => {
                           <p className="text-[11px] font-medium text-slate-400 mt-0.5 flex items-center gap-1"><Car size={11} /> {r.VehicleName}</p>
                         </td>
                         <td className="px-5 py-4">
-                          <p className="font-semibold text-slate-700">{r.DriverName || '—'}</p>
-                          <p className="text-xs text-slate-500">{r.PlateNumber} {r.DriverPhone && `· ${r.DriverPhone}`}</p>
+                          <p className="font-semibold text-slate-700 font-bold">{r.DriverName || '—'}</p>
+                          <p className="text-xs text-slate-500 font-medium">{r.PlateNumber} {r.DriverPhone && `· ${r.DriverPhone}`}</p>
                         </td>
                         <td className="px-5 py-4">
                           <p className="font-bold text-blue-600">{r.SlotCode}</p>
                           <p className="text-xs text-slate-400">{r.ZoneName} · {r.FloorName}</p>
                         </td>
-                        <td className="px-5 py-4 text-slate-500 text-xs">{fmtDateTime(r.EntryTime)}</td>
-                        <td className="px-5 py-4 font-semibold text-slate-700">{fmtDur(r.DurationMinutes)}</td>
+                        <td className="px-5 py-4 text-slate-500 font-medium text-xs">{fmtDateTime(r.EntryTime)}</td>
+                        <td className="px-5 py-4 font-semibold text-slate-700 font-bold">{fmtDur(r.DurationMinutes)}</td>
                         <td className="px-5 py-4">
                           {r.SessionStatus === 'Active' ? (
-                            <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200/60">
+                            <span className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200/60">
                               <Clock size={12} /> {t('manager.unpaid.statusActive')}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-600 border border-amber-200/60">
+                            <span className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold bg-amber-50 text-amber-600 border border-amber-200/60">
                               <AlertTriangle size={12} /> {t('manager.unpaid.statusExitedUnpaid')}
                             </span>
                           )}

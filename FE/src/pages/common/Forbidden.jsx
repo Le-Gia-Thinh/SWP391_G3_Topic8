@@ -1,3 +1,9 @@
+/**
+ * FILE: Forbidden.jsx
+ * MÔ TẢ: Trang Lỗi 403 (Forbidden) hiển thị khi người dùng cố truy cập
+ * vào một trang mà họ không có quyền (không khớp vai trò / Role).
+ */
+
 import { ShieldAlert, ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 

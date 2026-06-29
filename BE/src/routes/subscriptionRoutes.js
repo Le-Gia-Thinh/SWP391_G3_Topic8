@@ -1,3 +1,8 @@
+/**
+ * FILE: subscriptionRoutes.js
+ * MÔ TẢ: Định nghĩa các đường dẫn API liên quan đến Gói hội viên (Subscriptions).
+ */
+
 import express from "express";
 import { subscriptionController } from "../controllers/subscriptionController.js";
 import { isAuthorized, isDriver } from "../middlewares/authMiddleware.js";

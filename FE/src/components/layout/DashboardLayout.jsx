@@ -1,3 +1,10 @@
+/**
+ * FILE: DashboardLayout.jsx
+ * MÔ TẢ: Layout chính cho các trang quản trị (Admin/Manager/Staff/Driver).
+ * Bao gồm Sidebar (thanh bên trái), Navbar (thanh trên cùng) và vùng nội dung chính (Outlet).
+ * Hỗ trợ responsive để ẩn/hiện Sidebar trên các thiết bị di động.
+ */
+
 import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
@@ -12,7 +19,7 @@ const DashboardLayout = ({ links, roleName, profileLink }) => {
   const title = currentLink ? currentLink.label : 'Dashboard'
 
   return (
-    <div className="flex h-screen bg-gray-50/50 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 selection:bg-blue-200 selection:text-blue-900 dark:selection:bg-blue-900 dark:selection:text-blue-100 transition-colors duration-300">
+    <div className="flex h-screen bg-slate-50/50 dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 selection:bg-blue-200 selection:text-blue-900 dark:selection:bg-blue-900 dark:selection:text-blue-100 transition-colors duration-300">
       <Sidebar
         links={links}
         isOpen={sidebarOpen}

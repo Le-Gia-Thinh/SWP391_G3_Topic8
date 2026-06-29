@@ -1,6 +1,21 @@
+/**
+ * FILE: index.css
+ * MÔ TẢ: File CSS chính, cấu hình tích hợp Tailwind CSS.
+ * Chứa cấu hình nền tảng, custom variants (Dark mode), và xử lý lỗi hiển thị autofill trên trình duyệt.
+ */
+
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --animate-shimmer: shimmer 1.5s infinite;
+  
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+}
 
 html.dark {
   color-scheme: dark;
@@ -8,7 +23,7 @@ html.dark {
 
 @layer base {
   body {
-    @apply antialiased text-gray-900 bg-[#fbf9f1] dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300;
+    @apply antialiased text-slate-900 bg-slate-50 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300;
   }
 }
 

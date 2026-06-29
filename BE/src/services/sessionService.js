@@ -1,3 +1,10 @@
+/**
+ * FILE: sessionService.js
+ * MÔ TẢ: Service xử lý nghiệp vụ cho phiên gửi xe (Parking Session).
+ * Chức năng: Check-in xe, Check-out xe ( với các ràng buộc về đặt chỗ và slot),
+ * lấy thông tin phiên đang hoạt động.
+ */
+
 import { getPool, sql } from "../config/db.js";
 import { getUserIdFromToken } from "../utils/requestUser.js";
 import {
@@ -81,7 +88,7 @@ export async function getSessions() {
 
   const result = await pool.request().query(`
         SELECT s.SessionID,
-              CONCAT('SESS-', FORMAT(s.EntryTime,'yyyyMMdd'), '-', RIGHT('0000'+CAST(s.SessionID AS VARCHAR(10)),4)) AS SessionCode,
+              CONCAT('SS-', RIGHT('00000'+CAST(s.SessionID AS VARCHAR(10)),5)) AS SessionCode,
               s.DriverID, u.FullName AS DriverName, s.PlateNumber,
               s.VehicleTypeID, vt.VehicleCode, vt.VehicleName,
               s.SlotID, ps.SlotCode, ps.SlotStatus,
@@ -450,12 +457,10 @@ export async function getCurrentDriverSession(req) {
     .query(`
           SELECT TOP 1
             s.SessionID,
-            CONCAT(
-              'SESS-',
-              FORMAT(s.EntryTime, 'yyyyMMdd'),
-              '-',
-              RIGHT('0000' + CAST(s.SessionID AS VARCHAR(10)), 4)
-            ) AS SessionCode,
+              CONCAT(
+                'SS-',
+                RIGHT('00000' + CAST(s.SessionID AS VARCHAR(10)), 5)
+              ) AS SessionCode,
 
             s.DriverID,
             u.FullName AS DriverName,

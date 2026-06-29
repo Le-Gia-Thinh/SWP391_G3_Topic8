@@ -1,16 +1,46 @@
-// src/utils/validationUtils.js
-// Validate input trước khi vào controller
+/**
+ * FILE: validationUtils.js
+ * MÔ TẢ: Các middleware và hàm tiện ích để xác thực (validate) dữ liệu đầu vào từ request.
+ * 
+ * Được sử dụng trước controller trong routes để đảm bảo dữ liệu đúng format trước khi xử lý.
+ * 
+ * Các middleware validation:
+ * - validateRegister: Kiểm tra dữ liệu đăng ký tài khoản
+ * - validateLogin: Kiểm tra dữ liệu đăng nhập
+ * - validateForgotPassword / validateResetPassword: Kiểm tra dữ liệu khôi phục mật khẩu
+ * - validateSocialLogin: Kiểm tra token đăng nhập mạng xã hội
+ * - validateCreateReservation: Kiểm tra dữ liệu đặt chỗ
+ * - validateCheckIn / validateCheckOut: Kiểm tra dữ liệu check-in/check-out
+ * - validateStaffWalkIn / validateStaffBookingCheckIn / validateStaffCheckOut: Validation cho Staff
+ * - validateConfirmSurcharge: Kiểm tra xác nhận phụ thu
+ */
 
+// ========================= BIỂU THỨC CHÍNH QUY (REGEX) =========================
+
+/** Regex kiểm tra định dạng email cơ bản */
 export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Regex kiểm tra số điện thoại Việt Nam (10 số, bắt đầu bằng 0) */
 export const vietnamPhoneRegex = /^0\d{9}$/;
 
-// Cho phép dạng biển số phổ biến:
-// 59A-12345
-// 59A-123.45
-// 59AB-12345
-// 51F-99999
+/**
+ * Regex kiểm tra biển số xe Việt Nam.
+ * Hỗ trợ các dạng phổ biến:
+ * - 59A-12345   (2 số + 1 chữ + dấu gạch + 5 số)
+ * - 59A-123.45  (2 số + 1 chữ + dấu gạch + 3 số + chấm + 2 số)
+ * - 59AB-12345  (2 số + 2 chữ + dấu gạch + 5 số)
+ * - 51F-99999
+ */
 export const plateNumberRegex = /^(\d{2}[A-Z]{1,2}-?\d{3}\.?\d{2}|\d{2}[A-Z]{1,2}-?\d{4,5})$/i;
 
+// ========================= HÀM HELPER =========================
+
+/**
+ * Gửi response lỗi validation (400 Bad Request).
+ * @param {Object} res - Express response object
+ * @param {string[]} errors - Mảng các thông báo lỗi
+ * @returns {Object} Response JSON với danh sách lỗi
+ */
 function sendValidationError(res, errors) {
   return res.status(400).json({
     success: false,
@@ -19,46 +49,70 @@ function sendValidationError(res, errors) {
   });
 }
 
+/**
+ * Kiểm tra email có đúng format không.
+ * @param {string} email - Email cần kiểm tra
+ * @returns {boolean} true nếu email hợp lệ
+ */
 export function isValidEmail(email) {
   return emailRegex.test(String(email || "").trim());
 }
 
+/**
+ * Trim (cắt khoảng trắng đầu cuối) một chuỗi. Nếu không phải string, trả về "".
+ * @param {*} value - Giá trị cần trim
+ * @returns {string} Chuỗi đã trim
+ */
 export function trim(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+/**
+ * Format biển số xe theo chuẩn Việt Nam.
+ * Tự động chuyển hoa, thêm dấu "-" giữa phần chữ và phần số.
+ * Ví dụ: "59a12345" → "59A-12345"
+ * 
+ * Luồng xử lý:
+ * 1. Tách 2 ký tự số đầu (tỉnh/thành phố)
+ * 2. Tách 1-2 ký tự chữ (seri)
+ * 3. Tách phần số còn lại
+ * 4. Ghép lại với dấu "-"
+ * 
+ * @param {string} value - Biển số xe thô từ input
+ * @returns {string} Biển số đã được format chuẩn
+ */
 export function formatPlateNumber(value) {
   if (!value) return '';
   
   // Lấy giá trị gốc và chuyển thành chữ hoa
   let raw = String(value).toUpperCase();
   
-  // Giữ lại dấu '-' ở cuối nếu user cố tình gõ
+  // Giữ lại dấu '-' ở cuối nếu user cố tình gõ (đang gõ dở)
   const endsWithHyphen = raw.endsWith('-');
   
   // Loại bỏ các ký tự không hợp lệ (chỉ giữ chữ cái, số, và dấu chấm)
   raw = raw.replace(/[^A-Z0-9.]/g, '');
   
-  // 1. 2 ký tự đầu tiên phải là số
+  // Bước 1: 2 ký tự đầu tiên phải là số (mã tỉnh/thành phố)
   let p1 = raw.substring(0, 2).replace(/[^0-9]/g, '');
-  if (p1.length < 2) return p1;
+  if (p1.length < 2) return p1; // Chưa đủ 2 số → trả về ngay
   
-  // 2. Ký tự tiếp theo là chữ cái (1 hoặc 2 chữ)
+  // Bước 2: Ký tự tiếp theo là chữ cái (seri, 1 hoặc 2 chữ)
   let restAfterP1 = raw.substring(p1.length);
   let letterMatch = restAfterP1.match(/^[A-Z]{1,2}/);
   let letters = letterMatch ? letterMatch[0] : '';
   
   if (letters.length === 0) {
-    // Nếu chưa gõ chữ cái, chỉ trả về p1
+    // Nếu chưa gõ chữ cái, chỉ trả về phần số
     return p1;
   }
   
-  // 3. Các số còn lại
+  // Bước 3: Các số còn lại (phần thân biển số)
   let restAfterLetters = restAfterP1.substring(letters.length);
   let digits = restAfterLetters.replace(/[^0-9.]/g, '');
   
   if (digits.length > 0) {
-    // Nếu bắt đầu gõ số sau phần chữ cái -> tự động chèn dấu '-'
+    // Nếu đã có số sau phần chữ → tự động chèn dấu '-'
     return `${p1}${letters}-${digits}`;
   } else {
     // Nếu chưa gõ số, nhưng người dùng cố tình gõ '-' thì giữ lại
@@ -66,6 +120,15 @@ export function formatPlateNumber(value) {
   }
 }
 
+// ========================= MIDDLEWARE VALIDATION =========================
+
+/**
+ * Middleware xác thực dữ liệu đăng ký tài khoản.
+ * Kiểm tra: fullName, email, password, confirmPassword, phoneNumber, plateNumber.
+ * Nếu hợp lệ, chuẩn hóa (trim, lowercase) và gắn lại vào req.body.
+ * 
+ * @route POST /api/auth/register
+ */
 export function validateRegister(req, res, next) {
   const errors = [];
 
@@ -123,6 +186,12 @@ export function validateRegister(req, res, next) {
   next();
 }
 
+/**
+ * Middleware xác thực dữ liệu đăng nhập.
+ * Kiểm tra: email và password không được để trống, email đúng format.
+ * 
+ * @route POST /api/auth/login
+ */
 export function validateLogin(req, res, next) {
   const errors = [];
 
@@ -147,6 +216,12 @@ export function validateLogin(req, res, next) {
   next();
 }
 
+/**
+ * Middleware xác thực dữ liệu quên mật khẩu.
+ * Kiểm tra: email hợp lệ.
+ * 
+ * @route POST /api/auth/forgot-password
+ */
 export function validateForgotPassword(req, res, next) {
   const email = trim(req.body.email).toLowerCase();
 
@@ -158,6 +233,12 @@ export function validateForgotPassword(req, res, next) {
   next();
 }
 
+/**
+ * Middleware xác thực dữ liệu đặt lại mật khẩu.
+ * Kiểm tra: token bắt buộc, newPassword (tối thiểu 6, tối đa 100 ký tự), confirmPassword khớp.
+ * 
+ * @route POST /api/auth/reset-password
+ */
 export function validateResetPassword(req, res, next) {
   const errors = [];
 
@@ -189,6 +270,12 @@ export function validateResetPassword(req, res, next) {
   next();
 }
 
+/**
+ * Middleware xác thực dữ liệu đăng nhập mạng xã hội (Google, Facebook).
+ * Yêu cầu ít nhất một trong: idToken (Google) hoặc accessToken (Facebook).
+ * 
+ * @route POST /api/auth/google, POST /api/auth/facebook
+ */
 export function validateSocialLogin(req, res, next) {
   const { idToken, accessToken } = req.body;
 
@@ -199,6 +286,12 @@ export function validateSocialLogin(req, res, next) {
   next();
 }
 
+/**
+ * Middleware xác thực dữ liệu tạo đặt chỗ (Reservation).
+ * Kiểm tra: vehicleType, reservationDate, startTime, endTime/duration, slotId.
+ * 
+ * @route POST /api/reservations
+ */
 export function validateCreateReservation(req, res, next) {
   const errors = [];
 
@@ -242,6 +335,14 @@ export function validateCreateReservation(req, res, next) {
   next();
 }
 
+/**
+ * Middleware xác thực dữ liệu check-in xe.
+ * Hỗ trợ 2 luồng:
+ * 1. Check-in bằng Booking Code hoặc ReservationId (chỉ cần mã đặt chỗ)
+ * 2. Check-in walk-in (cần driverId, plateNumber, vehicleTypeId, slotId)
+ * 
+ * @route POST /api/sessions/check-in
+ */
 export function validateCheckIn(req, res, next) {
   const errors = [];
 
@@ -312,6 +413,13 @@ export function validateCheckIn(req, res, next) {
   next();
 }
 
+/**
+ * Middleware xác thực dữ liệu check-out xe.
+ * Kiểm tra: sessionId (số nguyên dương), paymentMethod (trong danh sách cho phép).
+ * Các phương thức thanh toán cho phép: Cash, Card, Banking, Momo, VNPay, ZaloPay.
+ * 
+ * @route POST /api/sessions/check-out
+ */
 export function validateCheckOut(req, res, next) {
   const errors = [];
 
@@ -339,6 +447,13 @@ export function validateCheckOut(req, res, next) {
 
   next();
 }
+/**
+ * Middleware xác thực dữ liệu Staff check-in walk-in (xe vào trực tiếp, không đặt trước).
+ * Kiểm tra: plateNumber, vehicleTypeId, slotId (bắt buộc), driverId (tùy chọn).
+ * Nếu không có driverId, BE sẽ tự dùng guest driver.
+ * 
+ * @route POST /api/staff/walk-in
+ */
 export function validateStaffWalkIn(req, res, next) {
   const errors = []
 
@@ -378,7 +493,12 @@ export function validateStaffWalkIn(req, res, next) {
   next()
 }
 
-// ── Check-in booking: chỉ validate plateNumber (reservationId ở params) ──
+/**
+ * Middleware xác thực dữ liệu Staff check-in booking (xe có đặt chỗ trước).
+ * Chỉ validate plateNumber (reservationId nằm ở URL params).
+ * 
+ * @route POST /api/staff/booking-checkin/:reservationId
+ */
 export function validateStaffBookingCheckIn(req, res, next) {
   const errors = []
   const plateNumber = trim(req.body.plateNumber).toUpperCase()
@@ -393,7 +513,12 @@ export function validateStaffBookingCheckIn(req, res, next) {
   next()
 }
 
-// ── Checkout của Staff: sessionId nằm ở params, chỉ validate paymentMethod ──
+/**
+ * Middleware xác thực dữ liệu Staff check-out.
+ * sessionId nằm ở URL params (không phải body). Chỉ validate paymentMethod.
+ * 
+ * @route POST /api/staff/checkout/:sessionId
+ */
 export function validateStaffCheckOut(req, res, next) {
   const errors = []
 
@@ -417,7 +542,13 @@ export function validateStaffCheckOut(req, res, next) {
   next()
 }
 
-// ── Thu phụ trội: paymentMethod chỉ Cash | Banking ──
+/**
+ * Middleware xác thực dữ liệu xác nhận phụ thu (surcharge).
+ * Phụ thu chỉ chấp nhận thanh toán bằng: Cash hoặc Banking.
+ * sessionId lấy từ URL params.
+ * 
+ * @route POST /api/staff/surcharge/:sessionId
+ */
 export function validateConfirmSurcharge(req, res, next) {
   const sessionId = Number(req.params.sessionId)
   const paymentMethod = trim(req.body.paymentMethod)

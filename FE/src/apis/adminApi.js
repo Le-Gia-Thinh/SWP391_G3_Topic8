@@ -1,11 +1,14 @@
+/**
+ * FILE: adminApi.js
+ * MÔ TẢ: Tập hợp các API dành cho quyền Admin.
+ * Bao gồm: Quản lý người dùng, vai trò, quyền, cấu hình cơ sở hạ tầng bãi đỗ xe
+ * (Tòa nhà, Tầng, Khu vực, Vị trí đỗ) và Xem nhật ký hệ thống (Audit Logs).
+ */
+
 import authorizeAxios from '../utils/authorizeAxios'
 
 // authorizeAxios đã có baseURL kết thúc bằng /api → KHÔNG thêm /api ở đây.
 const BASE = '/admin'
-
-// Đặt false để gọi API thật (mặc định). Đổi true khi backend admin chưa sẵn sàng
-// để các trang admin tự dùng dữ liệu mẫu nội bộ (nếu trang có cài fallback).
-export const USE_MOCK = false
 
 /* ── Stats ───────────────────────────────────────────────────── */
 export const getAdminStatsAPI = () =>

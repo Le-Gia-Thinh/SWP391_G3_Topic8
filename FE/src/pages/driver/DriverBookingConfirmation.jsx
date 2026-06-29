@@ -1,3 +1,10 @@
+/**
+ * FILE: DriverBookingConfirmation.jsx
+ * MÔ TẢ: Trang Xác nhận Đặt chỗ thành công dành cho Driver.
+ * Hiển thị thông tin chi tiết về booking vừa tạo (mã booking, biển số, ô đỗ, thời gian),
+ * các lưu ý quan trọng và cung cấp chức năng Hủy đặt chỗ nếu cần.
+ */
+
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {

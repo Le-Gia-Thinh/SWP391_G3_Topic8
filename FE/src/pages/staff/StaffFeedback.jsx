@@ -1,3 +1,9 @@
+/**
+ * FILE: StaffFeedback.jsx
+ * MÔ TẢ: Trang Xem Đánh giá (Feedback) dành cho Staff.
+ * Xem tổng quan điểm đánh giá và danh sách phản hồi từ khách hàng.
+ */
+
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -77,7 +83,7 @@ const StaffFeedback = () => {
           <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">
             {t('staff.feedback.title')}
           </h1>
-          <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent drop-shadow-sm">
+          <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent drop-shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <Sparkles size={16} className="text-amber-500 animate-pulse" />
             {t('staff.feedback.subtitle')}
           </p>
@@ -88,7 +94,7 @@ const StaffFeedback = () => {
         {/* Cột trái: Thống kê tổng quan */}
         <div className="md:col-span-4 space-y-4">
           <div className="sticky top-6 space-y-4">
-            <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-6 shadow-sm">
+            <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
               <div className="text-center">
                 <p className="mb-2 text-sm font-bold uppercase tracking-widest text-slate-400">{t('staff.feedback.averageRating')}</p>
                 <div className="flex items-center justify-center gap-3">
@@ -124,9 +130,9 @@ const StaffFeedback = () => {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-900/20 p-5 shadow-sm">
+            <div className="rounded-2xl border border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-900/20 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/50">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-3xl bg-blue-100 dark:bg-blue-900/50">
                   <TrendingUp className="text-blue-600 dark:text-blue-400" size={24} />
                 </div>
                 <div>
@@ -149,7 +155,7 @@ const StaffFeedback = () => {
               <select
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50"
+                className="w-full rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/50"
               >
                 <option value="all">{t('staff.feedback.filterAll')}</option>
                 <option value="positive">{t('staff.feedback.filterPositive')}</option>
@@ -170,7 +176,7 @@ const StaffFeedback = () => {
               </div>
             ) : (
               filteredFeedbacks.map((f, idx) => (
-                <div key={f.RatingID || idx} className="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-5 shadow-sm transition-colors hover:border-blue-200 dark:hover:border-blue-800">
+                <div key={f.RatingID || idx} className="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-colors hover:border-blue-200 dark:hover:border-blue-800">
                   <div className="flex flex-col gap-4 sm:flex-row">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 font-bold text-white">
                       {f.DriverName?.charAt(0) || 'U'}
@@ -188,7 +194,7 @@ const StaffFeedback = () => {
                         </div>
 
                         <div className="flex flex-col items-start gap-1 sm:items-end">
-                          <div className="flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-300">
+                          <div className="flex items-center gap-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-300">
                             <Car size={14} />
                             {f.PlateNumber}
                           </div>
@@ -199,7 +205,7 @@ const StaffFeedback = () => {
                       </div>
 
                       {f.Comment && (
-                        <div className="mt-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 p-4 border border-slate-100 dark:border-slate-700/50">
+                        <div className="mt-4 rounded-3xl bg-slate-50 dark:bg-slate-900/50 p-4 border border-slate-100 dark:border-slate-700/50">
                           <p className="text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300 italic">
                             &quot;{f.Comment}&quot;
                           </p>

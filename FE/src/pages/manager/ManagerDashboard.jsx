@@ -1,3 +1,9 @@
+/**
+ * FILE: ManagerDashboard.jsx
+ * MÔ TẢ: Trang Bảng điều khiển (Dashboard) chính của Manager.
+ * Thống kê doanh thu, tỷ lệ lấp đầy, sức chứa hiện tại và danh sách xe đang trong bãi theo thời gian thực.
+ */
+
 // src/pages/manager/ManagerDashboard.jsx
 import { ArrowUpRight, Download, CarFront, RefreshCcw, Sparkles } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
@@ -92,10 +98,10 @@ const ManagerDashboard = () => {
   return (
     <div className="space-y-8 pb-10">
       {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">{t('manager.dashboard.title')}</h1>
-          <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-sm">
+          <p className="mt-2 flex items-center gap-2 text-sm font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent drop-shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <Sparkles size={16} className="text-amber-500 animate-pulse" />
             {t('manager.dashboard.greetingPre')} <span className="font-black text-blue-600">{displayName}</span>{t('manager.dashboard.greetingPost')}
           </p>
@@ -135,8 +141,8 @@ const ManagerDashboard = () => {
             style={{ transitionDelay: `${i * 60}ms` }}
           >
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">{item.title}</p>
-            <p className="text-3xl font-black text-slate-800 tracking-tight">{item.value}</p>
-            <div className={`mt-2 inline-flex rounded-lg bg-linear-to-br ${item.color} px-2.5 py-1 text-xs font-bold text-white`}>
+            <p className="text-3xl font-black text-slate-800 font-black tracking-tight">{item.value}</p>
+            <div className={`mt-2 inline-flex rounded-xl bg-linear-to-br ${item.color} px-2.5 py-1 text-xs font-bold text-white`}>
               {item.title === t('manager.dashboard.kpi.occupied') && kpis.totalSlots > 0
                 ? `${Math.round((item.value / kpis.totalSlots) * 100)}%`
                 : '—'
@@ -148,13 +154,13 @@ const ManagerDashboard = () => {
 
       <div className="grid gap-6 xl:grid-cols-3">
         {/* Tỷ lệ lấp đầy theo tầng */}
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm flex flex-col">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-lg font-bold text-slate-900">{t('manager.dashboard.occupancyTitle')}</h2>
               <p className="text-xs text-slate-500 font-medium mt-1">{t('manager.dashboard.occupancySubtitle')}</p>
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 border border-blue-100 px-3 py-1.5 text-sm font-bold text-blue-600 shadow-sm">
+            <span className="inline-flex items-center gap-1.5 rounded-3xl bg-blue-50 border border-blue-100 px-3 py-1.5 text-sm font-bold text-blue-600 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
               <ArrowUpRight size={16} />
               {kpis.totalSlots > 0 ? Math.round((kpis.occupied / kpis.totalSlots) * 100) : 0}%
             </span>
@@ -182,7 +188,7 @@ const ManagerDashboard = () => {
         </div>
 
         {/* Doanh thu 7 ngày */}
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm xl:col-span-2 flex flex-col">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] xl:col-span-2 flex flex-col">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
               <h2 className="text-lg font-bold text-slate-900">{t('manager.dashboard.revenue7DaysTitle')}</h2>
@@ -244,7 +250,7 @@ const ManagerDashboard = () => {
 
       <div className="grid gap-6 xl:grid-cols-3">
         {/* Cơ cấu loại xe */}
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm flex flex-col">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
           <div className="flex items-center gap-2 mb-6">
             <CarFront className="text-blue-500" size={24} />
             <h2 className="text-lg font-bold text-slate-900">{t('manager.dashboard.vehicleBreakdownTitle')}</h2>
@@ -254,7 +260,7 @@ const ManagerDashboard = () => {
               const pct = Math.round((v.Count / totalVehicles) * 100)
               return (
                 <div key={v.VehicleCode || idx}>
-                  <div className="flex items-center justify-between text-sm font-bold text-slate-700 mb-2">
+                  <div className="flex items-center justify-between text-sm font-bold text-slate-700 font-bold mb-2">
                     <span>{v.VehicleName}</span>
                     <span className="bg-slate-100 px-2 py-0.5 rounded-md">{pct}%</span>
                   </div>
@@ -273,16 +279,16 @@ const ManagerDashboard = () => {
         </div>
 
         {/* Xe vào gần đây */}
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm xl:col-span-2">
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] xl:col-span-2">
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-900">{t('manager.dashboard.recentCheckInsTitle')}</h2>
               <p className="text-xs text-slate-500 font-medium mt-1">{t('manager.dashboard.realDataSubtitle')}</p>
             </div>
           </div>
-          <div className="overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+              <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
                 <tr>
                   <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colSession')}</th>
                   <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colPlate')}</th>
@@ -294,11 +300,11 @@ const ManagerDashboard = () => {
                 {recentCheckIns.length > 0 ? recentCheckIns.map((row) => (
                   <tr key={row.SessionID} className="hover:bg-blue-50/50 transition-colors cursor-pointer">
                     <td className="px-5 py-4 font-bold text-slate-900">{row.SessionCode}</td>
-                    <td className="px-5 py-4 font-semibold text-slate-700">
+                    <td className="px-5 py-4 font-semibold text-slate-700 font-bold">
                       <span className="bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">{row.PlateNumber}</span>
                     </td>
                     <td className="px-5 py-4 font-bold text-blue-600">{row.SlotCode}</td>
-                    <td className="px-5 py-4 font-medium text-slate-500">
+                    <td className="px-5 py-4 font-medium text-slate-500 font-medium">
                       {row.EntryTime ? new Date(row.EntryTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—'}
                     </td>
                   </tr>
@@ -314,16 +320,16 @@ const ManagerDashboard = () => {
       </div>
 
       {/* Thanh toán gần nhất */}
-      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900">{t('manager.dashboard.recentPaymentsTitle')}</h2>
             <p className="text-xs text-slate-500 font-medium mt-1">{t('manager.dashboard.realDataLabel')}</p>
           </div>
         </div>
-        <div className="overflow-hidden rounded-2xl border border-slate-100 shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
+            <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-100">
               <tr>
                 <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colSession')}</th>
                 <th className="px-5 py-4 font-bold tracking-wider uppercase text-[11px]">{t('manager.dashboard.colPlate')}</th>
@@ -336,7 +342,7 @@ const ManagerDashboard = () => {
               {recentPayments.length > 0 ? recentPayments.map((row) => (
                 <tr key={row.PaymentID} className="hover:bg-blue-50/50 transition-colors cursor-pointer">
                   <td className="px-5 py-4 font-bold text-slate-900">{row.SessionCode}</td>
-                  <td className="px-5 py-4 font-semibold text-slate-700">{row.PlateNumber}</td>
+                  <td className="px-5 py-4 font-semibold text-slate-700 font-bold">{row.PlateNumber}</td>
                   <td className="px-5 py-4 font-black text-slate-900">
                     {Number(row.Amount).toLocaleString('vi-VN')}đ
                   </td>
@@ -350,7 +356,7 @@ const ManagerDashboard = () => {
                       {t(`manager.dashboard.paymentStatus.${row.PaymentStatus}`, row.PaymentStatus)}
                     </span>
                   </td>
-                  <td className="px-5 py-4 font-medium text-slate-500">
+                  <td className="px-5 py-4 font-medium text-slate-500 font-medium">
                     {row.PaymentTime
                       ? new Date(row.PaymentTime).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
                       : '—'

@@ -1,3 +1,9 @@
+/**
+ * FILE: VerifyEmailPages.jsx
+ * MÔ TẢ: Các trang liên quan đến việc Xác thực Email sau khi đăng ký (Pending, Success, Error).
+ * Polling API để kiểm tra trạng thái xác thực và hỗ trợ gửi lại email xác thực.
+ */
+
 // src/pages/VerifyEmailPages.jsx
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
