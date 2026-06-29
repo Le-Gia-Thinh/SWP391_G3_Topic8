@@ -405,6 +405,7 @@ CREATE TABLE DriverVehicles (
     VehicleColor  NVARCHAR(50)  NULL,
     IsActive      BIT NOT NULL DEFAULT 1,
     IsDefault     BIT NOT NULL DEFAULT 0,
+    IsVIPVehicle  BIT NOT NULL DEFAULT 0,
     CreatedAt     DATETIME NOT NULL DEFAULT GETDATE(),
     UpdatedAt     DATETIME NOT NULL DEFAULT GETDATE(),
     CONSTRAINT FK_DriverVehicles_Driver      FOREIGN KEY (DriverID)      REFERENCES Users(UserID),
@@ -1052,9 +1053,9 @@ FROM VehicleTypes;
 GO
 
 INSERT INTO SubscriptionPlans (PlanID,Name,BasePrice,Description) VALUES
-('basic',   N'Cơ Bản',  99000,  N'5 lần miễn phí mỗi tháng, sau đó giảm 10% cho các lần tiếp theo.'),
-('pro',     N'Nâng Cao',199000, N'15 lần miễn phí mỗi tháng, sau đó giảm 25% cho các lần tiếp theo.'),
-('premium', N'Cao Cấp', 399000, N'Miễn phí đỗ xe hoàn toàn, không giới hạn số lượt mỗi tháng.');
+('basic',   N'Cơ Bản',  99000,  N'5 phiên miễn phí mỗi tháng (1 phiên = 4 tiếng), sau đó giảm 10%. Áp dụng cho xe Mặc định.'),
+('pro',     N'Nâng Cao',199000, N'15 phiên miễn phí mỗi tháng (1 phiên = 4 tiếng), sau đó giảm 25%. Áp dụng cho xe Mặc định.'),
+('premium', N'Cao Cấp', 399000, N'300 phiên miễn phí mỗi tháng (~1200 giờ). Đăng ký tối đa 2 xe mặc định miễn phí.');
 GO
 
 /* ===================================================================

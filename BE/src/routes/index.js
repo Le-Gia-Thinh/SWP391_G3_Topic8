@@ -239,6 +239,13 @@ router.patch(
   vehicleController.setDefaultVehicle
 );
 
+router.patch(
+  "/driver/vehicles/:id/vip",
+  isAuthorized,
+  isDriver,
+  vehicleController.toggleVIPVehicle
+);
+
 // Driver Ratings
 router.get(
   "/driver/ratings",

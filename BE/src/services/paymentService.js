@@ -67,7 +67,7 @@ async function calcFeeV2(pool, vehicleTypeId, entryTime) {
 }
 
 // ── Tính giảm giá từ gói Hội viên ──────────────────────────────
-async function applySubscriptionDiscount(pool, driverId, baseFee) {
+export async function applySubscriptionDiscount(pool, driverId, baseFee, sessionId) {
     // 1. Lấy gói Active hiện tại
     const subRes = await pool.request()
         .input('UserID', sql.Int, driverId)
@@ -84,42 +84,93 @@ async function applySubscriptionDiscount(pool, driverId, baseFee) {
     }
 
     const sub = subRes.recordset[0];
+
+    // Kiểm tra xem xe đang checkout có phải xe VIP hoặc Mặc Định không
+    if (sessionId) {
+        const vehicleRes = await pool.request()
+            .input('SessionID', sql.Int, sessionId)
+            .query(`
+                SELECT dv.IsVIPVehicle, dv.IsDefault 
+                FROM ParkingSessions ps
+                JOIN DriverVehicles dv ON ps.PlateNumber = dv.PlateNumber
+                WHERE ps.SessionID = @SessionID
+            `);
+        const isVIP = vehicleRes.recordset[0]?.IsVIPVehicle || false;
+        const isDefault = vehicleRes.recordset[0]?.IsDefault || false;
+
+        if (!isVIP && !isDefault) {
+            // Không phải xe VIP hay Mặc định thì trả full tiền
+            return { finalFee: baseFee, discountPercent: 0, planId: sub.PlanID, sessionCount: 0 };
+        }
+    }
     
-    // 2. Đếm số lượt đã đỗ trong thời gian gói
-    const countRes = await pool.request()
+    // 2. Tính số blocks 4 tiếng đã sử dụng trong tháng từ các phiên ĐÃ HOÀN THÀNH
+    const pastCountRes = await pool.request()
         .input('DriverID', sql.Int, driverId)
-        .input('StartDate', sql.DateTime, sub.StartDate)
-        .input('EndDate', sql.DateTime, sub.EndDate)
         .query(`
-            SELECT COUNT(*) as SessionCount
+            SELECT ISNULL(SUM(CEILING(DATEDIFF(MINUTE, EntryTime, ExitTime) / 240.0)), 0) as PastBlocks
             FROM ParkingSessions
             WHERE DriverID = @DriverID 
+              AND SessionStatus = 'Completed'
               AND MONTH(EntryTime) = MONTH(GETDATE())
               AND YEAR(EntryTime) = YEAR(GETDATE())
         `);
         
-    const sessionCount = countRes.recordset[0].SessionCount; // bao gồm cả lượt hiện tại đang Active
-    let discountPercent = 0;
+    const pastBlocksUsed = pastCountRes.recordset[0].PastBlocks || 0;
+
+    // 3. Tính số blocks 4 tiếng của phiên HIỆN TẠI (đang checkout)
+    const currentCountRes = await pool.request()
+        .input('DriverID', sql.Int, driverId)
+        .query(`
+            SELECT ISNULL(CEILING(DATEDIFF(MINUTE, EntryTime, GETDATE()) / 240.0), 0) as CurrentBlocks
+            FROM ParkingSessions
+            WHERE DriverID = @DriverID AND SessionStatus = 'Active'
+        `);
+        
+    // Đảm bảo phiên hiện tại luôn tính ít nhất là 1 block để tránh chia cho 0
+    const currentBlocks = Math.max(1, currentCountRes.recordset[0]?.CurrentBlocks || 1);
+
+    // 4. Cấu hình hạn mức theo gói
+    let limitBlocks = 0;
+    let fallbackDiscount = 0;
 
     if (sub.PlanID === 'basic') {
-        if (sessionCount <= 5) discountPercent = 100;
-        else discountPercent = 10;
+        limitBlocks = 5;
+        fallbackDiscount = 10;
     } else if (sub.PlanID === 'pro') {
-        if (sessionCount <= 15) discountPercent = 100;
-        else discountPercent = 25;
+        limitBlocks = 15;
+        fallbackDiscount = 25;
     } else if (sub.PlanID === 'premium') {
-        discountPercent = 100; // Không giới hạn
+        limitBlocks = 300; // Giới hạn 300 blocks (1200 giờ) cho VIP
+        fallbackDiscount = 0; // Vượt quá thì trả full tiền
     }
 
-    let finalFee = baseFee - (baseFee * discountPercent / 100);
+    // 5. Tính toán phân bổ phí
+    const remainingFreeBlocks = Math.max(0, limitBlocks - pastBlocksUsed);
+    const freeBlocksApplicable = Math.min(currentBlocks, remainingFreeBlocks);
+    const paidBlocks = Math.max(0, currentBlocks - freeBlocksApplicable);
+
+    // Tính tỷ lệ tiền cho phần được miễn phí và phần phải trả
+    let freePortionFee = baseFee * (freeBlocksApplicable / currentBlocks);
+    let paidPortionFee = baseFee * (paidBlocks / currentBlocks);
+    
+    // Áp dụng giảm giá cho phần phải trả
+    let finalFee = paidPortionFee * (1 - fallbackDiscount / 100);
+
     if (finalFee > 0 && finalFee < 2000) finalFee = 2000;
     else if (finalFee < 0) finalFee = 0;
+
+    // Tính lại phần trăm giảm giá tổng thể để return (dành cho client hiển thị)
+    let discountPercent = 0;
+    if (baseFee > 0) {
+        discountPercent = Math.round(((baseFee - finalFee) / baseFee) * 100);
+    }
 
     return { 
         finalFee: Math.round(finalFee), 
         discountPercent, 
         planId: sub.PlanID,
-        sessionCount
+        sessionCount: currentBlocks
     };
 }
 
@@ -227,7 +278,7 @@ export async function createPaymentService(sessionId, driverId) {
     const pricingTable = await getPricingTable(pool, session.VehicleTypeID)
 
     // Áp dụng giảm giá Member
-    const { finalFee: amount, discountPercent, planId, sessionCount } = await applySubscriptionDiscount(pool, driverId, baseFee);
+    const { finalFee: amount, discountPercent, planId, sessionCount } = await applySubscriptionDiscount(pool, driverId, baseFee, sessionId);
 
     if (amount === 0) {
         // Miễn phí hoàn toàn => Mark prepaid directly without PayOS
