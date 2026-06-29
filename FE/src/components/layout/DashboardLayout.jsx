@@ -11,7 +11,7 @@ import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 
 const DashboardLayout = ({ links, roleName, profileLink }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
 
   // Find current title based on active link
@@ -24,12 +24,13 @@ const DashboardLayout = ({ links, roleName, profileLink }) => {
         links={links}
         isOpen={sidebarOpen}
         setIsOpen={setSidebarOpen}
+        onHoverEnter={() => setSidebarOpen(true)}
+        onHoverLeave={() => setSidebarOpen(false)}
         roleName={roleName}
       />
 
       <div className="flex flex-1 flex-col overflow-hidden relative">
         <Navbar
-          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           title={title}
           profileLink={profileLink}
         />

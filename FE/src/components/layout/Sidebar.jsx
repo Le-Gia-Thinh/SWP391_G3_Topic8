@@ -11,7 +11,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
-const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
+const Sidebar = ({ links, isOpen, setIsOpen, onHoverEnter, onHoverLeave, roleName }) => {
   const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
@@ -35,6 +35,8 @@ const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
 
       {/* Sidebar */}
       <aside
+        onMouseEnter={() => onHoverEnter?.()}
+        onMouseLeave={() => onHoverLeave?.()}
         className={`fixed inset-y-0 left-0 z-50 flex shrink-0 flex-col border-r border-slate-200/60 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out overflow-hidden lg:static lg:translate-x-0 ${isOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full lg:w-20'
         }`}
       >
@@ -87,16 +89,16 @@ const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
                   to={link.path}
                   onClick={() => setIsOpen(false)}
                   title={!isOpen ? linkLabel : ''}
-                  className={`group flex items-center justify-between rounded-xl py-3 transition-all whitespace-nowrap ${isActive
+                  className={`group flex items-center justify-between rounded-xl py-3 transition-all duration-200 ease-out whitespace-nowrap ${isActive
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                    : 'text-slate-500 hover:bg-blue-600 hover:text-white hover:shadow-md hover:shadow-blue-500/20 dark:text-gray-400'
                   } ${isOpen ? 'px-3' : 'lg:justify-center lg:px-0 px-3'}`}
                 >
                   <div className={`flex items-center ${isOpen ? 'gap-3' : 'lg:gap-0'}`}>
-                    <div className="flex w-5 h-5 shrink-0 items-center justify-center transition-transform">
+                    <div className="flex w-5 h-5 shrink-0 items-center justify-center transition-transform duration-200 group-hover:scale-110">
                       <Icon
                         size={20}
-                        className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-900'}
+                        className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}
                       />
                     </div>
                     <span className={`font-semibold transition-all duration-300 overflow-hidden ${isOpen ? 'opacity-100 ml-3 w-32' : 'lg:opacity-0 lg:w-0'}`}>
@@ -105,7 +107,7 @@ const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
                   </div>
                   {link.badge && (
                     <span
-                      className={`rounded-full py-0.5 text-xs font-bold transition-all duration-300 overflow-hidden ${isActive ? 'bg-white/20 text-white' : 'bg-red-50 text-red-600 border border-red-100'
+                      className={`rounded-full py-0.5 text-xs font-bold transition-all duration-300 overflow-hidden ${isActive ? 'bg-white/20 text-white' : 'bg-red-50 text-red-600 border border-red-100 group-hover:bg-white/20 group-hover:text-white group-hover:border-transparent'
                       } ${isOpen ? 'opacity-100 px-2' : 'lg:opacity-0 lg:w-0'}`}
                     >
                       {link.badge}
