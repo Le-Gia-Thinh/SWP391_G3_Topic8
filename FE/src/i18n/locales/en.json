@@ -783,7 +783,7 @@
       "formTitleEdit": "Update vehicle",
       "formTitleAdd": "Add new vehicle",
       "plateLabel": "Plate number *",
-      "platePlaceholder": "e.g. 29A-12345",
+      "platePlaceholder": "e.g. 51A-123.45",
       "typeLabel": "Vehicle type *",
       "typeSelect": "-- Select type --",
       "brandLabel": "Brand",

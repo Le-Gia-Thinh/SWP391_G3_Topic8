@@ -223,12 +223,22 @@ const WalkInContent = () => {
   const selectedSlot = allSlots.find(s => s.SlotID === selSlotId)
   const plateValid = isValidPlate(plateNumber)
 
+  const normPlate = p => (p || '').toUpperCase().replace(/[^0-9A-Z]/g, '')
+
   useEffect(() => {
-    if (plateValid) {
-      if (plateNumber.includes('99')) setAiPlateInsight({ type: 'error', message: 'Xe đang trong bãi, không thể Check-in' })
-      else if (plateNumber.includes('88')) setAiPlateInsight({ type: 'warning', message: 'Xe có lịch hẹn 16:00, đang đến quá sớm' })
-      else setAiPlateInsight(null)
-    } else { setAiPlateInsight(null) }
+    if (!plateValid) { setAiPlateInsight(null); return }
+    let cancelled = false
+    staffApi.searchSessions({ keyword: plateNumber, status: 'Active' })
+      .then(res => {
+        if (cancelled) return
+        const sessions = res?.data || []
+        const active = sessions.find(s => normPlate(s.PlateNumber) === normPlate(plateNumber))
+        setAiPlateInsight(active
+          ? { type: 'error', message: 'Xe này đang có phiên đỗ xe đang hoạt động trong bãi.' }
+          : null)
+      })
+      .catch(() => { if (!cancelled) setAiPlateInsight(null) })
+    return () => { cancelled = true }
   }, [plateNumber, plateValid])
 
   const step = !selBuilding ? 1 : !selFloor ? 2 : !selZone ? 3 : !selSlotId ? 4 : 5
@@ -622,6 +632,12 @@ const WalkInContent = () => {
 /* ═══════════════════════════════════════════════════════════════
    BOOKING CONTENT
 ═══════════════════════════════════════════════════════════════ */
+const DATE_SHORTCUTS = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'today', label: 'Hôm nay' },
+  { key: 'tomorrow', label: 'Ngày mai' },
+]
+
 const BookingContent = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -630,8 +646,15 @@ const BookingContent = () => {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(false)
   const [searchTrigger, setSearchTrigger] = useState(0)
+  const [dateShortcut, setDateShortcut] = useState('today')
+  const [vehicleTypeId, setVehicleTypeId] = useState('all')
+  const [vehicleTypes, setVehicleTypes] = useState([])
   const keywordRef = useRef(keyword)
   useEffect(() => { keywordRef.current = keyword }, [keyword])
+
+  useEffect(() => {
+    staffApi.getVehicleTypes().then(res => { if (res.success) setVehicleTypes(res.data) }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -641,12 +664,23 @@ const BookingContent = () => {
           const params = {}
           if (activeTab !== 'all') params.status = activeTab
           if (keywordRef.current.trim()) params.keyword = keywordRef.current.trim()
+          if (vehicleTypeId !== 'all') params.vehicleTypeId = vehicleTypeId
+          const toLocalDate = (d) => d.toLocaleDateString('en-CA') // YYYY-MM-DD in local timezone
+          if (dateShortcut === 'today') {
+            const today = new Date()
+            params.dateFrom = toLocalDate(today)
+            params.dateTo = toLocalDate(today)
+          } else if (dateShortcut === 'tomorrow') {
+            const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+            params.dateFrom = toLocalDate(tomorrow)
+            params.dateTo = toLocalDate(tomorrow)
+          }
           const res = await staffApi.getBookingQueue(params)
           if (!cancelled && res.success) setBookings(res.data)
         } catch {} finally { if (!cancelled) setLoading(false) }
       })()
     return () => { cancelled = true }
-  }, [activeTab, searchTrigger])
+  }, [activeTab, searchTrigger, dateShortcut, vehicleTypeId])
 
   const STATUS_BADGE = {
     Reserved: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
@@ -664,20 +698,45 @@ const BookingContent = () => {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 space-y-4">
+        {/* Row 1: keyword search */}
         <div className="flex gap-4">
           <div className="relative flex-1">
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input type="text" value={keyword}
               onChange={e => setKeyword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && setSearchTrigger(t => t + 1)}
-              placeholder="Tìm theo Biển số hoặc Mã đặt chỗ..."
+              placeholder="Tìm theo Tên, SĐT, Mã đặt chỗ, Vị trí đỗ..."
               className="w-full pl-12 pr-4 py-3.5 rounded-2xl border-2 border-slate-100 bg-slate-50 text-sm font-bold focus:outline-none focus:border-blue-400 focus:bg-white transition-all shadow-sm" />
           </div>
           <button onClick={() => setSearchTrigger(t => t + 1)} disabled={loading}
             className="px-8 py-3.5 bg-slate-800 text-white font-black rounded-2xl text-sm hover:bg-slate-900 disabled:opacity-50 transition-colors shadow-md">
             Tìm kiếm
           </button>
+        </div>
+        {/* Row 2: date shortcut + vehicle type */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+            {DATE_SHORTCUTS.map(s => (
+              <button key={s.key} onClick={() => setDateShortcut(s.key)}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${dateShortcut === s.key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <select value={vehicleTypeId} onChange={e => setVehicleTypeId(e.target.value)}
+            className="px-4 py-2.5 rounded-xl border-2 border-slate-100 bg-slate-50 text-xs font-black text-slate-700 focus:outline-none focus:border-blue-400 focus:bg-white transition-all cursor-pointer">
+            <option value="all">Tất cả loại xe</option>
+            {vehicleTypes.map(vt => (
+              <option key={vt.VehicleTypeID} value={String(vt.VehicleTypeID)}>{vt.VehicleName}</option>
+            ))}
+          </select>
+          {(dateShortcut !== 'all' || vehicleTypeId !== 'all' || keyword.trim()) && (
+            <button onClick={() => { setDateShortcut('all'); setVehicleTypeId('all'); setKeyword(''); setSearchTrigger(t => t + 1) }}
+              className="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors underline">
+              Xóa filter
+            </button>
+          )}
         </div>
       </div>
 
@@ -706,7 +765,7 @@ const BookingContent = () => {
                 <tr className="bg-slate-50 text-[10px] text-slate-400 font-black uppercase tracking-widest text-left">
                   <th className="py-4 px-6 rounded-l-2xl">Mã vé</th>
                   <th className="py-4 px-6">Tài xế & Liên hệ</th>
-                  <th className="py-4 px-6">Biển số xe</th>
+                  <th className="py-4 px-6">Loại xe</th>
                   <th className="py-4 px-6">Vị trí đỗ</th>
                   <th className="py-4 px-6">Khung giờ đặt</th>
                   <th className="py-4 px-6">Trạng thái</th>

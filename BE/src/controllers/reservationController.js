@@ -37,6 +37,7 @@ function sendClientError(res, err) {
     return res.status(status).json({
       success: false,
       message: err.message,
+      code: err.code,
     });
   }
 

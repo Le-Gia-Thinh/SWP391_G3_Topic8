@@ -202,18 +202,25 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
   const [aiPlateInsight, setAiPlateInsight] = useState(null)
   const [aiWalkInInsight, setAiWalkInInsight] = useState(null)
 
+  const normPlate = p => (p || '').toUpperCase().replace(/[^0-9A-Z]/g, '')
+
   useEffect(() => {
     if (!plateNumber || plateNumber.length < 8) {
       setAiPlateInsight(null)
       return
     }
-    if (plateNumber.includes('99')) {
-      setAiPlateInsight({ type: 'error', message: 'Hệ thống báo xe này đang BÊN TRONG bãi (Lỗi chưa out).' })
-    } else if (plateNumber.includes('88')) {
-      setAiPlateInsight({ type: 'warning', message: 'Biển số có lịch sử trễ giờ check-out.' })
-    } else {
-      setAiPlateInsight(null)
-    }
+    let cancelled = false
+    staffApi.searchSessions({ keyword: plateNumber, status: 'Active' })
+      .then(res => {
+        if (cancelled) return
+        const sessions = res?.data || []
+        const active = sessions.find(s => normPlate(s.PlateNumber) === normPlate(plateNumber))
+        setAiPlateInsight(active
+          ? { type: 'error', message: 'Xe này đang có phiên đỗ xe đang hoạt động trong bãi.' }
+          : null)
+      })
+      .catch(() => { if (!cancelled) setAiPlateInsight(null) })
+    return () => { cancelled = true }
   }, [plateNumber])
 
   useEffect(() => {
@@ -221,13 +228,18 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
       setAiWalkInInsight(null)
       return
     }
-    if (walkInPlate.includes('99')) {
-      setAiWalkInInsight({ type: 'error', message: 'Hệ thống báo xe này đang BÊN TRONG bãi.' })
-    } else if (walkInPlate.includes('88')) {
-      setAiWalkInInsight({ type: 'warning', message: 'Xe có lịch sử nợ phí hệ thống.' })
-    } else {
-      setAiWalkInInsight(null)
-    }
+    let cancelled = false
+    staffApi.searchSessions({ keyword: walkInPlate, status: 'Active' })
+      .then(res => {
+        if (cancelled) return
+        const sessions = res?.data || []
+        const active = sessions.find(s => normPlate(s.PlateNumber) === normPlate(walkInPlate))
+        setAiWalkInInsight(active
+          ? { type: 'error', message: 'Xe này đang có phiên đỗ xe đang hoạt động trong bãi.' }
+          : null)
+      })
+      .catch(() => { if (!cancelled) setAiWalkInInsight(null) })
+    return () => { cancelled = true }
   }, [walkInPlate])
 
   // Slot selection state (for walk-in early override)
@@ -341,7 +353,8 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
     setWalkInPlateError('')
     setCancellingWalkIn(true)
     try {
-      const data = await staffApi.cancelAndWalkIn(booking.ReservationID, walkInPlate.trim(), finalSlotId)
+      const result = await staffApi.cancelAndWalkIn(booking.ReservationID, walkInPlate.trim(), finalSlotId)
+      const data = result?.data
       navigate('/staff/checkin-success', {
         state: {
           actionType: 'walkin-checkin',
@@ -1243,16 +1256,23 @@ const StaffVerifyBooking = () => {
     finally { setSearching(false) }
   }
 
-  const handleCheckIn = async (booking, plateNumber) => { // ✅ nhận thêm plateNumber
+  const handleCheckIn = async (booking, plateNumber) => {
     setChecking(true)
     try {
-      await staffApi.checkInBooking(booking.ReservationID, plateNumber) // ✅ truyền xuống
+      const result = await staffApi.checkInBooking(booking.ReservationID, plateNumber)
+      const data = result?.data
       toast.success(t('staff.verifyBooking.checkinSuccess', { code: booking.BookingCode }))
       navigate('/staff/checkin-success', {
         state: {
           actionType: 'booking-checkin',
-          sessionCode: null,
-          session: null
+          sessionCode: data?.sessionCode || null,
+          session: {
+            SessionCode: data?.sessionCode,
+            PlateNumber: data?.session?.PlateNumber || plateNumber,
+            VehicleName: booking?.VehicleName,
+            SlotCode: booking?.SlotCode,
+            EntryTime: data?.session?.EntryTime,
+          }
         }
       })
     } catch (err) {
