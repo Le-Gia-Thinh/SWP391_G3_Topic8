@@ -104,11 +104,29 @@ const DriverLayout = () => {
           <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800">
             <Menu size={24} />
           </button>
-          <Link to="/driver/home" onClick={closeAllDropdowns} className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:text-blue-400">
-              <Car size={20} />
+          <Link to="/driver/home" onClick={closeAllDropdowns} className="flex items-center gap-3 group">
+            {/* Premium Icon */}
+            <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-500/30 group-hover:scale-105 group-hover:shadow-blue-500/50 transition-all duration-300 ring-2 ring-white/20">
+              <div className="absolute inset-0 bg-white/20 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm" />
+              <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6 sm:w-7 sm:h-7 drop-shadow-md z-10 relative" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 19.5v-15h5a4.5 4.5 0 0 1 0 9H9" />
+                <path d="M14 4.5A4.5 4.5 0 0 1 18.5 9" className="stroke-cyan-300 opacity-70" />
+                <circle cx="18" cy="18" r="2.5" className="fill-green-400 stroke-white dark:stroke-slate-800" strokeWidth="1.5" />
+              </svg>
             </div>
-            <span className="hidden sm:block text-blue-600 dark:text-blue-400 font-black text-2xl">PBMS</span>
+            
+            {/* Typography */}
+            <div className="hidden sm:flex flex-col justify-center ml-2">
+              <div className="flex items-baseline leading-none">
+                <span className="text-[26px] font-black text-slate-800 dark:text-white tracking-tighter">Smart</span>
+                <span className="text-[26px] font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500 tracking-tighter">Park</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 ml-1 mb-1 animate-pulse" />
+              </div>
+              <span className="text-[9.5px] font-black tracking-[0.25em] text-slate-400 dark:text-slate-500 uppercase mt-1.5 flex items-center gap-2">
+                Driver Portal
+                <span className="w-8 h-[2px] bg-gradient-to-r from-slate-300 to-transparent dark:from-slate-600 rounded-full"></span>
+              </span>
+            </div>
           </Link>
           <div className="relative hidden sm:block" ref={locationRef}>
             <button onClick={() => setIsLocationOpen(prev => !prev)} className="flex items-center gap-2 rounded-xl p-2 text-sm font-bold text-blue-600 dark:text-blue-400">

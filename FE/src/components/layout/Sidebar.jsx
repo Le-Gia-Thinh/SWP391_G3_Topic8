@@ -42,16 +42,23 @@ const Sidebar = ({ links, isOpen, setIsOpen, onHoverEnter, onHoverLeave, roleNam
       >
         <div className={`flex h-20 items-center border-b border-slate-100 dark:border-gray-800 ${isOpen ? 'justify-between px-6' : 'lg:justify-center px-6 lg:px-0'}`}>
           <Link to={links[0]?.path || '/'} onClick={() => setIsOpen(false)} className={`flex items-center hover:opacity-80 transition-opacity whitespace-nowrap overflow-hidden ${isOpen ? 'gap-3' : 'lg:gap-0'}`}>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-lg font-black text-white shadow-lg shadow-blue-500/30 border border-blue-400/20">
-              P
+            <div className={`flex shrink-0 items-center justify-center transition-all duration-300 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-500/30 border border-blue-400/20 ring-2 ring-white/20 ${isOpen ? 'h-11 w-11' : 'h-10 w-10'}`}>
+              <svg viewBox="0 0 24 24" fill="none" className={`drop-shadow-md z-10 relative transition-all duration-300 ${isOpen ? 'w-6 h-6' : 'w-5 h-5'}`} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 19.5v-15h5a4.5 4.5 0 0 1 0 9H9" />
+                <path d="M14 4.5A4.5 4.5 0 0 1 18.5 9" className="stroke-cyan-300 opacity-70" />
+                <circle cx="18" cy="18" r="2.5" className="fill-green-400 stroke-white dark:stroke-slate-800" strokeWidth="1.5" />
+              </svg>
             </div>
-            <div className={`transition-all duration-300 ${isOpen ? 'opacity-100 w-48' : 'lg:opacity-0 lg:w-0'}`}>
-              <span className="text-xl font-black tracking-tight text-slate-800 dark:text-white">
-                Smart<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:text-blue-500">Park</span>
-              </span>
+            <div className={`transition-all duration-300 ${isOpen ? 'opacity-100 w-48 ml-1' : 'lg:opacity-0 lg:w-0'}`}>
+              <div className="flex items-baseline leading-none">
+                <span className="text-[22px] font-black tracking-tighter text-slate-800 dark:text-white">Smart</span>
+                <span className="text-[22px] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Park</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 ml-1 mb-1 animate-pulse" />
+              </div>
               {roleName && (
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                <span className="flex items-center gap-2 text-[9px] mt-1 font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
                   {roleName} Portal
+                  <span className="w-8 h-[2px] bg-gradient-to-r from-slate-300 to-transparent dark:from-slate-600 rounded-full"></span>
                 </span>
               )}
             </div>
