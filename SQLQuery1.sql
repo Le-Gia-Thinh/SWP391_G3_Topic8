@@ -405,7 +405,6 @@ CREATE TABLE DriverVehicles (
     VehicleColor  NVARCHAR(50)  NULL,
     IsActive      BIT NOT NULL DEFAULT 1,
     IsDefault     BIT NOT NULL DEFAULT 0,
-    IsVIPVehicle  BIT NOT NULL DEFAULT 0,
     CreatedAt     DATETIME NOT NULL DEFAULT GETDATE(),
     UpdatedAt     DATETIME NOT NULL DEFAULT GETDATE(),
     CONSTRAINT FK_DriverVehicles_Driver      FOREIGN KEY (DriverID)      REFERENCES Users(UserID),

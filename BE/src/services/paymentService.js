@@ -85,21 +85,21 @@ export async function applySubscriptionDiscount(pool, driverId, baseFee, session
 
     const sub = subRes.recordset[0];
 
-    // Kiểm tra xem xe đang checkout có phải xe VIP hoặc Mặc Định không
+    // Kiểm tra xem xe đang checkout có phải xe Mặc Định không
     if (sessionId) {
         const vehicleRes = await pool.request()
             .input('SessionID', sql.Int, sessionId)
             .query(`
-                SELECT dv.IsVIPVehicle, dv.IsDefault 
+                SELECT dv.IsDefault 
                 FROM ParkingSessions ps
                 JOIN DriverVehicles dv ON ps.PlateNumber = dv.PlateNumber
+                    AND ps.DriverID = dv.DriverID
                 WHERE ps.SessionID = @SessionID
             `);
-        const isVIP = vehicleRes.recordset[0]?.IsVIPVehicle || false;
         const isDefault = vehicleRes.recordset[0]?.IsDefault || false;
 
-        if (!isVIP && !isDefault) {
-            // Không phải xe VIP hay Mặc định thì trả full tiền
+        if (!isDefault) {
+            // Không phải xe Mặc định thì trả full tiền (không áp dụng giảm giá hội viên)
             return { finalFee: baseFee, discountPercent: 0, planId: sub.PlanID, sessionCount: 0 };
         }
     }
@@ -120,11 +120,11 @@ export async function applySubscriptionDiscount(pool, driverId, baseFee, session
 
     // 3. Tính số blocks 4 tiếng của phiên HIỆN TẠI (đang checkout)
     const currentCountRes = await pool.request()
-        .input('DriverID', sql.Int, driverId)
+        .input('SessionID', sql.Int, sessionId)
         .query(`
             SELECT ISNULL(CEILING(DATEDIFF(MINUTE, EntryTime, GETDATE()) / 240.0), 0) as CurrentBlocks
             FROM ParkingSessions
-            WHERE DriverID = @DriverID AND SessionStatus = 'Active'
+            WHERE SessionID = @SessionID
         `);
         
     // Đảm bảo phiên hiện tại luôn tính ít nhất là 1 block để tránh chia cho 0
@@ -225,7 +225,34 @@ export async function getActiveSessionsService(driverId) {
         AND ps.SessionStatus = 'Active'
       ORDER BY ps.EntryTime DESC
     `)
-    return recordset
+    
+    // Tiền tính toán trước giảm giá hội viên cho frontend
+    const sessions = recordset;
+    for (let i = 0; i < sessions.length; i++) {
+        const s = sessions[i];
+        try {
+            // 1. Tính base fee
+            const feeRes = await pool.request()
+                .input('VehicleTypeID', sql.Int, s.VehicleTypeID)
+                .input('EntryTime', sql.DateTime, s.EntryTime)
+                .input('ExitTime', sql.DateTime, new Date())
+                .output('Fee', sql.Decimal(10, 2))
+                .output('Breakdown', sql.NVarChar(sql.MAX))
+                .execute('sp_CalcParkingFeeV2');
+                
+            const baseFee = feeRes.output.Fee || 0;
+            
+            // 2. Tính discount
+            const { discountPercent } = await applySubscriptionDiscount(driverId, baseFee, s.SessionID);
+            s.DiscountPercent = discountPercent;
+            
+        } catch (e) {
+            console.error('Error calculating discount for session:', s.SessionID, e);
+            s.DiscountPercent = 0;
+        }
+    }
+    
+    return sessions
 }
 
 // =================================================================
@@ -641,6 +668,55 @@ export async function getPaymentHistoryService(driverId, limit = 20, offset = 0)
 // =================================================================
 export async function staffCheckoutService(sessionId, paymentMethod) {
     const pool = await getPool()
+
+    // 1. Lấy thông tin cơ bản của session để tính toán
+    const sessionRes = await pool.request()
+        .input('SessionID', sql.Int, sessionId)
+        .query(`
+            SELECT DriverID, VehicleTypeID, EntryTime 
+            FROM ParkingSessions 
+            WHERE SessionID = @SessionID AND SessionStatus = 'Active'
+        `);
+    
+    if (sessionRes.recordset.length > 0) {
+        const { DriverID, VehicleTypeID, EntryTime } = sessionRes.recordset[0];
+        
+        // 2. Tính phí đỗ xe cơ bản trước
+        const feeRes = await pool.request()
+            .input('VehicleTypeID', sql.Int, VehicleTypeID)
+            .input('EntryTime', sql.DateTime, EntryTime)
+            .input('ExitTime', sql.DateTime, new Date())
+            .output('Fee', sql.Decimal(10, 2))
+            .output('Breakdown', sql.NVarChar(sql.MAX))
+            .execute('sp_CalcParkingFeeV2');
+            
+        const baseFee = feeRes.output.Fee || 0;
+        
+        // 3. Áp dụng giảm giá hội viên
+        const { finalFee } = await applySubscriptionDiscount(DriverID, baseFee, sessionId);
+        const discountAmount = baseFee - finalFee;
+        
+        // 4. Nếu có giảm giá (đặc biệt là giảm 100%), tự động tạo prepayment để bù vào
+        // Để sp_CheckOutWithSurcharge không tính phí đầy đủ cho user
+        if (discountAmount > 0 && finalFee === 0) {
+            // Check xem đã có payment chưa
+            const payRes = await pool.request()
+                .input('SessionID', sql.Int, sessionId)
+                .query(`SELECT PrepaidAmount, PaymentStatus FROM Payments WHERE SessionID = @SessionID`);
+            
+            if (payRes.recordset.length === 0 || payRes.recordset[0].PaymentStatus !== 'Prepaid') {
+                // Tự động mark as prepaid với amount = 0
+                await pool.request()
+                    .input('SessionID', sql.Int, sessionId)
+                    .input('Amount', sql.Decimal(10, 2), 0)
+                    .input('PaidAt', sql.DateTime, new Date())
+                    .input('PaymentMethod', sql.NVarChar(50), 'Subscription')
+                    .execute('sp_CreatePrepayment');
+            }
+        }
+    }
+
+    // 5. Gọi SP checkout chuẩn của hệ thống (sẽ tự cấn trừ PrepaidAmount nếu có)
     const { recordset } = await pool.request()
         .input('SessionID', sql.Int, sessionId)
         .input('PaymentMethod', sql.NVarChar(50), paymentMethod)

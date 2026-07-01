@@ -239,12 +239,13 @@ router.patch(
   vehicleController.setDefaultVehicle
 );
 
-router.patch(
-  "/driver/vehicles/:id/vip",
-  isAuthorized,
-  isDriver,
-  vehicleController.toggleVIPVehicle
-);
+// [DISABLED] Cột IsVIPVehicle không tồn tại trong DB hiện tại
+// router.patch(
+//   "/driver/vehicles/:id/vip",
+//   isAuthorized,
+//   isDriver,
+//   vehicleController.toggleVIPVehicle
+// );
 
 // Driver Ratings
 router.get(

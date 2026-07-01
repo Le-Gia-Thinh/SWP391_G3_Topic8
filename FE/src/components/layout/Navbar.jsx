@@ -73,7 +73,7 @@ const Navbar = ({ title = 'Dashboard', profileLink = '/profile' }) => {
 
   const formatRelativeTime = (dateStr) => {
     if (!dateStr) return ''
-    const date = new Date(String(dateStr).endsWith('Z') ? String(dateStr).slice(0, -1) : dateStr)
+    const date = new Date(dateStr)
     const diffMs = new Date().getTime() - date.getTime()
     const diffMin = Math.floor(diffMs / 60000)
     const diffHour = Math.floor(diffMs / 3600000)

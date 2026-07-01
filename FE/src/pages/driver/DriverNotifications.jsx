@@ -34,7 +34,7 @@ const FILTER_TABS = [
 
 function formatRelativeTime(dateStr, t) {
   if (!dateStr) return ''
-  const date = new Date(String(dateStr).endsWith('Z') ? String(dateStr).slice(0, -1) : dateStr)
+  const date = new Date(dateStr)
   if (Number.isNaN(date.getTime())) return ''
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
