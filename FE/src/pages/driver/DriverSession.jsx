@@ -28,21 +28,9 @@ import Modal from '../../components/ui/Modal'
 
 const parseBackendDate = (value) => {
   if (!value) return null
-
   if (value instanceof Date) return value
-
-  let text = String(value)
-
-  if (text.endsWith('Z')) {
-    text = text.slice(0, -1)
-  }
-
-  const date = new Date(text)
-
-  if (Number.isNaN(date.getTime())) {
-    return null
-  }
-
+  const date = new Date(String(value))
+  if (Number.isNaN(date.getTime())) return null
   return date
 }
 

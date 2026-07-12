@@ -32,7 +32,9 @@ export function translateError(err) {
     if (translated !== key) return translated
   }
 
-  // Không dùng beMessage làm fallback vì BE luôn trả tiếng Việt
+  const beMessage = err?.response?.data?.message
+  if (beMessage) return beMessage
+
   return i18next.t('errors.DEFAULT')
 }
 

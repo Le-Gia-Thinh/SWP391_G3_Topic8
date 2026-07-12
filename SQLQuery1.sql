@@ -1114,9 +1114,9 @@ FROM VehicleTypes;
 GO
 
 INSERT INTO SubscriptionPlans (PlanID,Name,BasePrice,Description) VALUES
-('basic',   N'Cơ Bản',  99000,  N'5 lần miễn phí mỗi tháng, sau đó giảm 10% cho các lần tiếp theo.'),
-('pro',     N'Nâng Cao',199000, N'15 lần miễn phí mỗi tháng, sau đó giảm 25% cho các lần tiếp theo.'),
-('premium', N'Cao Cấp', 399000, N'Miễn phí đỗ xe hoàn toàn, không giới hạn số lượt mỗi tháng.');
+('basic',   N'Cơ Bản',  99000,  N'5 phiên miễn phí mỗi tháng (1 phiên = 4 tiếng), sau đó giảm 10%. Áp dụng cho xe Mặc định.'),
+('pro',     N'Nâng Cao',199000, N'15 phiên miễn phí mỗi tháng (1 phiên = 4 tiếng), sau đó giảm 25%. Áp dụng cho xe Mặc định.'),
+('premium', N'Cao Cấp', 399000, N'300 phiên miễn phí mỗi tháng (~1200 giờ). Đăng ký tối đa 2 xe mặc định miễn phí.');
 GO
 
 /* ===================================================================

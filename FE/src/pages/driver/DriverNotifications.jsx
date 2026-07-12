@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import {
   BellOff, CalendarDays, CheckCheck, Clock, Wallet, AlertTriangle, Loader2, Info
 } from 'lucide-react'
@@ -33,7 +34,7 @@ const FILTER_TABS = [
 
 function formatRelativeTime(dateStr, t) {
   if (!dateStr) return ''
-  const date = new Date(String(dateStr).endsWith('Z') ? String(dateStr).slice(0, -1) : dateStr)
+  const date = new Date(dateStr)
   if (Number.isNaN(date.getTime())) return ''
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -49,6 +50,7 @@ function formatRelativeTime(dateStr, t) {
 
 const DriverNotifications = () => {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -74,12 +76,18 @@ const DriverNotifications = () => {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const handleMarkRead = async (notifId) => {
-    try {
-      await driverApi.markNotificationRead(notifId)
-      setNotifications((prev) => prev.map((n) => (n.NotificationID === notifId ? { ...n, IsRead: true } : n)))
-      setUnreadCount((prev) => Math.max(0, prev - 1))
-    } catch { /* silent */ }
+  const handleNotificationClick = async (notif) => {
+    if (!notif.IsRead) {
+      try {
+        await driverApi.markNotificationRead(notif.NotificationID)
+        setNotifications((prev) => prev.map((n) => (n.NotificationID === notif.NotificationID ? { ...n, IsRead: true } : n)))
+        setUnreadCount((prev) => Math.max(0, prev - 1))
+      } catch { /* silent */ }
+    }
+    // Nếu thông báo yêu cầu thiết lập xe mặc định, chuyển đến trang quản lý xe
+    if (notif.ReferenceType === 'SET_DEFAULT_VEHICLE') {
+      navigate('/driver/vehicles')
+    }
   }
 
   const handleMarkAllRead = async () => {
@@ -145,7 +153,7 @@ const DriverNotifications = () => {
             const config = TYPE_CONFIG[notif.NotificationType] || TYPE_CONFIG.system
             const Icon = config.icon
             return (
-              <button key={notif.NotificationID} onClick={() => !notif.IsRead && handleMarkRead(notif.NotificationID)}
+              <button key={notif.NotificationID} onClick={() => handleNotificationClick(notif)}
                 className={`group flex w-full items-start gap-4 rounded-2xl border p-5 text-left transition-all hover:shadow-md hover:-translate-y-0.5 ${notif.IsRead ? 'border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800' : `${config.border} ${config.bg} shadow-sm`}`}>
                 <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${notif.IsRead ? 'bg-gray-100 dark:bg-slate-700/50 text-gray-400' : `bg-white dark:bg-slate-800 ${config.color} shadow-sm`}`}><Icon size={20} /></div>
                 <div className="min-w-0 flex-1">

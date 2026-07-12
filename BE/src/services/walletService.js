@@ -221,46 +221,8 @@ export async function payParkingByWalletService(sessionId, driverId) {
 
     // Apply subscription discount
     const { applySubscriptionDiscount } = await import('./paymentService.js');
-    // We need to dynamically import but applySubscriptionDiscount is not exported. Let's inline it.
-    const subRes = await pool.request()
-        .input('UserID', sql.Int, driverId)
-        .query(`
-            SELECT top 1 PlanID, StartDate, EndDate 
-            FROM UserSubscriptions 
-            WHERE UserID = @UserID AND Status = 'Active' AND EndDate > GETDATE()
-            ORDER BY EndDate DESC
-        `);
+    const { finalFee: amount, discountPercent, planId } = await applySubscriptionDiscount(pool, driverId, baseFee, sessionId);
 
-    let amount = baseFee;
-    let discountPercent = 0;
-    let planId = null;
-
-    if (subRes.recordset.length > 0) {
-        const sub = subRes.recordset[0];
-        const countRes = await pool.request()
-            .input('DriverID', sql.Int, driverId)
-            .input('StartDate', sql.DateTime, sub.StartDate)
-            .query(`
-                SELECT COUNT(*) as SessionCount 
-                FROM ParkingSessions 
-                WHERE DriverID = @DriverID 
-                  AND MONTH(EntryTime) = MONTH(GETDATE()) 
-                  AND YEAR(EntryTime) = YEAR(GETDATE())
-            `);
-        const sessionCount = countRes.recordset[0].SessionCount;
-
-        if (sub.PlanID === 'basic') {
-            discountPercent = sessionCount <= 5 ? 100 : 10;
-        } else if (sub.PlanID === 'pro') {
-            discountPercent = sessionCount <= 15 ? 100 : 25;
-        } else if (sub.PlanID === 'premium') {
-            discountPercent = 100;
-        }
-        planId = sub.PlanID;
-        amount = Math.round(baseFee - (baseFee * discountPercent / 100));
-        if (amount > 0 && amount < 2000) amount = 2000;
-        if (amount < 0) amount = 0;
-    }
 
     if (amount === 0) {
         // Miễn phí → giống logic FREE hiện tại
@@ -300,7 +262,7 @@ export async function payParkingByWalletService(sessionId, driverId) {
         .input('UserID', sql.Int, driverId)
         .input('Title', sql.NVarChar, 'Thanh toán phí đỗ xe')
         .input('Message', sql.NVarChar, `Bạn đã thanh toán ${amount.toLocaleString('vi-VN')} VNĐ phí đỗ xe qua Ví cho phiên #${sessionId}.`)
-        .input('Type', sql.NVarChar, 'SYSTEM')
+        .input('Type', sql.NVarChar, 'system')
         .input('RefID', sql.Int, sessionId)
         .query(`
             INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType)
@@ -329,7 +291,7 @@ export async function payParkingByWalletService(sessionId, driverId) {
 }
 
 // ── Mua gói subscription bằng ví ────────────────────────────────────
-export async function paySubscriptionByWalletService(userId, planId, durationMonths) {
+export async function paySubscriptionByWalletService(userId, planId, durationMonths, deductionAmount = 0, extraDays = 0) {
     const pool = await getPool();
 
     // Validate plan
@@ -340,10 +302,15 @@ export async function paySubscriptionByWalletService(userId, planId, durationMon
         throw Object.assign(new Error('Gói hội viên không tồn tại'), { statusCode: 400 });
 
     const plan = planResult.recordset[0];
-    const discountMap = { 1: 0, 3: 5, 6: 10, 9: 15, 12: 20 };
+    const discountMap = { 1: 0, 2: 2, 3: 5, 6: 10, 9: 15, 12: 20, 24: 30 };
     const discountPercent = discountMap[durationMonths] || 0;
     const totalBase = plan.BasePrice * durationMonths;
-    const amount = Math.round(totalBase * (1 - discountPercent / 100));
+    let amount = Math.round(totalBase * (1 - discountPercent / 100));
+
+    // Khấu trừ số dư từ gói cũ (nếu có)
+    if (deductionAmount > 0) {
+        amount = Math.max(0, amount - deductionAmount);
+    }
 
     // Kiểm tra số dư
     const balance = await getBalanceService(userId);
@@ -360,50 +327,124 @@ export async function paySubscriptionByWalletService(userId, planId, durationMon
         .input('Description', sql.NVarChar(200), `Mua gói ${plan.Name} - ${durationMonths} tháng`)
         .execute('sp_PayByWallet');
 
-    // Tạo subscription
+    // Tạo subscription (có xử lý nâng cấp gói)
     let startDate = new Date();
+    let oldSubId = null;
+    let oldPlanId = null;
+
     const existingSub = await pool.request()
         .input('UserID', sql.Int, userId)
-        .query(`SELECT top 1 EndDate FROM UserSubscriptions WHERE UserID = @UserID AND Status = 'Active' ORDER BY EndDate DESC`);
+        .query(`
+            SELECT TOP 1 UserSubscriptionID, PlanID, EndDate
+            FROM UserSubscriptions
+            WHERE UserID = @UserID AND Status = 'Active'
+            ORDER BY EndDate DESC
+        `);
+
     if (existingSub.recordset.length > 0) {
-        const currentEnd = new Date(existingSub.recordset[0].EndDate);
-        if (currentEnd > startDate) startDate = currentEnd;
+        const row = existingSub.recordset[0];
+        oldSubId = row.UserSubscriptionID;
+        oldPlanId = row.PlanID;
+        const currentEnd = new Date(row.EndDate);
+
+        // Nếu cùng gói (Gia hạn) -> Cộng dồn thời gian nối tiếp
+        if (oldPlanId === planId) {
+            if (currentEnd > startDate) {
+                startDate = currentEnd;
+            }
+        }
+        // Nếu khác gói (Nâng cấp) -> Bắt đầu ngay lập tức từ hôm nay
     }
 
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + durationMonths);
+    if (extraDays > 0) {
+        endDate.setDate(endDate.getDate() + extraDays);
+    }
 
-    const result = await pool.request()
-        .input('UserID', sql.Int, userId)
-        .input('PlanID', sql.NVarChar, planId)
-        .input('StartDate', sql.DateTime, startDate)
-        .input('EndDate', sql.DateTime, endDate)
-        .input('AmountPaid', sql.Decimal(10, 2), amount)
-        .query(`
-            INSERT INTO UserSubscriptions (UserID, PlanID, StartDate, EndDate, AmountPaid, Status)
-            OUTPUT inserted.UserSubscriptionID
-            VALUES (@UserID, @PlanID, @StartDate, @EndDate, @AmountPaid, 'Active')
-        `);
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
 
-    // Thêm thông báo
-    await pool.request()
-        .input('UserID', sql.Int, userId)
-        .input('Title', sql.NVarChar, 'Gia hạn/Mua gói hội viên')
-        .input('Message', sql.NVarChar, `Bạn đã thanh toán ${amount.toLocaleString('vi-VN')} VNĐ qua Ví để mua/gia hạn gói ${plan.Name} (${durationMonths} tháng).`)
-        .input('Type', sql.NVarChar, 'SYSTEM')
-        .input('RefID', sql.Int, result.recordset[0].UserSubscriptionID)
-        .query(`
-            INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType)
-            VALUES (@UserID, @Title, @Message, @Type, @RefID, 'subscription')
-        `);
+    try {
+        // 1. Nếu là nâng cấp, hủy gói cũ
+        if (oldSubId && oldPlanId !== planId) {
+            await new sql.Request(transaction)
+                .input('OldSubID', sql.Int, oldSubId)
+                .query(`
+                    UPDATE UserSubscriptions
+                    SET Status = 'Upgraded', EndDate = GETDATE()
+                    WHERE UserSubscriptionID = @OldSubID
+                `);
+        }
 
-    const newBalance = await getBalanceService(userId);
-    return {
-        success: true,
-        userSubscriptionId: result.recordset[0].UserSubscriptionID,
-        startDate,
-        endDate,
-        amount,
-        newBalance,
-    };
+        // 2. Tạo gói mới
+        const result = await new sql.Request(transaction)
+            .input('UserID', sql.Int, userId)
+            .input('PlanID', sql.NVarChar, planId)
+            .input('StartDate', sql.DateTime, startDate)
+            .input('EndDate', sql.DateTime, endDate)
+            .input('AmountPaid', sql.Decimal(10, 2), amount)
+            .query(`
+                INSERT INTO UserSubscriptions (UserID, PlanID, StartDate, EndDate, AmountPaid, Status)
+                OUTPUT inserted.UserSubscriptionID
+                VALUES (@UserID, @PlanID, @StartDate, @EndDate, @AmountPaid, 'Active')
+            `);
+
+        await transaction.commit();
+
+        const subId = result.recordset[0].UserSubscriptionID;
+
+        // Thêm thông báo mua gói
+        try {
+            await pool.request()
+                .input('UserID', sql.Int, userId)
+                .input('Title', sql.NVarChar, 'Gia hạn/Mua gói hội viên')
+                .input('Message', sql.NVarChar, `Bạn đã thanh toán ${amount.toLocaleString('vi-VN')} VNĐ qua Ví để mua/gia hạn gói ${plan.Name} (${durationMonths} tháng).`)
+                .input('Type', sql.NVarChar, 'system')
+                .input('RefID', sql.Int, subId)
+                .query(`
+                    INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType)
+                    VALUES (@UserID, @Title, @Message, @Type, @RefID, 'subscription')
+                `);
+        } catch (notifErr) {
+            console.error('Wallet sub notification error:', notifErr.message);
+        }
+
+        // Kiểm tra nếu user chưa có xe mặc định thì gửi thông báo
+        try {
+            const defaultVehicleCheck = await pool.request()
+                .input("UserID", sql.Int, userId)
+                .query(`
+                    SELECT TOP 1 1 FROM DriverVehicles
+                    WHERE DriverID = @UserID AND IsActive = 1 AND IsDefault = 1
+                `);
+
+            if (defaultVehicleCheck.recordset.length === 0) {
+                await pool.request()
+                    .input("UserID", sql.Int, userId)
+                    .input("Title", sql.NVarChar, "Thiết lập xe mặc định")
+                    .input("Message", sql.NVarChar, "Bạn vừa đăng ký gói hội viên thành công! Hãy chọn xe mặc định để nhận quyền lợi miễn phí đỗ xe. Nhấn vào đây để thiết lập ngay.")
+                    .input("Type", sql.NVarChar, "system")
+                    .query(`
+                        INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+                        VALUES (@UserID, @Title, @Message, @Type, NULL, 'SET_DEFAULT_VEHICLE', 0, GETDATE())
+                    `);
+            }
+        } catch (notifErr) {
+            console.error('Default vehicle notification error:', notifErr.message);
+        }
+
+        const newBalance = await getBalanceService(userId);
+        return {
+            success: true,
+            userSubscriptionId: subId,
+            startDate,
+            endDate,
+            amount,
+            newBalance,
+        };
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 }

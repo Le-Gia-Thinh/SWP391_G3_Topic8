@@ -11,7 +11,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
-const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
+const Sidebar = ({ links, isOpen, setIsOpen, onHoverEnter, onHoverLeave, roleName }) => {
   const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
@@ -35,21 +35,30 @@ const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
 
       {/* Sidebar */}
       <aside
+        onMouseEnter={() => onHoverEnter?.()}
+        onMouseLeave={() => onHoverLeave?.()}
         className={`fixed inset-y-0 left-0 z-50 flex shrink-0 flex-col border-r border-slate-200/60 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out overflow-hidden lg:static lg:translate-x-0 ${isOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full lg:w-20'
         }`}
       >
         <div className={`flex h-20 items-center border-b border-slate-100 dark:border-gray-800 ${isOpen ? 'justify-between px-6' : 'lg:justify-center px-6 lg:px-0'}`}>
           <Link to={links[0]?.path || '/'} onClick={() => setIsOpen(false)} className={`flex items-center hover:opacity-80 transition-opacity whitespace-nowrap overflow-hidden ${isOpen ? 'gap-3' : 'lg:gap-0'}`}>
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-lg font-black text-white shadow-lg shadow-blue-500/30 border border-blue-400/20">
-              P
+            <div className={`flex shrink-0 items-center justify-center transition-all duration-300 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-500/30 border border-blue-400/20 ring-2 ring-white/20 ${isOpen ? 'h-11 w-11' : 'h-10 w-10'}`}>
+              <svg viewBox="0 0 24 24" fill="none" className={`drop-shadow-md z-10 relative transition-all duration-300 ${isOpen ? 'w-6 h-6' : 'w-5 h-5'}`} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 19.5v-15h5a4.5 4.5 0 0 1 0 9H9" />
+                <path d="M14 4.5A4.5 4.5 0 0 1 18.5 9" className="stroke-cyan-300 opacity-70" />
+                <circle cx="18" cy="18" r="2.5" className="fill-green-400 stroke-white dark:stroke-slate-800" strokeWidth="1.5" />
+              </svg>
             </div>
-            <div className={`transition-all duration-300 ${isOpen ? 'opacity-100 w-48' : 'lg:opacity-0 lg:w-0'}`}>
-              <span className="text-xl font-black tracking-tight text-slate-800 dark:text-white">
-                Smart<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:text-blue-500">Park</span>
-              </span>
+            <div className={`transition-all duration-300 ${isOpen ? 'opacity-100 w-48 ml-1' : 'lg:opacity-0 lg:w-0'}`}>
+              <div className="flex items-baseline leading-none">
+                <span className="text-[22px] font-black tracking-tighter text-slate-800 dark:text-white">Smart</span>
+                <span className="text-[22px] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Park</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 ml-1 mb-1 animate-pulse" />
+              </div>
               {roleName && (
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                <span className="flex items-center gap-2 text-[9px] mt-1 font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
                   {roleName} Portal
+                  <span className="w-8 h-[2px] bg-gradient-to-r from-slate-300 to-transparent dark:from-slate-600 rounded-full"></span>
                 </span>
               )}
             </div>
@@ -87,16 +96,16 @@ const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
                   to={link.path}
                   onClick={() => setIsOpen(false)}
                   title={!isOpen ? linkLabel : ''}
-                  className={`group flex items-center justify-between rounded-xl py-3 transition-all whitespace-nowrap ${isActive
+                  className={`group flex items-center justify-between rounded-xl py-3 transition-all duration-200 ease-out whitespace-nowrap ${isActive
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                    : 'text-slate-500 hover:bg-blue-600 hover:text-white hover:shadow-md hover:shadow-blue-500/20 dark:text-gray-400'
                   } ${isOpen ? 'px-3' : 'lg:justify-center lg:px-0 px-3'}`}
                 >
                   <div className={`flex items-center ${isOpen ? 'gap-3' : 'lg:gap-0'}`}>
-                    <div className="flex w-5 h-5 shrink-0 items-center justify-center transition-transform">
+                    <div className="flex w-5 h-5 shrink-0 items-center justify-center transition-transform duration-200 group-hover:scale-110">
                       <Icon
                         size={20}
-                        className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-900'}
+                        className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}
                       />
                     </div>
                     <span className={`font-semibold transition-all duration-300 overflow-hidden ${isOpen ? 'opacity-100 ml-3 w-32' : 'lg:opacity-0 lg:w-0'}`}>
@@ -105,7 +114,7 @@ const Sidebar = ({ links, isOpen, setIsOpen, roleName }) => {
                   </div>
                   {link.badge && (
                     <span
-                      className={`rounded-full py-0.5 text-xs font-bold transition-all duration-300 overflow-hidden ${isActive ? 'bg-white/20 text-white' : 'bg-red-50 text-red-600 border border-red-100'
+                      className={`rounded-full py-0.5 text-xs font-bold transition-all duration-300 overflow-hidden ${isActive ? 'bg-white/20 text-white' : 'bg-red-50 text-red-600 border border-red-100 group-hover:bg-white/20 group-hover:text-white group-hover:border-transparent'
                       } ${isOpen ? 'opacity-100 px-2' : 'lg:opacity-0 lg:w-0'}`}
                     >
                       {link.badge}

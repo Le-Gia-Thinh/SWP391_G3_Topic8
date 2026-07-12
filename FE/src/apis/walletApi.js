@@ -39,10 +39,25 @@ export const walletApi = {
     return unwrap(res)
   },
 
-  // Mua gói hội viên bằng ví
-  paySubscription: async (planId, durationMonths) => {
-    const res = await authorizeAxios.post('/driver/wallet/pay-subscription', { planId, durationMonths })
-    return unwrap(res)
+  // Thanh toán gói hội viên
+  paySubscription: async (planIdOrParams, durationMonths, deductionAmount = 0, extraDays = 0) => {
+    // Để tương thích ngược, hỗ trợ cả 2 cách gọi:
+    // 1. paySubscription({ planId, durationMonths, ... })
+    // 2. paySubscription(planId, durationMonths, deductionAmount, extraDays)
+    let bodyData;
+    if (typeof planIdOrParams === 'object' && planIdOrParams !== null) {
+      bodyData = planIdOrParams;
+    } else {
+      bodyData = {
+        planId: planIdOrParams,
+        durationMonths,
+        deductionAmount,
+        extraDays
+      };
+    }
+
+    const response = await authorizeAxios.post('/driver/wallet/pay-subscription', bodyData);
+    return unwrap(response);
   },
 }
 

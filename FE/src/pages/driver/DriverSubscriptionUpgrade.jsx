@@ -19,9 +19,9 @@ const allPlans = {
     borderColor: 'border-blue-200',
     buttonColor: 'bg-blue-600 hover:bg-blue-700',
     features: [
-      'Miễn phí 5 lượt đỗ xe mỗi tháng',
-      'Giảm 10% phí đỗ xe các lượt tiếp theo',
-      'Hỗ trợ khách hàng tiêu chuẩn',
+      'Miễn phí 5 phiên đỗ xe/tháng (1 phiên = 4 tiếng)',
+      'Giảm 10% phí đỗ xe khi vượt hạn mức',
+      'Áp dụng cho xe Mặc định của tài khoản',
       'Thanh toán linh hoạt'
     ],
     cardStyle: 'border border-slate-200 hover:border-blue-300',
@@ -38,10 +38,9 @@ const allPlans = {
     borderColor: 'border-amber-400',
     buttonColor: 'bg-amber-500 hover:bg-amber-600',
     features: [
-      'Miễn phí 15 lượt đỗ xe mỗi tháng',
-      'Giảm 25% phí đỗ xe các lượt tiếp theo',
-      'Ưu tiên đặt chỗ trước 24h',
-      'Hỗ trợ khách hàng ưu tiên 24/7'
+      'Miễn phí 15 phiên đỗ xe/tháng (1 phiên = 4 tiếng)',
+      'Giảm 25% phí đỗ xe khi vượt hạn mức',
+      'Áp dụng cho xe Mặc định của tài khoản'
     ],
     cardStyle: 'border-2 border-amber-400 scale-105 z-10 shadow-amber-100/50 hover:shadow-amber-200/50',
     badgeText: 'Phổ Biến Nhất',
@@ -58,10 +57,9 @@ const allPlans = {
     borderColor: 'border-purple-200',
     buttonColor: 'bg-purple-600 hover:bg-purple-700',
     features: [
-      'Đỗ xe miễn phí không giới hạn',
-      'Giữ cố định 1 vị trí đỗ xe VIP',
-      'Miễn phí dịch vụ rửa xe 1 lần/tháng',
-      'Đường dây nóng hỗ trợ riêng biệt'
+      'Miễn phí 300 phiên/tháng (1 phiên = 4 tiếng, ~1200 giờ)',
+      'Đăng ký tối đa 2 xe mặc định miễn phí',
+      'Áp dụng cho xe Mặc định & xe VIP'
     ],
     cardStyle: 'border-2 border-purple-500 scale-110 z-20 shadow-xl shadow-purple-200/50 hover:shadow-purple-300/50',
     badgeText: 'Khuyên Dùng',
