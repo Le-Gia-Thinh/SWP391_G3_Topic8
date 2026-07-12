@@ -433,9 +433,11 @@ export async function checkInBooking(reservationId, plateNumber) {
         const bookingResult = await new sql.Request(transaction)
             .input('reservationId', sql.Int, id)
             .query(`
-                SELECT r.*, sl.SlotStatus
+                SELECT r.*, sl.SlotStatus, f.BuildingID, sl.SlotCode AS OldSlotCode
                 FROM Reservations r WITH (UPDLOCK, ROWLOCK)
                 LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
+                LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
+                LEFT JOIN Floors f ON z.FloorID = f.FloorID
                 WHERE r.ReservationID = @reservationId
             `)
 
@@ -495,15 +497,69 @@ export async function checkInBooking(reservationId, plateNumber) {
             throw badRequest('Booking chưa có slot.', 'BOOKING_SLOT_REQUIRED')
         }
 
+        let finalSlotId = booking.SlotID
+        let finalSlotCode = booking.OldSlotCode
+        let reassigned = false
+
         if (!['Reserved', 'Available'].includes(booking.SlotStatus)) {
-            throw conflict('Slot của booking hiện không khả dụng.', 'BOOKING_SLOT_NOT_AVAILABLE')
+            // Tự động điều hướng sang slot trống khác (Dynamic Reassignment)
+            const minWindow = new Date(Date.now() + 60 * 60000)
+            const slotResult = await new sql.Request(transaction)
+                .input('buildingId', sql.Int, booking.BuildingID)
+                .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
+                .input('minWindow', sql.DateTime, minWindow)
+                .query(`
+                    SELECT TOP 1 sl.SlotID, sl.SlotCode
+                    FROM ParkingSlots sl WITH (UPDLOCK, ROWLOCK)
+                    JOIN Zones z ON sl.ZoneID = z.ZoneID
+                    JOIN Floors f ON z.FloorID = f.FloorID
+                    WHERE f.BuildingID = @buildingId
+                      AND sl.VehicleTypeID = @vehicleTypeId
+                      AND sl.SlotStatus NOT IN ('Maintenance', 'Blocked')
+                      AND NOT EXISTS (
+                        SELECT 1 FROM ParkingSessions ps
+                        WHERE ps.SlotID = sl.SlotID AND ps.SessionStatus = 'Active' AND ps.ExitTime IS NULL
+                      )
+                      AND NOT EXISTS (
+                        SELECT 1 FROM Reservations r
+                        WHERE r.SlotID = sl.SlotID
+                          AND r.ReservationStatus = 'Reserved'
+                          AND r.StartTime < @minWindow
+                      )
+                    ORDER BY sl.SlotCode
+                `)
+            const availableSlot = slotResult.recordset[0]
+            if (!availableSlot) {
+                throw conflict('Slot của booking hiện không khả dụng và không còn slot trống thay thế.', 'BOOKING_SLOT_NOT_AVAILABLE')
+            }
+
+            finalSlotId = availableSlot.SlotID
+            finalSlotCode = availableSlot.SlotCode
+            reassigned = true
+
+            // Cập nhật slot mới cho đặt chỗ
+            await new sql.Request(transaction)
+                .input('newSlotId', sql.Int, finalSlotId)
+                .input('reservationId', sql.Int, id)
+                .query(`UPDATE Reservations SET SlotID = @newSlotId WHERE ReservationID = @reservationId`)
+
+            // Gửi thông báo đến tài xế
+            const notifyMessage = `Vị trí đặt chỗ ${booking.OldSlotCode} của bạn đã được đổi sang vị trí mới ${finalSlotCode} do sự cố kỹ thuật (xe trước chưa rời đi). Xin lỗi vì sự bất tiện này.`
+            await new sql.Request(transaction)
+                .input('driverId', sql.Int, booking.DriverID)
+                .input('reservationId', sql.Int, id)
+                .input('message', sql.NVarChar(500), notifyMessage)
+                .query(`
+                    INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+                    VALUES (@driverId, N'Thay đổi vị trí đỗ xe tự động', @message, 'Booking', @reservationId, 'Reservation', 0, GETDATE())
+                `)
         }
 
         // ✅ Dùng biển số thực tế nếu có, fallback về BOOKING-{id}
         const finalPlate = plateNumber?.trim().toUpperCase() || `BOOKING-${id}`
 
         const insertSessionResult = await new sql.Request(transaction)
-            .input('slotId', sql.Int, booking.SlotID)
+            .input('slotId', sql.Int, finalSlotId)
             .input('driverId', sql.Int, booking.DriverID)
             .input('plateNumber', sql.NVarChar(20), finalPlate)
             .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
@@ -551,6 +607,9 @@ export async function checkInBooking(reservationId, plateNumber) {
             sessionCode: formatSessionCode(session.SessionID),
             timeStatus,
             earlyFeeAmount: earlyFee,
+            reassigned,
+            oldSlotCode: booking.OldSlotCode,
+            newSlotCode: finalSlotCode,
             session
         }
     } catch (error) {
@@ -912,7 +971,13 @@ export async function getCheckoutPreview(sessionId) {
             p.Amount,
             p.PrepaidAmount,
             p.PaymentStatus,
-            p.SurchargeStatus
+            p.SurchargeStatus,
+            (
+                SELECT TOP 1 r.EndTime 
+                FROM Reservations r 
+                WHERE r.DriverID = ps.DriverID AND r.SlotID = ps.SlotID AND r.StartTime = ps.BookingStartTime AND r.ReservationStatus = 'Completed'
+                ORDER BY r.StartTime DESC
+            ) AS BookingEndTime
         FROM ParkingSessions ps
         LEFT JOIN Users u ON ps.DriverID = u.UserID
         JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
@@ -939,14 +1004,27 @@ export async function getCheckoutPreview(sessionId) {
     const durationH = Math.max(0.01, (now.getTime() - entry.getTime()) / 1000 / 60 / 60)
     const durationMin = Math.floor((now.getTime() - entry.getTime()) / 60000)
 
-    // ← sửa chỗ này: dùng entry/now thật thay vì chỉ truyền durationH
     const { fee, breakdown } = await calcParkingFee(pool, session.VehicleTypeID, entry, now)
     const earlyFeeAmount = Number(session.EarlyFeeAmount || 0)
     const bookingStart = session.BookingStartTime ? new Date(session.BookingStartTime) : null
-    // Vào sớm nhưng ra sớm: ra trước giờ booking AND đỗ dưới 30 phút → miễn phụ phí đến sớm
     const isEarlyExit = !!(bookingStart && now < bookingStart && durationMin < 30 && earlyFeeAmount > 0)
     const effectiveEarlyFee = isEarlyExit ? 0 : earlyFeeAmount
-    const totalFee = fee + effectiveEarlyFee
+
+    // Tính phí phạt đỗ quá giờ (Overtime Penalty)
+    const bookingEnd = session.BookingEndTime ? new Date(session.BookingEndTime) : null
+    let overtimePenaltyAmount = 0
+    let overtimeHours = 0
+    if (bookingEnd && now > bookingEnd) {
+        overtimeHours = Math.ceil((now.getTime() - bookingEnd.getTime()) / 1000 / 60 / 60)
+        if (overtimeHours > 0) {
+            const vType = Number(session.VehicleTypeID)
+            if (vType === 1) overtimePenaltyAmount = 10000 + (overtimeHours * 5000)
+            else if (vType === 2) overtimePenaltyAmount = 50000 + (overtimeHours * 20000)
+            else if (vType === 3) overtimePenaltyAmount = 100000 + (overtimeHours * 40000)
+        }
+    }
+
+    const totalFee = fee + effectiveEarlyFee + overtimePenaltyAmount
     const prepaidAmount = Number(session.PrepaidAmount || 0)
 
     return {
@@ -956,6 +1034,8 @@ export async function getCheckoutPreview(sessionId) {
         durationMin,
         parkingFee: fee,
         earlyFeeAmount: effectiveEarlyFee,
+        overtimePenaltyAmount,
+        overtimeHours,
         isEarlyExit,
         estimatedFee: totalFee,
         feeBreakdown: breakdown,
@@ -1356,7 +1436,13 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
                     WHEN ps.SlotStatus IN ('Maintenance','Blocked') THEN ps.SlotStatus
                     WHEN EXISTS (
                         SELECT 1 FROM ParkingSessions s
-                        WHERE s.SlotID = ps.SlotID AND s.SessionStatus = 'Active'
+                        JOIN Reservations r ON r.DriverID = s.DriverID AND r.SlotID = s.SlotID AND r.StartTime = s.BookingStartTime AND r.ReservationStatus = 'Completed'
+                        WHERE s.SlotID = ps.SlotID AND s.SessionStatus = 'Active' AND s.ExitTime IS NULL
+                          AND r.EndTime < GETDATE()
+                    ) THEN 'Overstay'
+                    WHEN EXISTS (
+                        SELECT 1 FROM ParkingSessions s
+                        WHERE s.SlotID = ps.SlotID AND s.SessionStatus = 'Active' AND s.ExitTime IS NULL
                     ) THEN 'Occupied'
                     WHEN EXISTS (
                         SELECT 1 FROM Reservations r
@@ -1405,6 +1491,7 @@ export async function getSlotDetail(slotCode) {
                 s.EntryTime,
                 s.ExitTime,
                 s.PlateNumber,
+                rActive.EndTime AS BookingEndTime,
                 -- Reservation Info (nếu không có active session)
                 r.ReservationID,
                 r.StartTime,
@@ -1435,6 +1522,11 @@ export async function getSlotDetail(slotCode) {
                 AND r.ReservationStatus = 'Reserved'
                 AND r.StartTime <= DATEADD(HOUR, 8, GETDATE())
                 AND s.SessionID IS NULL  -- Chỉ lấy reservation khi không có active session
+            LEFT JOIN Reservations rActive
+                ON rActive.DriverID = s.DriverID
+                AND rActive.SlotID = s.SlotID
+                AND rActive.StartTime = s.BookingStartTime
+                AND rActive.ReservationStatus = 'Completed'
             LEFT JOIN Users u 
                 ON u.UserID = COALESCE(s.DriverID, r.DriverID)
             LEFT JOIN Payments p 
@@ -1472,6 +1564,10 @@ export async function getSlotDetail(slotCode) {
         driverName: slotDetail.DriverName || (slotDetail.SessionID ? 'Khách vãng lai' : null),
         driverEmail: slotDetail.DriverEmail,
         driverPhone: slotDetail.DriverPhone,
+
+        // Overtime check
+        bookingEndTime: slotDetail.BookingEndTime,
+        isOvertime: slotDetail.BookingEndTime && new Date() > new Date(slotDetail.BookingEndTime),
 
         // Payment info
         paymentId: slotDetail.PaymentID,

@@ -2047,6 +2047,7 @@
       "statusReserved": "Reserved",
       "statusMaintenance": "Maintenance",
       "statusBlocked": "Blocked",
+      "statusOverstay": "Overstayed",
       "sessionTitle": "Parking session",
       "reservationTitle": "Reservation",
       "sessionCode": "Session code",

@@ -211,6 +211,7 @@ export async function getDriverHome(req, res, next) {
             p.PaymentStatus,
 
             booking.ReservationID,
+            booking.EndTime AS BookingEndTime,
             CASE 
               WHEN booking.ReservationID IS NOT NULL
               THEN CONCAT('BK-', RIGHT('0000' + CAST(booking.ReservationID AS VARCHAR(10)), 4))
@@ -226,7 +227,7 @@ export async function getDriverHome(req, res, next) {
           LEFT JOIN Payments p ON p.SessionID = s.SessionID
 
           OUTER APPLY (
-            SELECT TOP 1 r.ReservationID
+            SELECT TOP 1 r.ReservationID, r.EndTime
             FROM Reservations r
             WHERE r.DriverID = s.DriverID
               AND r.SlotID = s.SlotID

@@ -881,6 +881,37 @@ AS BEGIN
     IF @EntryTime IS NULL BEGIN RAISERROR('Session not found or already completed.',16,1); RETURN; END
     SET @ExitTime=GETDATE();
     EXEC sp_CalcParkingFeeV2 @VehicleTypeID=@VehicleTypeID,@EntryTime=@EntryTime,@ExitTime=@ExitTime,@Fee=@Fee OUTPUT,@Breakdown=@Breakdown OUTPUT;
+
+    -- TÍNH PHÍ PHẠT ĐỖ QUÁ GIỜ (OVERTIME PENALTY)
+    DECLARE @ReservationEndTime DATETIME = NULL;
+    DECLARE @DriverID INT, @SlotID INT, @BookingStartTime DATETIME;
+    SELECT @DriverID=DriverID, @SlotID=SlotID, @BookingStartTime=BookingStartTime FROM ParkingSessions WHERE SessionID=@SessionID;
+    
+    IF @BookingStartTime IS NOT NULL
+    BEGIN
+        SELECT TOP 1 @ReservationEndTime = EndTime 
+        FROM Reservations 
+        WHERE DriverID = @DriverID AND SlotID = @SlotID AND StartTime = @BookingStartTime AND ReservationStatus = 'Completed'
+        ORDER BY StartTime DESC;
+    END
+
+    DECLARE @OvertimePenalty DECIMAL(10,2) = 0;
+    IF @ReservationEndTime IS NOT NULL AND @ExitTime > @ReservationEndTime
+    BEGIN
+        DECLARE @OvertimeH INT = CEILING(DATEDIFF(MINUTE, @ReservationEndTime, @ExitTime) / 60.0);
+        IF @OvertimeH > 0
+        BEGIN
+            IF @VehicleTypeID = 1 SET @OvertimePenalty = 10000.00 + (@OvertimeH * 5000.00);
+            ELSE IF @VehicleTypeID = 2 SET @OvertimePenalty = 50000.00 + (@OvertimeH * 20000.00);
+            ELSE IF @VehicleTypeID = 3 SET @OvertimePenalty = 100000.00 + (@OvertimeH * 40000.00);
+            
+            SET @Fee = @Fee + @OvertimePenalty;
+            IF @Breakdown IS NULL SET @Breakdown = N'[]';
+            SET @Breakdown = REPLACE(@Breakdown, ']', CONCAT(',{"type":"overtime_penalty","amount":', CAST(@OvertimePenalty AS NVARCHAR(20)), ',"hours":', CAST(@OvertimeH AS NVARCHAR(10)), '}]'));
+        END
+    END
+    -- HẾT TÍNH PHÍ PHẠT
+
     UPDATE ParkingSessions SET ExitTime=@ExitTime,SessionStatus='Completed' WHERE SessionID=@SessionID;
     UPDATE Payments SET Amount=@Fee,PaymentMethod=@PaymentMethod,PaymentTime=@ExitTime,PaymentStatus='Completed',PaymentNote=@Breakdown WHERE SessionID=@SessionID;
     SELECT @Fee AS FinalFee,@Breakdown AS FeeBreakdown;
@@ -896,6 +927,37 @@ AS BEGIN
     SELECT @EntryTime=EntryTime,@VehicleTypeID=VehicleTypeID FROM ParkingSessions WHERE SessionID=@SessionID AND SessionStatus='Active';
     IF @EntryTime IS NULL BEGIN ROLLBACK; RAISERROR('Session không tồn tại hoặc đã checkout.',16,1); RETURN; END
     EXEC sp_CalcParkingFeeV2 @VehicleTypeID=@VehicleTypeID,@EntryTime=@EntryTime,@ExitTime=@ExitTime,@Fee=@FinalFee OUTPUT,@Breakdown=@Breakdown OUTPUT;
+
+    -- TÍNH PHÍ PHẠT ĐỖ QUÁ GIỜ (OVERTIME PENALTY)
+    DECLARE @ReservationEndTime DATETIME = NULL;
+    DECLARE @DriverID INT, @SlotID INT, @BookingStartTime DATETIME;
+    SELECT @DriverID=DriverID, @SlotID=SlotID, @BookingStartTime=BookingStartTime FROM ParkingSessions WHERE SessionID=@SessionID;
+    
+    IF @BookingStartTime IS NOT NULL
+    BEGIN
+        SELECT TOP 1 @ReservationEndTime = EndTime 
+        FROM Reservations 
+        WHERE DriverID = @DriverID AND SlotID = @SlotID AND StartTime = @BookingStartTime AND ReservationStatus = 'Completed'
+        ORDER BY StartTime DESC;
+    END
+
+    DECLARE @OvertimePenalty DECIMAL(10,2) = 0;
+    IF @ReservationEndTime IS NOT NULL AND @ExitTime > @ReservationEndTime
+    BEGIN
+        DECLARE @OvertimeH INT = CEILING(DATEDIFF(MINUTE, @ReservationEndTime, @ExitTime) / 60.0);
+        IF @OvertimeH > 0
+        BEGIN
+            IF @VehicleTypeID = 1 SET @OvertimePenalty = 10000.00 + (@OvertimeH * 5000.00);
+            ELSE IF @VehicleTypeID = 2 SET @OvertimePenalty = 50000.00 + (@OvertimeH * 20000.00);
+            ELSE IF @VehicleTypeID = 3 SET @OvertimePenalty = 100000.00 + (@OvertimeH * 40000.00);
+            
+            SET @FinalFee = @FinalFee + @OvertimePenalty;
+            IF @Breakdown IS NULL SET @Breakdown = N'[]';
+            SET @Breakdown = REPLACE(@Breakdown, ']', CONCAT(',{"type":"overtime_penalty","amount":', CAST(@OvertimePenalty AS NVARCHAR(20)), ',"hours":', CAST(@OvertimeH AS NVARCHAR(10)), '}]'));
+        END
+    END
+    -- HẾT TÍNH PHÍ PHẠT
+
     SELECT @PrepaidAmount=ISNULL(PrepaidAmount,0),@PayStatus=PaymentStatus FROM Payments WHERE SessionID=@SessionID;
     DECLARE @Surcharge DECIMAL(10,2)=@FinalFee-@PrepaidAmount; IF @Surcharge<0 SET @Surcharge=0;
     UPDATE ParkingSessions SET ExitTime=@ExitTime,SessionStatus='Completed' WHERE SessionID=@SessionID;
