@@ -40,7 +40,7 @@ const STATUSES = [
 ]
 const UPDATE_STATUSES = ['Open', 'InProgress', 'Resolved']
 const MAX_IMAGES = 15
-const MAX_FILE_MB = 5
+const MAX_FILE_MB = 100
 
 // ─── Biển số & mã phiên helpers ───────────────────────────────────────────────
 const formatPlate = (raw) => {
