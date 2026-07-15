@@ -14,7 +14,7 @@ import ms from "ms";
 import crypto from "crypto";
 import bcryptjs from "bcryptjs";
 import axios from "axios";
-import nodemailer from "nodemailer";
+import { sendMail } from "./mailService.js";
 import { OAuth2Client } from "google-auth-library";
 import { getPool, sql } from "../config/db.js";
 import JwtProvider from "../providers/JwtProvider.js";
@@ -23,20 +23,9 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const BCRYPT_ROUNDS = 10;
 const REFRESH_TTL = ms(process.env.REFRESH_TOKEN_EXPIRES || "7d");
 const SESSION_ABSOLUTE_TTL = ms(process.env.SESSION_ABSOLUTE_EXPIRES || "30d");
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: false,
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-});
-
-async function sendVerifyEmail(email, fullName, token) {
+export async function sendVerifyEmail(email, fullName, token) {
     const url = `http://localhost:5000/api/auth/verify-email?token=${token}`;
-    await transporter.sendMail({
-        from: `"Parking System" <${process.env.SMTP_USER}>`,
+    await sendMail({
         to: email,
         subject: "Xác minh địa chỉ email của bạn",
         html: `
@@ -152,7 +141,9 @@ export async function loginService({ email, password }, ip) {
 
     if (!user || !isMatch || !user.HasLocalAuth) {
         const err = new Error("Email hoặc mật khẩu không đúng");
-        err.statusCode = 401; throw err;
+        err.statusCode = 401;
+        err.code = "INVALID_CREDENTIALS";
+        throw err;
     }
     if (!user.IsActive) {
         const err = new Error("Tài khoản đã bị khóa, vui lòng liên hệ quản lý");

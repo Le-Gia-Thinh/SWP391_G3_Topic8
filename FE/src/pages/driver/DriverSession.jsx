@@ -422,18 +422,22 @@ const SessionDetail = ({
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('driver.session.feeParking')}</span>
                 <span className="font-bold text-gray-800 dark:text-gray-200">
-                  {formatCurrency(totalAmount)}
+                  {formatCurrency(session.ParkingFee !== undefined ? session.ParkingFee : totalAmount)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('driver.session.feeOvertime')}</span>
-                <span className="font-bold text-gray-800 dark:text-gray-200">0 VNĐ</span>
+                <span className="font-bold text-gray-800 dark:text-gray-200">
+                  {formatCurrency(session.OvertimeFee || 0)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('driver.session.feeOther')}</span>
-                <span className="font-bold text-gray-800 dark:text-gray-200">0 VNĐ</span>
+                <span className="font-bold text-gray-800 dark:text-gray-200">
+                  {formatCurrency(session.OtherFee || 0)}
+                </span>
               </div>
             </div>
 
