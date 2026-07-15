@@ -2047,6 +2047,7 @@
       "statusReserved": "Đã đặt",
       "statusMaintenance": "Bảo trì",
       "statusBlocked": "Khóa",
+      "statusOverstay": "Đỗ quá giờ",
       "sessionTitle": "Phiên gửi xe",
       "reservationTitle": "Đặt chỗ",
       "sessionCode": "Mã phiên",

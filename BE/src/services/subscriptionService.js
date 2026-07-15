@@ -14,7 +14,7 @@ const PAYOS_CHECKSUM = process.env.PAYOS_CHECKSUM_KEY;
 const PAYOS_BASE_URL = 'https://api-merchant.payos.vn';
 
 // Discount table (matching FE)
-const discountMap = { 1: 0, 3: 5, 6: 10, 9: 15, 12: 20 };
+const discountMap = { 1: 0, 2: 2, 3: 5, 6: 10, 9: 15, 12: 20, 24: 30 };
 
 function makeSignature({ amount, cancelUrl, description, orderCode, returnUrl }) {
     const raw = `amount=${amount}&cancelUrl=${cancelUrl}&description=${description}&orderCode=${orderCode}&returnUrl=${returnUrl}`;
@@ -54,6 +54,7 @@ export const subscriptionService = {
           s.UserSubscriptionID,
           s.PlanID as planId,
           p.Name as planName,
+          p.BasePrice as basePrice,
           s.StartDate as startDate,
           s.EndDate as endDate,
           s.Status as active
@@ -295,6 +296,30 @@ export const subscriptionService = {
           `);
           
         await transaction.commit();
+
+        // Kiểm tra nếu user chưa có xe mặc định thì gửi thông báo
+        try {
+          const defaultVehicleCheck = await pool.request()
+            .input("UserID", sql.Int, userId)
+            .query(`
+              SELECT TOP 1 1 FROM DriverVehicles
+              WHERE DriverID = @UserID AND IsActive = 1 AND IsDefault = 1
+            `);
+
+          if (defaultVehicleCheck.recordset.length === 0) {
+            await pool.request()
+              .input("UserID", sql.Int, userId)
+              .input("Title", sql.NVarChar, "Thiết lập xe mặc định")
+              .input("Message", sql.NVarChar, "Bạn vừa đăng ký gói hội viên thành công! Hãy chọn xe mặc định để nhận quyền lợi miễn phí đỗ xe. Nhấn vào đây để thiết lập ngay.")
+              .input("Type", sql.NVarChar, "system")
+              .query(`
+                INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+                VALUES (@UserID, @Title, @Message, @Type, NULL, 'SET_DEFAULT_VEHICLE', 0, GETDATE())
+              `);
+          }
+        } catch (notifErr) {
+          console.error('Default vehicle notification error:', notifErr.message);
+        }
 
         return {
             success: true,

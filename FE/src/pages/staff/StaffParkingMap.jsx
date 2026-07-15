@@ -17,6 +17,7 @@ import {
 const STATUS_CONFIG = {
   available: { labelKey: 'staff.parkingMap.statusAvailable', bg: 'bg-emerald-50', border: 'border-emerald-300', text: 'text-emerald-700', dot: 'bg-emerald-400' },
   occupied: { labelKey: 'staff.parkingMap.statusOccupied', bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', dot: 'bg-red-400' },
+  overstay: { labelKey: 'staff.parkingMap.statusOverstay', bg: 'bg-red-100 border-red-500 text-red-950 font-black animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.5)]', border: 'border-red-500', text: 'text-red-950', dot: 'bg-red-600' },
   reserved: { labelKey: 'staff.parkingMap.statusReserved', bg: 'bg-amber-50', border: 'border-amber-300', text: 'text-amber-700', dot: 'bg-amber-400' },
   maintenance: { labelKey: 'staff.parkingMap.statusMaintenance', bg: 'bg-slate-100', border: 'border-slate-300', text: 'text-slate-500', dot: 'bg-slate-400' },
   blocked: { labelKey: 'staff.parkingMap.statusBlocked', bg: 'bg-slate-800', border: 'border-slate-800', text: 'text-white', dot: 'bg-slate-600' },
@@ -180,6 +181,7 @@ const StaffParkingMap = () => {
     total: slots.length,
     available: slots.filter(s => s.status === 'available').length,
     occupied: slots.filter(s => s.status === 'occupied').length,
+    overstay: slots.filter(s => s.status === 'overstay').length,
     reserved: slots.filter(s => s.status === 'reserved').length,
     maintenance: slots.filter(s => s.status === 'maintenance').length,
   }), [slots])
@@ -343,8 +345,9 @@ const StaffParkingMap = () => {
             {/* Stats + zoom */}
             <div className="flex items-center gap-2 flex-wrap">
               <StatPill value={counts.total} label={t('staff.parkingMap.statTotal')} color="text-slate-700" />
-              <StatPill value={counts.available} label={t('staff.parkingMap.statAvailable')} color="text-emerald-600" />F
-              <StatPill value={counts.occupied} label={t('staff.parkingMap.statusOccupied')} color="text-red-600" />
+              <StatPill value={counts.available} label={t('staff.parkingMap.statAvailable')} color="text-emerald-600" />
+              <StatPill value={counts.occupied} label={t('staff.parkingMap.statusOccupied')} color="text-red-500" />
+              {counts.overstay > 0 && <StatPill value={counts.overstay} label={t('staff.parkingMap.statusOverstay')} color="text-red-700 animate-pulse font-black" />}
               <StatPill value={counts.reserved} label={t('staff.parkingMap.statusReserved')} color="text-amber-600" />
               {counts.maintenance > 0 && <StatPill value={counts.maintenance} label={t('staff.parkingMap.statusMaintenance')} color="text-slate-500" />}
 
@@ -401,6 +404,7 @@ const StaffParkingMap = () => {
                               {slot.code.split('-').slice(-1)[0]}
                             </span>
                             {slot.status === 'occupied' && <Car size={11} className="mt-0.5 opacity-80" />}
+                            {slot.status === 'overstay' && <Car size={11} className="mt-0.5 animate-bounce text-red-600" />}
                             {slot.status === 'available' && <span className="text-[8px] opacity-50 font-bold mt-0.5">OK</span>}
                             {slot.status === 'reserved' && <span className="text-[8px] font-bold opacity-80 mt-0.5">{t('staff.parkingMap.tagReserved')}</span>}
                             {slot.status === 'maintenance' && <span className="text-[8px] font-bold opacity-70 mt-0.5">BT</span>}
@@ -446,6 +450,19 @@ const StaffParkingMap = () => {
                   <p className="text-center text-slate-400 py-4">{selectedSlot.error}</p>
                 ) : (
                   <>
+                    {/* Overstay alert warning */}
+                    {selectedSlot.isOvertime && (
+                      <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 flex flex-col gap-1 shadow-sm">
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
+                          <span>Cảnh báo: Đỗ quá giờ!</span>
+                        </div>
+                        <p className="text-[10px] text-red-600">
+                          Hạn trả xe dự kiến lúc: {fmt(selectedSlot.bookingEndTime)}
+                        </p>
+                      </div>
+                    )}
+
                     {/* Zone path */}
                     <div>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">{t('staff.parkingMap.locationLabel')}</p>

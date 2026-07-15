@@ -17,7 +17,7 @@ const QUICK_TAG_KEYS = ['clean', 'easyToFind', 'friendlyStaff', 'fairPrice', 'go
 
 function formatDateTime(value) {
   if (!value) return '—'
-  const date = new Date(String(value).endsWith('Z') ? String(value).slice(0, -1) : value)
+  const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
   return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
 }

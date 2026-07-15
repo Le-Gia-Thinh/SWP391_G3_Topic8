@@ -30,7 +30,7 @@ async function main() {
         // 2. Lặp qua từng email trong danh sách để cập nhật
         for (const email of seedEmails) {
             
-            // Cập nhật lại mật khẩu (đã băm), trạng thái IsActive = 1 và IsEmailVerified = 1
+            // Cập nhật lại mật khẩu (đã băm), trạng thái IsActive = 1 và IsEmailVerified = 0 (yêu cầu xác thực email)
             await pool.request()
                 .input("Email", sql.NVarChar(100), email)
                 .input("PasswordHash", sql.NVarChar(256), passwordHash)
@@ -38,7 +38,7 @@ async function main() {
           UPDATE Users
           SET PasswordHash = @PasswordHash,
               IsActive = 1,
-              IsEmailVerified = 1,
+              IsEmailVerified = 0,
               UpdatedAt = GETDATE()
           WHERE Email = @Email
         `);

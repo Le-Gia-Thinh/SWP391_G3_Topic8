@@ -12,6 +12,9 @@
  */
 
 import { getPool, sql } from "../config/db.js"; // Kết nối database
+import { sendVerifyEmail } from "../services/authService.js";
+import crypto from "crypto";
+import bcryptjs from "bcryptjs";
 
 /**
  * Hàm helper: Lấy UserID từ request.
@@ -211,6 +214,7 @@ export async function getDriverHome(req, res, next) {
             p.PaymentStatus,
 
             booking.ReservationID,
+            booking.EndTime AS BookingEndTime,
             CASE 
               WHEN booking.ReservationID IS NOT NULL
               THEN CONCAT('BK-', RIGHT('0000' + CAST(booking.ReservationID AS VARCHAR(10)), 4))
@@ -226,7 +230,7 @@ export async function getDriverHome(req, res, next) {
           LEFT JOIN Payments p ON p.SessionID = s.SessionID
 
           OUTER APPLY (
-            SELECT TOP 1 r.ReservationID
+            SELECT TOP 1 r.ReservationID, r.EndTime
             FROM Reservations r
             WHERE r.DriverID = s.DriverID
               AND r.SlotID = s.SlotID
@@ -379,6 +383,8 @@ export async function updateDriverProfile(req, res, next) {
       req.body.avatarUrl || req.body.AvatarUrl || ""
     ).trim();
     const dateOfBirth = req.body.dateOfBirth || req.body.DateOfBirth || null;
+    const email = String(req.body.email || req.body.Email || "").trim().toLowerCase();
+    const currentPassword = String(req.body.currentPassword || "").trim();
 
     if (!fullName) {
       return res.status(400).json({
@@ -396,6 +402,58 @@ export async function updateDriverProfile(req, res, next) {
 
     const pool = await getPool();
 
+    // Lấy thông tin user hiện tại
+    const currentUserRes = await pool.request()
+      .input("DriverID", sql.Int, driverId)
+      .query(`SELECT Email, FullName, PasswordHash FROM Users WHERE UserID = @DriverID`);
+    const currentUser = currentUserRes.recordset[0];
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy tài khoản.",
+      });
+    }
+
+    const currentEmail = currentUser.Email;
+    let emailChanged = false;
+    let verifyToken = null;
+    let expiresAt = null;
+
+    if (email && email !== currentEmail.toLowerCase()) {
+      // Bắt buộc nhập mật khẩu khi đổi email
+      if (!currentPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng nhập mật khẩu hiện tại để xác nhận thay đổi email.",
+        });
+      }
+
+      // Kiểm tra mật khẩu
+      const isMatch = await bcryptjs.compare(currentPassword, currentUser.PasswordHash);
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          message: "Mật khẩu hiện tại không chính xác.",
+        });
+      }
+
+      // Check trùng email
+      const emailCheck = await pool.request()
+        .input("Email", sql.NVarChar(100), email)
+        .input("DriverID", sql.Int, driverId)
+        .query(`SELECT UserID FROM Users WHERE Email = @Email AND UserID <> @DriverID`);
+      if (emailCheck.recordset.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Email này đã được sử dụng bởi tài khoản khác.",
+        });
+      }
+
+      emailChanged = true;
+      verifyToken = crypto.randomUUID();
+      expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 giờ
+    }
+
     const updateResult = await pool
       .request()
       .input("DriverID", sql.Int, driverId)
@@ -403,6 +461,10 @@ export async function updateDriverProfile(req, res, next) {
       .input("PhoneNumber", sql.NVarChar(20), phoneNumber || null)
       .input("AvatarUrl", sql.NVarChar(500), avatarUrl || null)
       .input("DateOfBirth", sql.VarChar(10), dateOfBirth || null)
+      .input("EmailChanged", sql.Bit, emailChanged ? 1 : 0)
+      .input("TempPendingEmail", sql.NVarChar(100), emailChanged ? email : null)
+      .input("EmailVerifyToken", sql.NVarChar(500), verifyToken)
+      .input("EmailVerifyExpires", sql.DateTime, expiresAt)
       .query(`
         UPDATE Users
         SET
@@ -413,6 +475,9 @@ export async function updateDriverProfile(req, res, next) {
             WHEN @DateOfBirth IS NULL OR @DateOfBirth = '' THEN NULL
             ELSE CONVERT(date, @DateOfBirth, 23)
           END,
+          TempPendingEmail = CASE WHEN @EmailChanged = 1 THEN @TempPendingEmail ELSE TempPendingEmail END,
+          EmailVerifyToken = CASE WHEN @EmailChanged = 1 THEN @EmailVerifyToken ELSE EmailVerifyToken END,
+          EmailVerifyExpires = CASE WHEN @EmailChanged = 1 THEN @EmailVerifyExpires ELSE EmailVerifyExpires END,
           UpdatedAt = GETDATE()
         WHERE UserID = @DriverID
       `);
@@ -440,16 +505,28 @@ export async function updateDriverProfile(req, res, next) {
           u.AccountBalance,
           u.CreatedAt,
           u.UpdatedAt,
+          u.TempPendingEmail,
           r.RoleName
         FROM Users u
         LEFT JOIN Roles r ON u.RoleID = r.RoleID
         WHERE u.UserID = @DriverID
       `);
 
+    if (emailChanged) {
+      sendVerifyEmail(email, fullName, verifyToken).catch((err) => {
+        console.error("❌ Gửi verify email khi đổi email thất bại:", err.message);
+      });
+    }
+
     return res.json({
       success: true,
-      message: "Cập nhật thông tin cá nhân thành công.",
-      data: updatedResult.recordset[0],
+      message: emailChanged
+        ? "Yêu cầu đổi email thành công. Vui lòng kiểm tra hộp thư của email mới để xác minh và hoàn tất thay đổi."
+        : "Cập nhật hồ sơ thành công.",
+      data: {
+        ...updatedResult.recordset[0],
+        requiresVerification: emailChanged,
+      },
     });
   } catch (err) {
     next(err);

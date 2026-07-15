@@ -37,8 +37,8 @@ app.get("/", (req, res) => {
 // 1. Áp dụng cấu hình CORS cho tất cả các request
 app.use(cors(corsOptions));
 // 2. Chuyển đổi dữ liệu gửi lên (body) dạng JSON thành object
-app.use(express.json());
-// 3. Phân tích Cookies từ request headers
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ limit: "100mb", extended: true }));
 app.use(cookieParser());
 
 // ================= ROUTES ======================

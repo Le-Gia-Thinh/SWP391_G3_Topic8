@@ -92,15 +92,24 @@ export async function payParkingByWallet(req, res, next) {
 export async function paySubscriptionByWallet(req, res, next) {
     try {
         const userId = req.user?.UserID;
-        const { planId, durationMonths } = req.body;
+        const { planId, durationMonths, deductionAmount, extraDays } = req.body;
         if (!planId || !durationMonths)
             return res.status(400).json({ success: false, message: 'Thiếu thông tin gói' });
 
-        const data = await paySubscriptionByWalletService(userId, planId, parseInt(durationMonths));
+        const data = await paySubscriptionByWalletService(
+            userId, 
+            planId, 
+            parseInt(durationMonths),
+            parseFloat(deductionAmount) || 0,
+            parseInt(extraDays) || 0
+        );
         return res.status(StatusCodes.OK).json({
             success: true,
             message: 'Mua gói bằng ví thành công',
             data,
         });
-    } catch (err) { next(err); }
+    } catch (err) {
+        console.error('Wallet Payment Error:', err);
+        next(err); 
+    }
 }

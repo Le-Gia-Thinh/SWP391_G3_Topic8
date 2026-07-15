@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Menu, Search, Bell, Moon, Sun, Clock, CalendarDays, Wallet, AlertTriangle, CheckCheck, Info } from 'lucide-react'
+import { Search, Bell, Moon, Sun, Clock, CalendarDays, Wallet, AlertTriangle, CheckCheck, Info } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppTheme } from '../../contexts/AppThemeContext'
@@ -23,7 +23,7 @@ const getInitials = (name) => {
   return name.slice(0, 2).toUpperCase()
 }
 
-const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }) => {
+const Navbar = ({ title = 'Dashboard', profileLink = '/profile' }) => {
   const { t } = useTranslation()
   const { user } = useAuth()
   const { theme, toggleTheme } = useAppTheme()
@@ -73,7 +73,7 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
 
   const formatRelativeTime = (dateStr) => {
     if (!dateStr) return ''
-    const date = new Date(String(dateStr).endsWith('Z') ? String(dateStr).slice(0, -1) : dateStr)
+    const date = new Date(dateStr)
     const diffMs = new Date().getTime() - date.getTime()
     const diffMin = Math.floor(diffMs / 60000)
     const diffHour = Math.floor(diffMs / 3600000)
@@ -96,12 +96,6 @@ const Navbar = ({ toggleSidebar, title = 'Dashboard', profileLink = '/profile' }
   return (
     <header className="sticky top-0 z-30 flex h-20 shrink-0 items-center justify-between border-b border-slate-200/60 dark:border-gray-800 bg-white/80 backdrop-blur-md dark:bg-gray-900 px-6 transition-colors duration-300">
       <div className="flex items-center gap-4">
-        <button
-          onClick={toggleSidebar}
-          className="rounded-xl border border-slate-200/60 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 text-slate-500 dark:text-gray-300 shadow-[0_2px_10px_rgb(0,0,0,0.02)] transition-all hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 dark:hover:bg-gray-700 dark:hover:text-blue-400"
-        >
-          <Menu size={20} />
-        </button>
         <h1 className="text-xl font-bold text-slate-800 dark:text-white hidden sm:block tracking-tight">{title}</h1>
       </div>
 

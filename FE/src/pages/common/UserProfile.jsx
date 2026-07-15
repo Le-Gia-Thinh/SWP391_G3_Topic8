@@ -82,7 +82,23 @@ const ProfileContent = ({ user, editing, formData, onChange, recentActivity, rec
             </div>
             <div className="space-y-1">
               <label className="text-xs font-semibold text-gray-400 dark:text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1.5"><Mail size={16} className="text-purple-500" /> {t('userProfile.email')}</label>
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg">{user?.email || user?.Email || t('userProfile.notUpdated')}</p>
+              {editing ? (
+                <input
+                  type="email"
+                  value={formData?.email || ''}
+                  onChange={onChange('email')}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+                />
+              ) : (
+                <div>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg">{formData?.email || user?.email || user?.Email || t('userProfile.notUpdated')}</p>
+                  {user?.TempPendingEmail && (
+                    <span className="text-xs text-orange-500 font-bold block mt-1">
+                      (Đang chờ xác thực đổi sang: {user.TempPendingEmail})
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <label className="text-xs font-semibold text-gray-400 dark:text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1.5"><Phone size={16} className="text-green-500" /> {t('userProfile.phone')}</label>
@@ -290,7 +306,8 @@ const SecurityContent = () => {
 
 const UserProfile = () => {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [profileData, setProfileData] = useState(user)
   const [activeTab, setActiveTab] = useState('profile')
   const [editing, setEditing] = useState(false)
@@ -311,7 +328,8 @@ const UserProfile = () => {
   const [formData, setFormData] = useState({
     fullName: user?.fullName || user?.FullName || '',
     phoneNumber: user?.phone || user?.PhoneNumber || '',
-    dateOfBirth: user?.dateOfBirth || user?.DateOfBirth || ''
+    dateOfBirth: user?.dateOfBirth || user?.DateOfBirth || '',
+    email: user?.email || user?.Email || ''
   })
 
   const [recentActivity, setRecentActivity] = useState([])
@@ -330,7 +348,8 @@ const UserProfile = () => {
           setFormData({
             fullName: currentUser.fullName || currentUser.FullName || '',
             phoneNumber: currentUser.phone || currentUser.PhoneNumber || '',
-            dateOfBirth: currentUser.dateOfBirth || currentUser.DateOfBirth || ''
+            dateOfBirth: currentUser.dateOfBirth || currentUser.DateOfBirth || '',
+            email: currentUser.email || currentUser.Email || ''
           })
         }
       } catch (error) {
@@ -362,16 +381,53 @@ const UserProfile = () => {
     if (activeTab === 'profile' && isDriver) {
       setIsUpdating(true)
       try {
-        await driverApi.updateProfile({
+        let currentPassword = ''
+        const emailChanged = formData.email !== (profileData?.email || profileData?.Email)
+        if (emailChanged) {
+          const password = prompt(t('userProfile.security.enterPasswordToChangeEmail') || 'Vui lòng nhập mật khẩu hiện tại để xác nhận đổi email:')
+          if (password === null) {
+            setIsUpdating(false)
+            return
+          }
+          if (!password.trim()) {
+            toast.error(t('userProfile.security.passwordRequired') || 'Mật khẩu hiện tại không được để trống.')
+            setIsUpdating(false)
+            return
+          }
+          currentPassword = password
+        }
+
+        const response = await driverApi.updateProfile({
           fullName: formData.fullName,
           phoneNumber: formData.phoneNumber,
-          dateOfBirth: formData.dateOfBirth
+          dateOfBirth: formData.dateOfBirth,
+          email: formData.email,
+          currentPassword
         })
+
+        const resData = response.data?.data || response.data || response
+        if (resData) {
+          setProfileData(resData)
+          setFormData({
+            fullName: resData.fullName || resData.FullName || '',
+            phoneNumber: resData.phone || resData.PhoneNumber || '',
+            dateOfBirth: resData.dateOfBirth || resData.DateOfBirth || '',
+            email: resData.email || resData.Email || ''
+          })
+        }
+
+        if (emailChanged && resData?.requiresVerification) {
+          toast.success(response.message || 'Yêu cầu đổi email thành công. Vui lòng xác thực email mới của bạn.')
+        } else {
+          toast.success(t('userProfile.security.updateSuccess') || 'Cập nhật hồ sơ thành công.')
+        }
+
         setSaved(true)
         setTimeout(() => setSaved(false), 2000)
         setEditing(false)
       } catch (error) {
         console.error('Update profile error:', error)
+        toast.error(error.response?.data?.message || 'Cập nhật hồ sơ thất bại.')
       } finally {
         setIsUpdating(false)
       }

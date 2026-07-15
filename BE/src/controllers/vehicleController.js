@@ -345,17 +345,73 @@ export async function setDefaultVehicle(req, res, next) {
       });
     }
 
-    // Unset all defaults, then set this one — wrapped in a transaction
+    // Check if the vehicle is currently parked
+    const parkedCheck = await pool.request()
+      .input("VehicleID", sql.Int, vehicleId)
+      .query(`
+        SELECT top 1 1 FROM ParkingSessions ps
+        JOIN DriverVehicles dv ON ps.PlateNumber = dv.PlateNumber
+        WHERE dv.VehicleID = @VehicleID AND ps.SessionStatus = 'Active'
+      `);
+      
+    if (parkedCheck.recordset.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Không thể đổi trạng thái Mặc định khi xe này đang đỗ trong bãi."
+      });
+    }
+
+    // Kiểm tra gói hội viên để xác định giới hạn xe mặc định (Premium = 2, còn lại = 1)
+    const subCheck = await pool.request()
+      .input("DriverID", sql.Int, driverId)
+      .query(`
+        SELECT TOP 1 PlanID FROM UserSubscriptions
+        WHERE UserID = @DriverID AND Status = 'Active' AND EndDate > GETDATE()
+        ORDER BY EndDate DESC
+      `);
+    const planId = subCheck.recordset[0]?.PlanID || null;
+    const maxDefaults = (planId === 'premium') ? 2 : 1;
+
+    // Đếm số xe mặc định hiện tại (trừ xe đang set)
+    const defaultCountRes = await pool.request()
+      .input("DriverID", sql.Int, driverId)
+      .input("VehicleID", sql.Int, vehicleId)
+      .query(`
+        SELECT COUNT(*) as DefaultCount FROM DriverVehicles
+        WHERE DriverID = @DriverID AND IsActive = 1 AND IsDefault = 1 AND VehicleID != @VehicleID
+      `);
+    const currentDefaults = defaultCountRes.recordset[0].DefaultCount;
+
     const transaction = new sql.Transaction(pool);
     try {
       await transaction.begin();
 
-      await new sql.Request(transaction)
-        .input("DriverID", sql.Int, driverId)
-        .query(`
-          UPDATE DriverVehicles SET IsDefault = 0
-          WHERE DriverID = @DriverID AND IsActive = 1
-        `);
+      // Nếu đã đạt giới hạn, cần bỏ bớt xe mặc định cũ nhất
+      if (currentDefaults >= maxDefaults) {
+        // Chỉ bỏ 1 xe mặc định cũ nhất để nhường chỗ
+        if (maxDefaults === 1) {
+          // Gói Basic/Pro: bỏ hết, chỉ giữ xe mới
+          await new sql.Request(transaction)
+            .input("DriverID", sql.Int, driverId)
+            .query(`
+              UPDATE DriverVehicles SET IsDefault = 0
+              WHERE DriverID = @DriverID AND IsActive = 1
+            `);
+        } else {
+          // Gói Premium: bỏ xe mặc định cũ nhất (giữ 1, thêm 1 mới = 2)
+          await new sql.Request(transaction)
+            .input("DriverID", sql.Int, driverId)
+            .input("VehicleID", sql.Int, vehicleId)
+            .query(`
+              UPDATE DriverVehicles SET IsDefault = 0
+              WHERE VehicleID = (
+                SELECT TOP 1 VehicleID FROM DriverVehicles
+                WHERE DriverID = @DriverID AND IsActive = 1 AND IsDefault = 1 AND VehicleID != @VehicleID
+                ORDER BY UpdatedAt ASC
+              )
+            `);
+        }
+      }
 
       await new sql.Request(transaction)
         .input("VehicleID", sql.Int, vehicleId)
@@ -379,4 +435,74 @@ export async function setDefaultVehicle(req, res, next) {
   } catch (err) {
     next(err);
   }
-}
+};
+
+export async function toggleVIPVehicle(req, res, next) {
+  try {
+    const driverId = getUserIdFromToken(req);
+    const { id: vehicleId } = req.params;
+
+    const pool = await getPool();
+
+    // Verify ownership and get current VIP status
+    const ownerCheck = await pool
+      .request()
+      .input("VehicleID", sql.Int, vehicleId)
+      .input("DriverID", sql.Int, driverId)
+      .query(`
+        SELECT VehicleID, IsVIPVehicle FROM DriverVehicles
+        WHERE VehicleID = @VehicleID AND DriverID = @DriverID AND IsActive = 1
+      `);
+
+    if (ownerCheck.recordset.length === 0) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy phương tiện." });
+    }
+
+    const currentVIPStatus = ownerCheck.recordset[0].IsVIPVehicle;
+    const newVIPStatus = currentVIPStatus ? 0 : 1;
+
+    // Check if the vehicle is currently parked
+    const parkedCheck = await pool.request()
+      .input("VehicleID", sql.Int, vehicleId)
+      .query(`
+        SELECT top 1 1 FROM ParkingSessions ps
+        JOIN DriverVehicles dv ON ps.PlateNumber = dv.PlateNumber
+        WHERE dv.VehicleID = @VehicleID AND ps.SessionStatus = 'Active'
+      `);
+      
+    if (parkedCheck.recordset.length > 0) {
+      return res.status(400).json({ success: false, message: "Không thể đổi trạng thái VIP khi xe đang đỗ trong bãi." });
+    }
+
+    // If turning ON VIP, check if driver already has 2 VIP vehicles
+    if (newVIPStatus === 1) {
+      const countCheck = await pool.request()
+        .input("DriverID", sql.Int, driverId)
+        .query(`
+          SELECT COUNT(*) as VIPCount FROM DriverVehicles
+          WHERE DriverID = @DriverID AND IsActive = 1 AND IsVIPVehicle = 1
+        `);
+      
+      if (countCheck.recordset[0].VIPCount >= 2) {
+        return res.status(400).json({ success: false, message: "Bạn chỉ được phép đăng ký tối đa 2 xe VIP." });
+      }
+    }
+
+    await pool.request()
+      .input("VehicleID", sql.Int, vehicleId)
+      .input("IsVIP", sql.Bit, newVIPStatus)
+      .query(`
+        UPDATE DriverVehicles
+        SET IsVIPVehicle = @IsVIP, UpdatedAt = GETDATE()
+        WHERE VehicleID = @VehicleID
+      `);
+
+    return res.json({
+      success: true,
+      message: newVIPStatus ? "Đã đăng ký xe VIP thành công." : "Đã hủy trạng thái xe VIP.",
+      isVIP: Boolean(newVIPStatus)
+    });
+  } catch (err) {
+    next(err);
+  }
+};

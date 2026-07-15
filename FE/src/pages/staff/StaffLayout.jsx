@@ -79,13 +79,25 @@ const StaffLayout = () => {
       >
         {/* Logo & Close button */}
         <div className="p-6 flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 mb-2">
-          <Link to="/staff/dashboard" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="flex h-11 w-11 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/20">
-              <Car size={22} strokeWidth={2.5} />
+          <Link to="/staff/dashboard" onClick={() => setSidebarOpen(false)} className="flex items-center gap-3 hover:opacity-80 transition-opacity group">
+            <div className="relative flex shrink-0 items-center justify-center transition-all duration-300 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-500/30 border border-blue-400/20 ring-2 ring-white/20 h-11 w-11 group-hover:scale-105 group-hover:shadow-blue-500/50">
+              <div className="absolute inset-0 bg-white/20 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm" />
+              <svg viewBox="0 0 24 24" fill="none" className="drop-shadow-md z-10 relative transition-all duration-300 w-6 h-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 19.5v-15h5a4.5 4.5 0 0 1 0 9H9" />
+                <path d="M14 4.5A4.5 4.5 0 0 1 18.5 9" className="stroke-cyan-300 opacity-70" />
+                <circle cx="18" cy="18" r="2.5" className="fill-green-400 stroke-white dark:stroke-slate-800" strokeWidth="1.5" />
+              </svg>
             </div>
-            <div>
-              <p className="text-[17px] font-black text-slate-900 dark:text-white tracking-tight leading-tight">PBMS</p>
-              <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Staff Portal</p>
+            <div className="flex flex-col justify-center">
+              <div className="flex items-baseline leading-none">
+                <span className="text-[22px] font-black tracking-tighter text-slate-800 dark:text-white">Smart</span>
+                <span className="text-[22px] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Park</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 ml-1 mb-1 animate-pulse" />
+              </div>
+              <span className="flex items-center gap-2 text-[9px] mt-1 font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
+                Staff Portal
+                <span className="w-8 h-[2px] bg-gradient-to-r from-slate-300 to-transparent dark:from-slate-600 rounded-full"></span>
+              </span>
             </div>
           </Link>
           <button
@@ -176,12 +188,18 @@ const StaffLayout = () => {
           </button>
 
           {/* Logo in top bar */}
-          <Link to="/staff/dashboard" className="flex items-center gap-3 mr-4 hover:opacity-80 transition-opacity md:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-              <Car size={18} strokeWidth={2.5} />
+          <Link to="/staff/dashboard" className="flex items-center gap-3 mr-4 hover:opacity-80 transition-opacity md:hidden group">
+            <div className="relative flex shrink-0 items-center justify-center transition-all duration-300 rounded-xl bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-500/30 border border-blue-400/20 ring-2 ring-white/20 h-9 w-9 group-hover:scale-105">
+              <svg viewBox="0 0 24 24" fill="none" className="drop-shadow-md z-10 relative w-5 h-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 19.5v-15h5a4.5 4.5 0 0 1 0 9H9" />
+                <path d="M14 4.5A4.5 4.5 0 0 1 18.5 9" className="stroke-cyan-300 opacity-70" />
+                <circle cx="18" cy="18" r="2.5" className="fill-green-400 stroke-white dark:stroke-slate-800" strokeWidth="1.5" />
+              </svg>
             </div>
             <div>
-              <p className="text-sm font-black text-slate-900 dark:text-white leading-tight">PBMS</p>
+              <span className="text-[18px] leading-none font-black tracking-tighter text-slate-800 dark:text-white flex items-baseline">
+                Smart<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Park</span>
+              </span>
             </div>
           </Link>
 

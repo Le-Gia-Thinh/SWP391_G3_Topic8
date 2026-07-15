@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { ArrowLeft, Clock, QrCode, ShieldCheck, CheckCircle2, Copy, ExternalLink, Wallet } from 'lucide-react';
+import { ArrowLeft, Clock, QrCode, ShieldCheck, CheckCircle2, Copy, ExternalLink, Wallet, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import { subscriptionApi } from '../../apis/subscriptionApi';
@@ -180,7 +180,12 @@ const DriverSubscriptionPayment = () => {
            toast.error(t('driver.payment.walletInsufficient'));
            return;
        }
-       const res = await walletApi.paySubscription(plan.id, duration.months);
+       const res = await walletApi.paySubscription({
+           planId: plan.id,
+           durationMonths: duration.months,
+           deductionAmount: location.state?.deductionAmount || 0,
+           extraDays: location.state?.extraDays || 0
+       });
        if (res.success) {
            setStep('done');
            localStorage.setItem('driver_subscription_auto_renew', 'true');
@@ -227,16 +232,35 @@ const DriverSubscriptionPayment = () => {
   // STEP: done
   // ──────────────────────────────────────────────────────────────
   if (step === 'done') return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="text-center bg-white rounded-3xl p-10 shadow-lg max-w-md">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="text-center bg-white rounded-3xl p-8 md:p-10 shadow-lg max-w-md w-full">
         <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle2 className="w-10 h-10 text-emerald-600" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Kích hoạt thành công!</h2>
         <p className="text-slate-500 mb-6">Gói <strong>{plan.name}</strong> ({duration.label}) đã được kích hoạt.</p>
-        <button onClick={() => navigate('/driver/subscription', { state: { activeTab: 'status' } })} className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors">
-          Xem Gói Của Tôi
-        </button>
+
+        {/* Reminder to set default vehicle */}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-left flex items-start gap-3">
+            <div className="text-amber-500 mt-0.5">
+                <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+                <h4 className="font-semibold text-amber-900 text-sm mb-1">Đừng quên nhận ưu đãi!</h4>
+                <p className="text-amber-700 text-xs leading-relaxed">
+                    Để nhận quyền lợi miễn phí đỗ xe, bạn cần thiết lập <strong>Xe Mặc Định</strong>. Hãy vào mục Quản lý Xe để chọn ngay nhé.
+                </p>
+            </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <button onClick={() => navigate('/driver/vehicles')} className="w-full px-6 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-sm">
+            Thiết Lập Xe Mặc Định
+          </button>
+          <button onClick={() => navigate('/driver/subscription', { state: { activeTab: 'status' } })} className="w-full px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors">
+            Xem Gói Của Tôi
+          </button>
+        </div>
       </div>
     </div>
   );

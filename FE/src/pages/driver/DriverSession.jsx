@@ -28,21 +28,9 @@ import Modal from '../../components/ui/Modal'
 
 const parseBackendDate = (value) => {
   if (!value) return null
-
   if (value instanceof Date) return value
-
-  let text = String(value)
-
-  if (text.endsWith('Z')) {
-    text = text.slice(0, -1)
-  }
-
-  const date = new Date(text)
-
-  if (Number.isNaN(date.getTime())) {
-    return null
-  }
-
+  const date = new Date(String(value))
+  if (Number.isNaN(date.getTime())) return null
   return date
 }
 
@@ -434,18 +422,22 @@ const SessionDetail = ({
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('driver.session.feeParking')}</span>
                 <span className="font-bold text-gray-800 dark:text-gray-200">
-                  {formatCurrency(totalAmount)}
+                  {formatCurrency(session.ParkingFee !== undefined ? session.ParkingFee : totalAmount)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('driver.session.feeOvertime')}</span>
-                <span className="font-bold text-gray-800 dark:text-gray-200">0 VNĐ</span>
+                <span className="font-bold text-gray-800 dark:text-gray-200">
+                  {formatCurrency(session.OvertimeFee || 0)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 dark:text-gray-400">{t('driver.session.feeOther')}</span>
-                <span className="font-bold text-gray-800 dark:text-gray-200">0 VNĐ</span>
+                <span className="font-bold text-gray-800 dark:text-gray-200">
+                  {formatCurrency(session.OtherFee || 0)}
+                </span>
               </div>
             </div>
 

@@ -231,17 +231,18 @@ const PricingTable = ({ data = [], vehicleName = '' }) => {
 }
 
 // ── Session Card ─────────────────────────────────────────────────
-const SessionCard = ({ session, onPay, paying, now }) => {
+const SessionCard = ({ session, onPay, onPayByWallet, paying, now, walletBalance, isWalletPaying }) => {
   const { t } = useTranslation()
   const cur = t('driver.common.currency')
   const dur = getDuration(session.EntryTime, now)
   const isMe = paying?.SessionID === session.SessionID
   const isPrepaid = session.PaymentStatus === 'Prepaid'
+  const isFreeVIP = session.DiscountPercent === 100
   const surcharge = Number(session.SurchargeAmount ?? 0)
   const prepaid = Number(session.PrepaidAmount ?? 0)
   const bd = calcBreakdown(session.EntryTime, session.VehicleTypeID)
   const baseFee = bd ? bd.baseFee : Number(session.CurrentAmount || 0)
-  const grandTotal = (isPrepaid ? prepaid : baseFee) + surcharge
+  const grandTotal = isFreeVIP ? surcharge : ((isPrepaid ? prepaid : baseFee) + surcharge)
 
   const bracketLabels = [
     t('driver.payment.bracketLabel0'),
@@ -384,10 +385,16 @@ const SessionCard = ({ session, onPay, paying, now }) => {
 
           {/* Tổng hợp */}
           <div className="border-t border-slate-100">
-            {!isPrepaid && (
+            {!isPrepaid && !isFreeVIP && (
               <div className="flex justify-between items-center px-4 py-2 bg-white">
                 <span className="text-xs font-semibold text-slate-500">{t('driver.payment.baseFee')}</span>
                 <span className="text-xs font-bold text-slate-800">{fmt(baseFee, cur)}</span>
+              </div>
+            )}
+            {isFreeVIP && (
+              <div className="flex justify-between items-center px-4 py-2 bg-green-50">
+                <span className="text-xs font-semibold text-green-700">Ưu đãi Hội viên</span>
+                <span className="text-xs font-bold text-green-800">- {fmt(baseFee, cur)} (100%)</span>
               </div>
             )}
             {isPrepaid && prepaid > 0 && (
@@ -402,17 +409,23 @@ const SessionCard = ({ session, onPay, paying, now }) => {
                 <span className="text-xs font-bold text-orange-800">+ {fmt(surcharge, cur)}</span>
               </div>
             )}
-            <div className={`flex justify-between items-center px-6 py-4 border-t-2 ${isPrepaid ? 'bg-amber-50 border-amber-200' : 'bg-blue-50/50 border-blue-100'}`}>
-              <span className={`text-sm font-black ${isPrepaid ? 'text-amber-900' : 'text-blue-900'}`}>{t('driver.payment.totalFee')}</span>
-              <span className={`text-2xl font-black ${isPrepaid ? 'text-amber-600' : 'text-blue-600'}`}>{fmt(grandTotal, cur)}</span>
+            <div className={`flex justify-between items-center px-6 py-4 border-t-2 ${isPrepaid ? 'bg-amber-50 border-amber-200' : isFreeVIP ? 'bg-green-50 border-green-200' : 'bg-blue-50/50 border-blue-100'}`}>
+              <span className={`text-sm font-black ${isPrepaid ? 'text-amber-900' : isFreeVIP ? 'text-green-900' : 'text-blue-900'}`}>{t('driver.payment.totalFee')}</span>
+              <span className={`text-2xl font-black ${isPrepaid ? 'text-amber-600' : isFreeVIP ? 'text-green-600' : 'text-blue-600'}`}>{fmt(grandTotal, cur)}</span>
             </div>
           </div>
         </div>
 
-        {/* CTA button */}
-        <div className="px-6 py-5 bg-white border-t border-slate-100">
+        {/* CTA buttons */}
+        <div className="px-6 py-5 bg-white border-t border-slate-100 space-y-3">
+          {isFreeVIP && grandTotal === 0 && (
+            <div className="w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-sm text-green-800 bg-green-100 border-2 border-green-200 shadow-sm mb-3">
+              <CheckCircleIcon size={18} className="text-green-600" />
+              Xe mặc định - Miễn phí Hội viên
+            </div>
+          )}
           <button 
-            disabled={!!paying}
+            disabled={!!paying || isWalletPaying}
             onClick={() => onPay(session)}
             className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm text-white transition-all active:scale-[0.98] ${
               isPrepaid 
@@ -423,6 +436,22 @@ const SessionCard = ({ session, onPay, paying, now }) => {
             {isMe ? <Loader2 size={18} className="animate-spin" /> : <QrCodeIcon size={18} />}
             {isMe ? t('driver.payment.creatingQr') : isPrepaid ? t('driver.payment.createQrAgain') : t('driver.payment.createQr')}
           </button>
+          {!isPrepaid && (
+            <button
+              disabled={!!paying || isWalletPaying}
+              onClick={() => onPayByWallet(session)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-blue-700 bg-blue-50 border-2 border-blue-200 hover:bg-blue-100 transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              {isWalletPaying && paying?.SessionID === session.SessionID ? <Loader2 size={16} className="animate-spin" /> : <WalletIcon size={16} />}
+              Thanh toán bằng Ví ({fmt(walletBalance)})
+            </button>
+          )}
+          
+          <p className="text-[11px] text-center text-slate-400 font-medium">
+            {isFreeVIP && grandTotal === 0 ? 'Bạn có thể đánh xe ra cổng trực tiếp.' : (
+              <>Thanh toán bảo mật qua <strong className="text-slate-500">PayOS</strong> · VietQR</>
+            )}
+          </p>
         </div>
       </div>
     </div>
@@ -555,7 +584,7 @@ const DriverPayment = () => {
     }
   }
 
-  // Thanh toán bằng ví
+  // Thanh toán bằng ví (từ trang QR)
   const handlePayByWallet = async () => {
     try {
       if (walletBalance < payment.amount) {
@@ -569,6 +598,34 @@ const DriverPayment = () => {
       }
     } catch (e) {
       toast.error(t('driver.payment.walletFail'))
+    }
+  }
+
+  // Thanh toán bằng ví trực tiếp từ danh sách (không cần qua QR)
+  const handlePayByWalletDirect = async (session) => {
+    try {
+      setIsWalletPaying(true)
+      setPaying(session)
+      const res = await walletApi.payParking(session.SessionID)
+      if (res.success) {
+        if (res.amount === 0) {
+          setPayment({ checkoutUrl: 'FREE', amount: 0 });
+          setStep('qr');
+          return;
+        }
+        toast.success(t('driver.payment.walletSuccess'))
+        // Refresh danh sách
+        loadSessions()
+        // Refresh balance
+        walletApi.getBalance().then(r => {
+          if (r.success) setWalletBalance(r.data.balance)
+        }).catch(() => {})
+      }
+    } catch (e) {
+      toast.error(t('driver.payment.walletFail'))
+    } finally {
+      setIsWalletPaying(false)
+      setPaying(null)
     }
   }
 
@@ -602,7 +659,7 @@ const DriverPayment = () => {
         ) : (
           <div className="space-y-6">
             {sessions.map(s => (
-              <SessionCard key={s.SessionID} session={s} onPay={handlePay} paying={paying} now={now} />
+              <SessionCard key={s.SessionID} session={s} onPay={handlePay} onPayByWallet={handlePayByWalletDirect} paying={paying} now={now} walletBalance={walletBalance} isWalletPaying={isWalletPaying} />
             ))}
           </div>
         )}

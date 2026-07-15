@@ -32,7 +32,7 @@ const COLOR_CLASSES = {
 
 const formatDateTime = (value) => {
   if (!value) return '--'
-  const date = new Date(String(value).endsWith('Z') ? String(value).slice(0, -1) : value)
+  const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '--'
   return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
 }
@@ -164,9 +164,43 @@ const ActiveSessionCard = ({ session }) => {
   if (!session) {
     return (<EmptyCard title={t('driver.home.workflows.noSession')} description={t('driver.home.workflows.noSessionDesc')} actionText={t('driver.home.workflows.viewHistory')} actionTo="/driver/session" icon={Activity} />)
   }
+
+  const now = new Date()
+  const bookingEnd = session.BookingEndTime ? new Date(session.BookingEndTime) : null
+  
+  // Tính toán thời gian còn lại
+  const isOvertime = bookingEnd ? now > bookingEnd : false
+  const diffMs = bookingEnd ? bookingEnd.getTime() - now.getTime() : 0
+  const diffMin = Math.round(diffMs / 60000)
+
+  let alertLevel = 'normal' // 'normal', 'yellow', 'red', 'overtime'
+  let alertText = ''
+
+  if (bookingEnd) {
+    if (isOvertime) {
+      alertLevel = 'overtime'
+      const overtimeMs = now.getTime() - bookingEnd.getTime()
+      const overtimeMin = Math.floor(overtimeMs / 60000)
+      const overtimeH = Math.floor(overtimeMin / 60)
+      const overtimeM = overtimeMin % 60
+      alertText = `Đã quá giờ đỗ xe: lố ${overtimeH} giờ ${overtimeM} phút! Bạn đang bị tính phí phạt đỗ quá giờ.`
+    } else if (diffMin <= 15) {
+      alertLevel = 'red'
+      alertText = `Cảnh báo: Chỉ còn ${diffMin} phút! Bạn sắp quá giờ đặt chỗ.`
+    } else if (diffMin <= 30) {
+      alertLevel = 'yellow'
+      alertText = `Lưu ý: Chỉ còn ${diffMin} phút. Vui lòng di chuyển xe hoặc gia hạn.`
+    }
+  }
+
   const slotText = `${session.FloorName || '--'} / ${t('driver.home.zoneWord')} ${session.ZoneName || '--'} / Slot ${session.SlotCode || '--'}`
   return (
-    <div className="relative flex h-full min-h-[400px] flex-col overflow-hidden rounded-[1.5rem] border border-blue-200 bg-gradient-to-b from-white to-blue-50/30 p-6 shadow-md shadow-blue-900/5">
+    <div className={`relative flex h-full min-h-[400px] flex-col overflow-hidden rounded-[1.5rem] border p-6 shadow-md transition-all duration-300 ${
+      alertLevel === 'overtime' ? 'border-red-500 bg-red-50/10 shadow-red-100/50' :
+      alertLevel === 'red' ? 'border-rose-400 bg-rose-50/10 shadow-rose-100/50' :
+      alertLevel === 'yellow' ? 'border-amber-300 bg-amber-50/10' :
+      'border-blue-200 bg-gradient-to-b from-white to-blue-50/30 shadow-blue-900/5'
+    }`}>
       <div className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#f8fafc] border-r border-blue-200" />
       <div className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[#f8fafc] border-l border-blue-200" />
       <div className="mb-6 flex items-start justify-between">
@@ -179,6 +213,18 @@ const ActiveSessionCard = ({ session }) => {
           <span className="inline-block rounded-lg bg-indigo-50 px-2 py-1 text-xs font-bold text-indigo-700 border border-indigo-100">{session.BookingCode ? t('driver.home.workflows.prebooked') : t('driver.home.workflows.walkIn')}</span>
         </div>
       </div>
+
+      {alertText && (
+        <div className={`mb-4 px-4 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all ${
+          alertLevel === 'overtime' ? 'bg-red-500 text-white border-red-500 animate-pulse' :
+          alertLevel === 'red' ? 'bg-rose-50 text-rose-700 border-rose-200 animate-pulse' :
+          'bg-amber-50 text-amber-800 border-amber-200'
+        }`}>
+          <AlertCircle size={14} className={alertLevel === 'overtime' ? 'animate-bounce text-white' : ''} />
+          <span>{alertText}</span>
+        </div>
+      )}
+
       <div className="flex-1 space-y-3 border-y border-dashed border-blue-200 py-5">
         <InfoRow label={t('driver.home.workflows.sessionCode')} value={session.SessionCode || `SESS-${session.SessionID}`} />
         <InfoRow label={t('driver.home.workflows.bookingLink')} value={session.BookingCode || t('driver.home.workflows.none')} />

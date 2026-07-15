@@ -6,6 +6,7 @@
 
 import { getPool, sql } from "../config/db.js";
 import { syncParkingSlotStatuses } from "./slotSyncService.js";
+import { sendBookingConfirmation } from "./mailService.js";
 import {
   buildDateTime,
   getDurationHours,
@@ -495,6 +496,7 @@ export async function createReservation(req) {
         r.DriverID,
         r.VehicleTypeID,
         r.SlotID,
+        r.PlateNumber,
         r.ReservationDate,
         r.StartTime,
         r.EndTime,
@@ -515,18 +517,33 @@ export async function createReservation(req) {
     `);
 
   const reservation = newestReservation.recordset[0];
+  const fullBooking = {
+    ...reservation,
+    SlotCode: slot.SlotCode,
+    ZoneName: slot.ZoneName,
+    FloorName: slot.FloorName,
+    BuildingID: slot.BuildingID,
+    BuildingName: slot.BuildingName,
+    StatusValue: "active",
+    StatusLabel: "Đang hoạt động",
+  };
+
+  // Gửi email xác nhận đặt chỗ bất đồng bộ
+  pool.request()
+    .input("DriverID", sql.Int, driverId)
+    .query(`SELECT FullName, Email FROM Users WHERE UserID = @DriverID`)
+    .then((userRes) => {
+      const user = userRes.recordset[0];
+      if (user && user.Email) {
+        sendBookingConfirmation(user.Email, user.FullName, fullBooking);
+      }
+    })
+    .catch((err) => {
+      console.error("Failed to query driver for booking email confirmation:", err.message);
+    });
 
   return {
-    reservation: {
-      ...reservation,
-      SlotCode: slot.SlotCode,
-      ZoneName: slot.ZoneName,
-      FloorName: slot.FloorName,
-      BuildingID: slot.BuildingID,
-      BuildingName: slot.BuildingName,
-      StatusValue: "active",
-      StatusLabel: "Đang hoạt động",
-    },
+    reservation: fullBooking,
   };
 }
 
