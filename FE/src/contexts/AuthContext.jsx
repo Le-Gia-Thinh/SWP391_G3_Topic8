@@ -6,7 +6,7 @@
  */
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { loginAPI, googleLoginAPI, facebookLoginAPI, getMeAPI, logoutAPI } from '../apis/authApi'
+import { loginAPI, googleLoginAPI, getMeAPI, logoutAPI } from '../apis/authApi'
 
 const AuthContext = createContext(null)
 
@@ -75,13 +75,6 @@ export function AuthProvider({ children }) {
     return { user: loggedUser, message }
   }
 
-  async function loginWithFacebook(fbAccessToken) {
-    const res = await facebookLoginAPI(fbAccessToken)
-    const { user: loggedUser, message } = res.data.data
-    setUser(loggedUser)
-    return { user: loggedUser, message }
-  }
-
   async function logout() {
     try {
       await logoutAPI()
@@ -98,7 +91,6 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!user,
     login,
     loginWithGoogle,
-    loginWithFacebook,
     logout,
     getRedirectPath
   }

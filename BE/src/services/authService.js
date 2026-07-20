@@ -149,7 +149,13 @@ export async function loginService({ email, password }, ip) {
         const err = new Error("Tài khoản đã bị khóa, vui lòng liên hệ quản lý");
         err.statusCode = 403; throw err;
     }
-    if (!user.IsEmailVerified) {
+    const emailLower = String(user.Email || "").toLowerCase().trim();
+    const isFakeSystemEmail = 
+        emailLower.endsWith("@email.com") || 
+        emailLower.endsWith("@parking.com") || 
+        emailLower.endsWith("@example.com");
+
+    if (!user.IsEmailVerified && !isFakeSystemEmail) {
         const err = new Error("Vui lòng xác minh email trước khi đăng nhập. Kiểm tra hộp thư của bạn.");
         err.statusCode = 403;
         err.code = "EMAIL_NOT_VERIFIED";
@@ -200,45 +206,6 @@ export async function googleLoginService(idToken, ip) {
     return { accessToken, refreshToken, user: formatUser(user), message };
 }
 
-export async function facebookLoginService(fbAccessToken, ip) {
-    let fbData;
-    try {
-        const { data } = await axios.get("https://graph.facebook.com/me", {
-            params: { access_token: fbAccessToken, fields: "id,name,email,picture.type(large)" },
-            timeout: 5000,
-        });
-        fbData = data;
-    } catch {
-        const err = new Error("Facebook token không hợp lệ");
-        err.statusCode = 401; throw err;
-    }
-
-    const { id, name, email, picture } = fbData;
-    const pool = await getPool();
-    const result = await pool.request()
-        .input("ProviderName", sql.NVarChar(20), "facebook")
-        .input("ProviderUserID", sql.NVarChar(200), id)
-        .input("Email", sql.NVarChar(100), email || null)
-        .input("FullName", sql.NVarChar(100), name || "Facebook User")
-        .input("AvatarUrl", sql.NVarChar(500), picture?.data?.url || null)
-        .execute("sp_UpsertSocialUser");
-
-    const user = result.recordset[0];
-    if (!user) throw new Error("Không thể xử lý đăng nhập Facebook");
-
-    if (!user.IsActive) {
-        const err = new Error("Tài khoản đã bị khóa, vui lòng liên hệ quản lý");
-        err.statusCode = 403; throw err;
-    }
-
-    const { accessToken, refreshToken } = await generateAndSaveTokens(pool, user, ip);
-
-    const message = user.IsNewLink
-        ? "Đã liên kết Facebook vào tài khoản hiện có của bạn"
-        : "Đăng nhập Facebook thành công";
-
-    return { accessToken, refreshToken, user: formatUser(user), message };
-}
 
 export async function verifyEmailService(token) {
     if (!token) {

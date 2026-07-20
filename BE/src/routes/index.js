@@ -94,7 +94,6 @@ router.post("/auth/check-email-verified", authController.checkEmailVerifyStatus)
 
 // Social login public
 router.post("/auth/google", validateSocialLogin, authController.googleLogin);
-router.post("/auth/facebook", validateSocialLogin, authController.facebookLogin);
 
 // Auth protected
 router.get("/auth/me", isAuthorized, authController.getMe);

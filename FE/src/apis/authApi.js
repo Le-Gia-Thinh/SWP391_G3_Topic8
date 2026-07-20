@@ -6,7 +6,7 @@
 
 import authorizeAxios from '../utils/authorizeAxios'
 
-export const loginAPI = (data) => authorizeAxios.post('/auth/login', data)
+export const loginAPI = (data) => authorizeAxios.post('/auth/login', data, { _noToast: true })
 
 export const logoutAPI = () => authorizeAxios.post('/auth/logout')
 
@@ -24,10 +24,6 @@ export const resetPasswordAPI = (data) => authorizeAxios.post('/auth/reset-passw
 
 export const googleLoginAPI = (idToken) => {
   return authorizeAxios.post('/auth/google', { idToken })
-}
-
-export const facebookLoginAPI = (token) => {
-  return authorizeAxios.post('/auth/facebook', { accessToken: token })
 }
 export const checkEmailVerifiedAPI = (email) => {
   return authorizeAxios.post('/auth/check-email-verified', { email })
