@@ -7,6 +7,9 @@
  * - Lấy số liệu thống kê tổng quan (Dashboard Stats)
  * - Quản lý người dùng, vai trò (Roles)
  */
+/*
+Thinh
+*/
 
 import { getPool, sql } from '../config/db.js'
 import bcrypt from 'bcryptjs'

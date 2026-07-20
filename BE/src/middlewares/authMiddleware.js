@@ -11,6 +11,9 @@
 
 import JwtProvider     from "../providers/JwtProvider.js";  // Module xử lý JWT (tạo, xác minh token)
 import { getPool, sql } from "../config/db.js";             // Kết nối database
+/*
+Thinh
+*/
 
 /**
  * Middleware xác thực người dùng (Authentication).

@@ -3,6 +3,9 @@
  * MÔ TẢ: Service xử lý nghiệp vụ Hỗ trợ khách hàng (Support Tickets).
  * Chức năng: Tạo yêu cầu hỗ trợ, trả lời yêu cầu, thay đổi trạng thái yêu cầu.
  */
+/*
+hieu
+*/
 
 import { getPool } from '../config/db.js';
 

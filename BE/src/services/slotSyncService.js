@@ -3,6 +3,9 @@
  * MÔ TẢ: Service đồng bộ trạng thái Vị trí đỗ xe (Parking Slots) và xử lý tự động đỗ lố giờ.
  * Chức năng: Cập nhật trạng thái Slot và tự động hóa cảnh báo/điều hướng vị trí đỗ thông minh.
  */
+/*
+hieu
+*/
 
 import { getPool, sql } from "../config/db.js";
 

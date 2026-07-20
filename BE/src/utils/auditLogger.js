@@ -2,6 +2,9 @@
 // Helper ghi AuditLogs dùng chung cho các controller.
 // Tách ra từ adminController.logAudit để controller hạ tầng (Floor/Zone/Slot) tái dùng.
 import { sql } from '../config/db.js'
+/*
+hieu
+*/
 
 /**
  * Ghi một dòng audit log. Không bao giờ throw (lỗi log không được làm hỏng request chính).

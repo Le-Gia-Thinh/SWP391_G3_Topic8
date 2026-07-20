@@ -15,6 +15,9 @@
  * - getMe: Lấy thông tin user hiện tại
  * - checkEmailVerifyStatus: Kiểm tra trạng thái xác minh email
  */
+/*
+Thinh
+*/
 
 import { StatusCodes } from "http-status-codes"; // Mã HTTP status chuẩn
 import * as authService from "../services/authService.js"; // Service xử lý logic xác thực

@@ -6,6 +6,9 @@
  * Phục vụ các dropdown/form ở mọi role (Driver/Staff/Manager).
  * Tái sử dụng managerService cho các truy vấn phức tạp.
  */
+/*
+Thinh
+*/
 
 import { getPool } from "../config/db.js";
 import * as managerService from "../services/managerService.js";

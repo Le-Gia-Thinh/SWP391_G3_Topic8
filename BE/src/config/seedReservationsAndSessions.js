@@ -1,4 +1,8 @@
-import { getPool, sql } from "./db.js";
+/*
+Thinh
+*/
+
+import { getPool, sql } from "./db.js"; -
 
 async function main() {
     try {

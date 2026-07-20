@@ -5,6 +5,9 @@
  */
 
 import { getPool, sql } from "../config/db.js";
+/*
+Thinh
+*/
 
 const allowed = {
   roles: "Roles",

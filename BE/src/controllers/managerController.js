@@ -13,6 +13,9 @@
  * 
  * @access Manager only
  */
+/*
+Thinh
+*/
 
 import { StatusCodes } from "http-status-codes"; // Mã HTTP status chuẩn
 import * as managerService from "../services/managerService.js"; // Service xử lý logic manager
@@ -297,7 +300,7 @@ export async function getVehicleFlowReport(req, res, next) {
 }
 // ── Vehicle Types CRUD ────────────────────────────────────────
 // (getVehicleTypes đã có sẵn — controller này dùng getAllVehicleTypes cho trang quản lý)
-export async function getAllVehicleTypes(req, res, next) {
+export async function getAllVVehicleTypes(req, res, next) {
     try {
         const data = await managerService.getAllVehicleTypes();
         return res.status(StatusCodes.OK).json({ success: true, data });

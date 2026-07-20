@@ -3,7 +3,9 @@
  * MÔ TẢ: Component giao diện Chatbot AI hiển thị dưới dạng nút nổi (Floating Button) ở góc dưới màn hình.
  * Hỗ trợ giao tiếp trực tiếp với trợ lý AI tích hợp Gemini API để giải đáp thắc mắc.
  */
-
+/*
+Duy
+ */
 import React, { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MessageCircle, X, Send, Bot, User, Loader2 } from 'lucide-react'

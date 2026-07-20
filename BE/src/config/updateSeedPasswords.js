@@ -3,6 +3,9 @@
  * MÔ TẢ: Script cập nhật mật khẩu mặc định cho một số tài khoản thử nghiệm (seed emails).
  * Nó cũng cập nhật lại trạng thái kích hoạt, xác thực và đăng ký phương thức đăng nhập 'local'.
  */
+/*
+Thinh
+*/
 
 import bcryptjs from "bcryptjs"; // Thư viện để băm (hash) mật khẩu
 import { getPool, sql } from "./db.js";

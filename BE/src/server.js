@@ -3,6 +3,9 @@
  * MÔ TẢ: File cấu hình và khởi chạy ứng dụng Express (Backend).
  * Nó thiết lập các middlewares, kết nối các router (API), quản lý lỗi và chạy server.
  */
+/*
+Thinh, Hieu
+*/
 
 import express from "express"; // Framework chính để tạo server
 import cors from "cors"; // Middleware hỗ trợ Cross-Origin Resource Sharing, cho phép Frontend gọi API

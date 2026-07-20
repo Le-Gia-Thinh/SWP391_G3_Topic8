@@ -4,6 +4,9 @@
  * Chức năng: Check-in xe, Check-out xe ( với các ràng buộc về đặt chỗ và slot),
  * lấy thông tin phiên đang hoạt động.
  */
+/*
+hieu
+*/
 
 import { getPool, sql } from "../config/db.js";
 import { getUserIdFromToken } from "../utils/requestUser.js";

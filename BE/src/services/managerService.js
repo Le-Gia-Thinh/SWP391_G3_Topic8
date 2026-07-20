@@ -6,6 +6,9 @@
  */
 
 import { getPool, sql } from "../config/db.js";
+/*
+Thinh
+*/
 
 // ─────────────────────────────────────────────────────────────
 // DASHBOARD
