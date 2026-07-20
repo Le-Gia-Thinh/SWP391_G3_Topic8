@@ -807,7 +807,9 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
   const amountExpr = "ISNULL(p.FinalAmount, p.Amount)";
 
   let dateGroup;
-  if (groupBy === 'month') dateGroup = `FORMAT(t.PayTime, 'yyyy-MM')`;
+  if (groupBy === 'hour') dateGroup = `FORMAT(t.PayTime, 'yyyy-MM-dd HH:00')`;
+  else if (groupBy === 'month') dateGroup = `FORMAT(t.PayTime, 'yyyy-MM')`;
+  else if (groupBy === 'year') dateGroup = `FORMAT(t.PayTime, 'yyyy')`;
   else if (groupBy === 'week') dateGroup = `CONCAT(YEAR(t.PayTime), '-W', RIGHT('0' + CAST(DATEPART(WEEK, t.PayTime) AS VARCHAR), 2))`;
   else dateGroup = `CAST(t.PayTime AS DATE)`;
 
