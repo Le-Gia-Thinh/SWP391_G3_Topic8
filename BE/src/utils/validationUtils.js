@@ -271,16 +271,16 @@ export function validateResetPassword(req, res, next) {
 }
 
 /**
- * Middleware xác thực dữ liệu đăng nhập mạng xã hội (Google, Facebook).
- * Yêu cầu ít nhất một trong: idToken (Google) hoặc accessToken (Facebook).
+ * Middleware xác thực dữ liệu đăng nhập mạng xã hội (Google).
+ * Yêu cầu: idToken (Google).
  * 
- * @route POST /api/auth/google, POST /api/auth/facebook
+ * @route POST /api/auth/google
  */
 export function validateSocialLogin(req, res, next) {
-  const { idToken, accessToken } = req.body;
+  const { idToken } = req.body;
 
-  if (!idToken && !accessToken) {
-    return sendValidationError(res, ["Token mạng xã hội là bắt buộc"]);
+  if (!idToken) {
+    return sendValidationError(res, ["Token mạng xã hội (idToken) là bắt buộc"]);
   }
 
   next();

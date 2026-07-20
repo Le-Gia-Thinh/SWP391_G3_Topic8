@@ -16,59 +16,12 @@ import { useApiError } from '../utils/apiError'
 import { toast } from 'react-toastify'
 import loginCover from '../assets/login_cover_new.png'
 
-const FB_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID
-
-function useFacebookSDK() {
-  const fbRef = useRef(null)
-
-  useEffect(() => {
-    if (window.FB) {
-      fbRef.current = window.FB
-      return
-    }
-
-    window.fbAsyncInit = () => {
-      window.FB.init({
-        appId: FB_APP_ID,
-        cookie: true,
-        xfbml: false,
-        version: 'v19.0'
-      })
-      fbRef.current = window.FB
-    }
-    if (!document.getElementById('facebook-jssdk')) {
-      const script = document.createElement('script')
-      script.id = 'facebook-jssdk'
-      script.src = 'https://connect.facebook.net/en_US/sdk.js'
-      script.async = true
-      script.defer = true
-      document.body.appendChild(script)
-    }
-  }, [])
-
-  return fbRef
-}
-
-function FbIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path
-        fill="#1877F2"
-        d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"
-      />
-    </svg>
-  )
-}
-
 const AdminLogin = () => {
   const { t, i18n } = useTranslation()
   const apiError = useApiError()
   const [showPass, setShowPass] = useState(false)
-  const [fbLoading, setFbLoading] = useState(false)
-
-  const { login, loginWithGoogle, loginWithFacebook, isAuthenticated, getRedirectPath, user } = useAuth()
+  const { login, loginWithGoogle, isAuthenticated, getRedirectPath, user } = useAuth()
   const navigate = useNavigate()
-  const fbRef = useFacebookSDK()
 
   const {
     register,
@@ -103,32 +56,6 @@ const AdminLogin = () => {
     }
   }
 
-  const handleFacebookLogin = () => {
-    const FB = fbRef.current || window.FB
-    if (!FB) {
-      toast.error(t('auth.login.facebookNotReady'))
-      return
-    }
-
-    setFbLoading(true)
-
-    FB.login((response) => {
-      if (response.authResponse?.accessToken) {
-        loginWithFacebook(response.authResponse.accessToken)
-          .then(({ user: loggedUser, message }) => {
-            toast.success(message || t('auth.login.welcomeBack', { name: loggedUser.fullName }))
-            navigate(getRedirectPath(loggedUser.roleName), { replace: true })
-          })
-          .catch(() => { })
-          .finally(() => setFbLoading(false))
-      } else {
-        if (response.status !== 'unknown') {
-          toast.warning(t('auth.login.facebookCancelled'))
-        }
-        setFbLoading(false)
-      }
-    }, { scope: 'public_profile,email' })
-  }
 
   const toggleLanguage = () => {
     const nextLang = i18n.language === 'vi' ? 'en' : 'vi'
@@ -299,16 +226,6 @@ const AdminLogin = () => {
                 />
               </div>
 
-              <button
-                onClick={handleFacebookLogin}
-                disabled={fbLoading}
-                className="w-full py-3 px-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 transition-all flex items-center justify-center gap-3 disabled:opacity-70 shadow-sm hover:shadow-md"
-              >
-                {fbLoading ? (
-                  <div className="w-5 h-5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
-                ) : <FbIcon />}
-                {t('auth.login.facebookButton')}
-              </button>
             </div>
 
             <div className="mt-8 text-center bg-slate-50/80 dark:bg-slate-900/50 py-4 rounded-xl border border-slate-100 dark:border-slate-700/80">

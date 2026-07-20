@@ -154,30 +154,6 @@ export async function googleLogin(req, res, next) {
   }
 }
 
-// POST /api/auth/facebook
-export async function facebookLogin(req, res, next) {
-  try {
-    const { accessToken, refreshToken, user, message } =
-      await authService.facebookLoginService(req.body.accessToken, getClientIp(req));
-    setTokenCookies(res, accessToken, refreshToken);
-    await auditAuth(user, "Login", "Xác thực", "Đăng nhập bằng Facebook", getClientIp(req));
-    return res.status(StatusCodes.OK).json({
-      success: true,
-      message: message || "Đăng nhập Facebook thành công",
-      data: { user },
-    });
-  } catch (err) {
-    if (isEmailNotVerifiedError(err)) {
-      return res.status(StatusCodes.FORBIDDEN).json({
-        success: false,
-        message: "Email này đã được đăng ký nhưng chưa xác minh. Vui lòng kiểm tra hộp thư và xác minh email trước khi đăng nhập bằng Facebook.",
-        code: "EMAIL_NOT_VERIFIED",
-      });
-    }
-    next(err);
-  }
-}
-
 // GET /api/auth/verify-email?token=...
 export async function verifyEmail(req, res, next) {
   try {

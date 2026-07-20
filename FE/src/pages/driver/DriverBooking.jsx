@@ -1171,7 +1171,7 @@ const DriverBooking = () => {
 
             <button
               type="submit"
-              disabled={isSubmitting || isLoadingSlots || !selectedSlotId || !isBookingTimeValid}
+              disabled={isSubmitting || isLoadingSlots || !selectedSlotId}
               className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 font-bold text-white shadow-md shadow-blue-200 transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <CheckCircle2 size={18} />
