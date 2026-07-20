@@ -71,4 +71,4 @@ async function main() {
 }
 
 // Chạy hàm chính
-main();
+main();
