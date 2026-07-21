@@ -3,7 +3,9 @@
  * MÔ TẢ: Các hàm hỗ trợ định dạng dữ liệu phía giao diện (Frontend).
  * Bao gồm hàm chuẩn hóa định dạng biển số xe.
  */
-
+/*
+Thinh
+ */
 // Định dạng chuẩn: 51A-123.45 (xe máy) hoặc 51A-12345 (ô tô 5 số liền)
 // Logic: 2 số tỉnh + 1-2 chữ cái dòng xe + '-' + tối đa 5 chữ số
 // Nếu có 4-5 số → tự chèn '.' trước 2 số cuối (chuẩn xe máy VN)

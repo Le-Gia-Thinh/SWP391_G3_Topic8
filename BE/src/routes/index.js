@@ -3,6 +3,9 @@
  * MÔ TẢ: Điểm tập trung tất cả các route (đường dẫn API) của ứng dụng Backend.
  * File này import các controller, middleware xác thực, và kết nối chúng với các endpoint cụ thể.
  */
+/*
+Thinh < hieu
+*/
 
 import express from "express";
 

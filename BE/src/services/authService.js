@@ -8,7 +8,10 @@
  * - Khôi phục mật khẩu (Quên mật khẩu / Đặt lại mật khẩu)
  * - Đăng nhập bằng mạng xã hội (Google, Facebook)
  * - Đổi mật khẩu
- */
+ *//*
+Thinh
+*/
+
 
 import ms from "ms";
 import crypto from "crypto";

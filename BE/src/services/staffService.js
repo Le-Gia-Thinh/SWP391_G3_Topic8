@@ -4,6 +4,9 @@
  * Chức năng: Dashboard nhân viên, Check-in khách walk-in/đặt trước, 
  * Check-out (tính phí/phụ thu), xem Sơ đồ bãi đỗ, và Tạo/Quản lý Sự cố.
  */
+/*
+Thinh
+*/
 
 import { getPool, sql } from '../config/db.js'
 

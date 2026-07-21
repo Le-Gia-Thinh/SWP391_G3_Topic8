@@ -14,6 +14,9 @@
  * - validateStaffWalkIn / validateStaffBookingCheckIn / validateStaffCheckOut: Validation cho Staff
  * - validateConfirmSurcharge: Kiểm tra xác nhận phụ thu
  */
+/*
+Thinh
+*/
 
 // ========================= BIỂU THỨC CHÍNH QUY (REGEX) =========================
 

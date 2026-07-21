@@ -17,6 +17,10 @@ import { getPool } from "../config/db.js"; // Kết nối database
  * @route GET /api/reports/dashboard
  * @access Manager only
  */
+/*
+Thinh
+*/
+
 export async function dashboard(req, res, next) {
   try {
     const pool = await getPool();

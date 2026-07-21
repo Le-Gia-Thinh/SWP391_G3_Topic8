@@ -10,6 +10,9 @@
  * 
  * Lưu ý: Tất cả đều dùng local time (giờ Việt Nam), không dùng UTC.
  */
+/*
+hieu
+*/
 
 /**
  * Thêm số 0 phía trước nếu giá trị chỉ có 1 chữ số.
@@ -141,4 +144,4 @@ export function formatDateValue(date = new Date()) {
  */
 export function formatTimeValue(date = new Date()) {
   return `${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`;
-}
+}

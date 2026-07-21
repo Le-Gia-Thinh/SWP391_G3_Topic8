@@ -1,5 +1,5 @@
 /**
- * FILE: seedAdmin.js
+ * FILE: seedAdmin.js = HIEU
  * MÔ TẢ: Script chạy một lần để khởi tạo (seed) dữ liệu ban đầu cho hệ thống.
  * Cụ thể: Tạo Role Admin, Cập nhật Constraint (Ràng buộc) cho Users, 
  * Tạo tài khoản Admin mặc định, và tạo bảng AuditLogs.

@@ -6,6 +6,9 @@
  * Khi bất kỳ controller/route nào gọi next(err), lỗi sẽ được chuyển về đây.
  * Middleware này phân loại lỗi và trả về response JSON phù hợp cho client.
  */
+/*
+Thinh
+*/
 
 import { StatusCodes } from "http-status-codes"; // Thư viện chứa các mã HTTP status chuẩn
 
@@ -42,4 +45,4 @@ export const errorHandlingMiddleware = (err, req, res, next) => {
     message: err.message || "Internal Server Error",
     code: err.code || "SERVER_ERROR",
   });
-};
+};

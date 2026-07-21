@@ -3,6 +3,9 @@
  * MÔ TẢ: Service xử lý nghiệp vụ đặt chỗ (Reservation).
  * Chức năng: Tìm vị trí trống (tích hợp AI gợi ý), Tạo/Hủy đặt chỗ, Lấy danh sách đặt chỗ của tài xế.
  */
+/*
+hieu
+*/
 
 import { getPool, sql } from "../config/db.js";
 import { syncParkingSlotStatuses } from "./slotSyncService.js";

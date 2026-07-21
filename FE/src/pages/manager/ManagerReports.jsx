@@ -32,6 +32,7 @@ const ManagerReports = () => {
 
   const [startDate, setStartDate] = useState(daysAgoStr(30))
   const [endDate, setEndDate] = useState(todayStr())
+  const [groupBy, setGroupBy] = useState('day')
 
   const [revenue, setRevenue] = useState(null)
   const [sessions, setSessions] = useState(null)
@@ -72,7 +73,7 @@ const ManagerReports = () => {
   const fetchReport = useCallback(async (which) => {
     setLoading(true)
     try {
-      const params = { startDate, endDate }
+      const params = { startDate, endDate, groupBy }
       if (which === 'revenue') {
         const res = await getRevenueReportAPI(params)
         setRevenue(res.data.data)
@@ -92,7 +93,7 @@ const ManagerReports = () => {
       setLoading(false)
       setTimeout(() => setMounted(true), 80)
     }
-  }, [startDate, endDate, t])
+  }, [startDate, endDate, groupBy, t])
 
   useEffect(() => { fetchReport(tab) }, [tab, fetchReport])
 
@@ -128,7 +129,20 @@ const ManagerReports = () => {
             })}
           </div>
           {tab !== 'occupancy' && (
-            <div className="flex items-center gap-2 lg:ml-auto">
+            <div className="flex items-center gap-2 lg:ml-auto flex-wrap">
+              {tab === 'revenue' && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-400 font-semibold">{t('manager.reports.groupBy', 'Nhóm theo:')}</span>
+                  <select value={groupBy} onChange={e => setGroupBy(e.target.value)}
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 font-bold outline-none focus:border-blue-500 mr-2">
+                    <option value="hour">{t('manager.reports.groupBy.hour', 'Giờ')}</option>
+                    <option value="day">{t('manager.reports.groupBy.day', 'Ngày')}</option>
+                    <option value="week">{t('manager.reports.groupBy.week', 'Tuần')}</option>
+                    <option value="month">{t('manager.reports.groupBy.month', 'Tháng')}</option>
+                    <option value="year">{t('manager.reports.groupBy.year', 'Năm')}</option>
+                  </select>
+                </div>
+              )}
               <Calendar size={16} className="text-slate-400" />
               <input type="date" value={startDate} max={endDate} onChange={e => setStartDate(e.target.value)}
                 className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 font-bold outline-none focus:border-blue-500" />
@@ -195,8 +209,29 @@ const RevenueTab = ({ data, mounted, exportCsv }) => {
           </div>
           {chart.length === 0 ? <p className="text-sm text-slate-400 text-center py-10">{t('manager.reports.noData')}</p> : (
             <div className="flex items-end justify-between gap-2 min-h-50">
-              {chart.slice(-14).map((c, i) => {
+              {chart.slice(data.period?.groupBy === 'hour' ? -24 : -14).map((c, i) => {
                 const pct = Math.round((Number(c.TotalRevenue) / max) * 100)
+                const isHour = data.period?.groupBy === 'hour'
+                const isMonth = data.period?.groupBy === 'month'
+                const isYear = data.period?.groupBy === 'year'
+                const isWeek = data.period?.groupBy === 'week'
+
+                let displayPeriod = String(c.Period)
+                if (isHour) {
+                  const match = displayPeriod.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):00/)
+                  if (match) displayPeriod = `${match[3]}/${match[2]} ${match[4]}h`
+                } else if (isMonth) {
+                  const match = displayPeriod.match(/(\d{4})-(\d{2})/)
+                  if (match) displayPeriod = `${match[2]}/${match[1].slice(2)}`
+                } else if (isYear) {
+                  displayPeriod = displayPeriod.slice(0, 4)
+                } else if (isWeek) {
+                  displayPeriod = displayPeriod.replace(/^\d{4}-/, '') // Rút ngắn format tuần
+                } else {
+                  const match = displayPeriod.match(/(\d{4})-(\d{2})-(\d{2})/)
+                  if (match) displayPeriod = `${match[3]}/${match[2]}`
+                }
+
                 return (
                   <div key={i} className="group relative flex h-full w-full flex-col items-center justify-end gap-2">
                     <div className="absolute -top-10 z-10 scale-0 rounded-xl bg-slate-800 px-2 py-1 text-[11px] font-bold text-white opacity-0 transition-all group-hover:scale-100 group-hover:opacity-100 whitespace-nowrap">
@@ -207,7 +242,7 @@ const RevenueTab = ({ data, mounted, exportCsv }) => {
                         style={{ height: mounted ? `${Math.max(pct, 2)}%` : '0%' }} />
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 -rotate-45 origin-center whitespace-nowrap mt-1">
-                      {String(c.Period).slice(0, 10).slice(5)}
+                      {displayPeriod}
                     </span>
                   </div>
                 )

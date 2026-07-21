@@ -3,6 +3,9 @@
  * MÔ TẢ: Service xử lý các nghiệp vụ dành cho khách vãng lai (Guest).
  * Bao gồm: Tra cứu phiên gửi xe hiện tại, xem số liệu thống kê chung của bãi đỗ.
  */
+/*
+Hieu
+*/
 
 import { getPool, sql } from '../config/db.js';
 /**
