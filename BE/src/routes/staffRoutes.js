@@ -41,6 +41,8 @@ router.post('/check-in/walk-in', staffController.checkInWalkIn)
 // Booking check-in
 router.get('/bookings', staffController.getBookings)
 router.get('/bookings/:reservationId', staffController.getBookingDetail)
+// 🅿️ LUỒNG STAFF CHECK-IN [BƯỚC 3/7]: Backend Express Router nhận request
+// ➡️ BƯỚC TIẾP THEO: Qua Middleware isAuthorized (verify Token) & isStaffOrManager ➔ Nhảy sang BE/src/controllers/staffController.js ➔ Gọi hàm checkInBooking()
 router.post('/bookings/:reservationId/check-in', staffController.checkInBooking)
 router.post('/bookings/:reservationId/cancel-and-walkin', staffController.cancelAndWalkIn)
 
