@@ -6,6 +6,9 @@
  * Khi bất kỳ controller/route nào gọi next(err), lỗi sẽ được chuyển về đây.
  * Middleware này phân loại lỗi và trả về response JSON phù hợp cho client.
  */
+/*
+Thinh
+*/
 
 import { StatusCodes } from "http-status-codes"; // Thư viện chứa các mã HTTP status chuẩn
 
@@ -18,28 +21,28 @@ import { StatusCodes } from "http-status-codes"; // Thư viện chứa các mã 
  * @param {Object} res  - Express response object  
  * @param {Function} next - Hàm next (bắt buộc khai báo dù không dùng, để Express nhận biết error handler)
  */
+// 💡 BẮT LỖI TẬP TRUNG: Express nhận biết Error Middleware nhờ đủ 4 tham số (err, req, res, next)
 export const errorHandlingMiddleware = (err, req, res, next) => {
-  // Log lỗi ra console để debug
+  // Log lỗi ra console để debug ở Server
   console.error("❌ Error:", err.message);
 
-  // Xử lý lỗi CORS: Origin không được phép truy cập
+  // 💡 Phân loại các lỗi đặc thù (CORS, Email trùng, Lỗi SQL,...)
   if (err.message?.includes("CORS blocked")) {
     return res.status(StatusCodes.FORBIDDEN).json({
       success: false, message: err.message, code: "CORS_ERROR",
     });
   }
 
-  // Xử lý lỗi trùng email khi đăng ký
   if (err.message?.includes("Email already exists")) {
     return res.status(StatusCodes.CONFLICT).json({
       success: false, message: "Email đã được sử dụng", code: "EMAIL_EXISTS",
     });
   }
 
-  // Xử lý lỗi mặc định: sử dụng statusCode từ lỗi hoặc trả 500 Internal Server Error
+  // 💡 Trả về JSON đồng nhất cho Frontend Axios catch (tránh crash server)
   res.status(err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,
     message: err.message || "Internal Server Error",
     code: err.code || "SERVER_ERROR",
   });
-};
+};

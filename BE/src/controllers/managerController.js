@@ -13,6 +13,9 @@
  * 
  * @access Manager only
  */
+/*
+Thinh
+*/
 
 import { StatusCodes } from "http-status-codes"; // Mã HTTP status chuẩn
 import * as managerService from "../services/managerService.js"; // Service xử lý logic manager

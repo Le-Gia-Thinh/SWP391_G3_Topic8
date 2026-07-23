@@ -6,6 +6,9 @@
  * - Booking Code: BK-0001, BK-0002, ... (dựa trên reservationId)
  * - Session Code: SESS-20260625-0001 (dựa trên ngày vào và sessionId)
  */
+/*
+hieu
+*/
 
 /**
  * Tạo mã đặt chỗ (Booking Code) từ reservationId.
@@ -42,4 +45,4 @@ export function getReservationIdFromBookingCode(value) {
   const numberValue = Number(text);
 
   return Number.isNaN(numberValue) ? null : numberValue;
-}
+}

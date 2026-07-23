@@ -15,6 +15,9 @@
  * - getMe: Lấy thông tin user hiện tại
  * - checkEmailVerifyStatus: Kiểm tra trạng thái xác minh email
  */
+/*
+Thinh
+*/
 
 import { StatusCodes } from "http-status-codes"; // Mã HTTP status chuẩn
 import * as authService from "../services/authService.js"; // Service xử lý logic xác thực
@@ -104,11 +107,14 @@ export async function register(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// POST /api/auth/login
+// 🚀 LUỒNG ĐĂNG NHẬP [BƯỚC 5/8]: Controller xử lý Đăng nhập
 export async function login(req, res, next) {
   try {
+    // ➡️ BƯỚC TIẾP THEO: Nhảy sang BE/src/services/authService.js ➔ Gọi hàm loginService(req.body)
     const { accessToken, refreshToken, user } =
       await authService.loginService(req.body, getClientIp(req));
+    
+    // ➡️ BƯỚC KẾ TIẾP: Đặt 2 Token vào HttpOnly Cookies bảo mật -> Trả về JSON cho FE kèm Header Set-Cookie
     setTokenCookies(res, accessToken, refreshToken);
     await auditAuth(user, "Login", "Xác thực", "Đăng nhập bằng email/mật khẩu", getClientIp(req));
     return res.status(StatusCodes.OK).json({

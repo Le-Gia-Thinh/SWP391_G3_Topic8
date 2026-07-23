@@ -5,6 +5,9 @@ import axios from 'axios';
  * MÔ TẢ: Service xử lý nghiệp vụ Gói hội viên (Subscriptions).
  * Chức năng: Mua gói, kiểm tra trạng thái gói, xử lý thanh toán gói qua PayOS/Ví.
  */
+/*
+hieu
+*/
 
 import { getPool, sql } from "../config/db.js";
 

@@ -5,7 +5,7 @@
  */
 
 // src/pages/manager/ManagerUnpaid.jsx
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, RefreshCcw, AlertTriangle, Clock, CircleDollarSign, Car, Download } from 'lucide-react'
 import { toast } from 'react-toastify'
@@ -28,6 +28,13 @@ const ManagerUnpaid = () => {
   const [isLoaded, setIsLoaded] = useState(false)
   const [search, setSearch] = useState('')
   const [trigger, setTrigger] = useState(0)
+
+  // Bộ lọc theo giờ, ngày, tháng, năm
+  const [filterMode, setFilterMode] = useState('all')
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 10))
+  const [filterHour, setFilterHour] = useState(new Date().getHours().toString())
+  const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString())
 
   const exportCsv = useCallback((rowsArg) => {
     if (!rowsArg.length) { toast.info(t('manager.unpaid.exportEmpty')); return }
@@ -62,15 +69,46 @@ const ManagerUnpaid = () => {
 
   const doSearch = () => setTrigger(tt => tt + 1)
 
-  // Tổng tiền còn phải thu (ước tính)
-  const totalOwed = rows.reduce((s, r) => {
+  // Áp dụng bộ lọc lên rows
+  const filteredRows = useMemo(() => {
+    return rows.filter(r => {
+      if (!r.EntryTime) return false
+      const entryDate = new Date(r.EntryTime)
+      
+      if (filterMode === 'hour') {
+        const [y, m, d] = filterDate.split('-').map(Number)
+        return entryDate.getFullYear() === y &&
+               (entryDate.getMonth() + 1) === m &&
+               entryDate.getDate() === d &&
+               entryDate.getHours() === Number(filterHour)
+      }
+      if (filterMode === 'day') {
+        const [y, m, d] = filterDate.split('-').map(Number)
+        return entryDate.getFullYear() === y &&
+               (entryDate.getMonth() + 1) === m &&
+               entryDate.getDate() === d
+      }
+      if (filterMode === 'month') {
+        const [y, m] = filterMonth.split('-').map(Number)
+        return entryDate.getFullYear() === y &&
+               (entryDate.getMonth() + 1) === m
+      }
+      if (filterMode === 'year') {
+        return entryDate.getFullYear() === Number(filterYear)
+      }
+      return true
+    })
+  }, [rows, filterMode, filterDate, filterHour, filterMonth, filterYear])
+
+  // Tổng tiền còn phải thu (ước tính) theo bộ lọc
+  const totalOwed = filteredRows.reduce((s, r) => {
     const owe = r.SurchargeStatus === 'Pending'
       ? Number(r.SurchargeAmount || 0)
       : Number(r.FinalAmount || r.Amount || 0)
     return s + owe
   }, 0)
 
-  const stillParking = rows.filter(r => r.SessionStatus === 'Active').length
+  const stillParking = filteredRows.filter(r => r.SessionStatus === 'Active').length
 
   return (
     <div className={`space-y-6 pb-12 transition-all duration-700 ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -81,7 +119,7 @@ const ManagerUnpaid = () => {
           <h1 className="text-2xl font-bold text-slate-900 mt-1">{t('manager.unpaid.title')}</h1>
         </div>
         <div className="flex gap-3">
-          <button onClick={() => exportCsv(rows)}
+          <button onClick={() => exportCsv(filteredRows)}
             className="inline-flex items-center gap-2 rounded-3xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 font-bold hover:bg-slate-50 transition">
             <Download size={16} /> {t('manager.unpaid.exportCsv')}
           </button>
@@ -96,7 +134,7 @@ const ManagerUnpaid = () => {
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="flex items-center gap-2 mb-1"><AlertTriangle size={16} className="text-amber-500" /><p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('manager.unpaid.stats.total')}</p></div>
-          <p className="text-3xl font-black text-slate-800 font-black">{rows.length}</p>
+          <p className="text-3xl font-black text-slate-800 font-black">{filteredRows.length}</p>
         </div>
         <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <div className="flex items-center gap-2 mb-1"><Clock size={16} className="text-blue-500" /><p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('manager.unpaid.stats.stillParking')}</p></div>
@@ -109,11 +147,53 @@ const ManagerUnpaid = () => {
       </div>
 
       <div className="rounded-3xl bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">
-        <div className="relative mb-5 max-w-md">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && doSearch()}
-            placeholder={t('manager.unpaid.searchPlaceholder')}
-            className="w-full rounded-3xl bg-slate-50 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+        <div className="flex flex-col md:flex-row gap-4 mb-5 items-center justify-between">
+          <div className="relative w-full max-w-xs">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && doSearch()}
+              placeholder={t('manager.unpaid.searchPlaceholder')}
+              className="w-full rounded-3xl bg-slate-50 pl-11 pr-4 py-2.5 text-sm font-medium text-slate-900 outline-none border border-slate-200 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap text-sm font-semibold text-slate-700">
+            <span>{t('manager.unpaid.filterBy', 'Lọc theo:')}</span>
+            <select value={filterMode} onChange={e => setFilterMode(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none focus:border-blue-500">
+              <option value="all">{t('manager.unpaid.filter.all', 'Tất cả')}</option>
+              <option value="hour">{t('manager.unpaid.filter.hour', 'Giờ')}</option>
+              <option value="day">{t('manager.unpaid.filter.day', 'Ngày')}</option>
+              <option value="month">{t('manager.unpaid.filter.month', 'Tháng')}</option>
+              <option value="year">{t('manager.unpaid.filter.year', 'Năm')}</option>
+            </select>
+
+            {(filterMode === 'hour' || filterMode === 'day') && (
+              <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none focus:border-blue-500" />
+            )}
+
+            {filterMode === 'hour' && (
+              <select value={filterHour} onChange={e => setFilterHour(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none focus:border-blue-500">
+                {Array.from({ length: 24 }).map((_, i) => (
+                  <option key={i} value={String(i)}>{i}h</option>
+                ))}
+              </select>
+            )}
+
+            {filterMode === 'month' && (
+              <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none focus:border-blue-500" />
+            )}
+
+            {filterMode === 'year' && (
+              <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none focus:border-blue-500">
+                {[2024, 2025, 2026, 2027, 2028].map(yr => (
+                  <option key={yr} value={String(yr)}>{yr}</option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
 
         <div className="overflow-hidden rounded-3xl border border-slate-200">
@@ -122,7 +202,7 @@ const ManagerUnpaid = () => {
               <div className="py-16 flex items-center justify-center">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
               </div>
-            ) : rows.length === 0 ? (
+            ) : filteredRows.length === 0 ? (
               <div className="py-16 flex flex-col items-center justify-center text-center text-slate-500 font-medium">
                 <CircleDollarSign size={44} className="text-emerald-300 mb-3" />
                 <p className="font-bold text-slate-700 font-bold">{t('manager.unpaid.emptyTitle')}</p>
@@ -142,7 +222,7 @@ const ManagerUnpaid = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {rows.map(r => {
+                  {filteredRows.map(r => {
                     const owe = r.SurchargeStatus === 'Pending'
                       ? Number(r.SurchargeAmount || 0)
                       : Number(r.FinalAmount || r.Amount || 0)

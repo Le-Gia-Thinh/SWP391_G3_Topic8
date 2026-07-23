@@ -1,5 +1,5 @@
 /**
- * FILE: db.js
+ * FILE: db.js - THINH
  * MÔ TẢ: Cấu hình và khởi tạo kết nối đến cơ sở dữ liệu SQL Server.
  */
 
@@ -66,4 +66,4 @@ export async function getPool() {
 }
 
 // Export object sql gốc để tiện sử dụng các hàm của nó ở nơi khác nếu cần
-export { sql };
+export { sql };

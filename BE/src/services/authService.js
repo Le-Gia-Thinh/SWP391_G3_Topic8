@@ -8,7 +8,10 @@
  * - Khôi phục mật khẩu (Quên mật khẩu / Đặt lại mật khẩu)
  * - Đăng nhập bằng mạng xã hội (Google, Facebook)
  * - Đổi mật khẩu
- */
+ *//*
+Thinh
+*/
+
 
 import ms from "ms";
 import crypto from "crypto";
@@ -127,8 +130,10 @@ export async function registerService({ fullName, email, password, phoneNumber }
     return formatUser(user);
 }
 
+// 🚀 LUỒNG ĐĂNG NHẬP [BƯỚC 6/8]: Service xử lý kiểm tra Mật khẩu & Tạo Token
 export async function loginService({ email, password }, ip) {
     const pool = await getPool();
+    // ➡️ BƯỚC 6.1: Truy vấn SQL Server qua Stored Procedure sp_GetUserByEmail
     const result = await pool.request()
         .input("Email", sql.NVarChar(100), email.trim().toLowerCase())
         .execute("sp_GetUserByEmail");
@@ -137,6 +142,7 @@ export async function loginService({ email, password }, ip) {
 
     const dummyHash = await bcryptjs.hash("dummy_password", BCRYPT_ROUNDS);
     const hashToTest = user?.PasswordHash || dummyHash;
+    // ➡️ BƯỚC 6.2: Dùng bcrypt.compare đối chiếu Mật khẩu nhập vào với Mật khẩu đã mã hóa dưới DB
     const isMatch = await bcryptjs.compare(password, hashToTest);
 
     if (!user || !isMatch || !user.HasLocalAuth) {

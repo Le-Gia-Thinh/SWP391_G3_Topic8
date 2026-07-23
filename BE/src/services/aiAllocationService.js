@@ -5,6 +5,9 @@
  * Mục tiêu: Giảm thời gian tìm kiếm của tài xế và Tăng tỷ lệ sử dụng của bãi đỗ xe.
  * Logic: Chấm điểm dựa trên Tầng thấp, Khu vực đang sử dụng, Vị trí gần cửa.
  */
+/*
+Duy
+*/
 
 export function recommendOptimalSlot(slots) {
   const availableSlots = slots.filter((s) => s.DisplayStatus === 'available');

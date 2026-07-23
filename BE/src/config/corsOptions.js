@@ -1,5 +1,5 @@
 /**
- * FILE: corsOptions.js
+ * FILE: corsOptions.js - THINH
  * MÔ TẢ: Cấu hình CORS (Cross-Origin Resource Sharing) cho server.
  * CORS quy định những domain nào (frontend) được phép gọi API tới backend.
  */
@@ -38,4 +38,4 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"], // Các header được phép gửi lên server
 };
 
-export default corsOptions;
+export default corsOptions;

@@ -3,6 +3,9 @@
  * MÔ TẢ: File cấu hình và khởi chạy ứng dụng Express (Backend).
  * Nó thiết lập các middlewares, kết nối các router (API), quản lý lỗi và chạy server.
  */
+/*
+Thinh, Hieu
+*/
 
 import express from "express"; // Framework chính để tạo server
 import cors from "cors"; // Middleware hỗ trợ Cross-Origin Resource Sharing, cho phép Frontend gọi API
@@ -33,20 +36,21 @@ app.get("/", (req, res) => {
   });
 });
 
-// ================= MIDDLEWARES =================
-// 1. Áp dụng cấu hình CORS cho tất cả các request
+// ================= MIDDLEWARES TOÀN CỤC =================
+// 💡 CORS: Mở cổng cho phép React Frontend (localhost:5173) gọi API và gửi/nhận Cookie HttpOnly
 app.use(cors(corsOptions));
-// 2. Chuyển đổi dữ liệu gửi lên (body) dạng JSON thành object
+// 💡 BODY PARSER: Tự động giải mã dữ liệu req.body gửi lên dạng JSON
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
+// 💡 COOKIE PARSER: Đọc Cookie req.cookies (accessToken, refreshToken)
 app.use(cookieParser());
 
-// ================= ROUTES ======================
-// Áp dụng router chính với tiền tố "/api" cho tất cả các endpoint
+// ================= ROUTER CHÍNH ======================
+// 💡 ROUTER: Tiền tố /api kết nối tất cả các route con (/auth, /staff, /admin, /manager)
 app.use("/api", router);
 
-// ================= XỬ LÝ LỖI ===================
-// Middleware cuối cùng để bắt các lỗi ném ra từ controllers/routes
+// ================= XỬ LÝ LỖI TẬP TRUNG ===================
+// 💡 ERROR HANDLER: Middleware đứng ở vị trí cuối cùng, bắt mọi lỗi từ next(err) trong Controller
 app.use(errorHandlingMiddleware);
 
 // ================= KHỞI CHẠY SERVER ============

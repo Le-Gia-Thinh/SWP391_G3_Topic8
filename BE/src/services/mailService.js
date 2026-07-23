@@ -1,5 +1,8 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+/*
+Thinh
+*/
 
 dotenv.config();
 

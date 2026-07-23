@@ -60,10 +60,12 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('auth:logout', handleForceLogout)
   }, [])
 
+  // 🚀 LUỒNG ĐĂNG NHẬP [BƯỚC 2/8]: AuthContext xử lý login
   async function login({ email, password }) {
+    // ➡️ BƯỚC TIẾP THEO: Nhảy sang FE/src/apis/authApi.js ➔ Gọi hàm loginAPI({ email, password })
     const res = await loginAPI({ email, password })
     const loggedUser = res.data.data.user
-    setUser(loggedUser)
+    setUser(loggedUser) // Lưu thông tin User vừa đăng nhập vào React State toàn cục
     return loggedUser
   }
 

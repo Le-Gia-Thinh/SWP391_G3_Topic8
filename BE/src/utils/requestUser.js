@@ -6,6 +6,9 @@
  * các trường có thể khác nhau (UserID vs userId vs id).
  * Các hàm này giúp lấy đúng giá trị bất kể nguồn gốc.
  */
+/*
+Hieu
+*/
 
 /**
  * Lấy UserID từ request.
@@ -25,4 +28,4 @@ export function getUserIdFromToken(req) {
  */
 export function getRoleNameFromToken(req) {
   return req.user?.RoleName || req.user?.roleName;
-}
+}

@@ -4,6 +4,9 @@
  * Chức năng: Dashboard nhân viên, Check-in khách walk-in/đặt trước, 
  * Check-out (tính phí/phụ thu), xem Sơ đồ bãi đỗ, và Tạo/Quản lý Sự cố.
  */
+/*
+Thinh
+*/
 
 import { getPool, sql } from '../config/db.js'
 
@@ -416,6 +419,7 @@ export async function getBookingDetail(reservationId) {
     return booking
 }
 
+// 🅿️ LUỒNG STAFF CHECK-IN [BƯỚC 5/7]: Service thực thi SQL Transaction & Kiểm tra điều kiện nghiệp vụ
 export async function checkInBooking(reservationId, plateNumber) {
     const id = parseReservationId(reservationId)
 
@@ -424,12 +428,14 @@ export async function checkInBooking(reservationId, plateNumber) {
     }
 
     const pool = await getPool()
+    // 💡 TRANSACTION: Mở giao dịch an toàn (All-or-Nothing) đảm bảo tính toàn vẹn dữ liệu
     const transaction = new sql.Transaction(pool)
 
     await transaction.begin()
 
     let committed = false
     try {
+        // 💡 LOCK HINTS: UPDLOCK + ROWLOCK khóa riêng dòng Booking này để chống race condition khi 2 người cùng check-in 1 lúc
         const bookingResult = await new sql.Request(transaction)
             .input('reservationId', sql.Int, id)
             .query(`

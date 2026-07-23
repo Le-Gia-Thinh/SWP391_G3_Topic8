@@ -10,7 +10,10 @@
  * 
  * Thuật toán mã hóa: HS256 (HMAC-SHA256)
  * Secret key: lấy từ biến môi trường (.env)
- */
+ *//*
+Thinh
+*/
+
 
 import jwt from "jsonwebtoken";   // Thư viện tạo và xác minh JWT
 import crypto from "crypto";     // Module crypto của Node.js để hash token
@@ -93,4 +96,4 @@ const JwtProvider = {
     }
 };
 
-export default JwtProvider;
+export default JwtProvider;

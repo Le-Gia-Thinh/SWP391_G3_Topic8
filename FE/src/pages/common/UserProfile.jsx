@@ -21,6 +21,14 @@ import { toast } from 'react-toastify'
 import { useAppTheme } from '../../contexts/AppThemeContext'
 import { useTranslation } from 'react-i18next'
 
+const RESERVATION_STATUS_META = {
+  Completed: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30',
+  Cancelled: 'text-rose-600 bg-rose-50 dark:bg-rose-900/30',
+  Expired: 'text-gray-500 bg-gray-100 dark:bg-slate-700/50',
+  Reserved: 'text-blue-600 bg-blue-50 dark:bg-blue-900/30'
+}
+const getReservationStatusMeta = (status) => RESERVATION_STATUS_META[status] || 'text-gray-500 bg-gray-100 dark:bg-slate-700/50'
+
 const Toggle = ({ checked, onChange, label, desc }) => (
   <div className="flex items-center justify-between py-3.5 border-b border-gray-50 dark:border-gray-700 last:border-0">
     <div>
@@ -144,10 +152,10 @@ const ProfileContent = ({ user, editing, formData, onChange, recentActivity, rec
                   recentActivity?.map((act, i) => (
                     <div key={act.ReservationID || i} className="flex justify-between items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-700">
                       <div>
-                        <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{act.PlateNumber || 'N/A'}</p>
+                        <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{act.PlateNumber || act.BookingCode || 'N/A'}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{fmtDate(act.StartTime)} {fmtTime(act.StartTime)}</p>
                       </div>
-                      <span className="text-[10px] uppercase tracking-wider font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md">{act.ReservationStatus || 'N/A'}</span>
+                      <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-md ${getReservationStatusMeta(act.ReservationStatus)}`}>{act.ReservationStatus || 'N/A'}</span>
                     </div>
                   ))
                 )}
@@ -357,7 +365,7 @@ const UserProfile = () => {
         setProfileData(user)
       }
     }
-    if (!profileData || !formData.fullName) fetchProfile()
+    fetchProfile()
   }, [user])
 
   useEffect(() => {
