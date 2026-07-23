@@ -300,7 +300,7 @@ export async function getVehicleFlowReport(req, res, next) {
 }
 // ── Vehicle Types CRUD ────────────────────────────────────────
 // (getVehicleTypes đã có sẵn — controller này dùng getAllVehicleTypes cho trang quản lý)
-export async function getAllVVehicleTypes(req, res, next) {
+export async function getAllVehicleTypes(req, res, next) {
     try {
         const data = await managerService.getAllVehicleTypes();
         return res.status(StatusCodes.OK).json({ success: true, data });

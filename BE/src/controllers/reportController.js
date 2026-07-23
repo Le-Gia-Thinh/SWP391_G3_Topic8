@@ -17,8 +17,7 @@ import { getPool } from "../config/db.js"; // Kết nối database
  * @route GET /api/reports/dashboard
  * @access Manager only
  */
-/*
-Thinh
+/*Hieu
 */
 
 export async function dashboard(req, res, next) {

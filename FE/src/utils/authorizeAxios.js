@@ -22,6 +22,8 @@ const authorizeAxios = axios.create({
   withCredentials: true
 })
 
+//const dataToSend = JSON.stringify(payload); Cục Object biến thành chuỗi chữ thô đại diện dạng JSON
+
 // ── CÁCH ĐANG DÙNG TRONG PROJECT: isRefreshing + waitingQueue ─────
 // Mục tiêu:
 // Nếu nhiều request cùng bị TOKEN_EXPIRED,

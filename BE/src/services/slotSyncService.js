@@ -1,7 +1,16 @@
 /**
  * FILE: slotSyncService.js
- * MÔ TẢ: Service đồng bộ trạng thái Vị trí đỗ xe (Parking Slots) và xử lý tự động đỗ lố giờ.
- * Chức năng: Cập nhật trạng thái Slot và tự động hóa cảnh báo/điều hướng vị trí đỗ thông minh.
+ * MÔ TẢ: Service đồng bộ trạng thái Vị trí đỗ xe (Parking Slots) tự động chạy ngầm (Cron-job Background Worker).
+ * 
+ * ĐIỂM KHÁC BIỆT RẤT LỚN SO VỚI LUỒNG THÊM XE (VEHICLE):
+ * - Luồng Vehicle/Reservation được kích hoạt khi NGƯỜI DÙNG BẤM NÚT trên giao diện Web.
+ * - File này là TỰ ĐỘNG CHẠY NGẦM TRONG BACKGROUND (mỗi 1 phút chạy 1 lần do server.js kích hoạt).
+ * 
+ * Các chức năng chạy ngầm thông minh:
+ * 1. syncParkingSlotStatuses: Chạy Stored Proc `sp_SyncParkingSlotStatuses` đồng bộ màu vị trí đỗ.
+ * 2. Cảnh báo sắp hết giờ (Pre-overtime Alert): Tự gửi thông báo tới điện thoại tài xế trước 15 phút.
+ * 3. Cảnh báo lố giờ (Overtime Alert): Tự gửi thông báo khi tài xế đỗ quá giờ.
+ * 4. Điều hướng thông minh (Proactive Slot Reassignment): Tự động đổi vị trí đỗ cho xe tiếp theo nếu vị trí cũ đang bị xe trước đỗ lố giờ (Tránh xung đột bãi đỗ)!
  */
 /*
 hieu
@@ -12,14 +21,20 @@ import { getPool, sql } from "../config/db.js";
 let backgroundSyncRunning = false;
 let syncInterval = null;
 
+/**
+ * 1. Gọi Stored Procedure sp_SyncParkingSlotStatuses trong SQL để cập nhật trạng thái các Slot.
+ */
 export async function syncParkingSlotStatuses(existingPool = null) {
   const pool = existingPool || await getPool();
   await pool.request().execute("sp_SyncParkingSlotStatuses");
 }
 
+/**
+ * 2. WORKER CHẠY NGẦM THÔNG MINH (Smart Parking Proactive Worker)
+ */
 export async function runSmartParkingProactiveWorker(pool) {
   try {
-    // 1. Pre-overtime Alert (cảnh báo trước 15 phút)
+    // A. Cảnh báo sắp hết giờ đỗ xe (Gửi thông báo trước 15 phút)
     const preAlertResult = await pool.request().query(`
       SELECT 
           ps.SessionID,
@@ -52,10 +67,10 @@ export async function runSmartParkingProactiveWorker(pool) {
           INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
           VALUES (@UserID, N'Cảnh báo sắp hết giờ đỗ xe', @Message, 'System', @ReferenceID, 'Session', 0, GETDATE())
         `);
-      console.log(`[Smart Parking] Sent pre-overtime alert to Driver ID ${session.DriverID} for Slot ${session.SlotCode}`);
+      console.log(`[Smart Parking] Đã gửi cảnh báo sắp hết giờ tới Tài xế ID ${session.DriverID} cho vị trí ${session.SlotCode}`);
     }
 
-    // 2. Overtime Alert (cảnh báo khi vừa lố giờ)
+    // B. Cảnh báo lố giờ đỗ xe (Gửi thông báo ngay khi vừa đỗ quá giờ)
     const overtimeAlertResult = await pool.request().query(`
       SELECT 
           ps.SessionID,
@@ -87,10 +102,11 @@ export async function runSmartParkingProactiveWorker(pool) {
           INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
           VALUES (@UserID, N'Cảnh báo đỗ quá giờ', @Message, 'System', @ReferenceID, 'Session', 0, GETDATE())
         `);
-      console.log(`[Smart Parking] Sent overtime alert to Driver ID ${session.DriverID} for Slot ${session.SlotCode}`);
+      console.log(`[Smart Parking] Đã gửi cảnh báo lố giờ tới Tài xế ID ${session.DriverID} cho vị trí ${session.SlotCode}`);
     }
 
-    // 3. Proactive Slot Reassignment (Đổi chỗ đệm chủ động trước 15 phút)
+    // C. ĐIỀU HƯỚNG TỰ ĐỘNG CHỖ ĐỖ DỰ PHÒNG (Proactive Slot Reassignment)
+    // Nếu xe trước đỗ lố giờ, tự động chuyển người đặt đợt sau sang một vị trí trống khác cùng tầng/khu vực!
     const reassignmentCandidates = await pool.request().query(`
       SELECT 
           rB.ReservationID AS B_ReservationID,
@@ -98,127 +114,99 @@ export async function runSmartParkingProactiveWorker(pool) {
           rB.SlotID AS B_SlotID,
           rB.VehicleTypeID AS B_VehicleTypeID,
           sl.SlotCode AS B_OldSlotCode,
-          f.BuildingID AS B_BuildingID
+          z.ZoneID,
+          rB.StartTime AS B_StartTime,
+          rB.EndTime AS B_EndTime
       FROM Reservations rB
       JOIN ParkingSlots sl ON rB.SlotID = sl.SlotID
       JOIN Zones z ON sl.ZoneID = z.ZoneID
-      JOIN Floors f ON z.FloorID = f.FloorID
       WHERE rB.ReservationStatus = 'Reserved'
-        AND rB.StartTime <= DATEADD(MINUTE, 15, GETDATE())
-        AND rB.StartTime > GETDATE()
+        AND rB.StartTime BETWEEN GETDATE() AND DATEADD(MINUTE, 20, GETDATE())
         AND EXISTS (
             SELECT 1 FROM ParkingSessions psA
             WHERE psA.SlotID = rB.SlotID
               AND psA.SessionStatus = 'Active'
               AND psA.ExitTime IS NULL
-              AND (
-                  psA.BookingStartTime IS NULL
-                  OR EXISTS (
-                      SELECT 1 FROM Reservations rA
-                      WHERE rA.DriverID = psA.DriverID
-                        AND rA.SlotID = psA.SlotID
-                        AND rA.StartTime = psA.BookingStartTime
-                        AND rA.ReservationStatus = 'Completed'
-                        AND rA.EndTime <= GETDATE()
-                  )
-              )
         )
     `);
 
-    for (const rB of reassignmentCandidates.recordset) {
-      const minWindow = new Date(Date.now() + 60 * 60000);
-      const slotResult = await pool.request()
-        .input('buildingId', sql.Int, rB.B_BuildingID)
-        .input('vehicleTypeId', sql.Int, rB.B_VehicleTypeID)
-        .input('minWindow', sql.DateTime, minWindow)
+    for (const candidate of reassignmentCandidates.recordset) {
+      // Tìm vị trí đỗ trống khác trong cùng Zone
+      const freeSlotRes = await pool.request()
+        .input("ZoneID", sql.Int, candidate.ZoneID)
+        .input("VehicleTypeID", sql.Int, candidate.B_VehicleTypeID)
+        .input("StartTime", sql.DateTime, candidate.B_StartTime)
+        .input("EndTime", sql.DateTime, candidate.B_EndTime)
         .query(`
-            SELECT TOP 1 sl.SlotID, sl.SlotCode
-            FROM ParkingSlots sl
-            JOIN Zones z ON sl.ZoneID = z.ZoneID
-            JOIN Floors f ON z.FloorID = f.FloorID
-            WHERE f.BuildingID = @buildingId
-              AND sl.VehicleTypeID = @vehicleTypeId
-              AND sl.SlotStatus NOT IN ('Maintenance', 'Blocked')
-              AND NOT EXISTS (
-                SELECT 1 FROM ParkingSessions ps
-                WHERE ps.SlotID = sl.SlotID AND ps.SessionStatus = 'Active' AND ps.ExitTime IS NULL
-              )
-              AND NOT EXISTS (
+          SELECT TOP 1 ps.SlotID, ps.SlotCode
+          FROM ParkingSlots ps
+          WHERE ps.ZoneID = @ZoneID
+            AND ps.IsActive = 1
+            AND ps.SlotStatus NOT IN ('Maintenance', 'Blocked')
+            AND NOT EXISTS (
+                SELECT 1 FROM ParkingSessions s
+                WHERE s.SlotID = ps.SlotID AND s.SessionStatus = 'Active' AND s.ExitTime IS NULL
+            )
+            AND NOT EXISTS (
                 SELECT 1 FROM Reservations r
-                WHERE r.SlotID = sl.SlotID
+                WHERE r.SlotID = ps.SlotID
                   AND r.ReservationStatus = 'Reserved'
-                  AND r.StartTime < @minWindow
-              )
-            ORDER BY sl.SlotCode
+                  AND @StartTime < r.EndTime AND @EndTime > r.StartTime
+            )
+          ORDER BY ps.SlotCode ASC
         `);
 
-      const availableSlot = slotResult.recordset[0];
-      if (availableSlot) {
-        // Cập nhật slot mới cho xe B
+      if (freeSlotRes.recordset.length > 0) {
+        const newSlot = freeSlotRes.recordset[0];
+        
+        // Cập nhật vị trí mới cho đơn đặt chỗ
         await pool.request()
-          .input('newSlotId', sql.Int, availableSlot.SlotID)
-          .input('reservationId', sql.Int, rB.B_ReservationID)
-          .query(`UPDATE Reservations SET SlotID = @newSlotId WHERE ReservationID = @reservationId`);
-
-        // Gửi thông báo đến xe B
-        const notifyMessage = `Vị trí đặt chỗ ${rB.B_OldSlotCode} của bạn đã được đổi sang vị trí mới ${availableSlot.SlotCode} do sự cố kỹ thuật (xe trước chưa rời đi). Xin lỗi vì sự bất tiện này.`;
-        await pool.request()
-          .input('driverId', sql.Int, rB.B_DriverID)
-          .input('reservationId', sql.Int, rB.B_ReservationID)
-          .input('message', sql.NVarChar(500), notifyMessage)
+          .input("ReservationID", sql.Int, candidate.B_ReservationID)
+          .input("NewSlotID", sql.Int, newSlot.SlotID)
           .query(`
-              INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
-              VALUES (@driverId, N'Thay đổi vị trí đỗ xe tự động', @message, 'Booking', @reservationId, 'Reservation', 0, GETDATE())
+            UPDATE Reservations
+            SET SlotID = @NewSlotID, UpdatedAt = GETDATE()
+            WHERE ReservationID = @ReservationID
           `);
 
-        console.log(`[Smart Parking] Reassigned reservation ID ${rB.B_ReservationID} from slot ${rB.B_OldSlotCode} to ${availableSlot.SlotCode} due to overstaying vehicle`);
-      } else {
-        // Hết slot trống: tạo cảnh báo khẩn cấp cho nhân viên & quản lý bãi xe
-        console.warn(`[Smart Parking] No slot available to reassign reservation ID ${rB.B_ReservationID} from slot ${rB.B_OldSlotCode}`);
-        const alertMessage = `Đặt chỗ BK-${String(rB.B_ReservationID).padStart(4, '0')} tại vị trí ${rB.B_OldSlotCode} có nguy cơ xung đột vì xe trước đỗ quá giờ và không còn slot trống thay thế!`;
+        // Gửi thông báo cho tài xế về việc đổi vị trí đỗ tự động
+        const notifMsg = `Do vị trí ${candidate.B_OldSlotCode} cũ đang có xe đỗ lố giờ, hệ thống đã tự động chuyển vị trí đặt chỗ của bạn sang ${newSlot.SlotCode}.`;
         await pool.request()
-          .input('message', sql.NVarChar(500), alertMessage)
+          .input("UserID", sql.Int, candidate.B_DriverID)
+          .input("ReferenceID", sql.Int, candidate.B_ReservationID)
+          .input("Message", sql.NVarChar(500), notifMsg)
           .query(`
-              INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
-              SELECT u.UserID, N'Cảnh báo xung đột ô đỗ', @message, 'System', NULL, NULL, 0, GETDATE()
-              FROM Users u
-              JOIN Roles r ON u.RoleID = r.RoleID
-              WHERE r.RoleName IN ('Staff', 'Manager') AND u.IsActive = 1
+            INSERT INTO Notifications (UserID, Title, Message, NotificationType, ReferenceID, ReferenceType, IsRead, CreatedAt)
+            VALUES (@UserID, N'Đã tự động đổi vị trí đỗ xe', @Message, 'System', @ReferenceID, 'Reservation', 0, GETDATE())
           `);
+
+        console.log(`[Smart Parking] Reassigned Reservation ID ${candidate.B_ReservationID} from Slot ${candidate.B_OldSlotCode} to ${newSlot.SlotCode}`);
       }
     }
-  } catch (error) {
-    console.error("❌ Smart Parking proactive worker failed:", error.message);
+
+  } catch (err) {
+    console.error("[Smart Parking] Error in proactive worker:", err);
   }
 }
 
-async function safeBackgroundSync() {
+/**
+ * 3. KÍCH HOẠT VÒNG LẶP CHẠY NGẦM MỖI 1 PHÚT (Start Background Sync Worker)
+ */
+export function startBackgroundSlotSync(intervalMs = 60000) {
   if (backgroundSyncRunning) return;
-
   backgroundSyncRunning = true;
 
-  try {
-    const pool = await getPool();
-    await syncParkingSlotStatuses(pool);
-    await runSmartParkingProactiveWorker(pool);
-    console.log("✅ Parking slot statuses synced");
-  } catch (error) {
-    console.error("❌ Parking slot sync failed:", error.message);
-  } finally {
-    backgroundSyncRunning = false;
-  }
-}
+  console.log(`[Smart Parking] Started background slot status sync worker (Interval: ${intervalMs / 1000}s)...`);
 
-export function startParkingSlotAutoSync(intervalMs = 60000) {
-  if (syncInterval) return syncInterval;
-
-  safeBackgroundSync();
-
-  syncInterval = setInterval(() => {
-    safeBackgroundSync();
+  syncInterval = setInterval(async () => {
+    try {
+      const pool = await getPool();
+      await syncParkingSlotStatuses(pool);
+      await runSmartParkingProactiveWorker(pool);
+    } catch (err) {
+      console.error("[Smart Parking] Error running background slot sync:", err);
+    }
   }, intervalMs);
-
-  console.log(`🔄 Parking slot auto sync started: every ${intervalMs / 1000}s`);
-
-  return syncInterval;
 }
+
+export const startParkingSlotAutoSync = startBackgroundSlotSync;
