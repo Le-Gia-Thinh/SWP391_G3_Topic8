@@ -89,6 +89,10 @@ const DriverSubscription = () => {
     }
   }, [location.state]);
 
+  /**
+   * Gọi API tải danh sách các gói hội viên và thông tin gói hiện tại của tài xế.
+   * Xử lý merge dữ liệu từ server với UI config nội bộ.
+   */
   const fetchData = async () => {
     try {
         setLoading(true);
@@ -159,6 +163,9 @@ const DriverSubscription = () => {
     fetchData();
   }, []);
 
+  /**
+   * Tính toán giá sau khi đã áp dụng phần trăm giảm giá theo số tháng.
+   */
   const getDiscountedPrice = (basePrice, months, discountPercent) => {
     const totalBase = basePrice * months;
     const discountAmount = totalBase * (discountPercent / 100);

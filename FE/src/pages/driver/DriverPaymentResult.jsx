@@ -42,7 +42,10 @@ const DriverPaymentResult = () => {
     })
   }
 
-  // Lấy thông tin payment của session
+  /**
+   * Gọi API lấy thông tin chi tiết của phiên thanh toán vừa hoàn tất 
+   * (để hiển thị biên lai cho tài xế).
+   */
   useEffect(() => {
     let ignore = false
 

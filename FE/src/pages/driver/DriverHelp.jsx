@@ -10,6 +10,11 @@ import { LifeBuoy, Phone, Mail, MessageSquare, ChevronRight, FileText, ShieldAle
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
+/**
+ * Component hiển thị giao diện trang Trợ giúp.
+ * Sử dụng state `activeTab` để chuyển đổi qua lại giữa các nội dung:
+ * Hỗ trợ (Support), Điều khoản (Terms), và Bảo mật (Privacy).
+ */
 const DriverHelp = () => {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('support')

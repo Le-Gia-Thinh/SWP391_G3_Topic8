@@ -26,6 +26,9 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 
+/**
+ * Chuyển đổi an toàn giá trị ngày tháng từ backend thành đối tượng Date của Javascript.
+ */
 const parseBackendDate = (value) => {
   if (!value) return null
   if (value instanceof Date) return value
@@ -55,6 +58,9 @@ const formatCurrency = (value) => {
 }
 
 // getParkedDuration nhận t để i18n hoá chuỗi "X giờ Y phút Z giây"
+/**
+ * Tính thời gian xe đã đỗ trong bãi (thực tế) từ lúc vào cổng đến hiện tại.
+ */
 const getParkedDuration = (entryTime, currentTime, t) => {
   const entry = parseBackendDate(entryTime)
   const now = currentTime || new Date()
@@ -73,6 +79,9 @@ const getParkedDuration = (entryTime, currentTime, t) => {
   return t('driver.session.duration', { h: hours, m: minutes, s: seconds })
 }
 
+/**
+ * Tính % tiến trình đỗ xe (mặc định lấy mốc 4 tiếng = 100% để vẽ thanh Progress UI).
+ */
 const getProgress = (session, currentTime) => {
   const entry = parseBackendDate(session?.EntryTime)
   const now = currentTime || new Date()
@@ -498,6 +507,9 @@ const DriverSession = () => {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [mapModal, setMapModal] = useState({ isOpen: false })
 
+  /**
+   * Gọi API lấy danh sách các phiên đỗ xe (sessions) đang diễn ra của tài xế.
+   */
   const fetchCurrentSessions = async () => {
     try {
       setIsLoading(true)
@@ -545,6 +557,9 @@ const DriverSession = () => {
     return sessions.find((item) => String(item.SessionID) === String(selectedSessionId)) || sessions[0] || null
   }, [sessions, selectedSessionId])
 
+  /**
+   * Chuyển hướng sang trang Thanh toán cho một phiên đỗ xe.
+   */
   const handleGoPayment = (sessionId) => {
     navigate('/driver/payment', {
       state: { sessionId }

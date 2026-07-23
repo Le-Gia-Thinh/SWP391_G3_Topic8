@@ -50,6 +50,9 @@ const STATUS_CLASSES = {
   cancelled: 'border-red-100 bg-white dark:bg-slate-800 text-red-700 dark:text-red-400'
 }
 
+/**
+ * Tách chuỗi thời gian (VD: "2023-10-25 14:30") thành ngày và giờ riêng biệt.
+ */
 function splitDateTimeText(value) {
   if (!value) {
     return {
@@ -70,6 +73,9 @@ function splitDateTimeText(value) {
   }
 }
 
+/**
+ * Tính toán khoảng thời gian đỗ xe dự kiến (trả về chuỗi hiển thị như "2 giờ 30 phút").
+ */
 function calculateDurationLabel(startTimeText, endTimeText, t) {
   const start = splitDateTimeText(startTimeText)
   const end = splitDateTimeText(endTimeText)
@@ -101,6 +107,9 @@ function calculateDurationLabel(startTimeText, endTimeText, t) {
   return t('driver.common.durationHM', { h: hours, m: String(minutes).padStart(2, '0') })
 }
 
+/**
+ * Chuẩn hóa dữ liệu đặt chỗ từ nhiều nguồn (API hoặc Router State) thành một object chung để render.
+ */
 function mapReservationToBooking(reservation, stateBooking, t) {
   if (!reservation && !stateBooking) return null
 
@@ -252,6 +261,9 @@ const DriverBookingConfirmation = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false })
   const [alertModal, setAlertModal] = useState({ isOpen: false, message: '' })
 
+  /**
+   * Gọi API lấy thông tin chi tiết của một lượt đặt chỗ (booking).
+   */
   const fetchReservationDetail = async () => {
     if (!reservationId) {
       setIsLoading(false)
@@ -342,6 +354,9 @@ const DriverBookingConfirmation = () => {
       // ignore
     }
   }
+  /**
+   * Xử lý khi người dùng bấm nút Hủy đặt chỗ (mở Modal xác nhận).
+   */
   const handleCancelBooking = () => {
     if (!booking?.reservationId) {
       navigate('/driver/history')
@@ -350,6 +365,9 @@ const DriverBookingConfirmation = () => {
     setConfirmModal({ isOpen: true })
   }
 
+  /**
+   * Gọi API để hủy lượt đặt chỗ hiện tại khi người dùng xác nhận trên Modal.
+   */
   const confirmCancel = async () => {
     setConfirmModal({ isOpen: false })
     try {

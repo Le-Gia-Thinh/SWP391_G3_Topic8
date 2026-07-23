@@ -32,6 +32,9 @@ const FILTER_TABS = [
   { key: 'system', labelKey: 'driver.notifications.typeSystem' }
 ]
 
+/**
+ * Trả về chuỗi thời gian tương đối so với hiện tại (ví dụ: "vừa xong", "5 phút trước").
+ */
 function formatRelativeTime(dateStr, t) {
   if (!dateStr) return ''
   const date = new Date(dateStr)
@@ -56,6 +59,9 @@ const DriverNotifications = () => {
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState('all')
 
+  /**
+   * Tải danh sách thông báo dựa trên bộ lọc (activeFilter) và số lượng thông báo chưa đọc.
+   */
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
@@ -76,6 +82,9 @@ const DriverNotifications = () => {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  /**
+   * Xử lý khi click vào một thông báo: Đánh dấu đã đọc và điều hướng nếu có ReferenceType tương ứng.
+   */
   const handleNotificationClick = async (notif) => {
     if (!notif.IsRead) {
       try {
@@ -90,6 +99,9 @@ const DriverNotifications = () => {
     }
   }
 
+  /**
+   * Đánh dấu toàn bộ thông báo là đã đọc.
+   */
   const handleMarkAllRead = async () => {
     try {
       await driverApi.markAllNotificationsRead()

@@ -59,24 +59,42 @@ const DriverLayout = () => {
   const displayName = user?.fullName || 'Duy Nguyễn'
   const displayEmail = user?.email || 'driver@smartpark.com'
 
+  /**
+   * Đóng tất cả các menu thả xuống (dropdown) đang mở (Profile, Location, Notifications).
+   * Gọi khi người dùng click ra ngoài hoặc chọn một mục trong menu.
+   */
   const closeAllDropdowns = () => {
     setIsProfileOpen(false)
     setIsLocationOpen(false)
     setIsNotificationsOpen(false)
   }
 
+  /**
+   * Xử lý sự kiện đăng xuất của tài xế.
+   * Xóa token, gọi API đăng xuất và chuyển hướng về trang Login.
+   */
   const handleLogout = async () => {
     closeAllDropdowns()
     await logout()
     navigate('/login', { replace: true })
   }
 
+  /**
+   * Xử lý khi tài xế chọn một địa điểm/tòa nhà đỗ xe khác trên thanh Header.
+   * @param {string} locationName Tên tòa nhà được chọn
+   */
   const handleSelectLocation = (locationName) => {
     setSelectedLocation(locationName)
     setIsLocationOpen(false)
   }
 
   const currentPath = location.pathname
+  /**
+   * Kiểm tra xem một đường dẫn (path) menu có đang được kích hoạt hay không,
+   * dùng để tô sáng (highlight) menu hiện tại trên Sidebar.
+   * @param {string} path Đường dẫn của menu item
+   * @returns {boolean} true nếu đường dẫn khớp với trang hiện tại
+   */
   const isActiveMenu = (path) => {
     if (path === '/driver/home') {
       return currentPath === '/driver' || currentPath === '/driver/home'
@@ -84,6 +102,10 @@ const DriverLayout = () => {
     return currentPath === path || currentPath.startsWith(`${path}/`)
   }
 
+  /**
+   * useEffect hook: Lắng nghe sự kiện click chuột bên ngoài các dropdown menu 
+   * để đóng chúng lại (Profile, Location, Notifications).
+   */
   useEffect(() => {
     const handleClickOutside = (event) => {
       const target = event.target

@@ -28,11 +28,17 @@ const DEFAULT_BUILDINGS = []
 
 const padNumber = (value) => String(value).padStart(2, '0')
 
+/**
+ * Lấy ngày hiện tại định dạng YYYY-MM-DD
+ */
 const getTodayDateValue = () => {
   const now = new Date()
   return `${now.getFullYear()}-${padNumber(now.getMonth() + 1)}-${padNumber(now.getDate())}`
 }
 
+/**
+ * Tính toán thời gian bắt đầu đặt chỗ tối thiểu (cách hiện tại ít nhất 15 phút).
+ */
 const getMinimumStartDate = () => {
   const minimum = new Date(Date.now() + 15 * 60 * 1000)
 
@@ -242,6 +248,9 @@ const DriverBooking = () => {
     return displaySlots
   }, [displaySlots, slotFilter])
 
+  /**
+   * Gọi API lấy danh sách các tòa nhà/bãi đỗ xe khả dụng trong hệ thống.
+   */
   const fetchBuildings = async () => {
     try {
       const response = await authorizeAxios.get('/buildings')
@@ -268,6 +277,9 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Gọi API lấy danh sách phương tiện của tài xế để chọn nhanh khi đặt chỗ.
+   */
   const fetchVehicles = async () => {
     try {
       const response = await authorizeAxios.get('/driver/vehicles')
@@ -307,6 +319,10 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Gọi API lấy danh sách các chỗ trống phù hợp với:
+   * loại xe, thời gian, tòa nhà và thời lượng dự kiến gửi xe.
+   */
   const fetchAvailableSlots = async () => {
     if (!buildingId || !vehicleType || !bookingDate || !startTime || !duration) {
       setAvailableSlots([])
@@ -497,6 +513,9 @@ const DriverBooking = () => {
     }
   }, [autoSelect, filteredSlots, availableSlots, selectedSlotId])
 
+  /**
+   * Xử lý khi tài xế thay đổi ngày đặt chỗ (không cho chọn ngày trong quá khứ).
+   */
   const handleChangeDate = (event) => {
     const value = event.target.value
     const today = getTodayDateValue()
@@ -654,6 +673,10 @@ const DriverBooking = () => {
     setAutoSelect(false)
   }
 
+  /**
+   * Xử lý nộp form đặt chỗ lên Backend (Tạo Booking).
+   * Kiểm tra tính hợp lệ trước khi gửi, và chuyển hướng trang khi thành công.
+   */
   const handleSubmit = async (event) => {
     event.preventDefault()
     setErrorMessage('')

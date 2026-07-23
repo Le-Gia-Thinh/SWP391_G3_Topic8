@@ -11,6 +11,9 @@ import { QrCode, Copy, CheckCircle2, AlertCircle, ArrowLeft, Clock, XCircle, Loa
 import walletApi from '../../apis/walletApi'
 
 // ── QR Canvas ───────────────
+/**
+ * Component hiển thị mã QR Code từ chuỗi dữ liệu đầu vào.
+ */
 const QRCanvas = ({ data, size = 220 }) => {
   const canvasRef = useRef(null);
   const [error, setError] = useState(false);
@@ -116,6 +119,9 @@ const DriverTopUpPayment = () => {
     return () => clearInterval(timer)
   }, [timeLeft, payment, navigate])
 
+  /**
+   * Định dạng thời gian đếm ngược từ giây sang mm:ss.
+   */
   const formatTime = (seconds) => {
     if (seconds <= 0) return '00:00'
     const m = Math.floor(seconds / 60)
@@ -123,6 +129,9 @@ const DriverTopUpPayment = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
+  /**
+   * Sao chép thông tin (STK, Nội dung CK) vào clipboard.
+   */
   const handleCopy = (text, fieldName) => {
     navigator.clipboard.writeText(text)
     setCopiedField(fieldName)

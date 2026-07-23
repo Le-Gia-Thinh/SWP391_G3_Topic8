@@ -107,6 +107,9 @@ const DriverSubscriptionUpgrade = () => {
     .filter(p => p.basePrice >= currentPlan.basePrice)
     .sort((a, b) => a.basePrice - b.basePrice);
 
+  /**
+   * Tính toán giá sau khi đã áp dụng phần trăm giảm giá.
+   */
   const getDiscountedPrice = (basePrice, months, discountPercent) => {
     const totalBase = basePrice * months;
     const discountAmount = totalBase * (discountPercent / 100);

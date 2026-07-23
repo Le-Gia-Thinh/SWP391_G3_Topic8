@@ -9,6 +9,10 @@ import { useTranslation } from 'react-i18next'
 import { FileText, ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+/**
+ * Component hiển thị nội dung chi tiết về Điều khoản sử dụng dịch vụ.
+ * Quy định các quyền lợi, trách nhiệm và điều kiện khi sử dụng ứng dụng.
+ */
 const DriverTerms = () => {
   const { t } = useTranslation()
   return (

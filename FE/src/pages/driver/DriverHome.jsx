@@ -30,6 +30,11 @@ const COLOR_CLASSES = {
   green: { border: 'border-emerald-200/60', bg: 'bg-gradient-to-br from-emerald-50 to-white', iconBg: 'bg-emerald-100/80', iconText: 'text-emerald-600', progress: 'bg-emerald-500', progressBg: 'bg-emerald-100' }
 }
 
+/**
+ * Chuyển đổi chuỗi thời gian ISO thành định dạng giờ:phút ngày/tháng/năm
+ * @param {string} value Chuỗi thời gian
+ * @returns {string} Chuỗi đã định dạng
+ */
 const formatDateTime = (value) => {
   if (!value) return '--'
   const date = new Date(value)
@@ -37,8 +42,19 @@ const formatDateTime = (value) => {
   return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+/**
+ * Định dạng số thành chuỗi tiền tệ VNĐ
+ * @param {number|string} value Số tiền
+ * @returns {string} Chuỗi tiền tệ
+ */
 const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} VNĐ`
 
+/**
+ * Lấy Icon và màu sắc dựa trên mã loại xe
+ * @param {string} vehicleCode Mã xe
+ * @param {string} vehicleName Tên xe
+ * @returns {Object} Đối tượng chứa Icon và mã màu
+ */
 const getVehicleIconAndColor = (vehicleCode, vehicleName) => {
   const text = `${vehicleCode || ''} ${vehicleName || ''}`.toLowerCase()
   if (text.includes('moto') || text.includes('bike') || text.includes('máy')) return { Icon: Bike, color: 'orange' }
@@ -46,6 +62,9 @@ const getVehicleIconAndColor = (vehicleCode, vehicleName) => {
   return { Icon: CarFront, color: 'blue' }
 }
 
+/**
+ * Component hiển thị Tiêu đề của một khu vực (Section) có kèm nút "Xem thêm" (Action).
+ */
 const SectionHeader = ({ icon: Icon, title, actionText, actionTo }) => (
   <div className="mb-5 flex items-center justify-between">
     <h2 className="flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white">
@@ -280,6 +299,9 @@ const DriverHome = () => {
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoaded, setIsLoaded] = useState(false)
 
+  /**
+   * Gọi API để lấy tổng hợp dữ liệu trang chủ (số dư, trạng thái chỗ đỗ, phiên đỗ xe hiện hành).
+   */
   const fetchHomeData = async () => {
     try {
       setIsLoading(true)

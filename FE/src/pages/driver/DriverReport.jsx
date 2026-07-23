@@ -25,6 +25,10 @@ const ISSUE_TYPES = [
   { id: 'other', severity: 'Thấp' }
 ]
 
+/**
+ * Helper: Lấy giá trị đầu tiên khác undefined/null từ một danh sách các keys trong object.
+ * Giúp fallback khi các API trả về cấu trúc field name khác nhau (camelCase vs PascalCase).
+ */
 function getValue(obj, ...keys) {
   for (const key of keys) {
     if (obj && obj[key] !== undefined && obj[key] !== null) return obj[key]
@@ -49,6 +53,9 @@ function formatDateTime(value) {
   })
 }
 
+/**
+ * Chuẩn hóa danh sách file đính kèm thành format metadata rút gọn để hiển thị.
+ */
 function normalizeAttachments(files) {
   return files.map((file) => ({
     id: `${file.name}-${file.lastModified}-${file.size}`,
@@ -174,6 +181,10 @@ const DriverReport = () => {
     return relatedOptions.find((item) => item.id === selectedRelatedId) || relatedOptions[0]
   }, [relatedOptions, selectedRelatedId])
 
+  /**
+   * Gọi API lấy ngữ cảnh báo cáo (session hiện tại, các session đang active,
+   * các reservation chưa hoàn thành, lịch sử report gần đây) để đưa vào dropdown.
+   */
   const loadReportContext = useCallback(async () => {
     setLoading(true)
 
@@ -210,6 +221,9 @@ const DriverReport = () => {
     }
   }, [relatedOptions, selectedRelatedId])
 
+  /**
+   * Xử lý khi người dùng chọn file ảnh đính kèm (giới hạn dung lượng & loại file).
+   */
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files || [])
 
@@ -242,6 +256,9 @@ const DriverReport = () => {
     setAttachments((prev) => prev.filter((file) => file.id !== fileId))
   }
 
+  /**
+   * Gửi dữ liệu báo cáo sự cố (loại, ID liên quan, mô tả, đính kèm) lên server.
+   */
   const handleSubmit = async () => {
     if (!selectedIssue) {
       toast.error(t('driver.report.validateType'))

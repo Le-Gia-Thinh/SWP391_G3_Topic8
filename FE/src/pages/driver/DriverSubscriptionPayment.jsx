@@ -17,7 +17,9 @@ import walletApi from '../../apis/walletApi';
 // ── Helpers ──────────────────────────────────────────────────────
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n || 0)) + ' VNĐ';
 
-// ── QR Canvas (reuse cùng style với DriverPayment) ───────────────
+/**
+ * Component hiển thị mã QR Code từ chuỗi dữ liệu đầu vào.
+ */
 const QRCanvas = ({ data, size = 220 }) => {
   const canvasRef = useRef(null);
   const [error, setError] = useState(false);
@@ -45,7 +47,9 @@ const QRCanvas = ({ data, size = 220 }) => {
   );
 };
 
-// ── Countdown Timer ──────────────────────────────────────────────
+/**
+ * Component đếm ngược thời gian còn lại của mã QR thanh toán.
+ */
 const Countdown = ({ expiredAt }) => {
   const [timeLeft, setTimeLeft] = useState('');
 
@@ -158,6 +162,9 @@ const DriverSubscriptionPayment = () => {
   }, [step, payment]);
 
   // Confirm subscription after payment
+  /**
+   * Gọi API xác nhận đã thanh toán xong (để backend kích hoạt gói).
+   */
   const handleConfirm = useCallback(async () => {
     try {
       setConfirming(true);
@@ -174,6 +181,9 @@ const DriverSubscriptionPayment = () => {
     }
   }, [payment]);
 
+  /**
+   * Gọi API thanh toán bằng Ví nội bộ thay vì chuyển khoản.
+   */
   const handlePayByWallet = async () => {
     try {
        if (walletBalance < payment.amount) {

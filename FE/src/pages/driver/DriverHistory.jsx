@@ -66,7 +66,9 @@ const getIsoDate = (value) => {
 const fmt = (n) =>
   n != null ? new Intl.NumberFormat('vi-VN').format(Number(n)) + ' VNĐ' : '--'
 
-// Trả về key i18n + statusValue cho mỗi ReservationStatus
+/**
+ * Ánh xạ trạng thái đặt chỗ (từ DB) sang chuỗi ngôn ngữ i18n và class màu tương ứng.
+ */
 const getDisplayStatus = (item) => {
   const status = item.ReservationStatus || ''
   switch (status) {
@@ -94,7 +96,9 @@ const splitDateTimeText = (datetimeStr) => {
   }
 }
 
-// mapReservationToBooking nhận t để fallback các giá trị thiếu
+/**
+ * Chuẩn hóa dữ liệu một lượt đặt chỗ (booking) để hiển thị thống nhất trên UI.
+ */
 const mapReservationToBooking = (item, t) => {
   const displayStatus = getDisplayStatus(item)
   const start = splitDateTimeText(item.StartTime || item.StartTimeText)
@@ -166,6 +170,9 @@ const DriverHistory = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, booking: null })
   const [alertModal, setAlertModal] = useState({ isOpen: false, message: '' })
 
+  /**
+   * Gọi API lấy danh sách tất cả các lượt đặt chỗ (booking history) của tài xế.
+   */
   const fetchReservations = async () => {
     try {
       setIsLoading(true)
@@ -184,6 +191,9 @@ const DriverHistory = () => {
     }
   }
 
+  /**
+   * Gọi API lấy danh sách lịch sử các giao dịch thanh toán của tài xế.
+   */
   const fetchPayments = async () => {
     try {
       setIsLoading(true)

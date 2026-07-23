@@ -72,6 +72,10 @@ const DAY_BRACKETS = {
 }
 const NIGHT_FEE = { 1: 12000, 2: 120000, 3: 200000 }
 
+/**
+ * Tách khoảng thời gian đỗ xe thành các đoạn ban ngày (06:00 - 22:00) và ban đêm (22:00 - 06:00) 
+ * để tính phí chính xác theo từng block.
+ */
 const splitDayNightSegs = (start, end) => {
   const segs = []
   let cur = new Date(start.getTime())
@@ -90,6 +94,10 @@ const splitDayNightSegs = (start, end) => {
   return segs
 }
 
+/**
+ * Hàm tính toán chi tiết phí đỗ xe (dự kiến) dựa trên thời gian vào và biểu giá của loại xe.
+ * Logic này mô phỏng lại Stored Procedure sp_CalcParkingFeeV2 dưới Backend.
+ */
 const calcBreakdown = (entryTime, vehicleTypeId) => {
   if (!entryTime || !vehicleTypeId) return null
   const entry = new Date(entryTime)
@@ -510,7 +518,9 @@ const DriverPayment = () => {
     return () => clearInterval(pollerRef.current)
   }, [])
 
-  // Load sessions
+  /**
+   * Tải danh sách các phiên đỗ xe (sessions) đang active (chưa thanh toán hoặc đang thanh toán dở).
+   */
   const loadSessions = useCallback(async () => {
     setLS(true)
     try {
@@ -528,7 +538,9 @@ const DriverPayment = () => {
     return () => clearTimeout(timer)
   }, [loadSessions])
 
-  // Tạo QR
+  /**
+   * Gọi API tạo mã thanh toán QR Code (qua cổng PayOS) cho phiên đỗ xe được chọn.
+   */
   const handlePay = async (session) => {
     setPaying(session)
     try {
@@ -584,7 +596,9 @@ const DriverPayment = () => {
     }
   }
 
-  // Thanh toán bằng ví (từ trang QR)
+  /**
+   * Gọi API thanh toán bằng Ví nội bộ (dành cho màn hình đã hiển thị QR).
+   */
   const handlePayByWallet = async () => {
     try {
       if (walletBalance < payment.amount) {

@@ -19,6 +19,10 @@ import {
 } from 'lucide-react'
 import driverApi from '../../apis/driverApi'
 
+/**
+ * Lấy giá trị an toàn từ một object lồng nhau dựa trên mảng các key.
+ * Trả về giá trị đầu tiên tìm thấy không bị undefined/null.
+ */
 const getValue = (obj, ...keys) => {
   for (const key of keys) {
     if (obj?.[key] !== undefined && obj?.[key] !== null) {
@@ -29,6 +33,9 @@ const getValue = (obj, ...keys) => {
   return ''
 }
 
+/**
+ * Định dạng ngày tháng (Date) thành chuỗi hiển thị dạng DD/MM/YYYY.
+ */
 const formatDate = (value, fallback) => {
   if (!value) return fallback
 
@@ -41,6 +48,9 @@ const formatDate = (value, fallback) => {
   return date.toLocaleDateString('vi-VN')
 }
 
+/**
+ * Lấy 2 chữ cái đầu trong tên để làm Avatar mặc định (Ví dụ: "Duy Nguyen" -> "DN").
+ */
 const getInitials = (name) => {
   if (!name) return 'U'
 
@@ -74,6 +84,9 @@ const DriverProfile = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
 
+  /**
+   * Gọi API lấy thông tin hồ sơ cá nhân của tài xế hiện tại.
+   */
   const loadProfile = async () => {
     try {
       setIsLoading(true)

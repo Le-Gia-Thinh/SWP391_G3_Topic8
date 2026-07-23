@@ -17,6 +17,10 @@ const DriverSubscriptionCancel = () => {
   const [loading, setLoading] = useState(false);
   const [reason, setReason] = useState('');
 
+  /**
+   * Xử lý khi xác nhận hủy gia hạn gói cước.
+   * (Hiện tại đang simulate, sau này sẽ thay bằng call API).
+   */
   const handleCancel = () => {
     setLoading(true);
     // Simulate API call

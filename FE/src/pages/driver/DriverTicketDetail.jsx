@@ -38,6 +38,9 @@ const DriverTicketDetail = () => {
   const [submitting, setSubmitting] = useState(false)
   const endOfMessagesRef = useRef(null)
 
+  /**
+   * Lấy chi tiết của một ticket (bao gồm thông tin gốc và danh sách các câu trả lời).
+   */
   const fetchDetail = async () => {
     try {
       setLoading(true)
@@ -63,6 +66,9 @@ const DriverTicketDetail = () => {
     }
   }, [ticket?.Replies])
 
+  /**
+   * Gửi một câu trả lời mới vào ticket đang mở.
+   */
   const handleReply = async (e) => {
     e.preventDefault()
     if (!replyContent.trim()) return

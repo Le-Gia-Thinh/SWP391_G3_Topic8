@@ -34,17 +34,28 @@ const DriverTopUp = () => {
     fetchProfile()
   }, [])
 
+  /**
+   * Xử lý khi người dùng chọn một mệnh giá nạp tiền có sẵn.
+   */
   const handleAmountSelect = (amount) => {
     setSelectedAmount(amount)
     setCustomAmount('')
   }
 
+  /**
+   * Xử lý khi người dùng tự nhập số tiền nạp tùy ý.
+   * Lọc bỏ các ký tự không phải số.
+   */
   const handleCustomAmountChange = (e) => {
     const val = e.target.value.replace(/\D/g, '')
     setCustomAmount(val)
     setSelectedAmount(null)
   }
 
+  /**
+   * Xử lý chuyển hướng sang trang thanh toán khi người dùng nhấn "Tiến hành thanh toán".
+   * Kiểm tra số tiền hợp lệ tối thiểu là 10.000 VNĐ.
+   */
   const handleTopUp = () => {
     const amountToTopUp = customAmount ? parseInt(customAmount, 10) : selectedAmount
     if (!amountToTopUp || amountToTopUp < 10000) {

@@ -15,6 +15,9 @@ import driverApi from '../../apis/driverApi'
 
 const QUICK_TAG_KEYS = ['clean', 'easyToFind', 'friendlyStaff', 'fairPrice', 'goodSecurity', 'convenient']
 
+/**
+ * Định dạng chuỗi ngày tháng năm giờ phút (VD: 14:30 20/10/2023).
+ */
 function formatDateTime(value) {
   if (!value) return '—'
   const date = new Date(value)
@@ -58,6 +61,10 @@ const DriverFeedback = () => {
   const [formComment, setFormComment] = useState('')
   const [formTags, setFormTags] = useState([])
 
+  /**
+   * Gọi API lấy danh sách các phiên đỗ xe chưa đánh giá 
+   * và lịch sử các đánh giá đã gửi của tài xế.
+   */
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
@@ -80,6 +87,10 @@ const DriverFeedback = () => {
   const closeRatingForm = () => { setRatingForm(null); setFormRating(0); setFormComment(''); setFormTags([]) }
   const toggleTag = (tag) => setFormTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])
 
+  /**
+   * Gọi API gửi đánh giá cho một phiên đỗ xe.
+   * Gửi số sao, bình luận và các thẻ tag nổi bật.
+   */
   const handleSubmitRating = async () => {
     if (!formRating || formRating < 1) { toast.error(t('driver.feedbackPage.modal.validationError')); return }
     setSubmitting(true)

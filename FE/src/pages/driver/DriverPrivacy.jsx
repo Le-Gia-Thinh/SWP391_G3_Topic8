@@ -10,6 +10,10 @@ import { ShieldAlert, ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
+/**
+ * Component hiển thị nội dung chi tiết về Chính sách bảo mật.
+ * Bao gồm các thông tin về thu thập, sử dụng và bảo vệ dữ liệu người dùng.
+ */
 const DriverPrivacy = () => {
   const { t } = useTranslation()
   return (

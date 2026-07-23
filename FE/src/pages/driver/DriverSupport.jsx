@@ -35,6 +35,9 @@ const DriverSupport = () => {
   const [subject, setSubject] = useState('')
   const [content, setContent] = useState('')
 
+  /**
+   * Lấy danh sách các yêu cầu hỗ trợ (ticket) của tài xế.
+   */
   const fetchTickets = async () => {
     try {
       setLoading(true)
@@ -53,6 +56,9 @@ const DriverSupport = () => {
     fetchTickets()
   }, [])
 
+  /**
+   * Gửi yêu cầu tạo một ticket hỗ trợ mới (chủ đề, nội dung).
+   */
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!subject.trim() || !content.trim()) {

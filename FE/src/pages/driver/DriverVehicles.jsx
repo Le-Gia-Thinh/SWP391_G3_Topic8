@@ -31,10 +31,16 @@ const VEHICLE_ICONS = {
   TRUCK: { Icon: Truck, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' }
 }
 
+/**
+ * Lấy đối tượng giao diện (Icon, màu sắc) tương ứng với loại xe.
+ */
 function getVehicleStyle(vehicleCode) {
   return VEHICLE_ICONS[vehicleCode] || VEHICLE_ICONS.CAR
 }
 
+/**
+ * Chuyển đổi chuỗi ngày tháng sang dạng chuỗi hiển thị DD/MM/YYYY.
+ */
 function formatDate(value) {
   if (!value) return '—'
   const date = new Date(value)
@@ -59,12 +65,18 @@ const DriverVehicles = () => {
     vehicleColor: ''
   })
 
+  /**
+   * Xóa trắng form nhập liệu và đóng form (Hủy bỏ trạng thái Edit/Add).
+   */
   const resetForm = () => {
     setForm({ plateNumber: '', vehicleTypeId: '', vehicleBrand: '', vehicleColor: '' })
     setEditingVehicle(null)
     setShowForm(false)
   }
 
+  /**
+   * Tải danh sách xe của tài xế và danh sách các loại xe từ server.
+   */
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
@@ -90,11 +102,17 @@ const DriverVehicles = () => {
     fetchData()
   }, [fetchData])
 
+  /**
+   * Mở form ở chế độ "Thêm mới xe".
+   */
   const openAddForm = () => {
     resetForm()
     setShowForm(true)
   }
 
+  /**
+   * Mở form ở chế độ "Chỉnh sửa xe" và nạp dữ liệu cũ vào form.
+   */
   const openEditForm = (vehicle) => {
     setEditingVehicle(vehicle)
     setForm({
@@ -106,6 +124,9 @@ const DriverVehicles = () => {
     setShowForm(true)
   }
 
+  /**
+   * Xử lý sự kiện Submit form (Thêm mới hoặc Cập nhật xe).
+   */
   const handleSubmit = async (e) => {
     e.preventDefault()
 
@@ -144,6 +165,9 @@ const DriverVehicles = () => {
     }
   }
 
+  /**
+   * Gọi API xóa xe theo ID.
+   */
   const handleDelete = async (vehicleId) => {
     try {
       await driverApi.deleteVehicle(vehicleId)
@@ -155,6 +179,9 @@ const DriverVehicles = () => {
     }
   }
 
+  /**
+   * Thiết lập một xe làm xe mặc định (sẽ được ưu tiên chọn khi đặt chỗ).
+   */
   const handleSetDefault = async (vehicleId) => {
     try {
       await driverApi.setDefaultVehicle(vehicleId)
