@@ -33,10 +33,13 @@ const AdminLogin = () => {
     return <Navigate to={getRedirectPath(user?.roleName)} replace />
   }
 
+  // 🚀 LUỒNG ĐĂNG NHẬP [BƯỚC 1/8]: User bấm Submit form
   const onSubmit = async ({ account, password }) => {
     try {
+      // ➡️ BƯỚC TIẾP THEO: Nhảy sang FE/src/contexts/AuthContext.jsx ➔ Gọi hàm login({ email, password })
       const loggedUser = await login({ email: account, password })
       toast.success(t('auth.login.loginSuccess'))
+      // ➡️ SAU KHI ĐĂNG NHẬP THÀNH CÔNG: Tự động điều hướng theo Role (Admin -> /admin, Staff -> /staff/dashboard)
       navigate(getRedirectPath(loggedUser.roleName), { replace: true })
     } catch (error) {
       const message = error.response?.data?.message

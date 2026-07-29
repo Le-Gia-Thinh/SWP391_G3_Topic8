@@ -65,12 +65,20 @@ const DriverLayout = () => {
     setIsNotificationsOpen(false)
   }
 
+  /**
+   * Hàm xử lý logic: handleLogout
+   * Xóa thông tin đăng nhập và điều hướng người dùng về trang Đăng nhập.
+   */
   const handleLogout = async () => {
     closeAllDropdowns()
     await logout()
     navigate('/login', { replace: true })
   }
 
+  /**
+   * Hàm xử lý logic: handleSelectLocation
+   * Thay đổi vị trí tòa nhà đang được chọn.
+   */
   const handleSelectLocation = (locationName) => {
     setSelectedLocation(locationName)
     setIsLocationOpen(false)
@@ -85,6 +93,11 @@ const DriverLayout = () => {
   }
 
   useEffect(() => {
+    /**
+     * Hàm xử lý logic: handleClickOutside
+     * Xử lý sự kiện click chuột bên ngoài các menu dropdown (Profile, Location, Notification)
+     * để tự động đóng chúng lại.
+     */
     const handleClickOutside = (event) => {
       const target = event.target
       if (profileRef.current && !profileRef.current.contains(target)) setIsProfileOpen(false)

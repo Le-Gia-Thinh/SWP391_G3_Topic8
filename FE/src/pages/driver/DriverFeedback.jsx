@@ -80,6 +80,16 @@ const DriverFeedback = () => {
   const closeRatingForm = () => { setRatingForm(null); setFormRating(0); setFormComment(''); setFormTags([]) }
   const toggleTag = (tag) => setFormTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])
 
+  /**
+   * Xử lý gửi đánh giá (Feedback / Rating) lên server
+   * 1. Validate rating (bắt buộc > 0)
+   * 2. Gọi API POST /feedback
+   * 3. Hiển thị thông báo thành công và load lại lịch sử
+   */
+  /**
+   * Hàm xử lý logic: handleSubmitRating
+   * Gửi form đánh giá (rating, comment, tags) lên server.
+   */
   const handleSubmitRating = async () => {
     if (!formRating || formRating < 1) { toast.error(t('driver.feedbackPage.modal.validationError')); return }
     setSubmitting(true)

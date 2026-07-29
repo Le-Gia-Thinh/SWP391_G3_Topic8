@@ -28,16 +28,32 @@ const STATUS_LABEL_KEYS = {
 }
 
 const DriverTicketDetail = () => {
+  // Hook useTranslation: Hỗ trợ dịch ngôn ngữ (đa ngôn ngữ).
   const { t } = useTranslation()
+  // Hook useParams: Lấy tham số 'id' (mã ticket) từ URL (ví dụ: /driver/support/123 -> id = 123).
   const { id } = useParams()
+  // Hook useNavigate: Hỗ trợ điều hướng chuyển trang programmatically.
   const navigate = useNavigate()
 
+  // Hook useState:
+  // - ticket: Lưu trữ thông tin chi tiết của ticket và danh sách các tin nhắn phản hồi (Replies).
+  // - loading: Trạng thái chờ load dữ liệu (true = đang load).
+  // - replyContent: Lưu nội dung đoạn chat phản hồi mà tài xế đang gõ.
+  // - submitting: Trạng thái đang gửi phản hồi (true = đang gửi, block nút bấm để chống spam).
   const [ticket, setTicket] = useState(null)
   const [loading, setLoading] = useState(true)
   const [replyContent, setReplyContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  
+  // Hook useRef: Tạo một tham chiếu (reference) để trỏ tới thẻ div cuối cùng trong khu vực chat.
+  // Giúp tự động cuộn (scroll) màn hình xuống tin nhắn mới nhất khi có tin nhắn thêm vào.
   const endOfMessagesRef = useRef(null)
 
+  /**
+   * Hàm xử lý logic: fetchDetail
+   * Gửi request lên server để lấy thông tin chi tiết của 1 ticket dựa theo ID.
+   * Nếu có lỗi hoặc không tìm thấy, sẽ thông báo lỗi và đưa người dùng về trang danh sách.
+   */
   const fetchDetail = async () => {
     try {
       setLoading(true)
@@ -53,16 +69,29 @@ const DriverTicketDetail = () => {
     }
   }
 
+  // Hook useEffect: Lắng nghe sự thay đổi của biến 'id' từ URL.
+  // Khi 'id' thay đổi hoặc khi vào trang lần đầu, sẽ gọi hàm fetchDetail() để tải dữ liệu ticket tương ứng.
   useEffect(() => {
     fetchDetail()
   }, [id])
 
+  // Hook useEffect: Lắng nghe sự thay đổi của mảng ticket?.Replies.
+  // Mỗi khi danh sách tin nhắn thay đổi (có người gửi thêm tin nhắn mới), hàm này sẽ cuộn trang xuống phần tử cuối cùng mượt mà (smooth).
   useEffect(() => {
     if (endOfMessagesRef.current) {
       endOfMessagesRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [ticket?.Replies])
 
+  /**
+   * Hàm xử lý logic: handleReply
+   * Xử lý khi người dùng ấn nút "Gửi" tin nhắn phản hồi.
+   * - Kiểm tra nội dung tin nhắn không được để trống.
+   * - Gọi API replyTicket với nội dung tin nhắn.
+   * - Nếu thành công, làm sạch ô nhập và gọi lại fetchDetail() để cập nhật lại giao diện.
+   * 
+   * @param {Event} e Sự kiện submit form
+   */
   const handleReply = async (e) => {
     e.preventDefault()
     if (!replyContent.trim()) return
@@ -72,7 +101,7 @@ const DriverTicketDetail = () => {
       const res = await driverApi.replyTicket(id, { content: replyContent })
       if (res.success) {
         setReplyContent('')
-        fetchDetail() // reload to get new message and status
+        fetchDetail() // Tải lại chi tiết để lấy tin nhắn mới và trạng thái (nếu có thay đổi)
       }
     } catch (error) {
       toast.error(t('driver.ticketDetail.replyError'))

@@ -56,6 +56,11 @@ const formatTime = (value) => {
   })
 }
 
+/**
+ * Hàm xử lý logic: getIsoDate
+ * Trả về chuỗi ngày tháng theo chuẩn ISO (YYYY-MM-DD) từ một giá trị Date bất kỳ.
+ * Phục vụ cho bộ lọc (filter) theo ngày.
+ */
 const getIsoDate = (value) => {
   if (!value) return ''
   const date = new Date(value)
@@ -67,6 +72,12 @@ const fmt = (n) =>
   n != null ? new Intl.NumberFormat('vi-VN').format(Number(n)) + ' VNĐ' : '--'
 
 // Trả về key i18n + statusValue cho mỗi ReservationStatus
+/**
+ * Hàm xử lý logic: getDisplayStatus
+ * Ánh xạ trạng thái đặt chỗ (ReservationStatus) từ server trả về thành 2 giá trị:
+ * - statusLabelKey: Key dùng cho i18n (để dịch ra tiếng Việt/Anh).
+ * - statusValue: Dùng làm CSS class hoặc giá trị filter (active, used, expired...).
+ */
 const getDisplayStatus = (item) => {
   const status = item.ReservationStatus || ''
   switch (status) {
@@ -166,6 +177,11 @@ const DriverHistory = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, booking: null })
   const [alertModal, setAlertModal] = useState({ isOpen: false, message: '' })
 
+  /**
+   * Hàm xử lý logic: fetchReservations
+   * Gọi API lấy danh sách lịch sử đặt chỗ (booking) của tài xế
+   * Map dữ liệu trả về theo chuẩn hiển thị bảng
+   */
   const fetchReservations = async () => {
     try {
       setIsLoading(true)
@@ -184,6 +200,11 @@ const DriverHistory = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: fetchPayments
+   * Gọi API lấy danh sách lịch sử thanh toán (payment) của tài xế
+   * Phân trang 50 record mỗi lần gọi (hiện tại fix cứng limit 50, offset 0).
+   */
   const fetchPayments = async () => {
     try {
       setIsLoading(true)
@@ -202,6 +223,9 @@ const DriverHistory = () => {
     }
   }
 
+  // Hook useEffect: Lắng nghe sự thay đổi của tab hiện tại (activeTab).
+  // Nếu người dùng chuyển sang tab 'booking' thì gọi API fetchReservations.
+  // Ngược lại, nếu chọn 'payment' thì gọi API fetchPayments.
   useEffect(() => {
     if (activeTab === 'booking') {
       fetchReservations()
@@ -210,6 +234,8 @@ const DriverHistory = () => {
     }
   }, [activeTab])
 
+  // Hook useMemo: Tính toán lại mảng booking sau khi áp dụng các bộ lọc (Tìm kiếm, Trạng thái, Loại xe, Ngày).
+  // Chỉ tính toán lại khi một trong các state phụ thuộc bị thay đổi, giúp tránh render lại toàn bộ mảng một cách lãng phí.
   const filteredBookings = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase()
     return bookings.filter((booking) => {
@@ -225,6 +251,11 @@ const DriverHistory = () => {
     })
   }, [bookings, searchTerm, statusFilter, vehicleFilter, dateFilter])
 
+  /**
+   * Hàm xử lý logic: handleResetFilters
+   * Reset lại tất cả các bộ lọc (Tìm kiếm, Trạng thái, Loại xe, Ngày)
+   * và tải lại danh sách đặt chỗ mới nhất.
+   */
   const handleResetFilters = () => {
     setSearchTerm('')
     setStatusFilter('')
@@ -233,6 +264,13 @@ const DriverHistory = () => {
     fetchReservations()
   }
 
+  /**
+   * Hàm xử lý logic: handleCancelBooking
+   * Xử lý khi người dùng nhấn nút "Hủy" trên một đơn đặt chỗ cụ thể.
+   * Hiển thị popup xác nhận (confirmModal).
+   * 
+   * @param {Object} booking Đối tượng đặt chỗ cần hủy.
+   */
   const handleCancelBooking = (booking) => {
     if (!booking?.reservationId) {
       setAlertModal({ isOpen: true, message: t('driver.history.cancelNoCode') })
@@ -241,6 +279,10 @@ const DriverHistory = () => {
     setConfirmModal({ isOpen: true, booking })
   }
 
+  /**
+   * Xử lý xác nhận hủy bỏ đơn đặt chỗ từ Modal
+   * Gọi API PATCH để chuyển trạng thái thành Cancelled
+   */
   const confirmCancel = async () => {
     const booking = confirmModal.booking
     setConfirmModal({ isOpen: false, booking: null })

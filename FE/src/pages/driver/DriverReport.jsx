@@ -84,7 +84,10 @@ const DriverReport = () => {
   // Helper: lấy label i18n cho issue id
   const getIssueLabel = (id) => t(`driver.report.issues.${id}`)
 
-  // Helper: lấy label trạng thái sự cố
+  /**
+   * Hàm xử lý logic: getStatusLabel
+   * Dịch trạng thái sự cố từ tiếng Anh sang tiếng Việt dựa vào hệ thống i18n.
+   */
   const getStatusLabel = (status) => {
     if (!status) return '—'
     return t(`driver.report.incidentStatus.${status}`, status)
@@ -210,6 +213,13 @@ const DriverReport = () => {
     }
   }, [relatedOptions, selectedRelatedId])
 
+  /**
+   * Hàm xử lý logic: handleFileChange
+   * Xử lý khi người dùng chọn file hình ảnh tải lên.
+   * - Kiểm tra định dạng (chỉ cho phép PNG, JPEG, JPG).
+   * - Kiểm tra dung lượng (tối đa 5MB mỗi file).
+   * - Giới hạn tối đa 5 file đính kèm.
+   */
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files || [])
 
@@ -238,10 +248,19 @@ const DriverReport = () => {
     event.target.value = ''
   }
 
+  /**
+   * Hàm xử lý logic: handleRemoveAttachment
+   * Xóa một file đã đính kèm khỏi danh sách.
+   */
   const handleRemoveAttachment = (fileId) => {
     setAttachments((prev) => prev.filter((file) => file.id !== fileId))
   }
 
+  /**
+   * Hàm xử lý logic: handleSubmit
+   * Gửi báo cáo sự cố lên server.
+   * Validate thông tin loại sự cố và mô tả (ít nhất 5 ký tự) trước khi gọi API createReport.
+   */
   const handleSubmit = async () => {
     if (!selectedIssue) {
       toast.error(t('driver.report.validateType'))
@@ -282,6 +301,10 @@ const DriverReport = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: handleCancel
+   * Đặt lại form báo cáo về trạng thái ban đầu.
+   */
   const handleCancel = () => {
     setSelectedIssue('not_found')
     setDescription('')

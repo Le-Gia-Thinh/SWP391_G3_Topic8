@@ -252,6 +252,10 @@ const DriverBookingConfirmation = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false })
   const [alertModal, setAlertModal] = useState({ isOpen: false, message: '' })
 
+  /**
+   * Hàm xử lý logic: fetchReservationDetail
+   * Gọi API lấy chi tiết Booking theo ID.
+   */
   const fetchReservationDetail = async () => {
     if (!reservationId) {
       setIsLoading(false)
@@ -335,6 +339,10 @@ const DriverBookingConfirmation = () => {
     (vKey ? t(vKey) : booking?.vehicleType) ||
     '--'
 
+  /**
+   * Hàm xử lý logic: handleCopyBookingCode
+   * Sao chép mã đặt chỗ vào clipboard.
+   */
   const handleCopyBookingCode = async () => {
     try {
       await navigator.clipboard.writeText(booking?.bookingCode || '')
@@ -342,6 +350,10 @@ const DriverBookingConfirmation = () => {
       // ignore
     }
   }
+  /**
+   * Hàm xử lý logic: handleCancelBooking
+   * Mở modal xác nhận hủy đặt chỗ (chỉ áp dụng khi status còn active).
+   */
   const handleCancelBooking = () => {
     if (!booking?.reservationId) {
       navigate('/driver/history')

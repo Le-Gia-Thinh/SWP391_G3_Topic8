@@ -50,6 +50,8 @@ const staffApi = {
     return res.data
   },
 
+  // 🅿️ LUỒNG STAFF CHECK-IN [BƯỚC 2/7]: Gọi Axios gửi API Check-in
+  // ➡️ BƯỚC TIẾP THEO: Tự động qua FE/src/utils/authorizeAxios.js (gửi Cookie) ➔ Nhảy sang Backend BE/src/routes/staffRoutes.js (/bookings/:id/check-in)
   checkInBooking: async (reservationId, plateNumber) => {
     const res = await authorizedAxiosInstance.post(
       `${STAFF_BASE}/bookings/${reservationId}/check-in`,

@@ -73,6 +73,8 @@ router.get("/guest/home-stats", guestController.getHomeStats);
 // Auth public
 // Auth public
 router.post("/auth/register", validateRegister, authController.register);
+// 🚀 LUỒNG ĐĂNG NHẬP [BƯỚC 4/8]: Route Backend nhận request
+// ➡️ BƯỚC TIẾP THEO: Qua middleware validateLogin ➔ Nhảy sang BE/src/controllers/authController.js ➔ Gọi hàm login()
 router.post("/auth/login", validateLogin, authController.login);
 router.post("/auth/logout", authController.logout);
 router.post("/auth/refresh", authController.refreshToken);

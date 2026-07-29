@@ -19,6 +19,12 @@ import {
 } from 'lucide-react'
 import driverApi from '../../apis/driverApi'
 
+/**
+ * Hàm xử lý logic: getValue
+ * Hàm tiện ích để lấy giá trị từ một object (obj) dựa vào danh sách các khóa (keys).
+ * Lặp qua từng key, nếu tồn tại giá trị khác null/undefined thì trả về ngay giá trị đó.
+ * Dùng để hỗ trợ lấy dữ liệu khi API trả về các tên field khác nhau (ví dụ: FullName hoặc fullName).
+ */
 const getValue = (obj, ...keys) => {
   for (const key of keys) {
     if (obj?.[key] !== undefined && obj?.[key] !== null) {
@@ -41,6 +47,11 @@ const formatDate = (value, fallback) => {
   return date.toLocaleDateString('vi-VN')
 }
 
+/**
+ * Hàm xử lý logic: getInitials
+ * Hàm lấy 2 chữ cái đầu tiên của tên người dùng để làm ảnh đại diện dạng văn bản (khi chưa có ảnh Avatar).
+ * Ví dụ: "Lê Gia Thịnh" -> Cắt 2 từ cuối ("Gia", "Thịnh") -> Lấy "G", "T" -> Trả về "GT".
+ */
 const getInitials = (name) => {
   if (!name) return 'U'
 
@@ -69,11 +80,18 @@ const InfoItem = ({ icon, label, value, fallback }) => {
 }
 
 const DriverProfile = () => {
+  // Hook useTranslation: Hỗ trợ đa ngôn ngữ, lấy hàm 't' để gọi các chuỗi text tương ứng.
   const { t } = useTranslation()
+  
+  // Hook useState:
+  // - profile: Lưu trữ đối tượng chứa dữ liệu cá nhân của người dùng.
+  // - isLoading: Trạng thái hiển thị giao diện tải dữ liệu.
+  // - errorMessage: Lưu chuỗi thông báo lỗi (nếu gọi API thất bại).
   const [profile, setProfile] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
 
+  // Hàm loadProfile: Gửi request gọi API getProfile để lấy thông tin cá nhân.
   const loadProfile = async () => {
     try {
       setIsLoading(true)
@@ -96,10 +114,14 @@ const DriverProfile = () => {
     }
   }
 
+  // Hook useEffect: Chạy 1 lần duy nhất khi render lần đầu (mount) để lấy dữ liệu profile.
   useEffect(() => {
     loadProfile()
   }, [])
 
+  // Hook useMemo: Ghi nhớ (memoize) kết quả phân tích dữ liệu profileData.
+  // Chỉ tính toán lại khi state 'profile' hoặc hàm 't' thay đổi.
+  // Tránh việc component phải duyệt lại object mỗi khi render lại màn hình.
   const profileData = useMemo(() => {
     const fullName = getValue(profile, 'FullName', 'fullName') || t('driver.profile.defaultUser')
     const email = getValue(profile, 'Email', 'email')

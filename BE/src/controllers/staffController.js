@@ -89,18 +89,23 @@ export async function getBookingDetail(req, res, next) {
     }
 }
 
+// 🅿️ LUỒNG STAFF CHECK-IN [BƯỚC 4/7]: Controller tiếp nhận & bóc tách dữ liệu
 export async function checkInBooking(req, res, next) {
     try {
-        const { reservationId } = req.params
-        const { plateNumber } = req.body
+        const { reservationId } = req.params // 💡 req.params: Lấy ID trên đường dẫn URL (/bookings/:reservationId/check-in)
+        const { plateNumber } = req.body     // 💡 req.body: Lấy dữ liệu gửi ẩn trong body JSON ({ plateNumber })
+        
+        // ➡️ BƯỚC TIẾP THEO: Nhảy sang BE/src/services/staffService.js ➔ Gọi hàm checkInBooking(reservationId, plateNumber)
         const data = await staffService.checkInBooking(reservationId, plateNumber)
+        
+        // ➡️ HOÀN TẤT BACKEND: Trả về HTTP 201 Created cùng kết quả JSON về lại cho Frontend qua Axios
         res.status(StatusCodes.CREATED).json({
             success: true,
             message: 'Check-in booking thành công.',
             data
         })
     } catch (error) {
-        next(error)
+        next(error) // 💡 next(error): Chuyển lỗi về errorHandlingMiddleware xử lý tập trung
     }
 }
 

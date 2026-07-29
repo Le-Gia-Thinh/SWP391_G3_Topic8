@@ -6,6 +6,8 @@
 
 import authorizeAxios from '../utils/authorizeAxios'
 
+// 🚀 LUỒNG ĐĂNG NHẬP [BƯỚC 3/8]: Gọi Axios gửi request
+// ➡️ BƯỚC TIẾP THEO: Tự động qua FE/src/utils/authorizeAxios.js (gắn withCredentials: true) ➔ Nhảy sang Backend BE/src/routes/index.js (khớp endpoint /api/auth/login)
 export const loginAPI = (data) => authorizeAxios.post('/auth/login', data, { _noToast: true })
 
 export const logoutAPI = () => authorizeAxios.post('/auth/logout')

@@ -1256,12 +1256,15 @@ const StaffVerifyBooking = () => {
     finally { setSearching(false) }
   }
 
+  // 🅿️ LUỒNG STAFF CHECK-IN [BƯỚC 1/7]: Nhân viên bấm nút "Xác nhận Check-in" trên Giao diện
   const handleCheckIn = async (booking, plateNumber) => {
     setChecking(true)
     try {
+      // ➡️ BƯỚC TIẾP THEO: Nhảy sang FE/src/apis/staffApi.js ➔ Gọi hàm checkInBooking(reservationId, plateNumber)
       const result = await staffApi.checkInBooking(booking.ReservationID, plateNumber)
       const data = result?.data
       toast.success(t('staff.verifyBooking.checkinSuccess', { code: booking.BookingCode }))
+      // ➡️ HOÀN TẤT CHECK-IN: Chuyển sang trang hiển thị Biên lai/Thẻ xe /staff/checkin-success
       navigate('/staff/checkin-success', {
         state: {
           actionType: 'booking-checkin',
