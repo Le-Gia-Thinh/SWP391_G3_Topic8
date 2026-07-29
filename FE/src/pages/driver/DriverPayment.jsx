@@ -57,6 +57,10 @@ const getDuration = (entry, now = new Date()) => {
   return { text: `${h}h ${m}m ${s}s`, h, m, s, totalSec }
 }
 
+/**
+ * Hàm xử lý logic: getVehicleIcon
+ * Trả về Icon tương ứng với loại phương tiện.
+ */
 const getVehicleIcon = (code) => {
   const c = (code || '').toLowerCase()
   if (c.includes('moto') || c.includes('bike')) return <BikeIcon size={16} />
@@ -529,6 +533,15 @@ const DriverPayment = () => {
   }, [loadSessions])
 
   // Tạo QR
+  /**
+   * Xử lý bấm nút "Thanh Toán" (Tạo mã QR PayOS)
+   * Gọi API POST tạo đơn thanh toán, sau đó chuyển sang step 'qr' và bắt đầu polling
+   * @param {Object} session - Phiên đỗ xe cần thanh toán
+   */
+  /**
+   * Hàm xử lý logic: handlePay
+   * Xử lý tạo thanh toán qua PayOS (chọn thanh toán quét mã QR).
+   */
   const handlePay = async (session) => {
     setPaying(session)
     try {
@@ -545,6 +558,12 @@ const DriverPayment = () => {
   }
 
   // Poll trạng thái mỗi 3s
+  /**
+   * Hàm Polling: Gọi liên tục mỗi 3 giây để kiểm tra trạng thái thanh toán từ PayOS
+   * Nếu trạng thái là PAID -> Chuyển sang bước thành công
+   * Nếu CANCELLED/EXPIRED -> Chuyển sang bước thất bại
+   * @param {string} orderCode - Mã giao dịch PayOS
+   */
   const startPolling = (orderCode) => {
     clearInterval(pollerRef.current)
     pollerRef.current = setInterval(async () => {
@@ -566,6 +585,14 @@ const DriverPayment = () => {
   }
 
   // Huỷ đơn
+  /**
+   * Xử lý bấm nút Hủy đơn thanh toán (quay lại)
+   * Gọi API báo PayOS hủy order và quay về trang chọn phiên đỗ
+   */
+  /**
+   * Hàm xử lý logic: handleCancel
+   * Hủy giao dịch đang tiến hành và quay lại danh sách chọn.
+   */
   const handleCancel = async () => {
     setCancelling(true)
     clearInterval(pollerRef.current)
@@ -585,6 +612,10 @@ const DriverPayment = () => {
   }
 
   // Thanh toán bằng ví (từ trang QR)
+  /**
+   * Hàm xử lý logic: handlePayByWallet
+   * Xử lý thanh toán thông qua số dư Ví, gọi từ màn hình QR.
+   */
   const handlePayByWallet = async () => {
     try {
       if (walletBalance < payment.amount) {
@@ -602,6 +633,15 @@ const DriverPayment = () => {
   }
 
   // Thanh toán bằng ví trực tiếp từ danh sách (không cần qua QR)
+  /**
+   * Xử lý thanh toán trực tiếp qua Số dư Ví (Wallet) mà không cần quét QR
+   * Rút gọn bước quét mã nếu người dùng có đủ tiền trong ví
+   * @param {Object} session - Phiên đỗ xe cần thanh toán
+   */
+  /**
+   * Hàm xử lý logic: handlePayByWalletDirect
+   * Xử lý thanh toán nhanh bằng Ví (ngay từ danh sách phiên).
+   */
   const handlePayByWalletDirect = async (session) => {
     try {
       setIsWalletPaying(true)

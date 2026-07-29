@@ -65,6 +65,11 @@ const DriverTopUpPayment = () => {
        return
     }
 
+    /**
+     * Hàm xử lý logic: initPayment
+     * Khởi tạo giao dịch thanh toán thông qua API walletApi.createTopup.
+     * Cập nhật thời gian đếm ngược dựa trên expiredAt trả về từ server.
+     */
     const initPayment = async () => {
       try {
         setLoading(true)
@@ -123,6 +128,11 @@ const DriverTopUpPayment = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
+  /**
+   * Hàm xử lý logic: handleCopy
+   * Copy chuỗi văn bản vào bộ nhớ tạm (clipboard) của thiết bị.
+   * Hiển thị chữ "Đã copy" trong khoảng 2 giây.
+   */
   const handleCopy = (text, fieldName) => {
     navigator.clipboard.writeText(text)
     setCopiedField(fieldName)

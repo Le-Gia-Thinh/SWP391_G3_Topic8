@@ -55,6 +55,10 @@ const formatCurrency = (value) => {
 }
 
 // getParkedDuration nhận t để i18n hoá chuỗi "X giờ Y phút Z giây"
+/**
+ * Hàm xử lý logic: getParkedDuration
+ * Tính toán và định dạng thời gian đã đỗ thành chuỗi "X giờ Y phút Z giây".
+ */
 const getParkedDuration = (entryTime, currentTime, t) => {
   const entry = parseBackendDate(entryTime)
   const now = currentTime || new Date()
@@ -73,6 +77,10 @@ const getParkedDuration = (entryTime, currentTime, t) => {
   return t('driver.session.duration', { h: hours, m: minutes, s: seconds })
 }
 
+/**
+ * Hàm xử lý logic: getProgress
+ * Tính toán tiến trình đỗ xe (mặc định lấy 4 tiếng = 240 phút làm 100% để hiển thị progress bar).
+ */
 const getProgress = (session, currentTime) => {
   const entry = parseBackendDate(session?.EntryTime)
   const now = currentTime || new Date()
@@ -93,6 +101,10 @@ const getProgress = (session, currentTime) => {
 }
 
 // Trả về key i18n thay vì label cứng
+/**
+ * Hàm xử lý logic: getSessionStatusKey
+ * Chuyển đổi trạng thái Session thành key i18n tương ứng.
+ */
 const getSessionStatusKey = (status) => {
   const map = {
     Active: 'driver.session.statusActive',
@@ -104,10 +116,18 @@ const getSessionStatusKey = (status) => {
   return map[status] || 'driver.session.statusActive'
 }
 
+/**
+ * Hàm xử lý logic: getSessionTitle
+ * Lấy tiêu đề hiển thị cho Session (Ưu tiên SessionCode, nếu không dùng SessionID).
+ */
 const getSessionTitle = (session) => {
   return session?.SessionCode || `SS-${session?.SessionID || '--'}`
 }
 
+/**
+ * Hàm xử lý logic: getSessionSubTitle
+ * Lấy tiêu đề phụ hiển thị cho Session (Biển số xe • Mã ô đỗ).
+ */
 const getSessionSubTitle = (session, t) => {
   const plate = session?.PlateNumber || t('driver.session.noPlate')
   const slot = session?.SlotCode || t('driver.session.noSlot')
@@ -498,6 +518,11 @@ const DriverSession = () => {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [mapModal, setMapModal] = useState({ isOpen: false })
 
+  /**
+   * Hàm xử lý logic: fetchCurrentSessions
+   * Gọi API lấy danh sách các phiên đỗ xe ĐANG DIỄN RA (Active) của tài xế
+   * Tự động set phiên đầu tiên làm selectedSessionId nếu danh sách không rỗng
+   */
   const fetchCurrentSessions = async () => {
     try {
       setIsLoading(true)
@@ -545,18 +570,32 @@ const DriverSession = () => {
     return sessions.find((item) => String(item.SessionID) === String(selectedSessionId)) || sessions[0] || null
   }, [sessions, selectedSessionId])
 
+  /**
+   * Hàm xử lý logic: handleGoPayment
+   * Xử lý chuyển trang sang Màn hình Thanh toán
+   * Kèm theo sessionId để màn hình thanh toán tự động chọn phiên này
+   */
   const handleGoPayment = (sessionId) => {
     navigate('/driver/payment', {
       state: { sessionId }
     })
   }
 
+  /**
+   * Hàm xử lý logic: handleGoReport
+   * Xử lý chuyển trang sang Màn hình Báo cáo sự cố
+   * @param {string} sessionId - ID của phiên đỗ xe hiện tại
+   */
   const handleGoReport = (sessionId) => {
     navigate('/driver/report', {
       state: { sessionId }
     })
   }
 
+  /**
+   * Hàm xử lý logic: handleViewMap
+   * Mở modal xem bản đồ.
+   */
   const handleViewMap = () => {
     setMapModal({ isOpen: true })
   }

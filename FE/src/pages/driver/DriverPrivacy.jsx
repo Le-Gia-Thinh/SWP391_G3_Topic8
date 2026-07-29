@@ -11,6 +11,8 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 const DriverPrivacy = () => {
+  // Hook useTranslation dùng để lấy hàm 't' phục vụ cho việc đa ngôn ngữ (i18n).
+  // Hàm 't' sẽ lấy các chuỗi văn bản (text) từ file JSON ngôn ngữ tương ứng (ví dụ: vi.json, en.json) dựa trên key được truyền vào.
   const { t } = useTranslation()
   return (
     <div className="animate-in fade-in duration-500 max-w-3xl mx-auto space-y-6 bg-white dark:bg-slate-800 p-8 rounded-2xl border border-gray-100 dark:border-slate-700/50 shadow-sm">

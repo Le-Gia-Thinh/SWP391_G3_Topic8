@@ -39,6 +39,10 @@ const formatDateTime = (value) => {
 
 const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} VNĐ`
 
+/**
+ * Hàm xử lý logic: getVehicleIconAndColor
+ * Trả về icon và màu sắc phù hợp dựa trên tên và mã phương tiện.
+ */
 const getVehicleIconAndColor = (vehicleCode, vehicleName) => {
   const text = `${vehicleCode || ''} ${vehicleName || ''}`.toLowerCase()
   if (text.includes('moto') || text.includes('bike') || text.includes('máy')) return { Icon: Bike, color: 'orange' }
@@ -280,6 +284,10 @@ const DriverHome = () => {
   const [errorMessage, setErrorMessage] = useState('')
   const [isLoaded, setIsLoaded] = useState(false)
 
+  /**
+   * Hàm xử lý logic: fetchHomeData
+   * Gọi API để lấy dữ liệu tổng hợp cho trang chủ (thống kê, lượt đặt chỗ hiện tại, phiên đỗ xe, ...).
+   */
   const fetchHomeData = async () => {
     try {
       setIsLoading(true)

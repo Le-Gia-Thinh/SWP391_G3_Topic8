@@ -17,6 +17,11 @@ const DriverSubscriptionCancel = () => {
   const [loading, setLoading] = useState(false);
   const [reason, setReason] = useState('');
 
+  /**
+   * Hàm xử lý logic: handleCancel
+   * Hủy tự động gia hạn gói hội viên.
+   * Gửi API (mock) để xử lý hủy gia hạn, sau đó quay về trang quản lý gói.
+   */
   const handleCancel = () => {
     setLoading(true);
     // Simulate API call

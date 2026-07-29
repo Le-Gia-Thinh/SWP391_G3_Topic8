@@ -21,6 +21,10 @@ const DriverTopUp = () => {
 
   // Fetch current balance
   useEffect(() => {
+    /**
+     * Hàm xử lý logic: fetchProfile
+     * Gọi API lấy thông tin người dùng hiện tại để hiển thị số dư ví (AccountBalance).
+     */
     const fetchProfile = async () => {
       try {
         const res = await driverApi.getProfile()
@@ -34,17 +38,33 @@ const DriverTopUp = () => {
     fetchProfile()
   }, [])
 
+  /**
+   * Hàm xử lý logic: handleAmountSelect
+   * Xử lý khi người dùng chọn một mệnh giá nạp tiền có sẵn.
+   * Xóa số tiền nhập thủ công (nếu có).
+   */
   const handleAmountSelect = (amount) => {
     setSelectedAmount(amount)
     setCustomAmount('')
   }
 
+  /**
+   * Hàm xử lý logic: handleCustomAmountChange
+   * Xử lý khi người dùng tự nhập số tiền cần nạp.
+   * Chỉ cho phép nhập số, loại bỏ mọi ký tự chữ hoặc ký tự đặc biệt.
+   * Xóa bỏ mệnh giá đang được chọn (nếu có).
+   */
   const handleCustomAmountChange = (e) => {
     const val = e.target.value.replace(/\D/g, '')
     setCustomAmount(val)
     setSelectedAmount(null)
   }
 
+  /**
+   * Hàm xử lý logic: handleTopUp
+   * Kiểm tra số tiền cần nạp đã hợp lệ chưa (tối thiểu 10.000 VNĐ).
+   * Điều hướng sang trang thanh toán (topup-payment) và truyền số tiền sang đó thông qua state.
+   */
   const handleTopUp = () => {
     const amountToTopUp = customAmount ? parseInt(customAmount, 10) : selectedAmount
     if (!amountToTopUp || amountToTopUp < 10000) {
