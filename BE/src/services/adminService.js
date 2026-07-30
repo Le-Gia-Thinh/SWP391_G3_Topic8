@@ -1,18 +1,29 @@
 /**
  * FILE: adminService.js
- * MÔ TẢ: Service cung cấp các logic xử lý nghiệp vụ dành cho Admin.
+ * MÔ TẢ: Service cung cấp toàn bộ các chức năng quản trị hệ thống cao cấp dành riêng cho Quản trị viên (System Administrator Engine).
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. QUẢN LÝ CƠ SỞ HẠ TẦNG BÃI ĐỖ (Infrastructure Management):
+ *    - Quản lý Tầng (`Floors`): Thêm/Sửa/Xóa tầng, kiểm tra giới hạn `TotalFloors` của Tòa nhà (`createFloor`, `updateFloor`, `deleteFloor`).
+ *    - Quản lý Khu vực (`Zones`): Quản lý zone đỗ xe theo tầng (`createZone`, `updateZone`, `deleteZone`).
+ *    - Quản lý Vị trí ô đỗ (`ParkingSlots`): Thêm/Sửa/Bảo trì ô đỗ xe, tự động sinh mã ô đỗ theo format (`createSlot`, `batchCreateSlots`, `updateSlot`).
+ * 2. THỐNG KÊ DASHBOARD BÁO CÁO (System Analytics & Metrics):
+ *    - Tổng quan số lượng Tài xế, Nhân viên, Doanh thu, Tỷ lệ lấp đầy bãi xe (`getDashboardStats`).
+ *    - Biểu đồ doanh thu theo thời gian, theo phương thức thanh toán PayOS/Cash (`getRevenueAnalytics`).
+ * 3. QUẢN LÝ TÀI KHOẢN VÀ PHÂN QUYỀN TÀI NGUYÊN (User & Role Management):
+ *    - Tạo tài khoản Nhân viên / Quản lý (`createUser`), Mã hóa mật khẩu bằng `bcryptjs`.
+ *    - Khóa / Mở khóa tài khoản (`toggleUserActive`), Phân lại vai trò hệ thống (`changeUserRole`).
+ *    - Quản lý bảng giá niêm yết gửi xe lũy tiến (`updatePricingPolicy`).
  * 
- * Chức năng:
- * - Quản lý cơ sở hạ tầng bãi đỗ xe: Tầng (Floors), Khu vực (Zones), Vị trí (Slots)
- * - Lấy số liệu thống kê tổng quan (Dashboard Stats)
- * - Quản lý người dùng, vai trò (Roles)
+ * @module adminService
  */
-/*
-Thinh
-*/
 
 import { getPool, sql } from '../config/db.js'
 import bcrypt from 'bcryptjs'
+
+/**
+ * HÀM PHỤ: httpError
+ * TÁC DỤNG: Khởi tạo đối tượng Error kèm HTTP status code và mã lỗi hệ thống.
+ */
 function httpError(statusCode, message, code) {
   const e = new Error(message)
   e.statusCode = statusCode
@@ -23,32 +34,75 @@ const badRequest = (m, c = 'BAD_REQUEST') => httpError(400, m, c)
 const notFound = (m, c = 'NOT_FOUND') => httpError(404, m, c)
 const conflict = (m, c = 'CONFLICT') => httpError(409, m, c)
 
+// Các trạng thái khả thi của 1 ô đỗ xe trong hệ thống
 const SLOT_STATUSES = ['Available', 'Occupied', 'Reserved', 'Maintenance', 'Blocked']
 
+
 /* =====================================================================
-   FLOORS
+   FLOORS (QUẢN LÝ TẦNG ĐỖ XE)
    ===================================================================== */
 
+/**
+ * HÀM: getFloors
+ * MỤC ĐÍCH: Lấy danh sách các tầng gửi xe (có thể lọc theo Tòa nhà `buildingId`).
+ * NGUỒN ĐẦU VÀO TỪ FE: `buildingId` (từ query string FE `req.query.buildingId`).
+ * DỮ LIỆU TRẢ VỀ CHO FE: Mảng chứa thông tin Tầng (`FloorID`, `FloorName`), Tòa nhà (`BuildingName`), 
+ *                        số lượng Zone (`ZoneCount`) và số ô đỗ (`SlotCount`) để hiển thị bảng quản lý tầng.
+ */
 export async function getFloors(buildingId) {
   const pool = await getPool()
   const result = await pool.request()
+    // Gán tham số BuildingID dạng số nguyên (SQL Int), nếu không truyền thì nhận value NULL
     .input('BuildingID', sql.Int, buildingId || null)
     .query(`
       SELECT
-        f.FloorID, f.BuildingID, b.BuildingName, f.FloorName, f.IsActive,
+        -- 1. Lấy các thuộc tính tầng và tòa nhà để FE hiển thị bảng thông tin
+        f.FloorID, 
+        f.BuildingID, 
+        b.BuildingName, -- Lấy tên tòa nhà bằng phép JOIN bảng Buildings
+        f.FloorName, 
+        f.IsActive,     -- Trạng thái kích hoạt (1: Đang hoạt động, 0: Khóa)
+        
+        -- 2. Đếm tổng số Khu vực (Zone) thuộc Tầng này (dùng DISTINCT để đếm không bị trùng lắp khi JOIN nhiều bảng)
         COUNT(DISTINCT z.ZoneID)  AS ZoneCount,
+        
+        -- 3. Đếm tổng số vị trí ô đỗ (ParkingSlots) thực tế nằm trong các Zone của Tầng này
         COUNT(DISTINCT ps.SlotID) AS SlotCount
+
+      -- 4. BẢNG CHÍNH: Bảng Floors (chứa danh sách tầng đỗ xe)
       FROM Floors f
+
+      -- 5. INNER JOIN: Kết nối bảng Buildings theo khóa ngoại BuildingID để lấy tên Tòa nhà (BuildingName)
       JOIN Buildings b          ON b.BuildingID = f.BuildingID
+
+      -- 6. LEFT JOIN: Kết nối bảng Zones theo FloorID. Dùng LEFT JOIN để nếu Tầng mới chưa có Zone nào thì vẫn xuất hiện trong kết quả với ZoneCount = 0
       LEFT JOIN Zones z         ON z.FloorID    = f.FloorID
+
+      -- 7. LEFT JOIN: Kết nối bảng ParkingSlots theo ZoneID để đếm số ô đỗ
       LEFT JOIN ParkingSlots ps ON ps.ZoneID    = z.ZoneID
+
+      -- 8. ĐIỀU KIỆN LỌC WHERE: Nếu @BuildingID truyền vào là NULL ➔ Lấy tất cả tầng; Nếu có @BuildingID ➔ Chỉ lấy các tầng thuộc tòa nhà đó
       WHERE (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
+
+      -- 9. GOM NHÓM GROUP BY: Gom nhóm theo ID tầng và tòa nhà bắt buộc khi sử dụng các hàm đếm aggregate (COUNT)
       GROUP BY f.FloorID, f.BuildingID, b.BuildingName, f.FloorName, f.IsActive
+
+      -- 10. SẮP XẾP ORDER BY: Sắp xếp theo Tòa nhà trước, sau đó sắp xếp theo ID tầng tăng dần
       ORDER BY f.BuildingID, f.FloorID
     `)
   return result.recordset
 }
 
+/**
+ * HÀM: createFloor
+ * MỤC ĐÍCH: Tạo một tầng mới thuộc tòa nhà cụ thể.
+ * NGUỒN ĐẦU VÀO TỪ FE: Body gửi lên gồm `{ buildingId, floorName, isActive }`.
+ * GIẢI THÍCH SQL:
+ * - Query 1 (`SELECT TotalFloors`): Kiểm tra xem tòa nhà có vượt quá số tầng quy định tối đa hay chưa.
+ * - Query 2 (`SELECT FloorCount`): Đếm số tầng hiện có trong bảng Floors của tòa nhà đó.
+ * - Query 3 (`SELECT FloorID`): Kiểm tra trùng tên tầng (`FloorName`) trong cùng tòa nhà.
+ * - Query 4 (`INSERT INTO Floors ... OUTPUT INSERTED.*`): Chèn tầng mới và trả về bản ghi vừa tạo.
+ */
 export async function createFloor({ buildingId, floorName, isActive = 1 }) {
   if (!buildingId) throw badRequest('Thiếu BuildingID.', 'BUILDING_ID_REQUIRED')
   const name = String(floorName || '').trim()
@@ -57,12 +111,13 @@ export async function createFloor({ buildingId, floorName, isActive = 1 }) {
 
   const pool = await getPool()
 
+  // 1. QUERY TRUY VẤN TÒA NHÀ: Kiểm tra tòa nhà có tồn tại và lấy cột TotalFloors (Giới hạn tổng số tầng)
   const b = await pool.request()
     .input('BuildingID', sql.Int, Number(buildingId))
     .query('SELECT BuildingID, TotalFloors FROM Buildings WHERE BuildingID = @BuildingID')
   if (!b.recordset.length) throw notFound('Không tìm thấy tòa nhà.', 'BUILDING_NOT_FOUND')
 
-  // ── Check giới hạn số tầng ──────────────────────────────────
+  // 2. CHECK GIỚI HẠN SỐ TẦNG: Đếm số lượng tầng đã tạo dưới DB
   const building = b.recordset[0]
   if (building.TotalFloors != null && building.TotalFloors > 0) {
     const floorCountRes = await pool.request()
@@ -76,12 +131,15 @@ export async function createFloor({ buildingId, floorName, isActive = 1 }) {
       )
     }
   }
+
+  // 3. CHECK TRÙNG TÊN TẦNG: Quét bảng Floors xem tên tầng này đã có trong tòa nhà chưa
   const dup = await pool.request()
     .input('BuildingID', sql.Int, Number(buildingId))
     .input('FloorName', sql.NVarChar(50), name)
     .query('SELECT FloorID FROM Floors WHERE BuildingID = @BuildingID AND FloorName = @FloorName')
   if (dup.recordset.length) throw conflict(`Tầng "${name}" đã tồn tại trong tòa nhà này.`, 'FLOOR_NAME_EXISTS')
 
+  // 4. INSERT TẦNG MỚI: Thêm bản ghi mới và dùng mệnh đề OUTPUT INSERTED.* để trả về đầy đủ object vừa tạo cho FE
   const ins = await pool.request()
     .input('BuildingID', sql.Int, Number(buildingId))
     .input('FloorName', sql.NVarChar(50), name)
@@ -94,10 +152,15 @@ export async function createFloor({ buildingId, floorName, isActive = 1 }) {
   return ins.recordset[0]
 }
 
+/**
+ * HÀM: updateFloor
+ * MỤC ĐÍCH: Cập nhật tên tầng hoặc trạng thái kích hoạt của tầng.
+ */
 export async function updateFloor(floorId, { floorName, isActive }) {
   if (!floorId) throw badRequest('Thiếu FloorID.', 'FLOOR_ID_REQUIRED')
 
   const pool = await getPool()
+  // 1. SELECT kiểm tra sự tồn tại của Tầng
   const cur = await pool.request()
     .input('FloorID', sql.Int, Number(floorId))
     .query('SELECT * FROM Floors WHERE FloorID = @FloorID')
@@ -112,6 +175,7 @@ export async function updateFloor(floorId, { floorName, isActive }) {
     if (!name) throw badRequest('Tên tầng không được rỗng.', 'FLOOR_NAME_REQUIRED')
     if (name.length > 50) throw badRequest('Tên tầng tối đa 50 ký tự.', 'FLOOR_NAME_TOO_LONG')
     if (name !== current.FloorName) {
+      // 2. CHECK TRÙNG TÊN: Đảm bảo tên tầng mới không trùng với các tầng KHÁC trong cùng tòa nhà (FloorID <> @FloorID)
       const dup = await pool.request()
         .input('BuildingID', sql.Int, current.BuildingID)
         .input('FloorName', sql.NVarChar(50), name)
@@ -130,6 +194,7 @@ export async function updateFloor(floorId, { floorName, isActive }) {
 
   if (sets.length === 0) throw badRequest('Không có trường nào để cập nhật.', 'NOTHING_TO_UPDATE')
 
+  // 3. UPDATE DYNAMIC: Ghép nối danh sách các cột thay đổi và trả về dữ liệu mới qua OUTPUT INSERTED.*
   const upd = await req.query(`
     UPDATE Floors SET ${sets.join(', ')}
     OUTPUT INSERTED.*
@@ -138,15 +203,21 @@ export async function updateFloor(floorId, { floorName, isActive }) {
   return upd.recordset[0]
 }
 
+/**
+ * HÀM: deleteFloor
+ * MỤC ĐÍCH: Xóa tầng đỗ xe (Chỉ cho phép xóa khi tầng không chứa Zone nào).
+ */
 export async function deleteFloor(floorId) {
   if (!floorId) throw badRequest('Thiếu FloorID.', 'FLOOR_ID_REQUIRED')
 
   const pool = await getPool()
+  // 1. SELECT kiểm tra xem Tầng có tồn tại không
   const cur = await pool.request()
     .input('FloorID', sql.Int, Number(floorId))
     .query('SELECT * FROM Floors WHERE FloorID = @FloorID')
   if (!cur.recordset.length) throw notFound('Không tìm thấy tầng.', 'FLOOR_NOT_FOUND')
 
+  // 2. CHECK RÀNG BUỘC KHÓA NGOẠI: Kiểm tra xem có Zone nào đang nằm trên Tầng này không
   const z = await pool.request()
     .input('FloorID', sql.Int, Number(floorId))
     .query('SELECT TOP 1 ZoneID FROM Zones WHERE FloorID = @FloorID')
@@ -154,6 +225,7 @@ export async function deleteFloor(floorId) {
     throw conflict('Không thể xóa tầng vì còn khu vực (zone) bên trong.', 'FLOOR_HAS_ZONES')
   }
 
+  // 3. EXECUTE DELETE: Thực thi xóa dòng khỏi bảng Floors
   await pool.request()
     .input('FloorID', sql.Int, Number(floorId))
     .query('DELETE FROM Floors WHERE FloorID = @FloorID')
@@ -161,34 +233,89 @@ export async function deleteFloor(floorId) {
 }
 
 /* =====================================================================
-   ZONES
+   ZONES (QUẢN LÝ KHU VỰC ĐỖ XE)
    ===================================================================== */
 
+/**
+ * HÀM: getZones
+ * MỤC ĐÍCH: Lấy danh sách các Khu vực (Zone) đỗ xe theo Tầng.
+ * NGUỒN ĐẦU VÀO TỪ FE: `floorId` (từ `req.query.floorId`).
+ * DỮ LIỆU TRẢ VỀ CHO FE: Mảng đối tượng Zone đầy đủ kèm tên Tầng, tên Tòa nhà, tên Loại xe cho phép và số lượng ô đỗ thực tế `ActualSlots`.
+ */
 export async function getZones(floorId) {
   const pool = await getPool()
   const result = await pool.request()
+    // Gán tham số truyền từ FE vào biến SQL @FloorID (Int). Nếu FE không truyền -> Giá trị là NULL
     .input('FloorID', sql.Int, floorId || null)
     .query(`
       SELECT
-        z.ZoneID, z.FloorID, f.FloorName,
-        b.BuildingID, b.BuildingName,
-        z.ZoneName, z.AllowedVehicleTypeID,
-        vt.VehicleName AS AllowedVehicleName, vt.VehicleCode AS AllowedVehicleCode,
+        -- 1. Lấy ID khu vực và ID tầng để FE định danh và phân loại
+        z.ZoneID, 
+        z.FloorID, 
+        
+        -- 2. Lấy tên tầng (FloorName) từ bảng Floors bằng phép INNER JOIN
+        f.FloorName,
+
+        -- 3. Lấy ID tòa nhà và Tên tòa nhà (BuildingName) từ bảng Buildings bằng phép INNER JOIN
+        b.BuildingID, 
+        b.BuildingName,
+
+        -- 4. Lấy tên khu vực (ZoneName) để FE hiển thị tiêu đề Zone (ví dụ: Zone A, Zone B)
+        z.ZoneName, 
+
+        -- 5. Lấy ID loại xe cho phép và Tên/Mã loại xe (Xe máy / Ô tô / Xe tải) từ bảng VehicleTypes
+        z.AllowedVehicleTypeID,
+        vt.VehicleName AS AllowedVehicleName, 
+        vt.VehicleCode AS AllowedVehicleCode,
+
+        -- 6. Lấy sức chứa tối đa lý thuyết của Zone được thiết lập từ trước
         z.TotalSlots,
+
+        -- 7. Đếm tổng số ô đỗ (ParkingSlots) thực tế đã được tạo dưới CSDL thuộc Zone này
         COUNT(ps.SlotID) AS ActualSlots
+
+      -- 8. BẢNG CHÍNH: Bảng Zones (chứa thông tin danh mục các khu vực đỗ xe)
       FROM Zones z
+
+      -- 9. INNER JOIN BẢNG FLOORS: Nối bảng Floors qua FloorID để lấy thông tin Tầng chứa Zone này
       JOIN Floors f        ON f.FloorID        = z.FloorID
+
+      -- 10. INNER JOIN BẢNG BUILDINGS: Nối bảng Buildings qua BuildingID từ bảng Floors để lấy thông tin Tòa nhà
       JOIN Buildings b     ON b.BuildingID     = f.BuildingID
+
+      -- 11. INNER JOIN BẢNG VEHICLE TYPES: Nối bảng VehicleTypes qua AllowedVehicleTypeID để lấy tên và mã loại xe cho phép đỗ
       JOIN VehicleTypes vt ON vt.VehicleTypeID = z.AllowedVehicleTypeID
+
+      -- 12. LEFT JOIN BẢNG PARKING SLOTS: Nối bảng ParkingSlots qua ZoneID. Dùng LEFT JOIN để nếu Zone chưa được tạo ô đỗ nào thì vẫn giữ nguyên dòng thông tin Zone và ActualSlots = 0
       LEFT JOIN ParkingSlots ps ON ps.ZoneID   = z.ZoneID
+
+      -- 13. MỆNH ĐỀ WHERE (ĐIỀU KIỆN LỌC): 
+      -- Nếu @FloorID truyền vào là NULL ➔ Lấy danh sách tất cả các Zone trong bãi.
+      -- Nếu @FloorID có giá trị ➔ Chỉ lọc ra các Zone thuộc về Tầng đó.
       WHERE (@FloorID IS NULL OR z.FloorID = @FloorID)
+
+      -- 14. MỆNH ĐỀ GROUP BY (GOM NHÓM DỮ LIỆU): 
+      -- Bắt buộc phải liệt kê tất cả các cột không nằm trong hàm tổng hợp (COUNT) vào GROUP BY theo quy tắc chuẩn của SQL Server.
       GROUP BY z.ZoneID, z.FloorID, f.FloorName, b.BuildingID, b.BuildingName,
                z.ZoneName, z.AllowedVehicleTypeID, vt.VehicleName, vt.VehicleCode, z.TotalSlots
+
+      -- 15. MỆNH ĐỀ ORDER BY (SẮP XẾP KẾT QUẢ): 
+      -- Sắp xếp thứ tự tăng dần theo ID tầng (FloorID) trước, sau đó sắp xếp theo ID khu vực (ZoneID).
       ORDER BY z.FloorID, z.ZoneID
     `)
   return result.recordset
 }
 
+/**
+ * HÀM: createZone
+ * MỤC ĐÍCH: Tạo mới một Khu vực (Zone) gửi xe thuộc Tầng chỉ định.
+ * NGUỒN ĐẦU VÀO TỪ FE: `{ floorId, zoneName, allowedVehicleTypeId, totalSlots }`.
+ * GIẢI THÍCH SQL:
+ * - Query 1 (`SELECT FloorID`): Kiểm tra tầng có tồn tại.
+ * - Query 2 (`SELECT VehicleTypeID`): Kiểm tra loại xe cho phép có tồn tại trong CSDL không.
+ * - Query 3 (`SELECT ZoneID`): Kiểm tra tên Zone có bị trùng trong cùng một tầng không.
+ * - Query 4 (`INSERT INTO Zones`): Chèn bản ghi mới và dùng `OUTPUT INSERTED.*` trả về object vừa tạo.
+ */
 export async function createZone({ floorId, zoneName, allowedVehicleTypeId, totalSlots = 0 }) {
   if (!floorId) throw badRequest('Thiếu FloorID.', 'FLOOR_ID_REQUIRED')
   const name = String(zoneName || '').trim()
@@ -200,22 +327,26 @@ export async function createZone({ floorId, zoneName, allowedVehicleTypeId, tota
 
   const pool = await getPool()
 
+  // 1. SELECT CHECK TẦNG: Kiểm tra FloorID tồn tại
   const f = await pool.request()
     .input('FloorID', sql.Int, Number(floorId))
     .query('SELECT FloorID FROM Floors WHERE FloorID = @FloorID')
   if (!f.recordset.length) throw notFound('Không tìm thấy tầng.', 'FLOOR_NOT_FOUND')
 
+  // 2. SELECT CHECK LOẠI XE: Kiểm tra VehicleTypeID tồn tại
   const vt = await pool.request()
     .input('VtId', sql.Int, Number(allowedVehicleTypeId))
     .query('SELECT VehicleTypeID FROM VehicleTypes WHERE VehicleTypeID = @VtId')
   if (!vt.recordset.length) throw notFound('Không tìm thấy loại xe.', 'VEHICLE_TYPE_NOT_FOUND')
 
+  // 3. SELECT CHECK TRÙNG TÊN: Kiểm tra tên Zone trùng lặp trong Tầng
   const dup = await pool.request()
     .input('FloorID', sql.Int, Number(floorId))
     .input('ZoneName', sql.NVarChar(50), name)
     .query('SELECT ZoneID FROM Zones WHERE FloorID = @FloorID AND ZoneName = @ZoneName')
   if (dup.recordset.length) throw conflict(`Khu vực "${name}" đã tồn tại trong tầng này.`, 'ZONE_NAME_EXISTS')
 
+  // 4. INSERT ZONE MỚI: Thêm khu vực mới vào bảng Zones
   const ins = await pool.request()
     .input('FloorID', sql.Int, Number(floorId))
     .input('ZoneName', sql.NVarChar(50), name)
@@ -229,11 +360,16 @@ export async function createZone({ floorId, zoneName, allowedVehicleTypeId, tota
   return ins.recordset[0]
 }
 
+/**
+ * HÀM: updateZone
+ * MỤC ĐÍCH: Cập nhật thông tin Khu vực đỗ xe (Tên zone, Loại xe cho phép, Tổng sức chứa).
+ */
 export async function updateZone(zoneId, { zoneName, allowedVehicleTypeId, totalSlots }) {
   if (!zoneId) throw badRequest('Thiếu ZoneID.', 'ZONE_ID_REQUIRED')
 
   const pool = await getPool()
 
+  // 1. SELECT CHECK KHU VỰC VÀ SỐ Ô ĐỖ THỰC TẾ: Đếm xem khu vực này hiện đang chứa bao nhiêu ô đỗ (`ActualSlots`)
   const curRes = await pool.request()
     .input('ZoneID', sql.Int, Number(zoneId))
     .query(`
@@ -254,6 +390,7 @@ export async function updateZone(zoneId, { zoneName, allowedVehicleTypeId, total
     if (!name) throw badRequest('Tên khu vực không được rỗng.', 'ZONE_NAME_REQUIRED')
     if (name.length > 50) throw badRequest('Tên khu vực tối đa 50 ký tự.', 'ZONE_NAME_TOO_LONG')
     if (name !== current.ZoneName) {
+      // 2. SELECT CHECK TRÙNG TÊN MỚI trong cùng Tầng
       const dup = await pool.request()
         .input('FloorID', sql.Int, current.FloorID)
         .input('ZoneName', sql.NVarChar(50), name)
@@ -273,6 +410,7 @@ export async function updateZone(zoneId, { zoneName, allowedVehicleTypeId, total
     if (!vt.recordset.length) throw notFound('Không tìm thấy loại xe.', 'VEHICLE_TYPE_NOT_FOUND')
 
     if (vtId !== current.AllowedVehicleTypeID) {
+      // 3. SELECT CHECK KHÔNG KHỚP LOẠI XE: Kiểm tra xem có ô đỗ nào trong Zone đang thuộc loại xe khác không
       const mismatch = await pool.request()
         .input('ZoneID', sql.Int, Number(zoneId))
         .input('VtId', sql.Int, vtId)
@@ -291,6 +429,7 @@ export async function updateZone(zoneId, { zoneName, allowedVehicleTypeId, total
   if (totalSlots !== undefined) {
     const total = Number(totalSlots)
     if (!Number.isInteger(total) || total < 0) throw badRequest('Sức chứa (TotalSlots) không hợp lệ.', 'INVALID_TOTAL_SLOTS')
+    // 4. CHECK GIỚI HẠN: Sức chứa mới không được bé hơn số ô đỗ thực tế đang có
     if (total < current.ActualSlots) {
       throw conflict(
         `Sức chứa mới (${total}) nhỏ hơn số slot thực tế đang có (${current.ActualSlots}). Hãy xóa bớt slot trước.`,
@@ -303,6 +442,7 @@ export async function updateZone(zoneId, { zoneName, allowedVehicleTypeId, total
 
   if (sets.length === 0) throw badRequest('Không có trường nào để cập nhật.', 'NOTHING_TO_UPDATE')
 
+  // 5. UPDATE DYNAMIC KHU VỰC
   const upd = await req.query(`
     UPDATE Zones SET ${sets.join(', ')}
     OUTPUT INSERTED.*
@@ -311,6 +451,10 @@ export async function updateZone(zoneId, { zoneName, allowedVehicleTypeId, total
   return upd.recordset[0]
 }
 
+/**
+ * HÀM: deleteZone
+ * MỤC ĐÍCH: Xóa Khu vực đỗ xe (Chỉ xóa được khi Zone không chứa ô đỗ Slot nào).
+ */
 export async function deleteZone(zoneId) {
   if (!zoneId) throw badRequest('Thiếu ZoneID.', 'ZONE_ID_REQUIRED')
 
@@ -320,6 +464,7 @@ export async function deleteZone(zoneId) {
     .query('SELECT * FROM Zones WHERE ZoneID = @ZoneID')
   if (!cur.recordset.length) throw notFound('Không tìm thấy khu vực.', 'ZONE_NOT_FOUND')
 
+  // SELECT CHECK RÀNG BUỘC: Kiểm tra có Slot đỗ xe nào thuộc Zone này không
   const s = await pool.request()
     .input('ZoneID', sql.Int, Number(zoneId))
     .query('SELECT TOP 1 SlotID FROM ParkingSlots WHERE ZoneID = @ZoneID')
@@ -327,6 +472,7 @@ export async function deleteZone(zoneId) {
     throw conflict('Không thể xóa khu vực vì còn slot bên trong.', 'ZONE_HAS_SLOTS')
   }
 
+  // DELETE KHU VỰC
   await pool.request()
     .input('ZoneID', sql.Int, Number(zoneId))
     .query('DELETE FROM Zones WHERE ZoneID = @ZoneID')
@@ -334,9 +480,13 @@ export async function deleteZone(zoneId) {
 }
 
 /* =====================================================================
-   SLOTS
+   SLOTS (QUẢN LÝ VỊ TRÍ Ô ĐỖ XE)
    ===================================================================== */
 
+/**
+ * HÀM PHỤ: getZoneCapacity
+ * MỤC ĐÍCH: Lấy sức chứa tối đa (`TotalSlots`) và đếm số ô đỗ thực tế (`ActualSlots`) của 1 Zone.
+ */
 async function getZoneCapacity(pool, zoneId) {
   const r = await pool.request()
     .input('ZoneID', sql.Int, zoneId)
@@ -351,6 +501,10 @@ async function getZoneCapacity(pool, zoneId) {
   return r.recordset[0] || null
 }
 
+/**
+ * HÀM PHỤ: getSlotFull
+ * MỤC ĐÍCH: Lấy thông tin chi tiết đầy đủ của 1 ô đỗ xe (JOIN 4 BẢNG: ParkingSlots, VehicleTypes, Zones, Floors, Buildings).
+ */
 async function getSlotFull(pool, slotId) {
   const r = await pool.request()
     .input('SlotID', sql.Int, slotId)
@@ -371,6 +525,12 @@ async function getSlotFull(pool, slotId) {
   return r.recordset[0] || null
 }
 
+/**
+ * HÀM: getSlotsByZone
+ * MỤC ĐÍCH: Truy vấn toàn bộ các ô đỗ xe trong 1 Zone, kiểm tra cờ `HasActiveSession` (Có xe đỗ thực tế) và `HasReservation` (Có đơn đặt trước).
+ * NGUỒN ĐẦU VÀO TỪ FE: `zoneId` (từ `req.params.zoneId` hoặc `req.query.zoneId`).
+ * DỮ LIỆU TRẢ VỀ CHO FE: Đối tượng chứa thông tin Zone và danh sách mảng ô đỗ `slots`.
+ */
 export async function getSlotsByZone(zoneId) {
   if (!zoneId) throw badRequest('Thiếu ZoneID.', 'ZONE_ID_REQUIRED')
   const pool = await getPool()
@@ -378,18 +538,28 @@ export async function getSlotsByZone(zoneId) {
   const zone = await getZoneCapacity(pool, Number(zoneId))
   if (!zone) throw notFound('Không tìm thấy khu vực.', 'ZONE_NOT_FOUND')
 
+  // SQL SELECT LẤY DANH SÁCH Ô ĐỖ: Sử dụng subquery CASE WHEN EXISTS để xác định trạng thái thời gian thực
   const r = await pool.request()
     .input('ZoneID', sql.Int, Number(zoneId))
     .query(`
       SELECT
-        ps.SlotID, ps.SlotCode, ps.SlotStatus,
-        ps.VehicleTypeID, vt.VehicleName, vt.VehicleCode,
+        ps.SlotID, 
+        ps.SlotCode, 
+        ps.SlotStatus,
+        ps.VehicleTypeID, 
+        vt.VehicleName, 
+        vt.VehicleCode,
+
+        -- Subquery 1: Kiểm tra xem ô đỗ có phiên gửi xe đang đỗ thực tế hay không
         CASE WHEN EXISTS (
           SELECT 1 FROM ParkingSessions s WHERE s.SlotID = ps.SlotID AND s.SessionStatus = 'Active'
         ) THEN 1 ELSE 0 END AS HasActiveSession,
+
+        -- Subquery 2: Kiểm tra xem ô đỗ có đơn đặt chỗ trước đang ở trạng thái Reserved hay không
         CASE WHEN EXISTS (
           SELECT 1 FROM Reservations rv WHERE rv.SlotID = ps.SlotID AND rv.ReservationStatus = 'Reserved'
         ) THEN 1 ELSE 0 END AS HasReservation
+
       FROM ParkingSlots ps
       JOIN VehicleTypes vt ON vt.VehicleTypeID = ps.VehicleTypeID
       WHERE ps.ZoneID = @ZoneID
@@ -409,6 +579,14 @@ export async function getSlotsByZone(zoneId) {
   }
 }
 
+/**
+ * HÀM: createSlot
+ * MỤC ĐÍCH: Tạo mới 1 ô đỗ xe (Slot) đơn lẻ trong Zone.
+ * NGUỒN ĐẦU VÀO TỪ FE: `{ zoneId, slotCode, vehicleTypeId }`.
+ * GIẢI THÍCH SQL:
+ * - Query 1 (`SELECT SlotID FROM ParkingSlots WHERE SlotCode = @Code`): Kiểm tra trùng mã slot.
+ * - Query 2 (`INSERT INTO ParkingSlots ... OUTPUT INSERTED.SlotID`): Chèn slot mới và lấy ID vừa tạo.
+ */
 export async function createSlot({ zoneId, slotCode, vehicleTypeId }) {
   if (!zoneId) throw badRequest('Thiếu ZoneID.', 'ZONE_ID_REQUIRED')
   const code = String(slotCode || '').trim().toUpperCase()
@@ -431,11 +609,13 @@ export async function createSlot({ zoneId, slotCode, vehicleTypeId }) {
     throw badRequest('Loại xe của slot phải trùng loại xe cho phép của khu vực.', 'VEHICLE_TYPE_MISMATCH')
   }
 
+  // 1. SELECT CHECK TRÙNG MÃ SLOT: Mã ô đỗ (SlotCode) là duy nhất trên toàn hệ thống
   const dup = await pool.request()
     .input('Code', sql.NVarChar(20), code)
     .query('SELECT SlotID FROM ParkingSlots WHERE SlotCode = @Code')
   if (dup.recordset.length) throw conflict(`Mã slot "${code}" đã tồn tại.`, 'SLOT_CODE_EXISTS')
 
+  // 2. INSERT Ô ĐỖ MỚI: Trạng thái ban đầu mặc định là 'Available' (Sẵn sàng đỗ)
   const ins = await pool.request()
     .input('ZoneID', sql.Int, Number(zoneId))
     .input('SlotCode', sql.NVarChar(20), code)
@@ -448,6 +628,11 @@ export async function createSlot({ zoneId, slotCode, vehicleTypeId }) {
   return await getSlotFull(pool, ins.recordset[0].SlotID)
 }
 
+/**
+ * HÀM: createSlotsBulk
+ * MỤC ĐÍCH: Sinh hàng loạt (tối đa 200 slot) ô đỗ xe theo dải số tự động (Ví dụ: A-01 đến A-50).
+ * THAO TÁC SQL: Dùng `sql.Transaction` chạy lặp câu lệnh INSERT đảm bảo thêm thành công toàn bộ hoặc hủy bỏ nếu có lỗi.
+ */
 export async function createSlotsBulk({ zoneId, prefix, start, end, pad = 2, vehicleTypeId }) {
   if (!zoneId) throw badRequest('Thiếu ZoneID.', 'ZONE_ID_REQUIRED')
   const pfx = String(prefix || '').trim().toUpperCase()
@@ -471,6 +656,7 @@ export async function createSlotsBulk({ zoneId, prefix, start, end, pad = 2, veh
   const wanted = []
   for (let i = s; i <= e; i++) wanted.push(pfx + String(i).padStart(p, '0'))
 
+  // SELECT CHECK DANH SÁCH MÃ ĐÃ TỒN TẠI bằng toán tử LIKE tiền tố (Prefix%)
   const existing = new Set()
   const exRes = await pool.request()
     .input('Pfx', sql.NVarChar(20), pfx + '%')
@@ -492,6 +678,7 @@ export async function createSlotsBulk({ zoneId, prefix, start, end, pad = 2, veh
     return { created: [], createdCount: 0, skipped, skippedCount: skipped.length }
   }
 
+  // TRANSACTION THÊM HÀNG LOẠT:
   const tx = new sql.Transaction(pool)
   await tx.begin()
   try {
@@ -514,6 +701,10 @@ export async function createSlotsBulk({ zoneId, prefix, start, end, pad = 2, veh
   return { created: toInsert, createdCount: toInsert.length, skipped, skippedCount: skipped.length }
 }
 
+/**
+ * HÀM: updateSlot
+ * MỤC ĐÍCH: Cập nhật thông tin ô đỗ xe (Đổi mã slot, loại xe, hoặc chuyển trạng thái Bảo trì/Khóa).
+ */
 export async function updateSlot(slotId, { slotCode, vehicleTypeId, slotStatus }) {
   if (!slotId) throw badRequest('Thiếu SlotID.', 'SLOT_ID_REQUIRED')
 
@@ -529,6 +720,7 @@ export async function updateSlot(slotId, { slotCode, vehicleTypeId, slotStatus }
     if (!code) throw badRequest('Mã slot không được rỗng.', 'SLOT_CODE_REQUIRED')
     if (code.length > 20) throw badRequest('Mã slot tối đa 20 ký tự.', 'SLOT_CODE_TOO_LONG')
     if (code !== current.SlotCode) {
+      // CHECK TRÙNG MÃ: Mã slot mới không trùng với các ô KHÁC (SlotID <> @SlotID)
       const dup = await pool.request()
         .input('Code', sql.NVarChar(20), code)
         .input('SlotID', sql.Int, Number(slotId))
@@ -558,10 +750,15 @@ export async function updateSlot(slotId, { slotCode, vehicleTypeId, slotStatus }
 
   if (sets.length === 0) throw badRequest('Không có trường nào để cập nhật.', 'NOTHING_TO_UPDATE')
 
+  // UPDATE DYNAMIC PARKING SLOTS
   await req.query(`UPDATE ParkingSlots SET ${sets.join(', ')} WHERE SlotID = @SlotID`)
   return await getSlotFull(pool, Number(slotId))
 }
 
+/**
+ * HÀM: deleteSlot
+ * MỤC ĐÍCH: Xóa ô đỗ xe (Chặn xóa nếu ô đỗ đang có xe đỗ, có đơn đặt chỗ hoặc có lịch sử gửi xe).
+ */
 export async function deleteSlot(slotId) {
   if (!slotId) throw badRequest('Thiếu SlotID.', 'SLOT_ID_REQUIRED')
 
@@ -573,6 +770,7 @@ export async function deleteSlot(slotId) {
     throw conflict('Không thể xóa slot đang có xe hoặc đang được đặt.', 'SLOT_IN_USE')
   }
 
+  // SELECT CHECK RÀNG BUỘC PHIÊN VÀ ĐẶT CHỖ: Đếm tổng số phiên gửi xe và đơn đặt chỗ của ô đỗ này
   const refs = await pool.request()
     .input('SlotID', sql.Int, Number(slotId))
     .query(`
@@ -592,6 +790,7 @@ export async function deleteSlot(slotId) {
     )
   }
 
+  // DELETE THỰC TẾ
   await pool.request()
     .input('SlotID', sql.Int, Number(slotId))
     .query('DELETE FROM ParkingSlots WHERE SlotID = @SlotID')
@@ -599,25 +798,32 @@ export async function deleteSlot(slotId) {
   return { slotId: Number(slotId), slotCode: slot.SlotCode, deleted: true }
 }
 
-
 /* =====================================================================
-   STATS (Dashboard tổng quan)
+   STATS (Dashboard tổng quan Admin)
    ===================================================================== */
 
+/**
+ * HÀM: getStats
+ * MỤC ĐÍCH: Thống kê toàn bộ chỉ số vận hành hệ thống dành cho Admin (User, Hạ tầng, Slot, Revenue).
+ */
 export async function getStats() {
   const pool = await getPool()
 
+  // 1. QUERY TỔNG HỢP KPI ADMIN: Dùng Subquery SELECT độc lập tính toán nhanh tất cả thông số trong 1 câu SQL
   const r = await pool.request().query(`
     SELECT
+      -- Thống kê Người dùng
       (SELECT COUNT(*) FROM Users) AS TotalUsers,
       (SELECT COUNT(*) FROM Users WHERE IsActive = 1) AS ActiveUsers,
       (SELECT COUNT(*) FROM Users WHERE IsActive = 0) AS InactiveUsers,
       (SELECT COUNT(*) FROM Users WHERE IsEmailVerified = 1) AS VerifiedUsers,
  
+      -- Thống kê Cơ sở vật chất
       (SELECT COUNT(*) FROM Buildings) AS TotalBuildings,
       (SELECT COUNT(*) FROM Floors WHERE IsActive = 1) AS TotalFloors,
       (SELECT COUNT(*) FROM Zones) AS TotalZones,
  
+      -- Thống kê Ô đỗ theo từng trạng thái
       (SELECT COUNT(*) FROM ParkingSlots) AS TotalSlots,
       (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Available') AS AvailableSlots,
       (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Occupied') AS OccupiedSlots,
@@ -625,20 +831,24 @@ export async function getStats() {
       (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Maintenance') AS MaintenanceSlots,
       (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Blocked') AS BlockedSlots,
  
+      -- Thống kê Phiên gửi xe
       (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Active') AS ActiveSessions,
       (SELECT COUNT(*) FROM ParkingSessions WHERE CAST(EntryTime AS DATE) = CAST(GETDATE() AS DATE)) AS TodayCheckIns,
  
+      -- Thống kê Doanh thu thu được trong hôm nay
       (SELECT ISNULL(SUM(ISNULL(FinalAmount, Amount)), 0)
          FROM Payments
          WHERE PaymentStatus IN ('Completed', 'Prepaid')
-           AND CAST(ISNULL(PaymentTime, PrepaidAt) AS DATE) = CAST(GETDATE() AS DATE)
+           AND CAST(ISNULL(PaymentTime, SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE)
       ) AS TodayRevenue,
  
+      -- Thống kê Sự cố và Đơn hỗ trợ đang mở
       (SELECT COUNT(*) FROM Incidents WHERE IncidentStatus = 'Open') AS OpenIncidents,
       (SELECT COUNT(*) FROM SupportTickets WHERE Status IN ('Open', 'Pending')) AS OpenTickets
   `)
   const row = r.recordset[0]
 
+  // 2. QUERY THỐNG KÊ USER THEO VAI TRÒ (Role): LEFT JOIN bảng Roles với bảng Users và GROUP BY theo RoleID
   const roleStats = await pool.request().query(`
     SELECT r.RoleID, r.RoleName, COUNT(u.UserID) AS Count
     FROM Roles r
@@ -718,16 +928,43 @@ export async function getUsers({ roleId, isActive, search, page = 1, pageSize = 
 
   const result = await req.query(`
     SELECT
-      u.UserID, u.FullName, u.Email, u.PhoneNumber, u.RoleID, r.RoleName,
-      u.DateOfBirth, u.HireDate, u.IsActive, u.IsEmailVerified, u.AvatarUrl,
-      u.CreatedAt, u.UpdatedAt,
+      -- 1. Lấy thông tin tài khoản người dùng để FE hiển thị danh sách User
+      u.UserID, 
+      u.FullName, 
+      u.Email, 
+      u.PhoneNumber, 
+      u.RoleID, 
+      r.RoleName, -- Lấy tên vai trò (Admin/Manager/Staff/Driver) từ phép JOIN bảng Roles
+      u.DateOfBirth, 
+      u.HireDate, 
+      u.IsActive, 
+      u.IsEmailVerified, 
+      u.AvatarUrl,
+      u.CreatedAt, 
+      u.UpdatedAt,
+
+      -- 2. Đếm tổng số bản ghi khớp điều kiện bằng hàm cửa sổ COUNT(*) OVER() để tính phân trang mà không cần chạy 2 query
       COUNT(*) OVER() AS TotalCount
+
+    -- 3. BẢNG CHÍNH: Bảng Users chứa danh sách tài khoản
     FROM Users u
+
+    -- 4. INNER JOIN BẢNG ROLES: Nối bảng Roles qua RoleID để lấy tên vai trò người dùng (RoleName)
     JOIN Roles r ON u.RoleID = r.RoleID
+
+    -- 5. MỆNH ĐỀ WHERE (ĐIỀU KIỆN LỌC LINH HOẠT):
+    -- - @RoleID: Lọc theo vai trò nếu có
+    -- - @IsActive: Lọc theo trạng thái Hoạt động/Khóa
+    -- - @Search: Tìm kiếm tương đối (LIKE) theo Họ tên, Email hoặc Số điện thoại
     WHERE (@RoleID IS NULL OR u.RoleID = @RoleID)
       AND (@IsActive IS NULL OR u.IsActive = @IsActive)
       AND (@Search IS NULL OR u.FullName LIKE @Search OR u.Email LIKE @Search OR u.PhoneNumber LIKE @Search)
+
+    -- 6. MỆNH ĐỀ ORDER BY (SẮP XẾP MỚI NHẤT TRƯỚC): Sắp xếp UserID giảm dần
     ORDER BY u.UserID DESC
+
+    -- 7. MỆNH ĐỀ OFFSET ... FETCH NEXT ... (PHÂN TRANG CHUẨN SQL SERVER):
+    -- Bỏ qua @Offset dòng đầu tiên và chỉ lấy tiếp @PageSize dòng tiếp theo
     OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY
   `)
 
