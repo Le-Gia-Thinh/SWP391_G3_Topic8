@@ -49,18 +49,30 @@ function formatRelativeTime(dateStr, t) {
 }
 
 const DriverNotifications = () => {
+  // Hook useTranslation: Hỗ trợ đa ngôn ngữ, lấy hàm 't' để dịch chuỗi.
   const { t } = useTranslation()
+  // Hook useNavigate: Chuyển hướng người dùng sang trang khác (VD: chuyển sang trang Quản lý xe).
   const navigate = useNavigate()
+
+  // Hook useState:
+  // - notifications: Mảng lưu trữ danh sách các thông báo nhận được từ server.
+  // - unreadCount: Lưu số lượng thông báo chưa đọc (để hiển thị số đếm màu đỏ trên giao diện).
+  // - loading: Trạng thái hiển thị giao diện loading khi đang gọi API.
+  // - activeFilter: Trạng thái lưu bộ lọc thông báo hiện tại (VD: 'all', 'booking', 'payment'...).
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState('all')
 
+  // Hook useCallback: Ghi nhớ (memoize) hàm fetchData để tránh tạo lại hàm này trong mỗi lần render,
+  // giúp tối ưu hiệu suất khi truyền fetchData vào useEffect.
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const params = {}
       if (activeFilter !== 'all') params.type = activeFilter
+
+      // Sử dụng Promise.allSettled để gọi song song 2 API: lấy danh sách thông báo và đếm số lượng chưa đọc.
       const [notifResult, countResult] = await Promise.allSettled([
         driverApi.getNotifications(params),
         driverApi.getUnreadCount()
@@ -74,8 +86,18 @@ const DriverNotifications = () => {
     }
   }, [activeFilter, t])
 
+  // Hook useEffect: Tự động chạy hàm fetchData mỗi khi component render lần đầu,
+  // hoặc khi biến activeFilter (bộ lọc) thay đổi (được truyền thông qua mảng phụ thuộc của useCallback).
   useEffect(() => { fetchData() }, [fetchData])
 
+  /**
+   * Hàm xử lý logic: handleNotificationClick
+   * Xử lý sự kiện khi người dùng nhấn vào một thông báo cụ thể.
+   * - Nếu thông báo chưa đọc (IsRead = false), gọi API để đánh dấu là đã đọc, sau đó cập nhật lại state notifications và unreadCount.
+   * - Nếu thông báo là loại nhắc nhở cài đặt xe (SET_DEFAULT_VEHICLE), hệ thống tự động điều hướng sang trang Quản lý xe.
+   * 
+   * @param {Object} notif Đối tượng chứa dữ liệu của thông báo được click.
+   */
   const handleNotificationClick = async (notif) => {
     if (!notif.IsRead) {
       try {
@@ -90,6 +112,12 @@ const DriverNotifications = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: handleMarkAllRead
+   * Xử lý khi người dùng nhấn nút "Đánh dấu tất cả đã đọc".
+   * - Gọi API để đổi trạng thái toàn bộ thông báo.
+   * - Cập nhật lại mảng notifications (đổi IsRead thành true) và đưa unreadCount về 0.
+   */
   const handleMarkAllRead = async () => {
     try {
       await driverApi.markAllNotificationsRead()

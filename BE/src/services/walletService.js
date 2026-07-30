@@ -253,7 +253,7 @@ export async function payParkingByWalletService(sessionId, driverId) {
         .query(`
             SELECT ps.SessionID, ps.VehicleTypeID, ps.EntryTime, ps.SessionStatus,
                    p.PaymentStatus, p.Amount
-            FROM ParkingSessions s
+            FROM ParkingSessions ps
             JOIN Payments p ON ps.SessionID = p.SessionID
             WHERE ps.SessionID = @SessionID AND ps.DriverID = @DriverID AND ps.SessionStatus = 'Active'
         `);

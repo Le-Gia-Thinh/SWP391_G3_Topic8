@@ -10,6 +10,8 @@ import { FileText, ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const DriverTerms = () => {
+  // Hook useTranslation dùng để lấy hàm 't', hỗ trợ dịch nội dung văn bản sang các ngôn ngữ khác nhau (tiếng Việt, tiếng Anh,...).
+  // Các key như 'driver.helpPage.terms.title' sẽ được map với file JSON cấu hình ngôn ngữ.
   const { t } = useTranslation()
   return (
     <div className="animate-in fade-in duration-500 max-w-3xl mx-auto space-y-6 bg-white dark:bg-slate-800 p-8 rounded-2xl border border-gray-100 dark:border-slate-700/50 shadow-sm">

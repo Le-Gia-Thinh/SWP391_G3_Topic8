@@ -67,6 +67,10 @@ const Countdown = ({ expiredAt }) => {
 // ── Copy Button ──────────────────────────────────────────────────
 const CopyButton = ({ text }) => {
   const { t } = useTranslation();
+  /**
+   * Hàm xử lý logic: handleCopy
+   * Copy chuỗi văn bản vào bộ nhớ tạm (clipboard).
+   */
   const handleCopy = () => {
     navigator.clipboard.writeText(String(text || ''));
     toast.info(t('driver.subscriptionPayment.copied'));
@@ -157,7 +161,8 @@ const DriverSubscriptionPayment = () => {
     return () => clearInterval(pollerRef.current);
   }, [step, payment]);
 
-  // Confirm subscription after payment
+  // Hook useCallback: Ghi nhớ hàm handleConfirm để tái sử dụng mà không cần tạo lại.
+  // Gọi API xác nhận thanh toán thành công và lưu trạng thái tự động gia hạn vào localStorage.
   const handleConfirm = useCallback(async () => {
     try {
       setConfirming(true);
@@ -174,6 +179,10 @@ const DriverSubscriptionPayment = () => {
     }
   }, [payment]);
 
+  /**
+   * Hàm xử lý logic: handlePayByWallet
+   * Xử lý thanh toán gói hội viên trực tiếp bằng số dư trong Ví nội bộ.
+   */
   const handlePayByWallet = async () => {
     try {
        if (walletBalance < payment.amount) {

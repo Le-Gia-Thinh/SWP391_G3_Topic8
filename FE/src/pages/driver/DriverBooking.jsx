@@ -26,13 +26,36 @@ import authorizeAxios from '../../utils/authorizeAxios'
 
 const DEFAULT_BUILDINGS = []
 
+/**
+ * Thêm số 0 vào trước số có 1 chữ số (vd: 9 -> '09')
+ * @param {number|string} value Giá trị cần format
+ * @returns {string} Chuỗi đã format
+ */
 const padNumber = (value) => String(value).padStart(2, '0')
 
+/**
+ * Lấy ngày hiện tại theo định dạng YYYY-MM-DD
+ * @returns {string} Ngày hiện tại
+ */
+/**
+ * Hàm xử lý logic: getTodayDateValue
+ * Trả về chuỗi ngày hiện tại (YYYY-MM-DD).
+ */
 const getTodayDateValue = () => {
   const now = new Date()
   return `${now.getFullYear()}-${padNumber(now.getMonth() + 1)}-${padNumber(now.getDate())}`
 }
 
+/**
+ * Tính toán thời gian bắt đầu tối thiểu cho phép (hiện tại + 15 phút)
+ * Làm tròn lên phút tiếp theo nếu có số giây lẻ
+ * @returns {Date} Thời gian tối thiểu
+ */
+/**
+ * Hàm xử lý logic: getMinimumStartDate
+ * Tính toán và trả về đối tượng Date đại diện cho thời gian tối thiểu được phép đặt chỗ
+ * (thường là hiện tại cộng thêm 15 phút, làm tròn lên phút tiếp theo).
+ */
 const getMinimumStartDate = () => {
   const minimum = new Date(Date.now() + 15 * 60 * 1000)
 
@@ -46,6 +69,10 @@ const getMinimumStartDate = () => {
   return minimum
 }
 
+/**
+ * Hàm xử lý logic: getMinimumStartTimeValue
+ * Trả về chuỗi giờ:phút tối thiểu được phép đặt (HH:mm).
+ */
 const getMinimumStartTimeValue = () => {
   const minimum = getMinimumStartDate()
   return `${padNumber(minimum.getHours())}:${padNumber(minimum.getMinutes())}`
@@ -53,6 +80,12 @@ const getMinimumStartTimeValue = () => {
 
 const isToday = (dateValue) => dateValue === getTodayDateValue()
 
+/**
+ * Chuyển đổi chuỗi ngày và giờ thành đối tượng Date của Javascript
+ * @param {string} dateValue YYYY-MM-DD
+ * @param {string} timeValue HH:mm
+ * @returns {Date|null} Đối tượng Date
+ */
 const buildLocalDateTime = (dateValue, timeValue) => {
   if (!dateValue || !timeValue) return null
 
@@ -74,6 +107,10 @@ const isStartTimeValid = (dateValue, timeValue) => {
   return selected >= getMinimumStartDate()
 }
 
+/**
+ * Hàm xử lý logic: getMinutesDiff
+ * Tính khoảng cách thời gian (bằng phút) giữa 2 mốc thời gian (cùng 1 ngày).
+ */
 const getMinutesDiff = (dateValue, timeValueA, timeValueB) => {
   const dateA = buildLocalDateTime(dateValue, timeValueA)
   const dateB = buildLocalDateTime(dateValue, timeValueB)
@@ -87,10 +124,20 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN').format(value || 0)
 }
 
+/**
+ * Hàm xử lý logic: getOptionLabel
+ * Tìm kiếm và trả về chuỗi hiển thị (label) của một option dựa vào giá trị (value) cung cấp.
+ */
 const getOptionLabel = (options, value) => {
   return options.find((item) => String(item.value) === String(value))?.label || value
 }
 
+/**
+ * Loại bỏ các phần tử trùng lặp trong mảng dựa vào một key
+ * @param {Array} items Mảng đầu vào
+ * @param {Function} keyGetter Hàm lấy giá trị khóa (key)
+ * @returns {Array} Mảng đã lọc trùng lặp
+ */
 const uniqueBy = (items, keyGetter) => {
   const map = new Map()
 
@@ -242,6 +289,14 @@ const DriverBooking = () => {
     return displaySlots
   }, [displaySlots, slotFilter])
 
+  /**
+   * Gọi API lấy danh sách các tòa nhà (bãi đỗ xe)
+   * và thiết lập tòa nhà mặc định nếu chưa có
+   */
+  /**
+   * Hàm xử lý logic: fetchBuildings
+   * Gọi API GET /buildings để lấy danh sách tòa nhà/bãi đỗ xe và lưu vào state.
+   */
   const fetchBuildings = async () => {
     try {
       const response = await authorizeAxios.get('/buildings')
@@ -268,6 +323,14 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Gọi API lấy danh sách phương tiện của tài xế
+   * Tự động chọn xe mặc định để load thông tin biển số và loại xe
+   */
+  /**
+   * Hàm xử lý logic: fetchVehicles
+   * Lấy danh sách phương tiện của tài xế. Tự động chọn phương tiện mặc định (nếu có).
+   */
   const fetchVehicles = async () => {
     try {
       const response = await authorizeAxios.get('/driver/vehicles')
@@ -289,6 +352,10 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: fetchVehicleTypesList
+   * Gọi API để lấy danh mục các loại xe (Car, Moto, Truck...).
+   */
   const fetchVehicleTypesList = async () => {
     try {
       const response = await authorizeAxios.get('/vehicle-types')
@@ -298,6 +365,10 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: fetchPricingPolicies
+   * Gọi API lấy chính sách giá để tự động tạo danh sách thời lượng (durations) cho phép chọn.
+   */
   const fetchPricingPolicies = async () => {
     try {
       const response = await authorizeAxios.get('/pricing')
@@ -307,6 +378,16 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Gọi API tìm kiếm các vị trí đỗ (slots) còn trống
+   * Dựa trên: Tòa nhà, Loại xe, Ngày, Giờ và Thời lượng
+   * Sau đó xử lý logic tự động chọn khu vực và gợi ý vị trí tốt nhất (AI/Nearest)
+   */
+  /**
+   * Hàm xử lý logic: fetchAvailableSlots
+   * Tìm vị trí trống dựa trên các điều kiện lọc. 
+   * Ngoài ra, tích hợp AI gợi ý vị trí (isAIRec) hoặc tự động chọn slot trống đầu tiên.
+   */
   const fetchAvailableSlots = async () => {
     if (!buildingId || !vehicleType || !bookingDate || !startTime || !duration) {
       setAvailableSlots([])
@@ -497,6 +578,10 @@ const DriverBooking = () => {
     }
   }, [autoSelect, filteredSlots, availableSlots, selectedSlotId])
 
+  /**
+   * Hàm xử lý logic: handleChangeDate
+   * Xử lý khi người dùng đổi ngày đặt chỗ. Nếu là ngày quá khứ sẽ bị chặn.
+   */
   const handleChangeDate = (event) => {
     const value = event.target.value
     const today = getTodayDateValue()
@@ -523,6 +608,10 @@ const DriverBooking = () => {
     setErrorMessage('')
   }
 
+  /**
+   * Hàm xử lý logic: handleChangeStartTime
+   * Cập nhật thời gian bắt đầu đỗ xe. Reset về thời gian tối thiểu nếu không hợp lệ.
+   */
   const handleChangeStartTime = (event) => {
     const value = event.target.value
     const minimumTime = getMinimumStartTimeValue()
@@ -540,6 +629,10 @@ const DriverBooking = () => {
     setErrorMessage('')
   }
 
+  /**
+   * Hàm xử lý logic: handleChangeBuilding
+   * Đổi tòa nhà đặt chỗ và reset danh sách slot trống hiện tại.
+   */
   const handleChangeBuilding = (event) => {
     setBuildingId(event.target.value)
 
@@ -552,6 +645,10 @@ const DriverBooking = () => {
     setErrorMessage('')
   }
 
+  /**
+   * Hàm xử lý logic: handleChangeVehicleType
+   * Thay đổi loại phương tiện và yêu cầu lấy lại danh sách slot.
+   */
   const handleChangeVehicleType = (event) => {
     setVehicleType(event.target.value)
 
@@ -564,6 +661,10 @@ const DriverBooking = () => {
     setErrorMessage('')
   }
 
+  /**
+   * Hàm xử lý logic: handleChangeFloor
+   * Lọc slot theo Tầng (Floor) vừa chọn, reset Khu vực (Zone).
+   */
   const handleChangeFloor = (event) => {
     const newFloorId = event.target.value
 
@@ -590,6 +691,10 @@ const DriverBooking = () => {
     setSelectedSlotId(nearestAvailable?.SlotID || null)
   }
 
+  /**
+   * Hàm xử lý logic: handleChangeZone
+   * Lọc slot theo Khu (Zone) thuộc Tầng (Floor) hiện tại.
+   */
   const handleChangeZone = (event) => {
     const newZoneId = event.target.value
 
@@ -608,6 +713,10 @@ const DriverBooking = () => {
     setSelectedSlotId(nearestAvailable?.SlotID || null)
   }
 
+  /**
+   * Hàm xử lý logic: handleChangeSelectedVehicle
+   * Người dùng chọn biển số xe có sẵn, tự động điền loại xe và biển số.
+   */
   const handleChangeSelectedVehicle = (event) => {
     const val = event.target.value
     setSelectedVehicleId(val)
@@ -622,6 +731,10 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: handleAutoSelectChange
+   * Bật/tắt chế độ tự động chọn Slot.
+   */
   const handleAutoSelectChange = (event) => {
     const checked = event.target.checked
     setAutoSelect(checked)
@@ -647,6 +760,10 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: handleSelectSlot
+   * Khi người dùng click thủ công vào sơ đồ bãi đỗ để chọn ô (Slot). Tự động tắt autoSelect.
+   */
   const handleSelectSlot = (slot) => {
     if (slot.uiStatus === 'occupied') return
 
@@ -654,6 +771,16 @@ const DriverBooking = () => {
     setAutoSelect(false)
   }
 
+  /**
+   * Xử lý khi tài xế bấm nút "Xác nhận đặt chỗ"
+   * 1. Validate form (biển số, giờ giấc, slot)
+   * 2. Gọi API POST /reservations để tạo Booking
+   * 3. Chuyển hướng sang trang Confirmation
+   */
+  /**
+   * Hàm xử lý logic: handleSubmit
+   * Xác nhận và gửi dữ liệu lên server để tạo đơn đặt chỗ.
+   */
   const handleSubmit = async (event) => {
     event.preventDefault()
     setErrorMessage('')

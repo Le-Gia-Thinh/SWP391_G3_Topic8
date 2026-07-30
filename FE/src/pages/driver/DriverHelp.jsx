@@ -11,15 +11,24 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 const DriverHelp = () => {
+  // Hook useTranslation: Hỗ trợ đa ngôn ngữ (i18n), lấy hàm 't' để dịch chuỗi text.
   const { t } = useTranslation()
+
+  // Hook useState: Quản lý trạng thái tab hiện tại đang được chọn (mặc định là 'support').
+  // - activeTab: Chứa giá trị tab đang kích hoạt (VD: 'support', 'terms', 'privacy').
+  // - setActiveTab: Hàm dùng để cập nhật lại giá trị cho activeTab khi người dùng click vào menu.
   const [activeTab, setActiveTab] = useState('support')
 
+  // Mảng các tab hiển thị ở thanh điều hướng bên trái (Sidebar).
+  // Mỗi tab có một ID duy nhất, nhãn (label) được dịch bằng hàm 't', và một Icon lấy từ thư viện lucide-react.
   const HELP_TABS = [
     { id: 'support', label: t('driver.helpPage.tabs.support'), icon: HelpCircle },
     { id: 'terms', label: t('driver.helpPage.tabs.terms'), icon: FileText },
     { id: 'privacy', label: t('driver.helpPage.tabs.privacy'), icon: ShieldAlert }
   ]
 
+  // Sử dụng { returnObjects: true } trong hàm 't' để lấy một cấu trúc mảng/object (JSON array) 
+  // chứa danh sách các câu hỏi thường gặp (FAQs) từ file i18n, thay vì lấy một chuỗi văn bản đơn thuần.
   const FAQs = t('driver.helpPage.support.faqs', { returnObjects: true })
 
   return (

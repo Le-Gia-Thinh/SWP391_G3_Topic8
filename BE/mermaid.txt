@@ -1,0 +1,297 @@
+erDiagram
+    AuditLogs {
+        int_4 LogID PK
+        int_4 UserID
+        nvarchar_200 UserName
+        nvarchar_100 RoleName
+        nvarchar_100 Action
+        nvarchar_200 Target
+        nvarchar_1000 Description
+        nvarchar_90 IpAddress
+        datetime_8 CreatedAt
+    }
+    Buildings {
+        int_4 BuildingID PK
+        nvarchar_200 BuildingName
+        nvarchar_400 Address
+        nvarchar_100 OperatingHours
+        int_4 TotalFloors
+        datetime_8 CreatedAt
+        datetime_8 UpdatedAt
+    }
+    DriverVehicles {
+        int_4 VehicleID PK
+        int_4 DriverID
+        nvarchar_40 PlateNumber
+        int_4 VehicleTypeID
+        nvarchar_200 VehicleBrand
+        nvarchar_100 VehicleColor
+        bit_1 IsActive
+        bit_1 IsDefault
+        datetime_8 CreatedAt
+        datetime_8 UpdatedAt
+    }
+    Feedbacks {
+        int_4 FeedbackID PK
+        int_4 DriverID
+        int_4 IncidentID
+        nvarchar_100 FeedbackType
+        nvarchar_1000 Description
+        nvarchar_400 Attachment
+        nvarchar_40 FeedbackStatus
+        datetime_8 CreatedAt
+        datetime_8 UpdatedAt
+    }
+    Floors {
+        int_4 FloorID PK
+        int_4 BuildingID
+        nvarchar_100 FloorName
+        bit_1 IsActive
+    }
+    Incidents {
+        int_4 IncidentID PK
+        int_4 SessionID
+        int_4 DriverID
+        nvarchar_100 IncidentType
+        nvarchar_40 IncidentStatus
+        nvarchar_40 Priority
+        nvarchar_1000 Description
+        nvarchar Attachments
+        int_4 AssignedStaffID
+        datetime_8 CreatedAt
+        datetime_8 UpdatedAt
+    }
+    NightPricingPolicies {
+        int_4 NightPolicyID PK
+        int_4 VehicleTypeID
+        time_5 NightStartTime
+        time_5 NightEndTime
+        decimal_9 NightFee
+        bit_1 IsActive
+        datetime_8 CreatedAt
+    }
+    Notifications {
+        int_4 NotificationID PK
+        int_4 UserID
+        nvarchar_400 Title
+        nvarchar_1000 Message
+        nvarchar_100 NotificationType
+        int_4 ReferenceID
+        nvarchar_100 ReferenceType
+        bit_1 IsRead
+        datetime_8 CreatedAt
+    }
+    ParkingSessions {
+        int_4 SessionID PK
+        int_4 SlotID
+        int_4 DriverID
+        nvarchar_40 PlateNumber
+        int_4 VehicleTypeID
+        datetime_8 EntryTime
+        datetime_8 ExitTime
+        nvarchar_40 SessionStatus
+        int_4 EarlyFeeAmount
+        datetime_8 BookingStartTime
+    }
+    ParkingSlots {
+        int_4 SlotID PK
+        int_4 ZoneID
+        nvarchar_40 SlotCode
+        nvarchar_40 SlotStatus
+        int_4 VehicleTypeID
+    }
+    Payments {
+        int_4 PaymentID PK
+        int_4 SessionID
+        decimal_9 Amount
+        nvarchar_100 PaymentMethod
+        datetime_8 PaymentTime
+        nvarchar_40 PaymentStatus
+        bigint_8 OrderCode
+        nvarchar_200 PaymentLinkId
+        nvarchar QrCode
+        nvarchar_1000 CheckoutUrl
+        datetime_8 PrepaidAt
+        decimal_9 SnapshotDurationH
+        decimal_9 PrepaidAmount
+        decimal_9 SurchargeAmount
+        decimal_9 FinalAmount
+        nvarchar_40 SurchargeStatus
+        datetime_8 SurchargePaidAt
+        nvarchar PaymentNote
+    }
+    Permissions {
+        int_4 PermissionID PK
+        nvarchar_200 PermissionName
+        nvarchar_400 Description
+    }
+    PricingPolicies {
+        int_4 PricingPolicyID PK
+        int_4 VehicleTypeID
+        decimal_5 MinHours
+        decimal_5 MaxHours
+        decimal_9 Fee
+        bit_1 IsOvernight
+        bit_1 IsActive
+    }
+    RefreshTokens {
+        int_4 RefreshTokenID PK
+        int_4 UserID
+        nvarchar_400 TokenHash
+        datetime_8 ExpiresAt
+        datetime_8 SessionExpiresAt
+        datetime_8 CreatedAt
+        nvarchar_90 CreatedByIp
+        datetime_8 RevokedAt
+    }
+    Reservations {
+        int_4 ReservationID PK
+        int_4 DriverID
+        int_4 VehicleTypeID
+        int_4 SlotID
+        date_3 ReservationDate
+        datetime_8 StartTime
+        datetime_8 EndTime
+        nvarchar_40 ReservationStatus
+        nvarchar_40 PlateNumber
+        datetime_8 CreatedAt
+    }
+    RolePermissions {
+        int_4 RoleID
+        int_4 PermissionID
+    }
+    Roles {
+        int_4 RoleID PK
+        nvarchar_100 RoleName
+        nvarchar_400 Description
+    }
+    ServiceRatings {
+        int_4 RatingID PK
+        int_4 SessionID
+        int_4 DriverID
+        int_4 Rating
+        nvarchar_1000 Comment
+        nvarchar_1000 Tags
+        datetime_8 CreatedAt
+    }
+    SubscriptionPlans {
+        nvarchar_100 PlanID
+        nvarchar_200 Name
+        int_4 BasePrice
+        nvarchar_510 Description
+        bit_1 IsActive
+    }
+    SupportTickets {
+        int_4 TicketID PK
+        int_4 DriverID
+        nvarchar_400 Subject
+        nvarchar Content
+        varchar_20 Status
+        datetime_8 CreatedAt
+        datetime_8 UpdatedAt
+    }
+    TicketReplies {
+        int_4 ReplyID PK
+        int_4 TicketID
+        int_4 SenderID
+        nvarchar Content
+        datetime_8 CreatedAt
+    }
+    UserAuthProviders {
+        int_4 ProviderID PK
+        int_4 UserID
+        nvarchar_40 ProviderName
+        nvarchar_400 ProviderUserID
+        nvarchar_200 ProviderEmail
+        datetime_8 CreatedAt
+    }
+    Users {
+        int_4 UserID PK
+        nvarchar_200 FullName
+        nvarchar_200 Email
+        nvarchar_512 PasswordHash
+        nvarchar_40 PhoneNumber
+        int_4 RoleID
+        date_3 DateOfBirth
+        date_3 HireDate
+        bit_1 IsActive
+        bit_1 IsEmailVerified
+        nvarchar_1000 EmailVerifyToken
+        datetime_8 EmailVerifyExpires
+        nvarchar_1000 AvatarUrl
+        nvarchar_1000 ResetToken
+        datetime_8 ResetTokenExpires
+        decimal_9 AccountBalance
+        datetime_8 CreatedAt
+        datetime_8 UpdatedAt
+    }
+    UserSubscriptions {
+        int_4 UserSubscriptionID PK
+        int_4 UserID
+        nvarchar_100 PlanID
+        datetime_8 StartDate
+        datetime_8 EndDate
+        decimal_9 AmountPaid
+        nvarchar_100 Status
+        datetime_8 CreatedAt
+    }
+    VehicleTypes {
+        int_4 VehicleTypeID PK
+        nvarchar_40 VehicleCode
+        nvarchar_100 VehicleName
+        nvarchar_400 Description
+        bit_1 IsActive
+    }
+    WalletTransactions {
+        int_4 TransactionID PK
+        int_4 UserID
+        decimal_9 Amount
+        nvarchar_100 TransactionType
+        nvarchar_100 Status
+        nvarchar_200 ReferenceID
+        nvarchar_400 Description
+        datetime_8 CreatedAt
+    }
+    Zones {
+        int_4 ZoneID PK
+        int_4 FloorID
+        nvarchar_100 ZoneName
+        int_4 AllowedVehicleTypeID
+        int_4 TotalSlots
+    }
+    Floors ||--o{ Zones : "FloorID"
+    Zones ||--o{ ParkingSlots : "ZoneID"
+    ParkingSlots ||--o{ ParkingSessions : "SlotID"
+    ParkingSlots ||--o{ Reservations : "SlotID"
+    ParkingSessions ||--o{ Payments : "SessionID"
+    ParkingSessions ||--o{ Incidents : "SessionID"
+    ParkingSessions ||--o{ ServiceRatings : "SessionID"
+    Incidents ||--o{ Feedbacks : "IncidentID"
+    Roles ||--o{ RolePermissions : "RoleID"
+    Roles ||--o{ Users : "RoleID"
+    Permissions ||--o{ RolePermissions : "PermissionID"
+    SupportTickets ||--o{ TicketReplies : "TicketID"
+    Users ||--o{ ParkingSessions : "DriverID"
+    Users ||--o{ Reservations : "DriverID"
+    Users ||--o{ Incidents : "DriverID"
+    Users ||--o{ Incidents : "AssignedStaffID"
+    Users ||--o{ Feedbacks : "DriverID"
+    Users ||--o{ Notifications : "UserID"
+    Users ||--o{ DriverVehicles : "DriverID"
+    Users ||--o{ ServiceRatings : "DriverID"
+    Users ||--o{ SupportTickets : "DriverID"
+    Users ||--o{ TicketReplies : "SenderID"
+    Users ||--o{ UserAuthProviders : "UserID"
+    Users ||--o{ UserSubscriptions : "UserID"
+    Users ||--o{ RefreshTokens : "UserID"
+    Users ||--o{ AuditLogs : "UserID"
+    Users ||--o{ WalletTransactions : "UserID"
+    SubscriptionPlans ||--o{ UserSubscriptions : "PlanID"
+    VehicleTypes ||--o{ Zones : "AllowedVehicleTypeID"
+    VehicleTypes ||--o{ ParkingSlots : "VehicleTypeID"
+    VehicleTypes ||--o{ ParkingSessions : "VehicleTypeID"
+    VehicleTypes ||--o{ Reservations : "VehicleTypeID"
+    VehicleTypes ||--o{ DriverVehicles : "VehicleTypeID"
+    VehicleTypes ||--o{ PricingPolicies : "VehicleTypeID"
+    VehicleTypes ||--o{ NightPricingPolicies : "VehicleTypeID"
+    Buildings ||--o{ Floors : "BuildingID"

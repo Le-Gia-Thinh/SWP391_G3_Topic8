@@ -27,14 +27,27 @@ const STATUS_LABEL_KEYS = {
 }
 
 const DriverSupport = () => {
+  // Hook useTranslation: Lấy hàm 't' để hỗ trợ đa ngôn ngữ.
   const { t } = useTranslation()
+
+  // Hook useState:
+  // - tickets: Lưu trữ danh sách các ticket hỗ trợ lấy từ API.
+  // - loading: Trạng thái hiển thị màn hình chờ (true/false) trong lúc tải dữ liệu.
+  // - showForm: Trạng thái đóng/mở form tạo ticket mới.
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
 
+  // - subject: Lưu trữ tiêu đề (chủ đề) do người dùng nhập vào form.
+  // - content: Lưu trữ nội dung chi tiết của ticket.
   const [subject, setSubject] = useState('')
   const [content, setContent] = useState('')
 
+  /**
+   * Hàm xử lý logic: fetchTickets
+   * Gọi API lấy danh sách toàn bộ ticket của tài xế hiện tại.
+   * Xử lý loading và cập nhật state 'tickets' nếu gọi API thành công.
+   */
   const fetchTickets = async () => {
     try {
       setLoading(true)
@@ -49,10 +62,21 @@ const DriverSupport = () => {
     }
   }
 
+  // Hook useEffect: Chỉ chạy 1 lần duy nhất khi component vừa mount (do mảng phụ thuộc [] rỗng).
+  // Mục đích: Gọi hàm fetchTickets ngay khi người dùng vào trang Hỗ trợ để lấy dữ liệu.
   useEffect(() => {
     fetchTickets()
   }, [])
 
+  /**
+   * Hàm xử lý logic: handleSubmit
+   * Kích hoạt khi người dùng bấm nút gửi form tạo ticket mới.
+   * - Ngăn hành động mặc định của form (e.preventDefault).
+   * - Kiểm tra dữ liệu đầu vào (subject, content không được để trống).
+   * - Gọi API tạo ticket mới. Nếu thành công thì reset form, đóng form và load lại danh sách.
+   * 
+   * @param {Event} e Sự kiện submit form
+   */
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!subject.trim() || !content.trim()) {
@@ -66,7 +90,7 @@ const DriverSupport = () => {
         setSubject('')
         setContent('')
         setShowForm(false)
-        fetchTickets()
+        fetchTickets() // Tải lại danh sách sau khi tạo thành công
       }
     } catch (error) {
       toast.error(error.response?.data?.message || t('driver.support.createError'))
