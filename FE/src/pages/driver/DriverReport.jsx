@@ -220,7 +220,7 @@ const DriverReport = () => {
    * - Kiểm tra dung lượng (tối đa 5MB mỗi file).
    * - Giới hạn tối đa 5 file đính kèm.
    */
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const files = Array.from(event.target.files || [])
 
     if (files.length === 0) return
@@ -238,12 +238,23 @@ const DriverReport = () => {
       return
     }
 
-    const nextFiles = normalizeAttachments(files)
+    try {
+      const b64arr = await Promise.all(files.map(file => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result)
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+      }))
 
-    setAttachments((prev) => {
-      const merged = [...prev, ...nextFiles]
-      return merged.slice(0, 5)
-    })
+      setAttachments((prev) => {
+        const merged = [...prev, ...b64arr]
+        return merged.slice(0, 5)
+      })
+    } catch {
+      toast.error('Lỗi đọc file')
+    }
 
     event.target.value = ''
   }
@@ -252,8 +263,8 @@ const DriverReport = () => {
    * Hàm xử lý logic: handleRemoveAttachment
    * Xóa một file đã đính kèm khỏi danh sách.
    */
-  const handleRemoveAttachment = (fileId) => {
-    setAttachments((prev) => prev.filter((file) => file.id !== fileId))
+  const handleRemoveAttachment = (index) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index))
   }
 
   /**
@@ -503,20 +514,16 @@ const DriverReport = () => {
 
             {attachments.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-4">
-                {attachments.map((file) => (
+                {attachments.map((file, idx) => (
                   <div
-                    key={file.id}
+                    key={idx}
                     className="relative h-24 w-32 overflow-hidden rounded-xl border border-gray-200 dark:border-slate-700"
                   >
-                    <div className="flex h-full w-full items-center justify-center bg-gray-200 px-2 text-center">
-                      <span className="break-all text-xs text-gray-500 dark:text-gray-400">
-                        {file.name}
-                      </span>
-                    </div>
+                    <img src={file} className="h-full w-full object-cover" alt="attachment" />
 
                     <button
                       type="button"
-                      onClick={() => handleRemoveAttachment(file.id)}
+                      onClick={() => handleRemoveAttachment(idx)}
                       className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-xs text-white hover:bg-black/70"
                     >
                       ×

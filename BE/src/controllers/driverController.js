@@ -873,12 +873,17 @@ export async function createDriverReport(req, res, next) {
         .join("\n")
         .slice(0, 500);
 
+      const serializedAttachments = (Array.isArray(attachments) && attachments.length > 0)
+        ? JSON.stringify(attachments.filter(a => typeof a === 'string' && a.startsWith('data:image/')).slice(0, 15))
+        : null;
+
       const incidentResult = await new sql.Request(transaction)
         .input("SessionID", sql.Int, sessionId)
         .input("DriverID", sql.Int, driverId)
         .input("IncidentType", sql.NVarChar(50), issueType)
         .input("Priority", sql.NVarChar(20), normalizeReportPriority(issueType))
         .input("Description", sql.NVarChar(500), finalDescription)
+        .input("Attachments", sql.NVarChar(sql.MAX), serializedAttachments)
         .query(`
           INSERT INTO Incidents (
             SessionID,
@@ -887,6 +892,7 @@ export async function createDriverReport(req, res, next) {
             IncidentStatus,
             Priority,
             Description,
+            Attachments,
             CreatedAt,
             UpdatedAt
           )
@@ -897,11 +903,13 @@ export async function createDriverReport(req, res, next) {
             'Open',
             @Priority,
             @Description,
+            @Attachments,
             GETDATE(),
             GETDATE()
           );
           SELECT SCOPE_IDENTITY() AS IncidentID;
         `);
+
 
       const incident = incidentResult.recordset[0];
 

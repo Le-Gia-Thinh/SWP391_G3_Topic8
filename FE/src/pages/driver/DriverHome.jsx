@@ -71,7 +71,9 @@ const VehicleStatusCard = ({ vehicle }) => {
   const classes = COLOR_CLASSES[color] || COLOR_CLASSES.blue
   const available = Number(vehicle.AvailableSlots || 0)
   const total = Number(vehicle.TotalSlots || 0)
-  const used = total - available
+  const occupied = Number(vehicle.OccupiedSlots || 0)
+  const reserved = Number(vehicle.ReservedSlots || 0)
+  const used = occupied + reserved
   const percentage = total > 0 ? (used / total) * 100 : 0
   return (
     <div className={`relative overflow-hidden rounded-[1.25rem] border p-5 transition-all hover:shadow-md hover:-translate-y-1 ${classes.border} ${classes.bg}`}>
