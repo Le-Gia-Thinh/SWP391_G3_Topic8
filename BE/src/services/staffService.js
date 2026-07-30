@@ -1,21 +1,31 @@
 /**
  * FILE: staffService.js
- * MÔ TẢ: Service xử lý nghiệp vụ cho Nhân viên (Staff).
- * Chức năng: Dashboard nhân viên, Check-in khách walk-in/đặt trước, 
- * Check-out (tính phí/phụ thu), xem Sơ đồ bãi đỗ, và Tạo/Quản lý Sự cố.
+ * MÔ TẢ: Service quản lý toàn bộ các thao tác nghiệp vụ tại cổng bãi đỗ xe dành cho Nhân viên Bảo vệ (Parking Guard Operational Engine).
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. THỐNG KÊ CA TRỰC DASHBOARD BẢO VỆ (`getDashboardStats`): Đếm số lượt xe vào/ra trong ca, số ô đỗ còn trống theo loại xe, thông báo xe đỗ quá giờ.
+ * 2. CHO XE VÀO BÃI (`checkIn`):
+ *    - Phân loại Khách đặt trước (Booking): Tra cứu mã `BK-xxxx`, chuyển trạng thái `Reservations` ➔ 'Completed'.
+ *    - Phân loại Khách vãng lai (Walk-in): Tự động gán tài khoản vãng lai `walkin.guest@system.local`.
+ *    - Gọi Stored Procedure `sp_StaffCheckIn` ghi nhận mốc thời gian xe vào bãi.
+ * 3. CHO XE RA BÃI & THU PHÍ (`checkOut`): Gọi Stored Proc `sp_CheckOutWithSurcharge` để cấn trừ số tiền trả trước `PrepaidAmount` hoặc thu thêm phụ phí quá giờ `SurchargeAmount`.
+ * 4. QUẢN LÝ SỰ CỐ TẠI BÃI (`createIncident`, `getIncidents`): Lập biên bản sự cố (va quẹt, làm mất thẻ, hỏng barrier), đính kèm chuỗi JSON ảnh Base64 (`serializeAttachments`).
+ * 
+ * @module staffService
  */
-/*
-Thinh
-*/
 
 import { getPool, sql } from '../config/db.js'
 
+/**
+ * HÀM PHỤ: createHttpError
+ * TÁC DỤNG: Khởi tạo đối tượng lỗi Error chuẩn với HTTP Status Code.
+ */
 function createHttpError(statusCode, message, code) {
     const error = new Error(message)
     error.statusCode = statusCode
     error.code = code
     return error
 }
+
 
 function badRequest(message, code = 'BAD_REQUEST') {
     return createHttpError(400, message, code)
@@ -91,6 +101,10 @@ function parseAttachments(raw) {
         return []
     }
 }
+/**
+ * HÀM PHỤ: getDefaultDriverId
+ * MỤC ĐÍCH: Lấy UserID của tài khoản Khách Vãng Lai hệ thống (`walkin.guest@system.local`) phục vụ check-in không tài khoản.
+ */
 async function getDefaultDriverId(pool) {
     const result = await pool.request().query(`
         SELECT UserID FROM Users
@@ -110,6 +124,10 @@ async function getDefaultDriverId(pool) {
     return user.UserID
 }
 
+/**
+ * HÀM PHỤ: calcParkingFee
+ * MỤC ĐÍCH: Gọi Stored Procedure `sp_CalcParkingFeeV2` tính cước đỗ xe theo thời gian vào/ra.
+ */
 async function calcParkingFee(pool, vehicleTypeId, entryTime, exitTime) {
     const request = pool.request()
 
@@ -127,24 +145,46 @@ async function calcParkingFee(pool, vehicleTypeId, entryTime, exitTime) {
     }
 }
 
+/**
+ * HÀM: getDashboard
+ * MỤC ĐÍCH: Thống kê chỉ số ca trực dành cho Bảo vệ tại cổng bãi xe.
+ * NGUỒN ĐẦU VÀO TỪ FE: Gọi từ `GET /api/staff/dashboard`.
+ * DỮ LIỆU TRẢ VỀ CHO FE: `stats` (các chỉ số ca trực), `recentCheckIns` (8 lượt vào gần nhất), `alerts` (các sự cố mở).
+ */
+export async function getGates(buildingId = null) {
+    const pool = await getPool()
+    const request = pool.request()
+    request.input('BuildingID', sql.Int, buildingId || null)
+    const result = await request.query(`
+        SELECT g.GateID, g.BuildingID, b.BuildingName, g.GateName, g.GateType, g.IsActive
+        FROM Gates g
+        JOIN Buildings b ON g.BuildingID = b.BuildingID
+        WHERE (@BuildingID IS NULL OR g.BuildingID = @BuildingID) AND g.IsActive = 1
+        ORDER BY g.BuildingID, g.GateID
+    `)
+    return result.recordset
+}
+
 export async function getDashboard() {
     const pool = await getPool()
 
+    // 1. QUERY DASHBOARD STATS: Sử dụng 8 câu truy vấn con Subquery SELECT độc lập trong cùng 1 câu lệnh để tối ưu hiệu năng
     const stats = await pool.request().query(`
         SELECT
-        (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Active') AS activeSessions,
-        (SELECT COUNT(*) FROM ParkingSessions WHERE CAST(EntryTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckIns,
-        (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Completed' AND CAST(ExitTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckOuts,
+        (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Active') AS activeSessions, -- Xe đang đỗ thực tế
+        (SELECT COUNT(*) FROM ParkingSessions WHERE CAST(EntryTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckIns, -- Số lượt xe vào trong ngày
+        (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Completed' AND CAST(ExitTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckOuts, -- Số lượt xe ra trong ngày
         (SELECT ISNULL(SUM(ISNULL(FinalAmount, Amount)), 0)
         FROM Payments
         WHERE PaymentStatus = 'Completed'
-            AND CAST(ISNULL(PaymentTime, SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE)) AS todayRevenue,
-        (SELECT COUNT(*) FROM Incidents WHERE IncidentStatus IN ('Open', 'InProgress')) AS openIncidents,
-        (SELECT COUNT(*) FROM Reservations WHERE ReservationStatus = 'Reserved') AS pendingBookings,
-        (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Available') AS availableSlots,
-        (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Occupied') AS occupiedSlots
+            AND CAST(ISNULL(PaymentTime, SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE)) AS todayRevenue, -- Doanh thu trong ngày
+        (SELECT COUNT(*) FROM Incidents WHERE IncidentStatus IN ('Open', 'InProgress')) AS openIncidents, -- Sự cố chưa xử lý
+        (SELECT COUNT(*) FROM Reservations WHERE ReservationStatus = 'Reserved') AS pendingBookings, -- Đơn đặt trước chờ tới
+        (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Available') AS availableSlots, -- Số ô đỗ đang trống
+        (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Occupied') AS occupiedSlots -- Số ô đỗ đang bị chiếm
     `)
 
+    // 2. QUERY RECENT CHECK-INS: Truy vấn TOP 8 lượt xe vừa check-in gần nhất (JOIN 5 BẢNG: ParkingSessions, VehicleTypes, ParkingSlots, Zones, Floors, Buildings, Users)
     const recentCheckIns = await pool.request().query(`
         SELECT TOP 8
         ps.SessionID,
@@ -169,6 +209,7 @@ export async function getDashboard() {
         ORDER BY ps.EntryTime DESC
     `)
 
+    // 3. QUERY ALERTS: Truy vấn TOP 6 sự cố khẩn cấp đang mở (`Open`, `InProgress`), ưu tiên hiển thị Priority 'High' trước
     const alerts = await pool.request().query(`
         SELECT TOP 6
         IncidentID,
@@ -570,17 +611,22 @@ export async function checkInBooking(reservationId, plateNumber) {
             .input('plateNumber', sql.NVarChar(20), finalPlate)
             .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
             .input('earlyFeeAmount', sql.Int, earlyFee)
+            .input('cardCode', sql.NVarChar(50), cardCode || null)
+            .input('gateIn', sql.NVarChar(50), gateIn || 'Gate 1')
+            .input('gateInId', sql.Int, gateInId || null)
             .input('bookingStartTime', sql.DateTime, startTime)
+            .input('reservationId', sql.Int, id)
+            .input('createdByStaffId', sql.Int, staffId || null)
             .query(`
                 INSERT INTO ParkingSessions (
-                    SlotID, DriverID, PlateNumber,
-                    VehicleTypeID, EntryTime, SessionStatus, EarlyFeeAmount, BookingStartTime
+                    SlotID, DriverID, PlateNumber, CardCode, GateIn, GateInID,
+                    VehicleTypeID, EntryTime, SessionStatus, EarlyFeeAmount, BookingStartTime, ReservationID, CreatedByStaffID
                 )
                 VALUES (
-                    @slotId, @driverId, @plateNumber,
-                    @vehicleTypeId, GETDATE(), 'Active', @earlyFeeAmount, @bookingStartTime
+                    @slotId, @driverId, @plateNumber, @cardCode, @gateIn, @gateInId,
+                    @vehicleTypeId, GETDATE(), 'Active', @earlyFeeAmount, @bookingStartTime, @reservationId, @createdByStaffId
                 );
-                      SELECT * FROM ParkingSessions WHERE SessionID = SCOPE_IDENTITY();
+                SELECT * FROM ParkingSessions WHERE SessionID = SCOPE_IDENTITY();
             `)
 
         const session = insertSessionResult.recordset[0]
@@ -743,12 +789,16 @@ export async function cancelAndWalkIn(reservationId, plateNumber, slotId) {
         // 3. Tạo walk-in session trên slot vừa tìm được
         const insertResult = await new sql.Request(transaction)
             .input('slotId', sql.Int, availableSlot.SlotID)
-            .input('driverId', sql.Int, booking.DriverID)
+            .input('driverId', sql.Int, booking ? booking.DriverID : null)
             .input('plateNumber', sql.NVarChar(20), finalPlate)
-            .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
+            .input('cardCode', sql.NVarChar(50), cardCode || null)
+            .input('gateIn', sql.NVarChar(50), gateIn || 'Gate 1')
+            .input('gateInId', sql.Int, gateInId || null)
+            .input('vehicleTypeId', sql.Int, vehicleTypeId || (booking ? booking.VehicleTypeID : 1))
+            .input('createdByStaffId', sql.Int, staffId || null)
             .query(`
-                INSERT INTO ParkingSessions (SlotID, DriverID, PlateNumber, VehicleTypeID, EntryTime, SessionStatus)
-                VALUES (@slotId, @driverId, @plateNumber, @vehicleTypeId, GETDATE(), 'Active');
+                INSERT INTO ParkingSessions (SlotID, DriverID, PlateNumber, CardCode, GateIn, GateInID, VehicleTypeID, EntryTime, SessionStatus, CreatedByStaffID)
+                VALUES (@slotId, @driverId, @plateNumber, @cardCode, @gateIn, @gateInId, @vehicleTypeId, GETDATE(), 'Active', @createdByStaffId);
                 SELECT * FROM ParkingSessions WHERE SessionID = SCOPE_IDENTITY();
             `)
 

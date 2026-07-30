@@ -1,17 +1,15 @@
 /**
  * FILE: authService.js
- * MÔ TẢ: Service cung cấp các logic xử lý nghiệp vụ xác thực người dùng.
+ * MÔ TẢ: Service cung cấp toàn bộ logic xác thực người dùng và bảo mật hệ thống (Authentication & Authorization Core Service).
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. ĐĂNG KÝ XÁC MINH EMAIL (`registerService`, `sendVerifyEmail`): Mã hóa mật khẩu qua `bcryptjs` (salt rounds = 10), sinh ngẫu nhiên Token UUID 24h và gửi mail xác nhận qua SMTP Mailer.
+ * 2. ĐĂNG NHẬP THƯỜNG (`loginService`): Truy vấn DB qua Stored Procedure `sp_GetUserByEmail`, đối chiếu hash mật khẩu với `bcryptjs.compare`, cấp cặp Access Token (ngắn hạn: 1h) & Refresh Token (dài hạn: 7d/30d).
+ * 3. ĐĂNG NHẬP GOOGLE OAUTH2 (`googleLoginService`): Dùng thư viện chính thức `google-auth-library` (`OAuth2Client`) để xác thực `idToken` từ Google cấp cho Frontend ➔ Gọi Stored Proc `sp_UpsertSocialUser` để tạo mới hoặc liên kết tài khoản tự động.
+ * 4. CƠ CHẾ BẢO MỆT HASH REFRESH TOKEN: Mã Refresh Token không lưu trực tiếp ở dạng thô dưới DB mà được băm SHA-256 (`JwtProvider.hashToken`) giúp ngăn ngừa rò rỉ dữ liệu khi CSDL bị lộ.
+ * 5. CẤP LẠI TOKEN (`refreshTokenService`): Thu hồi Refresh Token cũ (Token Rotation) và cấp phát cặp Token mới.
  * 
- * Chức năng:
- * - Đăng ký (register), Đăng nhập (login), Refresh Token
- * - Gửi email xác minh và xử lý xác minh email
- * - Khôi phục mật khẩu (Quên mật khẩu / Đặt lại mật khẩu)
- * - Đăng nhập bằng mạng xã hội (Google, Facebook)
- * - Đổi mật khẩu
- *//*
-Thinh
-*/
-
+ * @module authService
+ */
 
 import ms from "ms";
 import crypto from "crypto";
@@ -22,10 +20,16 @@ import { OAuth2Client } from "google-auth-library";
 import { getPool, sql } from "../config/db.js";
 import JwtProvider from "../providers/JwtProvider.js";
 
+// Khởi tạo Google OAuth Client với Client ID từ biến môi trường
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const BCRYPT_ROUNDS = 10;
-const REFRESH_TTL = ms(process.env.REFRESH_TOKEN_EXPIRES || "7d");
-const SESSION_ABSOLUTE_TTL = ms(process.env.SESSION_ABSOLUTE_EXPIRES || "30d");
+const BCRYPT_ROUNDS = 10; // Trọng số Salt Rounds mã hóa mật khẩu Bcrypt
+const REFRESH_TTL = ms(process.env.REFRESH_TOKEN_EXPIRES || "7d"); // Thời gian sống Refresh Token (7 ngày)
+const SESSION_ABSOLUTE_TTL = ms(process.env.SESSION_ABSOLUTE_EXPIRES || "30d"); // Thời gian sống tối đa của 1 Session (30 ngày)
+
+/**
+ * HÀM 1: sendVerifyEmail
+ * TÁC DỤNG: Sinh mẫu email HTML đẹp mắt và gửi đường dẫn Kích hoạt tài khoản tới Email người dùng vừa đăng ký.
+ */
 export async function sendVerifyEmail(email, fullName, token) {
     const url = `http://localhost:5000/api/auth/verify-email?token=${token}`;
     await sendMail({
@@ -48,7 +52,10 @@ export async function sendVerifyEmail(email, fullName, token) {
     });
 }
 
-// ✅ Bug 2 fix — thêm isEmailVerified
+/**
+ * HÀM PHỤ: formatUser
+ * TÁC DỤNG: Chuẩn hóa đối tượng User trả về cho Frontend (Loại bỏ các thông tin nhạy cảm như Mật khẩu Hash).
+ */
 function formatUser(u) {
     return {
         userId: u.UserID,
@@ -65,6 +72,10 @@ function formatUser(u) {
     };
 }
 
+/**
+ * HÀM PHỤ: generateAndSaveTokens
+ * TÁC DỤNG: Sinh cặp Access Token + Refresh Token và băm lưu TokenHash vào CSDL thông qua Stored Procedure `sp_SaveRefreshToken`.
+ */
 async function generateAndSaveTokens(pool, user, ip = null, existingSessionExpiresAt = null) {
     const payload = {
         userId: user.UserID,
@@ -73,9 +84,11 @@ async function generateAndSaveTokens(pool, user, ip = null, existingSessionExpir
         roleName: user.RoleName,
     };
 
+    // 1. Tạo JWT Tokens
     const accessToken = JwtProvider.generateAccessToken(payload);
     const refreshToken = JwtProvider.generateRefreshToken({ userId: user.UserID });
 
+    // 2. Băm mã Refresh Token bằng SHA-256 trước khi lưu vào DB
     const tokenHash = JwtProvider.hashToken(refreshToken);
     const expiresAt = new Date(Date.now() + REFRESH_TTL);
 
@@ -84,6 +97,7 @@ async function generateAndSaveTokens(pool, user, ip = null, existingSessionExpir
             ? new Date(existingSessionExpiresAt)
             : new Date(Date.now() + SESSION_ABSOLUTE_TTL);
 
+    // 3. Gọi Stored Procedure lưu Hash vào bảng RefreshTokens
     await pool.request()
         .input("UserID", sql.Int, user.UserID)
         .input("TokenHash", sql.NVarChar(200), tokenHash)
@@ -92,26 +106,23 @@ async function generateAndSaveTokens(pool, user, ip = null, existingSessionExpir
         .input("CreatedByIp", sql.NVarChar(45), ip || null)
         .execute("sp_SaveRefreshToken");
 
-    console.log("====================================");
-    console.log("🆕 Tokens created");
-    console.log("UserID:", user.UserID);
-    console.log("Refresh expires at:", expiresAt.toISOString());
-    console.log("Session absolute expires at:", sessionExpiresAt.toISOString());
-    console.log("Refresh TTL seconds:", Math.floor(REFRESH_TTL / 1000));
-    console.log("Absolute session TTL seconds:", Math.floor((sessionExpiresAt - Date.now()) / 1000));
-    console.log("====================================");
-
     return { accessToken, refreshToken };
 }
 
-// ✅ Bug 1 fix — dùng crypto.randomUUID() thay JWT
+/**
+ * HÀM 2: registerService
+ * TÁC DỤNG: Xử lý Đăng ký tài khoản địa phương (Local Registration) bằng Email/Mật khẩu.
+ */
 export async function registerService({ fullName, email, password, phoneNumber }) {
     const pool = await getPool();
+    // Băm mật khẩu bằng Bcrypt
     const passwordHash = await bcryptjs.hash(password, BCRYPT_ROUNDS);
 
+    // Sinh Token ngẫu nhiên bằng UUID v4
     const verifyToken = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + ms("24h"));
 
+    // Thực thi Stored Procedure tạo tài khoản trong CSDL
     const result = await pool.request()
         .input("FullName", sql.NVarChar(100), fullName.trim())
         .input("Email", sql.NVarChar(100), email.trim().toLowerCase())
@@ -123,6 +134,7 @@ export async function registerService({ fullName, email, password, phoneNumber }
 
     const user = result.recordset[0];
 
+    // Gửi email xác minh bất đồng bộ (không await để trả về response cho user nhanh)
     sendVerifyEmail(user.Email, user.FullName, verifyToken).catch((err) => {
         console.error("❌ Gửi verify email thất bại:", err.message);
     });
@@ -130,19 +142,23 @@ export async function registerService({ fullName, email, password, phoneNumber }
     return formatUser(user);
 }
 
-// 🚀 LUỒNG ĐĂNG NHẬP [BƯỚC 6/8]: Service xử lý kiểm tra Mật khẩu & Tạo Token
+/**
+ * HÀM 3: loginService
+ * TÁC DỤNG: Xử lý Đăng nhập tài khoản Local (Email & Mật khẩu).
+ */
 export async function loginService({ email, password }, ip) {
     const pool = await getPool();
-    // ➡️ BƯỚC 6.1: Truy vấn SQL Server qua Stored Procedure sp_GetUserByEmail
+    // Gọi Stored Procedure lấy thông tin người dùng theo Email
     const result = await pool.request()
         .input("Email", sql.NVarChar(100), email.trim().toLowerCase())
         .execute("sp_GetUserByEmail");
 
     const user = result.recordset[0];
 
+    // Tránh Timing Attack: Băm một chuỗi dummy nếu không tìm thấy User
     const dummyHash = await bcryptjs.hash("dummy_password", BCRYPT_ROUNDS);
     const hashToTest = user?.PasswordHash || dummyHash;
-    // ➡️ BƯỚC 6.2: Dùng bcrypt.compare đối chiếu Mật khẩu nhập vào với Mật khẩu đã mã hóa dưới DB
+    // So sánh mật khẩu bằng bcrypt.compare
     const isMatch = await bcryptjs.compare(password, hashToTest);
 
     if (!user || !isMatch || !user.HasLocalAuth) {
@@ -155,6 +171,8 @@ export async function loginService({ email, password }, ip) {
         const err = new Error("Tài khoản đã bị khóa, vui lòng liên hệ quản lý");
         err.statusCode = 403; throw err;
     }
+
+    // Bỏ qua yêu cầu xác minh email nếu là các Email giả lập dùng để Test
     const emailLower = String(user.Email || "").toLowerCase().trim();
     const isFakeSystemEmail = 
         emailLower.endsWith("@email.com") || 
@@ -168,13 +186,19 @@ export async function loginService({ email, password }, ip) {
         throw err;
     }
 
+    // Sinh cặp Token và trả về thành công
     const { accessToken, refreshToken } = await generateAndSaveTokens(pool, user, ip);
     return { accessToken, refreshToken, user: formatUser(user) };
 }
 
+/**
+ * HÀM 4: googleLoginService
+ * TÁC DỤNG: Xử lý Đăng nhập / Đăng ký bằng Tài khoản Google (Google OAuth2 Single Sign-On).
+ */
 export async function googleLoginService(idToken, ip) {
     let payload;
     try {
+        // Xác thực ID Token gửi từ Google SDK bằng OAuth2Client
         const ticket = await googleClient.verifyIdToken({
             idToken,
             audience: process.env.GOOGLE_CLIENT_ID,
@@ -187,6 +211,7 @@ export async function googleLoginService(idToken, ip) {
 
     const { sub, email, name, picture } = payload;
     const pool = await getPool();
+    // Gọi Stored Proc sp_UpsertSocialUser (Nếu chưa có ➔ Tạo mới; Nếu đã có Email ➔ Liên kết GoogleID)
     const result = await pool.request()
         .input("ProviderName", sql.NVarChar(20), "google")
         .input("ProviderUserID", sql.NVarChar(200), sub)
@@ -212,7 +237,10 @@ export async function googleLoginService(idToken, ip) {
     return { accessToken, refreshToken, user: formatUser(user), message };
 }
 
-
+/**
+ * HÀM 5: verifyEmailService
+ * TÁC DỤNG: Thực thi kích hoạt tài khoản khi người dùng nhấp vào Link trong Email.
+ */
 export async function verifyEmailService(token) {
     if (!token) {
         const err = new Error("Token không hợp lệ");
@@ -225,7 +253,10 @@ export async function verifyEmailService(token) {
         .execute("sp_VerifyEmail");
 }
 
-// ✅ Bug 1 fix — dùng UUID
+/**
+ * HÀM 6: resendVerifyEmailService
+ * TÁC DỤNG: Gửi lại Email xác minh tài khoản nếu mail trước bị thất lạc hoặc hết hạn.
+ */
 export async function resendVerifyEmailService(email) {
     if (!email) return;
 
@@ -259,6 +290,10 @@ export async function resendVerifyEmailService(email) {
     });
 }
 
+/**
+ * HÀM 7: refreshTokenService
+ * TÁC DỤNG: Cấp lại Access Token mới bằng Refresh Token hợp lệ (Cơ chế Token Rotation).
+ */
 export async function refreshTokenService(rawRefreshToken, ip) {
     try {
         JwtProvider.verifyRefreshToken(rawRefreshToken);
@@ -285,6 +320,7 @@ export async function refreshTokenService(rawRefreshToken, ip) {
 
     const user = result.recordset[0];
 
+    // Kiểm tra thời gian hết hạn tuyệt đối của Session
     if (new Date(user.SessionExpiresAt) <= new Date()) {
         const err = new Error("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại");
         err.statusCode = 401;
@@ -292,16 +328,22 @@ export async function refreshTokenService(rawRefreshToken, ip) {
         throw err;
     }
 
+    // Thu hồi Refresh Token cũ (Revoke Old Token)
     await pool.request()
         .input("TokenHash", sql.NVarChar(200), tokenHash)
         .execute("sp_RevokeRefreshToken");
 
+    // Sinh và lưu cặp Token mới
     const { accessToken, refreshToken: newRefreshToken } =
         await generateAndSaveTokens(pool, user, ip, user.SessionExpiresAt);
 
     return { accessToken, refreshToken: newRefreshToken };
 }
 
+/**
+ * HÀM 8: logoutService
+ * TÁC DỤNG: Thu hồi Refresh Token khi người dùng bấm Đăng xuất.
+ */
 export async function logoutService(rawRefreshToken) {
     if (!rawRefreshToken) return;
     try {
@@ -313,7 +355,10 @@ export async function logoutService(rawRefreshToken) {
     } catch { }
 }
 
-// ✅ Bug 2 fix — thêm IsEmailVerified vào SELECT
+/**
+ * HÀM 9: getMeService
+ * TÁC DỤNG: Lấy toàn bộ hồ sơ thông tin của chính tài khoản đang đăng nhập.
+ */
 export async function getMeService(userId) {
     const pool = await getPool();
     const result = await pool.request()
@@ -338,6 +383,10 @@ export async function getMeService(userId) {
     return formatUser(result.recordset[0]);
 }
 
+/**
+ * HÀM 10: forgotPasswordService
+ * TÁC DỤNG: Xử lý yêu cầu Quên mật khẩu, sinh Reset Token hạn 15 phút.
+ */
 export async function forgotPasswordService(email) {
     const pool = await getPool();
     const result = await pool.request()
@@ -364,6 +413,10 @@ export async function forgotPasswordService(email) {
     console.log("🔑 Reset link:", `${process.env.FE_ORIGIN}/reset-password?token=${resetToken}`);
 }
 
+/**
+ * HÀM 11: resetPasswordService
+ * TÁC DỤNG: Cập nhật mật khẩu mới khi có Reset Token hợp lệ từ Email.
+ */
 export async function resetPasswordService({ token, newPassword }) {
     let decoded;
     try {
@@ -399,6 +452,11 @@ export async function resetPasswordService({ token, newPassword }) {
             WHERE UserID = @UserID
         `);
 }
+
+/**
+ * HÀM 12: checkEmailVerifyStatusService
+ * TÁC DỤNG: Kiểm tra xem email của người dùng đã được xác minh chưa.
+ */
 export async function checkEmailVerifyStatusService(email) {
     if (!email) {
         const err = new Error("Email là bắt buộc");
@@ -425,10 +483,14 @@ export async function checkEmailVerifyStatusService(email) {
     };
 }
 
+/**
+ * HÀM 13: changePasswordService
+ * TÁC DỤNG: Đổi mật khẩu chủ động từ trang Hồ sơ người dùng.
+ */
 export async function changePasswordService(userId, oldPassword, newPassword) {
     const pool = await getPool();
 
-    // 1. Get current password hash
+    // 1. Kiểm tra mật khẩu cũ
     const result = await pool.request()
         .input("UserID", sql.Int, userId)
         .query("SELECT PasswordHash FROM Users WHERE UserID = @UserID AND IsActive = 1");
@@ -440,9 +502,8 @@ export async function changePasswordService(userId, oldPassword, newPassword) {
 
     const { PasswordHash } = result.recordset[0];
 
-    // 2. If user has no password (social login), allow setting without oldPassword
+    // Nếu tài khoản có mật khẩu local ➔ So sánh mật khẩu cũ
     if (PasswordHash) {
-        // Compare old password
         if (!oldPassword) {
             const err = new Error("Vui lòng cung cấp mật khẩu cũ");
             err.statusCode = 400; throw err;
@@ -454,7 +515,7 @@ export async function changePasswordService(userId, oldPassword, newPassword) {
         }
     }
 
-    // 3. Update new password
+    // 2. Cập nhật mật khẩu mới băm bằng Bcrypt và thêm provider 'local' nếu là tài khoản Social tạo mật khẩu lần đầu
     const hashedPassword = await bcryptjs.hash(newPassword, BCRYPT_ROUNDS);
     await pool.request()
         .input("UserID", sql.Int, userId)
@@ -471,4 +532,4 @@ export async function changePasswordService(userId, oldPassword, newPassword) {
                 VALUES (@UserID, 'local', CAST(@UserID AS NVARCHAR(200)));
             END
         `);
-}
+}

@@ -1313,7 +1313,7 @@ export async function getBuildings() {
   return r.recordset
 }
 
-export async function createBuilding({ buildingName, address, operatingHours, totalFloors }) {
+export async function createBuilding({ buildingName, address, operatingHours, totalFloors, latitude, longitude }) {
   const name = String(buildingName || '').trim()
   if (!name) throw badRequest('Thiếu tên tòa nhà (buildingName).', 'BUILDING_NAME_REQUIRED')
   if (name.length > 100) throw badRequest('Tên tòa nhà tối đa 100 ký tự.', 'BUILDING_NAME_TOO_LONG')
@@ -1325,12 +1325,26 @@ export async function createBuilding({ buildingName, address, operatingHours, to
     .input('Address', sql.NVarChar(200), address || null)
     .input('OperatingHours', sql.NVarChar(50), operatingHours || null)
     .input('TotalFloors', sql.Int, totalFloors != null ? Number(totalFloors) : null)
+    .input('Latitude', sql.Decimal(9, 6), latitude != null ? parseFloat(latitude) : null)
+    .input('Longitude', sql.Decimal(9, 6), longitude != null ? parseFloat(longitude) : null)
     .query(`
-      INSERT INTO Buildings (BuildingName, Address, OperatingHours, TotalFloors)
+      INSERT INTO Buildings (BuildingName, Address, OperatingHours, TotalFloors, Latitude, Longitude)
       OUTPUT INSERTED.*
-      VALUES (@BuildingName, @Address, @OperatingHours, @TotalFloors)
+      VALUES (@BuildingName, @Address, @OperatingHours, @TotalFloors, @Latitude, @Longitude)
     `)
-  return ins.recordset[0]
+  const newBuilding = ins.recordset[0]
+
+  const floorCount = Number(totalFloors)
+  if (floorCount > 0) {
+    for (let i = 1; i <= floorCount; i++) {
+      await pool.request()
+        .input('BuildingID', sql.Int, newBuilding.BuildingID)
+        .input('FloorName', sql.NVarChar(50), `Tang ${i}`)
+        .query(`INSERT INTO Floors (BuildingID, FloorName, IsActive) VALUES (@BuildingID, @FloorName, 1)`)
+    }
+  }
+
+  return newBuilding
 }
 
 export async function updateBuilding(buildingId, { buildingName, address, operatingHours, totalFloors }) {
@@ -1366,6 +1380,16 @@ export async function updateBuilding(buildingId, { buildingName, address, operat
   if (totalFloors !== undefined) {
     req.input('TotalFloors', sql.Int, totalFloors != null ? Number(totalFloors) : null)
     sets.push('TotalFloors = @TotalFloors')
+  }
+
+  if (latitude !== undefined) {
+    req.input('Latitude', sql.Decimal(9, 6), latitude != null ? parseFloat(latitude) : null)
+    sets.push('Latitude = @Latitude')
+  }
+
+  if (longitude !== undefined) {
+    req.input('Longitude', sql.Decimal(9, 6), longitude != null ? parseFloat(longitude) : null)
+    sets.push('Longitude = @Longitude')
   }
 
   if (sets.length === 1) throw badRequest('Không có trường nào để cập nhật.', 'NOTHING_TO_UPDATE')
@@ -1456,4 +1480,103 @@ export async function getAuditLogs({ userId, action, search, fromDate, toDate, p
       totalPages: Math.ceil(totalCount / Number(pageSize)),
     },
   }
+}
+
+/* ── QUẢN LÝ PHÂN CÔNG TÒA NHÀ (BUILDING ASSIGNMENTS) ───────── */
+export async function assignUserToBuilding({ buildingId, userId, isPrimary = false }) {
+  const pool = await getPool();
+  await pool.request()
+    .input('buildingId', sql.Int, buildingId)
+    .input('userId', sql.Int, userId)
+    .input('isPrimary', sql.Bit, isPrimary)
+    .query(`
+      MERGE BuildingAssignments AS target
+      USING (SELECT @buildingId AS BuildingID, @userId AS UserID) AS source
+      ON (target.BuildingID = source.BuildingID AND target.UserID = source.UserID)
+      WHEN MATCHED THEN
+        UPDATE SET IsPrimary = @isPrimary, AssignedDate = GETDATE()
+      WHEN NOT MATCHED THEN
+        INSERT (BuildingID, UserID, IsPrimary) VALUES (@buildingId, @userId, @isPrimary);
+    `);
+  return { success: true, message: 'Phân công nhân sự thành công' };
+}
+
+export async function getBuildingAssignments(buildingId) {
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('buildingId', sql.Int, buildingId)
+    .query(`
+      SELECT ba.AssignmentID, ba.BuildingID, ba.UserID, ba.AssignedDate, ba.IsPrimary,
+             u.FullName, u.Email, u.PhoneNumber, r.RoleName
+      FROM BuildingAssignments ba
+      JOIN Users u ON ba.UserID = u.UserID
+      JOIN Roles r ON u.RoleID = r.RoleID
+      WHERE ba.BuildingID = @buildingId
+      ORDER BY ba.IsPrimary DESC, ba.AssignedDate DESC
+    `);
+  return result.recordset;
+}
+
+export async function removeBuildingAssignment(assignmentId) {
+  const pool = await getPool();
+  await pool.request()
+    .input('assignmentId', sql.Int, assignmentId)
+    .query(`DELETE FROM BuildingAssignments WHERE AssignmentID = @assignmentId`);
+  return { success: true, message: 'Xóa phân công thành công' };
+}
+
+export async function transferStaff({ userId, fromBuildingId = null, toBuildingId, isPrimary = true }) {
+  const pool = await getPool();
+  const transaction = new sql.Transaction(pool);
+  await transaction.begin();
+  try {
+    if (fromBuildingId) {
+      await new sql.Request(transaction)
+        .input('userId', sql.Int, userId)
+        .input('fromBuildingId', sql.Int, fromBuildingId)
+        .query(`UPDATE BuildingAssignments SET IsPrimary = 0 WHERE UserID = @userId AND BuildingID = @fromBuildingId`);
+    }
+    await new sql.Request(transaction)
+      .input('buildingId', sql.Int, toBuildingId)
+      .input('userId', sql.Int, userId)
+      .input('isPrimary', sql.Bit, isPrimary ? 1 : 0)
+      .query(`
+        MERGE BuildingAssignments AS target
+        USING (SELECT @buildingId AS BuildingID, @userId AS UserID) AS source
+        ON (target.BuildingID = source.BuildingID AND target.UserID = source.UserID)
+        WHEN MATCHED THEN UPDATE SET IsPrimary = @isPrimary, AssignedDate = GETDATE()
+        WHEN NOT MATCHED THEN INSERT (BuildingID, UserID, IsPrimary) VALUES (@buildingId, @userId, @isPrimary);
+      `);
+    await new sql.Request(transaction)
+      .input('userId', sql.Int, userId)
+      .input('action', sql.NVarChar(50), 'STAFF_TRANSFER')
+      .input('desc', sql.NVarChar(500), `Điều chuyển nhân sự UserID #${userId} sang Tòa nhà #${toBuildingId}`)
+      .query(`INSERT INTO AuditLogs (UserID, Action, Description, CreatedAt) VALUES (@userId, @action, @desc, GETDATE())`);
+
+    await transaction.commit();
+    return { success: true, message: 'Điều chuyển nhân sự sang tòa nhà mới thành công' };
+  } catch (err) {
+    await transaction.rollback();
+    throw err;
+  }
+}
+
+/* ── QUẢN LÝ CẤU HÌNH HỆ THỐNG (SYSTEM CONFIGS) ──────────────── */
+export async function getSystemConfigs() {
+  const pool = await getPool();
+  const result = await pool.request().query(`SELECT * FROM SystemConfigs ORDER BY ConfigKey`);
+  return result.recordset;
+}
+
+export async function updateSystemConfig(configKey, configValue) {
+  const pool = await getPool();
+  await pool.request()
+    .input('configKey', sql.NVarChar(50), configKey)
+    .input('configValue', sql.NVarChar(250), configValue)
+    .query(`
+      UPDATE SystemConfigs 
+      SET ConfigValue = @configValue, UpdatedAt = GETDATE() 
+      WHERE ConfigKey = @configKey
+    `);
+  return { success: true, message: 'Cập nhật cấu hình thành công' };
 }

@@ -1,31 +1,39 @@
 /**
  * FILE: staffController.js
- * MÔ TẢ: Controller xử lý các chức năng tác nghiệp trực tiếp tại bãi đỗ xe dành cho Staff.
- * 
- * Chức năng:
- * - Xem Dashboard & Sơ đồ bãi đỗ (Parking Map)
- * - Cập nhật trạng thái chỗ đỗ thủ công
- * - Check-in xe (khách walk-in hoặc có đặt trước)
- * - Tra cứu phiên gửi xe & Check-out xe (bao gồm tính phí, phụ thu)
- * - Quản lý sự cố (Tạo và cập nhật sự cố tại bãi đỗ)
- * - Lịch sử thanh toán & các khoản chờ thanh toán
- * 
- * @access Staff only
+ * MÔ TẢ: Controller xử lý toàn bộ các tác nghiệp thực tế tại bãi đỗ xe dành cho Nhân viên Bảo vệ (Staff).
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. Quản lý sơ đồ bãi đỗ: Xem sơ đồ thời gian thực (Parking Map), xem chi tiết ô đỗ theo SlotCode, cập nhật trạng thái Maintenance/Blocked thủ công.
+ * 2. Luồng xe vào bãi (Check-in): Cho xe vãng lai (Walk-in) vào bãi hoặc xác nhận Check-in cho xe đã đặt trước (Booking Check-in).
+ * 3. Luồng xe ra bãi (Check-out): Xem trước bảng tính tiền (Preview Fee), xác nhận xe ra, tính phí phạt đỗ quá giờ và thu tiền phụ trội (Surcharge).
+ * 4. Quản lý sự cố tại bãi (Incidents): Tạo biên bản sự cố (Mất thẻ, va quẹt, vi phạm đỗ), đính kèm tối đa 15 ảnh bằng chứng và cập nhật tiến độ giải quyết.
  */
-/*
-Thinh
-*/
 
-import { StatusCodes } from 'http-status-codes' // Mã HTTP status chuẩn
-import * as staffService from '../services/staffService.js' // Service xử lý logic staff
-import * as sessionService from '../services/sessionService.js'; // Service xử lý logic phiên xe
+// Import enum StatusCodes chuẩn quốc tế (200 OK, 201 CREATED, 400 BAD REQUEST,...) từ thư viện 'http-status-codes'
+import { StatusCodes } from 'http-status-codes'
+// Import tất cả hàm xử lý từ tầng service 'BE/src/services/staffService.js'
+// LIÊN KẾT FILE: `BE/src/services/staffService.js` - Chứa các thủ tục SQL Server Check-in (`sp_CheckInVehicle`), Check-out (`sp_CheckOutWithSurcharge`), tạo Incidents.
+import * as staffService from '../services/staffService.js'
+// Import service phiên đỗ xe
+import * as sessionService from '../services/sessionService.js';
 
-
+/**
+ * HÀM HELPER: getUserId
+ * TÁC DỤNG: Lấy mã ID của Nhân viên bảo vệ đang đăng nhập từ req.user hoặc req.jwtDecoded
+ */
 const getUserId = (req) =>
     req.user?.UserID || req.user?.userId || req.jwtDecoded?.userId
 
+/**
+ * HÀM 1: getDashboard
+ * TÁC DỤNG: Lấy dữ liệu báo cáo tổng quan dành riêng cho ca trực bảo vệ (Số xe đang gửi, số ô đỗ trống, số sự cố đang mở).
+ * 
+ * @route GET /api/staff/dashboard
+ * @access Staff Only (Chỉ bảo vệ ca trực)
+ */
 export async function getDashboard(req, res, next) {
     try {
+        // GỌI SERVICE LẤY DASHBOARD BẢO VỆ:
+        // LIÊN KẾT: Gọi hàm `staffService.getDashboard()` trong `BE/src/services/staffService.js`.
         const data = await staffService.getDashboard()
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
@@ -33,8 +41,26 @@ export async function getDashboard(req, res, next) {
     }
 }
 
+export async function getGates(req, res, next) {
+    try {
+        const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null;
+        const data = await staffService.getGates(buildingId);
+        res.status(StatusCodes.OK).json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+}
+
+/**
+ * HÀM 2: getParkingMap
+ * TÁC DỤNG: Lấy sơ đồ bãi đỗ xe đa tầng theo thời gian thực (hỗ trợ lọc theo Tòa nhà, Tầng, Loại xe, Trạng thái).
+ * 
+ * @route GET /api/staff/parking-map?buildingId=1&floorId=2
+ * @access Staff Only
+ */
 export async function getParkingMap(req, res, next) {
     try {
+        // Lấy tất cả tham số lọc từ URL query string (`req.query`)
         const data = await staffService.getParkingMap(req.query)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
@@ -42,10 +68,17 @@ export async function getParkingMap(req, res, next) {
     }
 }
 
+/**
+ * HÀM 3: updateSlotStatus
+ * TÁC DỤNG: Bảo vệ thay đổi trạng thái ô đỗ xe bằng tay (Ví dụ: Chuyển ô đỗ sang 'Maintenance' khi bị hỏng hoặc 'Blocked' khi bảo trì).
+ * 
+ * @route PUT /api/staff/slots/:slotId/status
+ * @access Staff Only
+ */
 export async function updateSlotStatus(req, res, next) {
     try {
-        const { slotId } = req.params
-        const { slotStatus } = req.body
+        const { slotId } = req.params // Lấy ID ô đỗ từ đường dẫn URL
+        const { slotStatus } = req.body // Lấy trạng thái mới từ req.body (Maintenance / Available / Blocked)
         const data = await staffService.updateSlotStatus(slotId, slotStatus)
         res.status(StatusCodes.OK).json({
             success: true,
@@ -57,8 +90,17 @@ export async function updateSlotStatus(req, res, next) {
     }
 }
 
+/**
+ * HÀM 4: checkInWalkIn
+ * TÁC DỤNG: Thực hiện Check-in cho xe vãng lai (khách không đặt chỗ trước).
+ * Khởi tạo phiên đỗ xe mới trong bảng `ParkingSessions` và đổi trạng thái ô đỗ thành 'Occupied'.
+ * 
+ * @route POST /api/staff/check-in/walk-in
+ * @access Staff Only
+ */
 export async function checkInWalkIn(req, res, next) {
     try {
+        // Truyền body chứa biển số, loại xe, mã slotId cho service xử lý
         const data = await staffService.checkInWalkIn(req.body)
         res.status(StatusCodes.CREATED).json({
             success: true,
@@ -70,6 +112,13 @@ export async function checkInWalkIn(req, res, next) {
     }
 }
 
+/**
+ * HÀM 5: getBookings
+ * TÁC DỤNG: Tra cứu danh sách các lịch Đặt chỗ đỗ trước (Reservations) đang chờ xe tới bãi.
+ * 
+ * @route GET /api/staff/bookings?status=Reserved
+ * @access Staff Only
+ */
 export async function getBookings(req, res, next) {
     try {
         const data = await staffService.getBookings(req.query)
@@ -79,6 +128,13 @@ export async function getBookings(req, res, next) {
     }
 }
 
+/**
+ * HÀM 6: getBookingDetail
+ * TÁC DỤNG: Xem thông tin chi tiết của một mã đặt chỗ trước (Thông tin tài xế, thời gian đăng ký đỗ).
+ * 
+ * @route GET /api/staff/bookings/:reservationId
+ * @access Staff Only
+ */
 export async function getBookingDetail(req, res, next) {
     try {
         const { reservationId } = req.params
@@ -89,26 +145,40 @@ export async function getBookingDetail(req, res, next) {
     }
 }
 
-// 🅿️ LUỒNG STAFF CHECK-IN [BƯỚC 4/7]: Controller tiếp nhận & bóc tách dữ liệu
+/**
+ * HÀM 7: checkInBooking
+ * TÁC DỤNG: Xác nhận Check-in cho xe đã đặt chỗ trước.
+ * Đổi trạng thái lịch đặt chỗ từ 'Reserved' thành 'Completed' và khởi tạo phiên đỗ xe Active.
+ * 
+ * @route POST /api/staff/bookings/:reservationId/check-in
+ * @access Staff Only
+ */
 export async function checkInBooking(req, res, next) {
     try {
-        const { reservationId } = req.params // 💡 req.params: Lấy ID trên đường dẫn URL (/bookings/:reservationId/check-in)
-        const { plateNumber } = req.body     // 💡 req.body: Lấy dữ liệu gửi ẩn trong body JSON ({ plateNumber })
+        const { reservationId } = req.params // Lấy ID mã đặt chỗ từ URL
+        const { plateNumber } = req.body     // Biển số xe quét được tại cổng vào
         
-        // ➡️ BƯỚC TIẾP THEO: Nhảy sang BE/src/services/staffService.js ➔ Gọi hàm checkInBooking(reservationId, plateNumber)
+        // Gọi service xử lý chuyển đổi đặt trước thành phiên đỗ xe hoạt động
         const data = await staffService.checkInBooking(reservationId, plateNumber)
         
-        // ➡️ HOÀN TẤT BACKEND: Trả về HTTP 201 Created cùng kết quả JSON về lại cho Frontend qua Axios
+        // Trả về kết quả HTTP 201 Created
         res.status(StatusCodes.CREATED).json({
             success: true,
             message: 'Check-in booking thành công.',
             data
         })
     } catch (error) {
-        next(error) // 💡 next(error): Chuyển lỗi về errorHandlingMiddleware xử lý tập trung
+        next(error)
     }
 }
 
+/**
+ * HÀM 8: cancelAndWalkIn
+ * TÁC DỤNG: Xử lý trường hợp khách đến sai giờ đặt trước -> Hủy đơn đặt trước và chuyển xe sang đỗ theo dạng Vãng lai (Walk-in).
+ * 
+ * @route POST /api/staff/bookings/:reservationId/cancel-and-walk-in
+ * @access Staff Only
+ */
 export async function cancelAndWalkIn(req, res, next) {
     try {
         const { reservationId } = req.params
@@ -124,6 +194,13 @@ export async function cancelAndWalkIn(req, res, next) {
     }
 }
 
+/**
+ * HÀM 9: searchSessions
+ * TÁC DỤNG: Tìm kiếm các phiên đỗ xe theo từ khóa biển số xe, mã phiên, ngày vào/ra.
+ * 
+ * @route GET /api/staff/sessions/search?keyword=29A12345
+ * @access Staff Only
+ */
 export async function searchSessions(req, res, next) {
     try {
         const data = await staffService.searchSessions(req.query)
@@ -131,6 +208,13 @@ export async function searchSessions(req, res, next) {
     } catch (err) { next(err) }
 }
 
+/**
+ * HÀM 10: getActiveSessions
+ * TÁC DỤNG: Lấy danh sách toàn bộ các xe đang có mặt đỗ trong bãi (`SessionStatus = 'Active'`).
+ * 
+ * @route GET /api/staff/sessions/active
+ * @access Staff Only
+ */
 export async function getActiveSessions(req, res, next) {
     try {
         const data = await staffService.searchSessions({
@@ -143,6 +227,13 @@ export async function getActiveSessions(req, res, next) {
     }
 }
 
+/**
+ * HÀM 11: getCheckoutPreview
+ * TÁC DỤNG: Xem trước bảng tính phí đỗ xe trước khi bấm cho xe ra (Xem tổng số giờ đỗ, phí tạm tính, phí phạt quá giờ nếu có).
+ * 
+ * @route GET /api/staff/sessions/:sessionId/checkout-preview
+ * @access Staff Only
+ */
 export async function getCheckoutPreview(req, res, next) {
     try {
         const { sessionId } = req.params
@@ -153,6 +244,14 @@ export async function getCheckoutPreview(req, res, next) {
     }
 }
 
+/**
+ * HÀM 12: checkOutSession
+ * TÁC DỤNG: Cho xe rời khỏi bãi đỗ xe (Check-out).
+ * Gọi Stored Procedure `sp_CheckOutVehicle` hoặc `sp_CheckOutWithSurcharge` để cập nhật ExitTime=GETDATE(), tính tổng tiền và giải phóng vị trí đỗ.
+ * 
+ * @route POST /api/staff/sessions/:sessionId/checkout
+ * @access Staff Only
+ */
 export async function checkOutSession(req, res, next) {
     try {
         const { sessionId } = req.params
@@ -167,6 +266,13 @@ export async function checkOutSession(req, res, next) {
     }
 }
 
+/**
+ * HÀM 13: confirmSurcharge
+ * TÁC DỤNG: Xác nhận bảo vệ đã thu đủ số tiền phụ trội (Surcharge) từ tài xế gửi quá giờ.
+ * 
+ * @route POST /api/staff/sessions/:sessionId/confirm-surcharge
+ * @access Staff Only
+ */
 export async function confirmSurcharge(req, res, next) {
     try {
         const { sessionId } = req.params
@@ -182,11 +288,19 @@ export async function confirmSurcharge(req, res, next) {
     }
 }
 
+/**
+ * HÀM 14: createIncident
+ * TÁC DỤNG: Lập biên bản sự cố xảy ra tại bãi đỗ (Mất vé/Mất thẻ, va quẹt xe, đỗ sai vị trí quy định,...).
+ * Giới hạn tối đa 15 tệp ảnh đính kèm minh chứng.
+ * 
+ * @route POST /api/staff/incidents
+ * @access Staff Only
+ */
 export async function createIncident(req, res, next) {
     try {
         const staffId = getUserId(req)
 
-        // Validate attachments size nếu có
+        // RÀNG BUỘC KÍCH THƯỚC FILE ĐÍNH KÈM:
         const { attachments } = req.body
         if (attachments && Array.isArray(attachments) && attachments.length > 15) {
             return res.status(StatusCodes.BAD_REQUEST).json({
@@ -196,6 +310,7 @@ export async function createIncident(req, res, next) {
             })
         }
 
+        // Gọi service tạo bản ghi sự cố trong bảng Incidents
         const data = await staffService.createIncident({
             ...req.body,
             staffId
@@ -211,6 +326,13 @@ export async function createIncident(req, res, next) {
     }
 }
 
+/**
+ * HÀM 15: getIncidents
+ * TÁC DỤNG: Lấy danh sách các sự cố trong bãi (hỗ trợ lọc theo trạng thái Open/InProgress/Resolved).
+ * 
+ * @route GET /api/staff/incidents
+ * @access Staff Only
+ */
 export async function getIncidents(req, res, next) {
     try {
         const data = await staffService.getIncidents(req.query)
@@ -220,6 +342,13 @@ export async function getIncidents(req, res, next) {
     }
 }
 
+/**
+ * HÀM 16: getIncidentById
+ * TÁC DỤNG: Xem thông tin chi tiết một sự cố kèm danh sách hình ảnh đính kèm và lịch sử xử lý.
+ * 
+ * @route GET /api/staff/incidents/:incidentId
+ * @access Staff Only
+ */
 export async function getIncidentById(req, res, next) {
     try {
         const { incidentId } = req.params
@@ -228,11 +357,17 @@ export async function getIncidentById(req, res, next) {
     } catch (error) { next(error) }
 }
 
+/**
+ * HÀM 17: updateIncidentStatus
+ * TÁC DỤNG: Bảo vệ cập nhật tiến độ giải quyết sự cố (Chuyển trạng thái sang InProgress hoặc Resolved/Closed).
+ * 
+ * @route PUT /api/staff/incidents/:incidentId/status
+ * @access Staff Only
+ */
 export async function updateIncidentStatus(req, res, next) {
     try {
         const { incidentId } = req.params
 
-        // Validate attachments nếu có
         const { attachments } = req.body
         if (attachments && Array.isArray(attachments) && attachments.length > 15) {
             return res.status(StatusCodes.BAD_REQUEST).json({
@@ -251,6 +386,13 @@ export async function updateIncidentStatus(req, res, next) {
     } catch (error) { next(error) }
 }
 
+/**
+ * HÀM 18: getProfile
+ * TÁC DỤNG: Lấy thông tin cá nhân và ca trực của Nhân viên bảo vệ đang đăng nhập.
+ * 
+ * @route GET /api/staff/profile
+ * @access Staff Only
+ */
 export async function getProfile(req, res, next) {
     try {
         const staffId = getUserId(req)
@@ -261,6 +403,13 @@ export async function getProfile(req, res, next) {
     }
 }
 
+/**
+ * HÀM 19: getVehicleTypes
+ * TÁC DỤNG: Lấy danh sách loại xe phục vụ form cho xe vào bãi tại trạm bảo vệ.
+ * 
+ * @route GET /api/staff/vehicle-types
+ * @access Staff Only
+ */
 export async function getVehicleTypes(req, res, next) {
     try {
         const data = await staffService.getVehicleTypes()
@@ -270,6 +419,13 @@ export async function getVehicleTypes(req, res, next) {
     }
 }
 
+/**
+ * HÀM 20: getSlotDetail
+ * TÁC DỤNG: Tra cứu thông tin chi tiết một ô đỗ xe theo SlotCode (ví dụ 'A-101').
+ * 
+ * @route GET /api/staff/slots/:slotCode
+ * @access Staff Only
+ */
 export async function getSlotDetail(req, res, next) {
     try {
         const { slotCode } = req.params
@@ -279,6 +435,14 @@ export async function getSlotDetail(req, res, next) {
         next(err)
     }
 }
+
+/**
+ * HÀM 21: getPendingPayments
+ * TÁC DỤNG: Lấy danh sách các xe đang chờ thanh toán tiền tại trạm bảo vệ.
+ * 
+ * @route GET /api/staff/pending-payments
+ * @access Staff Only
+ */
 export async function getPendingPayments(req, res, next) {
     try {
         const { keyword, fromDate, toDate, vehicleTypeId } = req.query
@@ -294,10 +458,18 @@ export async function getPendingPayments(req, res, next) {
         next(err)
     }
 }
+
+/**
+ * HÀM 22: getPaymentHistory
+ * TÁC DỤNG: Xem lịch sử thanh toán của một tài xế theo driverId.
+ * 
+ * @route GET /api/staff/drivers/:driverId/payments
+ * @access Staff Only
+ */
 export async function getPaymentHistory(req, res, next) {
     try {
         const driverId = Number(req.params.driverId)
         const data = await staffService.getPaymentHistory(driverId)
         res.status(200).json({ success: true, data })
     } catch (err) { next(err) }
-}
+}

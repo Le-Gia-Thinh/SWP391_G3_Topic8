@@ -1,42 +1,34 @@
 /**
  * FILE: sessionController.js
- * MÔ TẢ: Controller xử lý các phiên đỗ xe thực tế (Parking Sessions - Check-in / Check-out).
- * 
- * ĐIỂM KHÁC BIỆT NỔI BẬT SO VỚI LUỒNG THÊM XE (VEHICLE):
- * 1. Tự động tính tiền đỗ xe theo thời gian thực (Real-time Fee Calculation):
- *    - Gọi Stored Procedure `sp_CalcParkingFeeV2` trong SQL.
- *    - Tự động áp dụng giảm giá gói hội viên (Subscription Discount).
- *    - Tự động tính phạt đỗ quá giờ (Overtime Penalty).
- * 2. Phù hợp cho cả Bảo vệ (Staff check-in/out tại cổng) và Tài xế (Driver theo dõi phiên đỗ).
- * 
- * Các chức năng trong file:
- * - getSessions: Lấy tất cả các phiên đỗ xe trong bãi.
- * - checkInVehicle: Cho xe vào bãi (Tạo phiên đỗ mới & đổi trạng thái slot thành Occupied).
- * - checkOutVehicle: Cho xe ra khỏi bãi (Tính tiền, trừ tiền ví/tiền mặt, đổi slot thành Available).
- * - getCurrentDriverSession: Lấy phiên đỗ xe đang hoạt động của tài xế (1 phiên).
- * - getCurrentDriverSessions: Lấy tất cả các phiên đỗ xe đang đỗ trong bãi của tài xế.
- * 
- * @access Driver, Staff, Manager
+ * MÔ TẢ: Controller xử lý các phiên đỗ xe thực tế (Parking Sessions) tại cổng bãi và hiển thị trạng thái xe cho Tài xế.
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. Thuật toán tính phí thời gian thực (`calculateEstimatedFee`):
+ *    - Tự động gọi Stored Procedure `sp_CalcParkingFeeV2` để tính tiền cơ bản theo khung giờ.
+ *    - Áp dụng ưu đãi giảm giá nếu tài xế có Đăng ký gói hội viên (`applySubscriptionDiscount`).
+ *    - Tự động cộng Phí vào sớm (`EarlyFeeAmount`) và Phí phạt quá giờ (`Overtime Penalty`) nếu xe gửi quá hạn Booking.
+ * 2. Luồng Check-in (`checkInVehicle`): Tạo phiên đỗ xe mới (`SessionStatus = 'Active'`), gán thời gian `EntryTime = GETDATE()` và cập nhật ô đỗ thành 'Occupied'.
+ * 3. Luồng Check-out (`checkOutVehicle`): Ghi nhận `ExitTime = GETDATE()`, chốt tổng tiền hóa đơn, thực hiện trừ số dư Ví/Thu tiền mặt và đổi trạng thái ô đỗ thành 'Available'.
  */
-/*
-hieu
-*/
 
-import { getPool, sql } from "../config/db.js"; // Kết nối SQL Server Database
-import * as sessionService from "../services/sessionService.js"; // Service xử lý nghiệp vụ Check-in / Check-out
-import { applySubscriptionDiscount } from "../services/paymentService.js"; // Service tính giảm giá gói hội viên
+// Import hàm `getPool` kết nối SQL Server và đối tượng kiểu dữ liệu `sql` từ cấu hình 'BE/src/config/db.js'
+import { getPool, sql } from "../config/db.js";
+// Import các dịch vụ xử lý Check-in / Check-out từ 'BE/src/services/sessionService.js'
+// LIÊN KẾT FILE: `BE/src/services/sessionService.js` - Gọi các thủ tục SQL Server `sp_CheckInVehicle` và `sp_CheckOutVehicle`.
+import * as sessionService from "../services/sessionService.js";
+// Import hàm tính giảm giá gói hội viên từ 'BE/src/services/paymentService.js'
+import { applySubscriptionDiscount } from "../services/paymentService.js";
 
 /**
- * Hàm helper: Lấy HTTP status code từ error object.
- * @param {Error} err - Đối tượng lỗi
- * @returns {number} HTTP status code
+ * HÀM HELPER 1: getErrorStatus
+ * TÁC DỤNG: Lấy mã lỗi HTTP Status Code từ đối tượng Error (Mặc định 500 nếu là lỗi server không xác định).
  */
 function getErrorStatus(err) {
   return err.status || err.statusCode || 500;
 }
 
 /**
- * Hàm helper: Gửi response lỗi client (4xx). Trả null nếu lỗi server (5xx).
+ * HÀM HELPER 2: sendClientError
+ * TÁC DỤNG: Phản hồi lỗi Client (4xx) trực tiếp về cho ứng dụng Frontend.
  */
 function sendClientError(res, err) {
   const status = getErrorStatus(err);
@@ -47,33 +39,36 @@ function sendClientError(res, err) {
 }
 
 /**
- * Hàm helper nội bộ: Lấy ID tài xế từ Token của request.
+ * HÀM HELPER 3: getUserIdFromToken
+ * TÁC DỤNG: Lấy an toàn ID tài xế từ đối tượng Token JWT (`req.user`).
  */
 function getUserIdFromToken(req) {
   return req.user?.UserID || req.user?.userId || req.user?.id;
 }
 
 /**
- * HÀM TOÁN HỌC QUAN TRỌNG: Tính phí tạm tính (real-time estimated fee) cho xe đang đỗ trong bãi.
- * Tính toán bao gồm: Phí đỗ cơ bản (Stored Proc) - Giảm giá Hội viên + Phí vào sớm + Phí phạt quá giờ.
+ * HÀM NỘI BỘ NỔI BẬT: calculateEstimatedFee
+ * TÁC DỤNG: Tự động tính toán số tiền tạm tính thời gian thực (Real-time Estimated Fee) cho xe đang nằm trong bãi đỗ.
+ * CÔNG THỨC TÍNH:
+ *   [Tổng Phí Tạm Tính] = ([Phí Đỗ Gốc sp_CalcParkingFeeV2] - [Giảm Giá Vé Tháng]) + [Phí Vào Sớm] + [Phí Phạt Quá Giờ]
  */
 async function calculateEstimatedFee(pool, driverId, session) {
   try {
-    // 1. Gọi Stored Procedure sp_CalcParkingFeeV2 để tính phí đỗ xe theo khung giờ
+    // 1. Gọi Stored Procedure `sp_CalcParkingFeeV2` trong SQL Server để tính phí đỗ xe theo block giờ
     const feeRes = await pool.request()
       .input('VehicleTypeID', sql.Int, session.VehicleTypeID)
       .input('EntryTime', sql.DateTime, session.EntryTime)
-      .input('ExitTime', sql.DateTime, new Date())
+      .input('ExitTime', sql.DateTime, new Date()) // Giờ chốt giả định là Thời điểm hiện tại (GETDATE)
       .output('Fee', sql.Decimal(10, 2))
       .output('Breakdown', sql.NVarChar(sql.MAX))
       .execute('sp_CalcParkingFeeV2');
 
     const baseFee = feeRes.output.Fee || 0;
     
-    // Áp dụng giảm giá gói hội viên (nếu tài xế có mua gói Pro/Premium)
+    // Áp dụng giảm giá gói hội viên (nếu tài xế sở hữu gói vé tháng active)
     const { finalFee } = await applySubscriptionDiscount(pool, driverId, baseFee, session.SessionID);
 
-    // 2. Tính phí vào bãi sớm (Early Check-in Surcharge)
+    // 2. Tính phí phụ thu nếu tài xế vào bãi quá sớm so với giờ đặt (Early Check-in Surcharge)
     const now = new Date();
     const durationMin = Math.floor((now.getTime() - new Date(session.EntryTime).getTime()) / 60000);
     const earlyFeeAmount = Number(session.EarlyFeeAmount || 0);
@@ -81,21 +76,22 @@ async function calculateEstimatedFee(pool, driverId, session) {
     const isEarlyExit = !!(bookingStart && now < bookingStart && durationMin < 30 && earlyFeeAmount > 0);
     const effectiveEarlyFee = isEarlyExit ? 0 : earlyFeeAmount;
 
-    // 3. Tính phí phạt đỗ quá giờ (Overtime Penalty) nếu quá hạn Booking
+    // 3. Tính phí phạt đỗ quá giờ (Overtime Penalty) nếu xe đỗ vượt quá BookingEndTime
     const bookingEnd = session.BookingEndTime ? new Date(session.BookingEndTime) : null;
     let overtimePenaltyAmount = 0;
     let overtimeHours = 0;
     if (bookingEnd && now > bookingEnd) {
+      // Làm tròn lên số giờ đỗ quá hạn (Math.ceil)
       overtimeHours = Math.ceil((now.getTime() - bookingEnd.getTime()) / 1000 / 60 / 60);
       if (overtimeHours > 0) {
         const vType = Number(session.VehicleTypeID);
-        if (vType === 1) overtimePenaltyAmount = 10000 + (overtimeHours * 5000);       // Xe máy
-        else if (vType === 2) overtimePenaltyAmount = 50000 + (overtimeHours * 20000);  // Ô tô
-        else if (vType === 3) overtimePenaltyAmount = 100000 + (overtimeHours * 40000); // Xe tải / khác
+        if (vType === 1) overtimePenaltyAmount = 10000 + (overtimeHours * 5000);       // Xe máy (Phạt 10k + 5k/h)
+        else if (vType === 2) overtimePenaltyAmount = 50000 + (overtimeHours * 20000);  // Ô tô (Phạt 50k + 20k/h)
+        else if (vType === 3) overtimePenaltyAmount = 100000 + (overtimeHours * 40000); // Xe tải / Xe khác (Phạt 100k + 40k/h)
       }
     }
 
-    // Tổng chi phí tạm tính
+    // Tổng số tiền tạm tính
     const totalFee = finalFee + effectiveEarlyFee + overtimePenaltyAmount;
 
     return {
@@ -115,10 +111,13 @@ async function calculateEstimatedFee(pool, driverId, session) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 1. LẤY TẤT CẢ PHIÊN ĐỖ XE IN THE SYSTEM
-// Method: GET /api/sessions
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 1: getSessions
+ * TÁC DỤNG: Lấy danh sách tất cả các phiên đỗ xe trong bãi (Phục vụ Quản lý/Bảo vệ).
+ * 
+ * @route GET /api/sessions
+ * @access Staff / Manager / Admin
+ */
 export async function getSessions(req, res, next) {
   try {
     const data = await sessionService.getSessions();
@@ -126,13 +125,17 @@ export async function getSessions(req, res, next) {
   } catch (err) { next(err); }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 2. CHECK-IN CHO XE VÀO BÃI
-// Method: POST /api/sessions/check-in (Do Bảo vệ Staff quét mã)
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 2: checkInVehicle
+ * TÁC DỤNG: Bảo vệ thực hiện Check-in cho xe vào bãi đỗ.
+ * Đổi trạng thái ô đỗ thành 'Occupied' và khởi tạo bản ghi trong bảng `ParkingSessions`.
+ * 
+ * @route POST /api/sessions/check-in
+ * @access Staff Only
+ */
 export async function checkInVehicle(req, res, next) {
   try {
-    // Gọi Service kiểm tra mã booking / biển số, cập nhật vị trí đỗ thành Occupied
+    // Gọi Service xử lý nghiệp vụ Check-in
     const data = await sessionService.checkInVehicle(req);
 
     return res.status(201).json({
@@ -147,13 +150,16 @@ export async function checkInVehicle(req, res, next) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 3. CHECK-OUT CHO XE RA KHỎI BÃI
-// Method: POST /api/sessions/check-out (Do Bảo vệ Staff thực hiện)
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 3: checkOutVehicle
+ * TÁC DỤNG: Cho xe rời khỏi bãi đỗ xe (Check-out).
+ * Cập nhật giờ ra `ExitTime`, chốt hóa đơn thanh toán và giải phóng vị trí ô đỗ về trạng thái 'Available'.
+ * 
+ * @route POST /api/sessions/check-out
+ * @access Staff Only
+ */
 export async function checkOutVehicle(req, res, next) {
   try {
-    // Gọi Service chốt giờ ra ExitTime, tính tổng tiền, trừ ví tài xế và mở lại chỗ đỗ trống
     const data = await sessionService.checkOutVehicle(req);
 
     return res.json({
@@ -168,10 +174,13 @@ export async function checkOutVehicle(req, res, next) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 4. LẤY PHIÊN ĐỖ XE ĐANG HOẠT ĐỘNG CỦA TÀI XẾ (1 Phiên mới nhất)
-// Method: GET /api/sessions/driver/current
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 4: getCurrentDriverSession
+ * TÁC DỤNG: Lấy 1 phiên đỗ xe đang đỗ mới nhất của tài xế đang đăng nhập để hiển thị trên màn hình chính Mobile App.
+ * 
+ * @route GET /api/sessions/driver/current
+ * @access Driver Only
+ */
 export async function getCurrentDriverSession(req, res, next) {
   try {
     const driverId = getUserIdFromToken(req);
@@ -185,7 +194,7 @@ export async function getCurrentDriverSession(req, res, next) {
 
     const pool = await getPool();
 
-    // Query SQL lấy phiên đỗ xe có SessionStatus = 'Active' và ExitTime IS NULL
+    // Truy vấn SQL lấy phiên xe đang gửi trong bãi (SessionStatus = 'Active' và ExitTime IS NULL)
     const result = await pool
       .request()
       .input("DriverID", sql.Int, driverId)
@@ -252,13 +261,14 @@ export async function getCurrentDriverSession(req, res, next) {
       });
     }
 
-    // Tính thời gian đỗ thực tế và số tiền tạm tính real-time
+    // Tự động tính số phút đã đỗ và gọi hàm `calculateEstimatedFee` để tính tiền tạm tính thời gian thực
     const minutes = Number(session.ParkedMinutes || 0);
     let est = { Amount: session.Amount, ParkingFee: session.Amount, OvertimeFee: 0, OtherFee: 0 };
     if (session.SessionStatus === "Active" && !session.Amount) {
       est = await calculateEstimatedFee(pool, driverId, session);
     }
 
+    // Trả về JSON phiên đỗ xe kèm chuỗi định dạng thời lượng đỗ (ví dụ '2 giờ 15 phút')
     return res.json({
       success: true,
       data: {
@@ -275,10 +285,13 @@ export async function getCurrentDriverSession(req, res, next) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 5. LẤY TẤT CẢ PHIÊN ĐỖ XE ĐANG ĐỖ CỦA TÀI XẾ
-// Method: GET /api/sessions/driver/current-all
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 5: getCurrentDriverSessions
+ * TÁC DỤNG: Lấy danh sách TOÀN BỘ các xe mà tài xế đang gửi đồng thời trong bãi (Phù hợp trường hợp tài xế gửi nhiều xe cùng lúc).
+ * 
+ * @route GET /api/sessions/driver/current-all
+ * @access Driver Only
+ */
 export async function getCurrentDriverSessions(req, res, next) {
   try {
     const driverId = getUserIdFromToken(req);
@@ -292,6 +305,7 @@ export async function getCurrentDriverSessions(req, res, next) {
 
     const pool = await getPool();
 
+    // Truy vấn tất cả các phiên đỗ xe đang active của tài xế
     const result = await pool
       .request()
       .input("DriverID", sql.Int, driverId)
@@ -349,6 +363,7 @@ export async function getCurrentDriverSessions(req, res, next) {
         ORDER BY s.EntryTime DESC;
       `);
 
+    // Duyệt qua mảng phiên đỗ và tính tiền tạm tính cho từng xe bằng `Promise.all`
     const sessions = await Promise.all(
       result.recordset.map(async (session) => {
         const minutes = Number(session.ParkedMinutes || 0);
@@ -377,3 +392,4 @@ export async function getCurrentDriverSessions(req, res, next) {
     next(err);
   }
 }
+

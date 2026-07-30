@@ -41,7 +41,7 @@ async function main() {
           UPDATE Users
           SET PasswordHash = @PasswordHash,
               IsActive = 1,
-              IsEmailVerified = 0,
+              IsEmailVerified = 1,
               UpdatedAt = GETDATE()
           WHERE Email = @Email
         `);

@@ -111,9 +111,18 @@ export const updateSlotAPI = (id, data) => // { slotCode?, vehicleTypeId?, slotS
 export const deleteSlotAPI = (id) =>
   authorizeAxios.delete(`${BASE}/slots/${id}`)
 
-/* ── Audit Logs ──────────────────────────────────────────────── */
-// params: { userId?, action?, fromDate?, toDate?, page?, pageSize?, search? }
-// Lưu ý: backend hiện chưa hỗ trợ lọc `search` full-text trên AuditLogs (chỉ filter theo userId/action/khoảng ngày).
-// Nếu cần tìm theo UserName/Description, lọc tạm phía client (xem AdminAuditLog.jsx).
 export const getAuditLogsAPI = (params = {}) =>
   authorizeAxios.get(`${BASE}/audit-logs`, { params })
+
+/* ── Building Assignments & Staff Transfer ────────────────────── */
+export const getBuildingAssignmentsAPI = (buildingId) =>
+  authorizeAxios.get(`${BASE}/buildings/${buildingId}/assignments`)
+
+export const assignUserToBuildingAPI = (data) => // { buildingId, userId, isPrimary? }
+  authorizeAxios.post(`${BASE}/assignments`, data)
+
+export const removeBuildingAssignmentAPI = (id) =>
+  authorizeAxios.delete(`${BASE}/assignments/${id}`)
+
+export const transferStaffAPI = (data) => // { userId, fromBuildingId?, toBuildingId, isPrimary? }
+  authorizeAxios.post(`${BASE}/staff/transfer`, data)

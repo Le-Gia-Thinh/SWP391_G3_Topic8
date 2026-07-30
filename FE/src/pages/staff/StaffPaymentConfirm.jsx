@@ -245,7 +245,17 @@ const StaffPaymentConfirm = () => {
     if (!confirmedPlate) return toast.warning(t('staff.paymentConfirm.toastWarnPlate'))
     setProcessing(true)
     try {
-      await staffApi.checkOutSession(paramId, { paymentMethod: 'Cash', confirmedPlate: true })
+      let activeGate = null
+      try {
+        const saved = localStorage.getItem('staff_active_gate')
+        if (saved) activeGate = JSON.parse(saved)
+      } catch {}
+      await staffApi.checkOutSession(paramId, {
+        paymentMethod: 'Cash',
+        confirmedPlate: true,
+        gateOutId: activeGate?.GateID || null,
+        gateOut: activeGate?.GateName || null
+      })
       toast.success(t('staff.paymentConfirm.toastCashSuccess'))
       navigate('/staff/checkout-completed', {
         state: {
@@ -292,7 +302,17 @@ const StaffPaymentConfirm = () => {
 
   const handleQrPaid = async () => {
     try {
-      await staffApi.checkOutSession(paramId, { paymentMethod: 'Banking', confirmedPlate: true })
+      let activeGate = null
+      try {
+        const saved = localStorage.getItem('staff_active_gate')
+        if (saved) activeGate = JSON.parse(saved)
+      } catch {}
+      await staffApi.checkOutSession(paramId, {
+        paymentMethod: 'Banking',
+        confirmedPlate: true,
+        gateOutId: activeGate?.GateID || null,
+        gateOut: activeGate?.GateName || null
+      })
       toast.success(t('staff.paymentConfirm.toastQrSuccess'))
       navigate('/staff/checkout-completed', {
         state: {

@@ -1,39 +1,40 @@
 /**
  * FILE: vehicleController.js
- * MÔ TẢ: Controller xử lý tất cả các thao tác liên quan đến Phương tiện (Vehicles) của Tài xế (Driver).
- * 
- * Các chức năng chính trong file:
- * 1. getDriverVehicles: Lấy danh sách các xe đang hoạt động của tài xế.
- * 2. addDriverVehicle: Thêm một phương tiện mới (tự đặt làm mặc định nếu là xe đầu tiên).
- * 3. updateDriverVehicle: Cập nhật biển số, loại xe, hãng xe, màu xe.
- * 4. deleteDriverVehicle: Xóa phương tiện (Xóa mềm - Soft Delete: IsActive = 0).
- * 5. setDefaultVehicle: Đặt một xe làm phương tiện mặc định (xử lý giới hạn theo gói hội viên & SQL Transaction).
- * 6. toggleVIPVehicle: Bật/Tắt trạng thái xe VIP (Tối đa 2 xe VIP, không cho đổi khi xe đang đỗ).
- * 
- * @access Driver only (Dành riêng cho quyền Tài xế)
+ * MÔ TẢ: Controller xử lý tất cả các thao tác CRUD và quản lý tính năng nâng cao liên quan đến Phương tiện (DriverVehicles) của Tài xế.
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. `getDriverVehicles`: Truy vấn danh sách xe active (`IsActive = 1`), tự động sắp xếp xe mặc định (`IsDefault = 1`) lên vị trí đầu tiên.
+ * 2. `addDriverVehicle`: Thêm xe mới (kiểm tra chuẩn hóa biển số Regex, trùng lặp biển số; nếu là xe đầu tiên thì tự động chọn làm mặc định).
+ * 3. `updateDriverVehicle`: Cập nhật biển số, loại xe, hãng xe, màu sắc (xác minh quyền sở hữu và không trùng biển số xe khác).
+ * 4. `deleteDriverVehicle`: Xóa phương tiện theo cơ chế Soft Delete (`IsActive = 0`) để bảo toàn lịch sử giao dịch và phiên gửi xe cũ.
+ * 5. `setDefaultVehicle`: Thiết lập xe mặc định (Áp dụng SQL Transaction rollback nếu lỗi, giới hạn theo gói Premium=2 xe, gói khác=1 xe, không cho đổi khi xe đang đỗ).
+ * 6. `toggleVIPVehicle`: Đăng ký/Hủy trạng thái Xe VIP (Giới hạn tối đa 2 xe VIP/tài xế, ngăn chặn đổi khi xe đang active trong bãi).
  */
-/*
-hieu
-*/
 
-import { getPool, sql } from "../config/db.js"; // Kết nối tới Database SQL Server
+// Import hàm `getPool` kết nối Database và đối tượng dữ liệu `sql` từ cấu hình 'BE/src/config/db.js'
+import { getPool, sql } from "../config/db.js";
 
 /**
- * Hàm helper nội bộ: Lấy UserID (ID tài xế) từ đối tượng request (được gán từ middleware isAuthorized).
- * @param {Object} req - Express request
+ * HÀM HELPER NỘI BỘ: getUserIdFromToken
+ * TÁC DỤNG: Lấy an toàn UserID từ đối tượng request (do Middleware JWT authMiddleware gán vào).
+ * 
+ * @param {Object} req - Express request object
  * @returns {number|null} ID của tài xế
  */
 function getUserIdFromToken(req) {
   return req.user?.UserID || req.user?.userId || req.user?.id;
 }
 
-// ─────────────────────────────────────────────────────────────
-// 1. CHỨC NĂNG: LẤY DANH SÁCH XE CỦA TÀI XẾ
-// Method: GET /api/driver/vehicles
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 1: getDriverVehicles
+ * TÁC DỤNG: Lấy danh sách tất cả phương tiện đang hoạt động (`IsActive = 1`) của tài xế đang đăng nhập.
+ * CÚ PHÁP SQL: `ORDER BY dv.IsDefault DESC, dv.CreatedAt DESC` -> Đưa xe mặc định lên đầu danh sách.
+ * 
+ * @route GET /api/driver/vehicles
+ * @access Driver Only (Chỉ dành riêng cho tài xế)
+ */
 export async function getDriverVehicles(req, res, next) {
   try {
-    // Bước 1: Định danh tài xế từ Token
+    // Định danh tài xế từ Token JWT
     const driverId = getUserIdFromToken(req);
 
     if (!driverId) {
@@ -43,10 +44,10 @@ export async function getDriverVehicles(req, res, next) {
       });
     }
 
-    // Bước 2: Kết nối Database SQL
+    // Kết nối Database SQL Server
     const pool = await getPool();
 
-    // Bước 3: Truy vấn SQL lấy danh sách xe active (IsActive = 1), ưu tiên xe mặc định lên đầu
+    // Truy vấn danh sách xe active, JOIN với bảng VehicleTypes để lấy tên loại xe
     const result = await pool
       .request()
       .input("DriverID", sql.Int, driverId)
@@ -70,23 +71,28 @@ export async function getDriverVehicles(req, res, next) {
         ORDER BY dv.IsDefault DESC, dv.CreatedAt DESC
       `);
 
-    // Bước 4: Trả danh sách xe về cho Frontend
+    // Trả về danh sách xe cho Frontend
     return res.json({
       success: true,
       data: result.recordset,
     });
   } catch (err) {
-    next(err); // Ném lỗi xuống middleware xử lý lỗi chung
+    next(err); // Chuyển lỗi xuống Middleware xử lý lỗi tập trung
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 2. CHỨC NĂNG: THÊM PHƯƠNG TIỆN MỚI
-// Method: POST /api/driver/vehicles
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 2: addDriverVehicle
+ * TÁC DỤNG: Thêm phương tiện mới vào tài khoản tài xế.
+ * CÚ PHÁP & THUẬT NGỮ:
+ * - `OUTPUT inserted.*`: Trả lại thông tin bản ghi vừa chèn vào DB ngay trong câu lệnh INSERT SQL.
+ * - Regex `/^[A-Z0-9\-.\s]{4,20}$/`: Kiểm tra định dạng biển số hợp lệ (từ 4 đến 20 ký tự chữ hoa, số và dấu gạch).
+ * 
+ * @route POST /api/driver/vehicles
+ * @access Driver Only
+ */
 export async function addDriverVehicle(req, res, next) {
   try {
-    // Bước 1: Định danh tài xế
     const driverId = getUserIdFromToken(req);
 
     if (!driverId) {
@@ -96,13 +102,13 @@ export async function addDriverVehicle(req, res, next) {
       });
     }
 
-    // Bước 2: Bóc tách và làm sạch dữ liệu từ req.body (Payload gửi lên từ FE)
+    // Chuẩn hóa và làm sạch dữ liệu từ req.body
     const plateNumber = String(req.body.plateNumber || "").trim().toUpperCase();
     const vehicleTypeId = Number(req.body.vehicleTypeId);
     const vehicleBrand = String(req.body.vehicleBrand || "").trim() || null;
     const vehicleColor = String(req.body.vehicleColor || "").trim() || null;
 
-    // Bước 3: Kiểm tra tính hợp lệ dữ liệu (Validation)
+    // VALIDATION DỮ LIỆU ĐẦU VÀO:
     if (!plateNumber) {
       return res.status(400).json({
         success: false,
@@ -110,7 +116,7 @@ export async function addDriverVehicle(req, res, next) {
       });
     }
 
-    // Kiểm tra định dạng biển số bằng Regex (Từ 4 đến 20 ký tự gồm chữ, số, gạch ngang, dấu chấm)
+    // Biểu thức chính quy (Regex) kiểm tra biển số xe
     if (!/^[A-Z0-9\-.\s]{4,20}$/.test(plateNumber)) {
       return res.status(400).json({
         success: false,
@@ -127,7 +133,7 @@ export async function addDriverVehicle(req, res, next) {
 
     const pool = await getPool();
 
-    // Bước 4: Kiểm tra trùng lặp biển số xe (Duplicate Check)
+    // KIỂM TRA TRÙNG LẶP (Duplicate Check): Biển số xe này đã đăng ký trong tài khoản chưa?
     const dupCheck = await pool
       .request()
       .input("DriverID", sql.Int, driverId)
@@ -144,7 +150,7 @@ export async function addDriverVehicle(req, res, next) {
       });
     }
 
-    // Bước 5: Kiểm tra xem đây có phải chiếc xe đầu tiên không (nếu đầu tiên ➔ tự set làm xe mặc định IsDefault = 1)
+    // Đếm số lượng xe hiện có. Nếu đây là xe đầu tiên ➔ tự động đặt làm xe mặc định (IsDefault = 1)
     const countResult = await pool
       .request()
       .input("DriverID", sql.Int, driverId)
@@ -155,7 +161,7 @@ export async function addDriverVehicle(req, res, next) {
 
     const isFirst = (countResult.recordset[0]?.Total || 0) === 0;
 
-    // Bước 6: Chèn dữ liệu xe mới vào bảng DriverVehicles trong SQL Database
+    // Thực thi lệnh INSERT vào bảng DriverVehicles
     const insertResult = await pool
       .request()
       .input("DriverID", sql.Int, driverId)
@@ -176,7 +182,7 @@ export async function addDriverVehicle(req, res, next) {
         )
       `);
 
-    // Bước 7: Trả về kết quả HTTP 201 Created thành công cho Frontend
+    // Trả kết quả HTTP Status Code 201 (Created)
     return res.status(201).json({
       success: true,
       message: "Thêm phương tiện thành công.",
@@ -187,13 +193,15 @@ export async function addDriverVehicle(req, res, next) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 3. CHỨC NĂNG: CẬP NHẬT THÔNG TIN PHƯƠNG TIỆN
-// Method: PATCH /api/driver/vehicles/:id
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 3: updateDriverVehicle
+ * TÁC DỤNG: Chỉnh sửa thông tin phương tiện hiện có (Biển số, loại xe, màu sắc, thương hiệu).
+ * 
+ * @route PATCH /api/driver/vehicles/:id
+ * @access Driver Only
+ */
 export async function updateDriverVehicle(req, res, next) {
   try {
-    // Bước 1: Định danh tài xế & lấy ID phương tiện từ URL params (:id)
     const driverId = getUserIdFromToken(req);
     const vehicleId = Number(req.params.id);
 
@@ -211,7 +219,6 @@ export async function updateDriverVehicle(req, res, next) {
       });
     }
 
-    // Bước 2: Bóc tách dữ liệu từ req.body
     const plateNumber = String(req.body.plateNumber || "").trim().toUpperCase();
     const vehicleTypeId = Number(req.body.vehicleTypeId);
     const vehicleBrand = String(req.body.vehicleBrand || "").trim() || null;
@@ -226,7 +233,7 @@ export async function updateDriverVehicle(req, res, next) {
 
     const pool = await getPool();
 
-    // Bước 3: Kiểm tra quyền sở hữu xe (Verify Ownership - Xe này có đúng là của tài xế này không?)
+    // XÁC MINH QUYỀN SỞ HỮU (Ownership Check): Xe này có đúng là của tài xế này không?
     const ownerCheck = await pool
       .request()
       .input("VehicleID", sql.Int, vehicleId)
@@ -243,7 +250,7 @@ export async function updateDriverVehicle(req, res, next) {
       });
     }
 
-    // Bước 4: Kiểm tra xem biển số mới có bị trùng với chiếc xe KHÁC cũng thuộc tài xế này không
+    // Kiểm tra xem biển số mới sửa có bị trùng với một xe khác (`VehicleID <> @VehicleID`) của chính tài xế đó không
     const dupCheck = await pool
       .request()
       .input("DriverID", sql.Int, driverId)
@@ -262,7 +269,7 @@ export async function updateDriverVehicle(req, res, next) {
       });
     }
 
-    // Bước 5: Thực thi câu lệnh SQL UPDATE cập nhật thông tin xe
+    // Thực thi câu lệnh SQL UPDATE
     await pool
       .request()
       .input("VehicleID", sql.Int, vehicleId)
@@ -281,7 +288,6 @@ export async function updateDriverVehicle(req, res, next) {
         WHERE VehicleID = @VehicleID AND DriverID = @DriverID
       `);
 
-    // Bước 6: Trả kết quả thành công về cho Frontend
     return res.json({
       success: true,
       message: "Cập nhật phương tiện thành công.",
@@ -291,13 +297,16 @@ export async function updateDriverVehicle(req, res, next) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 4. CHỨC NĂNG: XÓA PHƯƠNG TIỆN (Xóa mềm - Soft Delete)
-// Method: DELETE /api/driver/vehicles/:id
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 4: deleteDriverVehicle
+ * TÁC DỤNG: Xóa phương tiện theo cơ chế Soft Delete (`IsActive = 0`).
+ * LÝ DO DÙNG SOFT DELETE: Đảm bảo lịch sử gửi xe (ParkingSessions) và lịch sử thanh toán (Payments) cũ của chiếc xe đó không bị lỗi khóa ngoại (Foreign Key constraint).
+ * 
+ * @route DELETE /api/driver/vehicles/:id
+ * @access Driver Only
+ */
 export async function deleteDriverVehicle(req, res, next) {
   try {
-    // Bước 1: Định danh tài xế & lấy ID phương tiện từ URL params (:id)
     const driverId = getUserIdFromToken(req);
     const vehicleId = Number(req.params.id);
 
@@ -310,7 +319,7 @@ export async function deleteDriverVehicle(req, res, next) {
 
     const pool = await getPool();
 
-    // Bước 2: Thực thi Xóa Mềm bằng cách gán IsActive = 0 (Giúp giữ lại lịch sử giao dịch/đỗ xe cũ)
+    // Thực thi Soft Delete: Gán IsActive = 0
     const result = await pool
       .request()
       .input("VehicleID", sql.Int, vehicleId)
@@ -321,7 +330,6 @@ export async function deleteDriverVehicle(req, res, next) {
         WHERE VehicleID = @VehicleID AND DriverID = @DriverID AND IsActive = 1
       `);
 
-    // Kiểm tra xem có dòng nào trong DB được cập nhật không
     if (!result.rowsAffected || result.rowsAffected[0] === 0) {
       return res.status(404).json({
         success: false,
@@ -329,7 +337,6 @@ export async function deleteDriverVehicle(req, res, next) {
       });
     }
 
-    // Bước 3: Trả kết quả thông báo đã xóa thành công
     return res.json({
       success: true,
       message: "Đã xóa phương tiện.",
@@ -339,13 +346,19 @@ export async function deleteDriverVehicle(req, res, next) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 5. CHỨC NĂNG: THIẾT LẬP XE MẶC ĐỊNH (Xử lý Transaction & Hạn mức Hội viên)
-// Method: PATCH /api/driver/vehicles/:id/default
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 5: setDefaultVehicle
+ * TÁC DỤNG: Đặt một phương tiện thành Xe Mặc Định (Default Vehicle).
+ * NGUYÊN LÝ HOẠT ĐỘNG & RÀNG BUỘC:
+ * 1. Không cho đổi trạng thái Mặc định nếu xe đang có phiên gửi active trong bãi.
+ * 2. Kiểm tra gói hội viên: Gói Premium được tối đa 2 xe mặc định, gói khác tối đa 1 xe.
+ * 3. Sử dụng SQL Transaction (`new sql.Transaction`): Nếu vượt quá hạn mức, tự động gỡ bỏ `IsDefault = 0` của xe cũ trước khi gán `IsDefault = 1` cho xe mới. Đảm bảo nếu gặp sự cố thì Rollback toàn bộ.
+ * 
+ * @route PATCH /api/driver/vehicles/:id/default
+ * @access Driver Only
+ */
 export async function setDefaultVehicle(req, res, next) {
   try {
-    // Bước 1: Định danh tài xế & lấy ID phương tiện
     const driverId = getUserIdFromToken(req);
     const vehicleId = Number(req.params.id);
 
@@ -358,7 +371,7 @@ export async function setDefaultVehicle(req, res, next) {
 
     const pool = await getPool();
 
-    // Bước 2: Kiểm tra quyền sở hữu xe
+    // Kiểm tra quyền sở hữu xe
     const ownerCheck = await pool
       .request()
       .input("VehicleID", sql.Int, vehicleId)
@@ -375,7 +388,7 @@ export async function setDefaultVehicle(req, res, next) {
       });
     }
 
-    // Bước 3: RÀNG BUỘC NGHIỆP VỤ - Kiểm tra xem xe này có đang đỗ trong bãi đỗ xe hay không?
+    // RÀNG BUỘC 1: Xe có đang đỗ trong bãi hay không?
     const parkedCheck = await pool.request()
       .input("VehicleID", sql.Int, vehicleId)
       .query(`
@@ -391,7 +404,7 @@ export async function setDefaultVehicle(req, res, next) {
       });
     }
 
-    // Bước 4: Kiểm tra gói hội viên của tài xế để xác định số lượng xe mặc định tối đa (Gói Premium = 2 xe, Gói khác = 1 xe)
+    // RÀNG BUỘC 2: Kiểm tra hạn mức số xe mặc định theo gói hội viên Active
     const subCheck = await pool.request()
       .input("DriverID", sql.Int, driverId)
       .query(`
@@ -400,9 +413,9 @@ export async function setDefaultVehicle(req, res, next) {
         ORDER BY EndDate DESC
       `);
     const planId = subCheck.recordset[0]?.PlanID || null;
-    const maxDefaults = (planId === 'premium') ? 2 : 1;
+    const maxDefaults = (planId === 'premium') ? 2 : 1; // Gói Premium được 2 xe mặc định
 
-    // Đếm số lượng xe đang làm mặc định hiện tại
+    // Đếm số lượng xe mặc định hiện có
     const defaultCountRes = await pool.request()
       .input("DriverID", sql.Int, driverId)
       .input("VehicleID", sql.Int, vehicleId)
@@ -412,15 +425,15 @@ export async function setDefaultVehicle(req, res, next) {
       `);
     const currentDefaults = defaultCountRes.recordset[0].DefaultCount;
 
-    // Bước 5: Sử dụng SQL Transaction để đảm bảo tính toàn vẹn dữ liệu khi bỏ xe mặc định cũ và đặt xe mặc định mới
+    // SỬ DỤNG TRANSACTION SQL:
     const transaction = new sql.Transaction(pool);
     try {
       await transaction.begin();
 
-      // Nếu đã đạt giới hạn xe mặc định, hủy trạng thái IsDefault của xe cũ
+      // Nếu đã vượt hạn mức, tiến hành bỏ mặc định của xe cũ
       if (currentDefaults >= maxDefaults) {
         if (maxDefaults === 1) {
-          // Gói Thường/Pro: Bỏ mặc định tất cả các xe cũ
+          // Bỏ mặc định tất cả xe cũ
           await new sql.Request(transaction)
             .input("DriverID", sql.Int, driverId)
             .query(`
@@ -428,7 +441,7 @@ export async function setDefaultVehicle(req, res, next) {
               WHERE DriverID = @DriverID AND IsActive = 1
             `);
         } else {
-          // Gói Premium (Được 2 xe mặc định): Chỉ bỏ mặc định chiếc xe cũ nhất
+          // Gói Premium: Bỏ mặc định chiếc xe cũ nhất
           await new sql.Request(transaction)
             .input("DriverID", sql.Int, driverId)
             .input("VehicleID", sql.Int, vehicleId)
@@ -443,7 +456,7 @@ export async function setDefaultVehicle(req, res, next) {
         }
       }
 
-      // Gán chiếc xe hiện tại thành Xe Mặc Định (IsDefault = 1)
+      // Đặt xe hiện tại làm mặc định
       await new sql.Request(transaction)
         .input("VehicleID", sql.Int, vehicleId)
         .input("DriverID", sql.Int, driverId)
@@ -453,14 +466,13 @@ export async function setDefaultVehicle(req, res, next) {
           WHERE VehicleID = @VehicleID AND DriverID = @DriverID
         `);
 
-      // Khớp Transaction thành công
+      // Commit transaction
       await transaction.commit();
     } catch (txErr) {
-      await transaction.rollback(); // Hoàn tác nếu có lỗi xảy ra
+      await transaction.rollback(); // Hoàn tác dữ liệu nếu xảy ra sự cố
       throw txErr;
     }
 
-    // Bước 6: Trả thông báo thành công về cho Frontend
     return res.json({
       success: true,
       message: "Đã đặt làm phương tiện mặc định.",
@@ -470,19 +482,24 @@ export async function setDefaultVehicle(req, res, next) {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// 6. CHỨC NĂNG: BẬT / TẮT TRẠNG THÁI XE VIP
-// Method: PATCH /api/driver/vehicles/:id/vip
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 6: toggleVIPVehicle
+ * TÁC DỤNG: Đăng ký hoặc Hủy trạng thái Xe VIP (`IsVIPVehicle = 1 / 0`).
+ * RÀNG BUỘC NGHIỆP VỤ:
+ * 1. Tối đa chỉ được đăng ký 2 xe VIP cho mỗi tài khoản tài xế.
+ * 2. Không cho phép bật/tắt trạng thái VIP khi xe đang đỗ trong bãi (`SessionStatus = 'Active'`).
+ * 
+ * @route PATCH /api/driver/vehicles/:id/vip
+ * @access Driver Only
+ */
 export async function toggleVIPVehicle(req, res, next) {
   try {
-    // Bước 1: Định danh tài xế & lấy ID phương tiện
     const driverId = getUserIdFromToken(req);
     const { id: vehicleId } = req.params;
 
     const pool = await getPool();
 
-    // Bước 2: Kiểm tra quyền sở hữu xe và lấy trạng thái VIP hiện tại
+    // Kiểm tra quyền sở hữu và lấy trạng thái VIP hiện tại
     const ownerCheck = await pool
       .request()
       .input("VehicleID", sql.Int, vehicleId)
@@ -496,11 +513,10 @@ export async function toggleVIPVehicle(req, res, next) {
       return res.status(404).json({ success: false, message: "Không tìm thấy phương tiện." });
     }
 
-    // Đảo ngược trạng thái VIP (Nếu đang là VIP (1) -> chuyển thành 0, và ngược lại)
     const currentVIPStatus = ownerCheck.recordset[0].IsVIPVehicle;
     const newVIPStatus = currentVIPStatus ? 0 : 1;
 
-    // Bước 3: RÀNG BUỘC NGHIỆP VỤ - Không cho đổi trạng thái VIP khi xe đang đỗ trong bãi
+    // RÀNG BUỘC 1: Không cho phép đổi trạng thái VIP khi xe đang đỗ trong bãi
     const parkedCheck = await pool.request()
       .input("VehicleID", sql.Int, vehicleId)
       .query(`
@@ -513,7 +529,7 @@ export async function toggleVIPVehicle(req, res, next) {
       return res.status(400).json({ success: false, message: "Không thể đổi trạng thái VIP khi xe đang đỗ trong bãi." });
     }
 
-    // Bước 4: RÀNG BUỘC NGHIỆP VỤ - Nếu muốn BẬT VIP, kiểm tra xem tài xế đã đạt giới hạn 2 xe VIP chưa
+    // RÀNG BUỘC 2: Nếu BẬT VIP ➔ Kiểm tra tổng số xe VIP hiện tại không quá 2 xe
     if (newVIPStatus === 1) {
       const countCheck = await pool.request()
         .input("DriverID", sql.Int, driverId)
@@ -527,7 +543,7 @@ export async function toggleVIPVehicle(req, res, next) {
       }
     }
 
-    // Bước 5: Cập nhật trạng thái VIP mới vào bảng DriverVehicles trong SQL Database
+    // Cập nhật trạng thái VIP mới
     await pool.request()
       .input("VehicleID", sql.Int, vehicleId)
       .input("IsVIP", sql.Bit, newVIPStatus)
@@ -537,7 +553,6 @@ export async function toggleVIPVehicle(req, res, next) {
         WHERE VehicleID = @VehicleID
       `);
 
-    // Bước 6: Trả về kết quả thông báo trạng thái VIP mới cho Frontend
     return res.json({
       success: true,
       message: newVIPStatus ? "Đã đăng ký xe VIP thành công." : "Đã hủy trạng thái xe VIP.",
@@ -547,3 +562,4 @@ export async function toggleVIPVehicle(req, res, next) {
     next(err);
   }
 };
+

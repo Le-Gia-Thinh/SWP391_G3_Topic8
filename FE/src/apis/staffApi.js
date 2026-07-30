@@ -22,6 +22,11 @@ const staffApi = {
     return res.data
   },
 
+  getGates: async (buildingId) => {
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/gates`, { params: buildingId ? { buildingId } : {} })
+    return res.data
+  },
+
   updateSlotStatus: async (slotId, slotStatus) => {
     const res = await authorizedAxiosInstance.patch(`${STAFF_BASE}/slots/${slotId}/status`, { slotStatus })
     return res.data

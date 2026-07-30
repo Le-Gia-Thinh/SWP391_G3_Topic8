@@ -1,29 +1,18 @@
 /**
  * FILE: walletController.js
- * MÔ TẢ: Controller xử lý các giao dịch Ví điện tử (Wallet) của Tài xế.
- * 
- * ĐIỂM KHÁC BIỆT NỔI BẬT SO VỚI LUỒNG THÊM XE (VEHICLE):
- * 1. Tích hợp Cổng thanh toán trực tuyến PayOS:
- *    - Nạp tiền vào ví bằng mã QR Ngân hàng (Ví dụ: VietQR).
- * 2. Tự động kiểm tra số dư và trừ tiền ví khi:
- *    - Thanh toán phí đỗ xe sau khi Check-out (`payParkingByWallet`).
- *    - Mua/Gia hạn gói hội viên (`paySubscriptionByWallet`).
- * 
- * Các chức năng trong file:
- * - createTopup: Tạo link/Mã QR nạp tiền qua cổng PayOS.
- * - checkTopupStatus: Kiểm tra kết quả giao dịch nạp tiền từ PayOS.
- * - getBalance: Xem số dư ví hiện tại của tài xế.
- * - getHistory: Xem lịch sử biến động số dư (Nạp tiền, Trừ tiền đỗ xe, Mua gói).
- * - payParkingByWallet: Thanh toán tiền đỗ xe trực tiếp bằng tiền trong ví.
- * - paySubscriptionByWallet: Mua gói hội viên trực tiếp bằng tiền trong ví.
- * 
- * @access Driver only
+ * MÔ TẢ: Controller quản lý các thao tác Giao dịch Ví điện tử (Digital Wallet) của Tài xế.
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. Nạp tiền vào Ví: Gọi cổng PayOS sinh mã VietQR để chuyển khoản ngân hàng -> Sau khi nhận thông báo thì chạy Stored Procedure `sp_TopUpWallet` để cộng tiền nguyên tố.
+ * 2. Rút/Trừ tiền Ví: Gọi Stored Procedure `sp_PayByWallet` để kiểm tra số dư và trừ tiền nguyên tố khi tài xế:
+ *    - Thanh toán phí gửi xe đỗ theo lượt/trả trước (`payParkingByWallet`).
+ *    - Mua/Gia hạn gói vé tháng hội viên (`paySubscriptionByWallet`).
+ * 3. Xem số dư và biến động nhật ký Ví trong bảng `WalletTransactions`.
  */
-/*
-Hieu
-*/
 
-import { StatusCodes } from 'http-status-codes'; // Thư viện định nghĩa mã HTTP Status
+// Import enum StatusCodes từ thư viện 'http-status-codes' (200 OK, 400 Bad Request,...)
+import { StatusCodes } from 'http-status-codes';
+// Import các hàm xử lý nghiệp vụ ví điện tử từ 'BE/src/services/walletService.js'
+// LIÊN KẾT FILE: `BE/src/services/walletService.js` - Chứa logic gọi Stored Procedure `sp_TopUpWallet` và `sp_PayByWallet` trong SQL Server.
 import {
     createTopupService,
     checkTopupStatusService,
@@ -31,80 +20,97 @@ import {
     getWalletHistoryService,
     payParkingByWalletService,
     paySubscriptionByWalletService,
-} from '../services/walletService.js'; // Service xử lý nghiệp vụ Ví & PayOS
+} from '../services/walletService.js';
 
-// ─────────────────────────────────────────────────────────────
-// 1. TẠO LINK NẠP TIỀN QUA PAYOS (QR VIETQR)
-// Method: POST /api/driver/wallet/create-topup
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 1: createTopup
+ * TÁC DỤNG: Khởi tạo yêu cầu nạp tiền vào ví. Tạo mã đơn PayOS và sinh mã QR chuyển khoản VietQR.
+ * 
+ * @route POST /api/driver/wallet/create-topup
+ * @access Driver Only
+ */
 export async function createTopup(req, res, next) {
     try {
-        const userId = req.user?.UserID;
-        const amount = parseInt(req.body.amount);
+        const userId = req.user?.UserID; // Lấy UserID tài xế từ Token JWT
+        const amount = parseInt(req.body.amount); // Số tiền nạp (ví dụ 100000 VNĐ)
 
-        if (!amount || isNaN(amount))
-            return res.status(400).json({ success: false, message: 'Số tiền không hợp lệ' });
+        // VALIDATION: Số tiền nạp phải lớn hơn 0 và là số hợp lệ
+        if (!amount || isNaN(amount) || amount <= 0)
+            return res.status(400).json({ success: false, message: 'Số tiền nạp không hợp lệ' });
 
-        // Gọi Service tạo link thanh toán PayOS và mã OrderCode
+        // Gọi Service tạo liên kết thanh toán PayOS và OrderCode
         const data = await createTopupService(userId, amount);
 
         return res.status(StatusCodes.OK).json({
             success: true,
             message: 'Tạo link nạp tiền thành công',
-            data,
+            data, // Trả về thông tin link nạp, QR code và mã orderCode
         });
     } catch (err) { next(err); }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 2. KIỂM TRA TRẠNG THÁI GIAO DỊCH NẠP TIỀN PAYOS
-// Method: GET /api/driver/wallet/status/:orderCode
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 2: checkTopupStatus
+ * TÁC DỤNG: Kiểm tra kết quả giao dịch nạp tiền từ cổng PayOS theo mã `orderCode`. Nếu PayOS xác nhận đã chuyển tiền thành công, hệ thống tự động gọi Stored Procedure `sp_TopUpWallet` để cộng tiền vào tài khoản tài xế.
+ * 
+ * @route GET /api/driver/wallet/status/:orderCode
+ * @access Driver Only
+ */
 export async function checkTopupStatus(req, res, next) {
     try {
         const orderCode = parseInt(req.params.orderCode);
         if (!orderCode || isNaN(orderCode))
             return res.status(400).json({ success: false, message: 'orderCode không hợp lệ' });
 
-        // Gọi Service kiểm tra PayOS xem tiền đã vào chưa và cộng số dư ví trong SQL Server
+        // Gọi Service kiểm tra PayOS và cộng tiền vào DB SQL Server
         const data = await checkTopupStatusService(orderCode);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 3. LẤY SỐ DƯ VÍ HẠN HIỆN TẠI
-// Method: GET /api/driver/wallet/balance
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 3: getBalance
+ * TÁC DỤNG: Lấy số dư tài khoản khả dụng hiện tại của tài xế (truy vấn cột AccountBalance trong bảng Users).
+ * 
+ * @route GET /api/driver/wallet/balance
+ * @access Driver Only
+ */
 export async function getBalance(req, res, next) {
     try {
         const userId = req.user?.UserID;
         
-        // Gọi Service truy vấn bảng Wallets trong SQL lấy Balance
+        // Gọi Service lấy số dư hiện tại
         const balance = await getBalanceService(userId);
         return res.status(StatusCodes.OK).json({ success: true, data: { balance } });
     } catch (err) { next(err); }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 4. LẤY LỊCH SỬ GIAO DỊCH VÍ
-// Method: GET /api/driver/wallet/history
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 4: getHistory
+ * TÁC DỤNG: Lấy lịch sử tất cả các biến động số dư ví (Nạp tiền TOPUP, Trừ tiền đỗ xe PARKING_FEE, Mua gói SUBSCRIPTION).
+ * 
+ * @route GET /api/driver/wallet/history?limit=20
+ * @access Driver Only
+ */
 export async function getHistory(req, res, next) {
     try {
         const userId = req.user?.UserID;
         const limit = parseInt(req.query.limit) || 20;
 
-        // Gọi Service lấy danh sách biến động số dư từ bảng WalletTransactions
+        // Gọi Service lấy danh sách giao dịch từ bảng WalletTransactions
         const data = await getWalletHistoryService(userId, limit);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 5. THANH TOÁN PHÍ ĐỖ XE BẰNG VÍ
-// Method: POST /api/driver/wallet/pay-parking
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 5: payParkingByWallet
+ * TÁC DỤNG: Thanh toán phí đỗ xe trực tiếp bằng số dư tiền trong ví điện tử của tài xế.
+ * XỬ LÝ NGUYÊN TỐ: Gọi Stored Procedure `sp_PayByWallet` để kiểm tra số dư -> nếu không đủ ném lỗi 50001 -> nếu đủ tiền thì tự động trừ số dư và chuyển hóa đơn sang 'Completed'.
+ * 
+ * @route POST /api/driver/wallet/pay-parking
+ * @access Driver Only
+ */
 export async function payParkingByWallet(req, res, next) {
     try {
         const driverId = req.user?.UserID;
@@ -113,7 +119,7 @@ export async function payParkingByWallet(req, res, next) {
         if (!sessionId || isNaN(sessionId))
             return res.status(400).json({ success: false, message: 'sessionId không hợp lệ' });
 
-        // Gọi Service kiểm tra số dư ví ➔ Trừ tiền ví ➔ Cập nhật trạng thái Payment = 'Paid'
+        // Gọi Service thực thi trừ tiền ví và hoàn tất thanh toán đỗ xe
         const data = await payParkingByWalletService(sessionId, driverId);
         return res.status(StatusCodes.OK).json({
             success: true,
@@ -123,19 +129,23 @@ export async function payParkingByWallet(req, res, next) {
     } catch (err) { next(err); }
 }
 
-// ─────────────────────────────────────────────────────────────
-// 6. MUA GÓI HỘI VIÊN BẰNG VÍ
-// Method: POST /api/driver/wallet/pay-subscription
-// ─────────────────────────────────────────────────────────────
+/**
+ * HÀM 6: paySubscriptionByWallet
+ * TÁC DỤNG: Mua hoặc gia hạn gói vé tháng đỗ xe trực tiếp bằng tiền trong ví điện tử.
+ * 
+ * @route POST /api/driver/wallet/pay-subscription
+ * @access Driver Only
+ */
 export async function paySubscriptionByWallet(req, res, next) {
     try {
         const userId = req.user?.UserID;
         const { planId, durationMonths, deductionAmount, extraDays } = req.body;
 
+        // VALIDATION: Kiểm tra xem tài xế đã truyền mã gói và thời hạn đăng ký chưa
         if (!planId || !durationMonths)
             return res.status(400).json({ success: false, message: 'Thiếu thông tin gói' });
 
-        // Gọi Service trừ tiền ví ➔ Tạo/Gia hạn gói trong UserSubscriptions
+        // Gọi Service kiểm tra số dư ví ➔ Trừ tiền ví ➔ Tạo/Gia hạn gói trong UserSubscriptions
         const data = await paySubscriptionByWalletService(
             userId, 
             planId, 
@@ -153,3 +163,4 @@ export async function paySubscriptionByWallet(req, res, next) {
         next(err); 
     }
 }
+

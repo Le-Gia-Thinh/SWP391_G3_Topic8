@@ -8,13 +8,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
-import { Search, RefreshCcw, UserPlus, Pencil, Lock, Unlock, ShieldCheck, MailCheck, MailX } from 'lucide-react'
+import { Search, RefreshCcw, UserPlus, Pencil, Lock, Unlock, ShieldCheck, MailCheck, MailX, Building2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import {
-  getUsersAPI, getRolesAPI, createUserAPI, updateUserAPI, toggleUserStatusAPI
+  getUsersAPI, getRolesAPI, createUserAPI, updateUserAPI, toggleUserStatusAPI,
+  getBuildingsAPI, transferStaffAPI
 } from '../../apis/adminApi'
 
 const roleBadge = {
@@ -53,6 +54,46 @@ const AdminUsers = () => {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm()
+
+  // Modal Phân công & Điều chuyển Nhân sự Tòa nhà
+  const [transferModalOpen, setTransferModalOpen] = useState(false)
+  const [transferUser, setTransferUser] = useState(null)
+  const [buildingsList, setBuildingsList] = useState([])
+  const [targetBuildingId, setTargetBuildingId] = useState('')
+  const [transferring, setTransferring] = useState(false)
+
+  const openTransfer = async (u) => {
+    setTransferUser(u)
+    setTargetBuildingId('')
+    try {
+      const res = await getBuildingsAPI()
+      const bList = res?.data?.data || []
+      setBuildingsList(bList)
+      if (bList.length > 0) setTargetBuildingId(String(bList[0].BuildingID))
+    } catch {
+      toast.error('Không thể tải danh sách Tòa nhà.')
+    }
+    setTransferModalOpen(true)
+  }
+
+  const handleTransferSubmit = async () => {
+    if (!targetBuildingId) return toast.warning('Vui lòng chọn Tòa nhà công tác.')
+    setTransferring(true)
+    try {
+      await transferStaffAPI({
+        userId: transferUser.UserID,
+        toBuildingId: Number(targetBuildingId),
+        isPrimary: true
+      })
+      toast.success(`Đã điều chuyển nhân sự ${transferUser.FullName} sang Tòa nhà mới thành công!`)
+      setTransferModalOpen(false)
+      applyFilters()
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Điều chuyển nhân sự thất bại.')
+    } finally {
+      setTransferring(false)
+    }
+  }
 
   const selectedRoleId = watch('RoleID')
   const selectedRoleName = roles.find(r => String(r.RoleID) === String(selectedRoleId))?.RoleName
@@ -283,6 +324,12 @@ const AdminUsers = () => {
                                 className="rounded-xl p-2 text-slate-500 font-medium hover:bg-blue-50 hover:text-blue-600 transition">
                                 <Pencil size={16} />
                               </button>
+                              {['Staff', 'Manager'].includes(u.RoleName) && (
+                                <button onClick={() => openTransfer(u)} title="Phân công / Điều chuyển Tòa nhà"
+                                  className="rounded-xl p-2 text-indigo-500 font-medium hover:bg-indigo-50 hover:text-indigo-600 transition">
+                                  <Building2 size={16} />
+                                </button>
+                              )}
                               <button onClick={() => toggleStatus(u)} title={u.IsActive ? t('admin.users.lockTitle') : t('admin.users.unlockTitle')}
                                 className={`rounded-xl p-2 transition ${u.IsActive ? 'text-slate-500 font-medium hover:bg-rose-50 hover:text-rose-600' : 'text-slate-500 font-medium hover:bg-emerald-50 hover:text-emerald-600'}`}>
                                 {u.IsActive ? <Lock size={16} /> : <Unlock size={16} />}
@@ -390,6 +437,48 @@ const AdminUsers = () => {
             </>
           )}
         </form>
+      </Modal>
+
+      {/* Modal Phân công & Điều chuyển Tòa nhà */}
+      <Modal
+        isOpen={transferModalOpen}
+        onClose={() => setTransferModalOpen(false)}
+        title="Phân công & Điều chuyển Tòa nhà công tác"
+        footer={(
+          <>
+            <Button variant="secondary" onClick={() => setTransferModalOpen(false)}>Hủy</Button>
+            <Button onClick={handleTransferSubmit} disabled={transferring}>
+              {transferring ? 'Đang điều chuyển...' : 'Xác nhận điều chuyển'}
+            </Button>
+          </>
+        )}
+      >
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs text-blue-800 space-y-1">
+            <p className="font-bold text-sm text-blue-900">{transferUser?.FullName}</p>
+            <p>Vai trò: <span className="font-bold">{transferUser?.RoleName}</span> · Email: {transferUser?.Email}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+              Chọn Tòa nhà công tác mới:
+            </label>
+            <select
+              value={targetBuildingId}
+              onChange={e => setTargetBuildingId(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm font-bold outline-none focus:border-blue-500 transition"
+            >
+              {buildingsList.map(b => (
+                <option key={b.BuildingID} value={b.BuildingID}>
+                  {b.BuildingName} ({b.Address || 'Chưa có địa chỉ'})
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="text-xs text-slate-500 font-medium">
+            * Khi điều chuyển, nhân sự này sẽ được phân công trực tiếp tại Tòa nhà đã chọn và ghi nhận lịch sử trong Audit Logs.
+          </p>
+        </div>
       </Modal>
     </div>
   )

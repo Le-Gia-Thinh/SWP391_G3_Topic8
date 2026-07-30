@@ -7,14 +7,99 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, Bell, Moon, Sun, Clock, CalendarDays, Wallet, AlertTriangle, CheckCheck, Info } from 'lucide-react'
+import { Search, Bell, Moon, Sun, Clock, CalendarDays, Wallet, AlertTriangle, CheckCheck, Info, MapPin, ChevronDown, CheckCircle2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppTheme } from '../../contexts/AppThemeContext'
 import { toast } from 'react-toastify'
 import driverApi from '../../apis/driverApi'
 import notificationApi from '../../apis/notificationApi'
+import staffApi from '../../apis/staffApi'
 import LanguageSwitcher from '../ui/LanguageSwitcher'
+
+function StaffGateSelector() {
+  const [gates, setGates] = useState([])
+  const [selectedGate, setSelectedGate] = useState(() => {
+    try {
+      const saved = localStorage.getItem('staff_active_gate')
+      return saved ? JSON.parse(saved) : null
+    } catch { return null }
+  })
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    staffApi.getGates()
+      .then(res => {
+        if (!active) return
+        const list = res?.data || []
+        setGates(list)
+        if (!selectedGate && list.length > 0) {
+          const firstIn = list.find(g => g.GateType === 'In' || g.GateType === 'BiDirectional') || list[0]
+          setSelectedGate(firstIn)
+          localStorage.setItem('staff_active_gate', JSON.stringify(firstIn))
+        }
+      })
+      .catch(() => { })
+    return () => { active = false }
+  }, [])
+
+  const handleSelectGate = (gate) => {
+    setSelectedGate(gate)
+    localStorage.setItem('staff_active_gate', JSON.stringify(gate))
+    setDropdownOpen(false)
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setDropdownOpen(!dropdownOpen)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-slate-700 transition-all text-xs font-bold text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-slate-700 shadow-sm"
+      >
+        <MapPin size={14} className="text-blue-600 dark:text-blue-400" />
+        <span>
+          {selectedGate ? `${selectedGate.BuildingName || 'Bãi xe'} - ${selectedGate.GateName}` : 'Chọn Cổng Trực'}
+        </span>
+        <ChevronDown size={13} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {dropdownOpen && (
+        <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-2 z-50 animate-in fade-in slide-in-from-top-2">
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-3 py-1.5">
+            Cổng bảo vệ đang trực
+          </p>
+          <div className="space-y-1 max-h-56 overflow-y-auto">
+            {gates.length === 0 ? (
+              <p className="text-xs text-slate-400 px-3 py-2">Không tìm thấy danh sách cổng</p>
+            ) : (
+              gates.map(g => {
+                const isSelected = selectedGate?.GateID === g.GateID
+                return (
+                  <button
+                    key={g.GateID}
+                    onClick={() => handleSelectGate(g)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-left transition-all ${isSelected
+                      ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300'
+                      }`}
+                  >
+                    <div>
+                      <p>{g.GateName}</p>
+                      <p className="text-[10px] font-normal text-slate-400">
+                        {g.BuildingName} · {g.GateType === 'In' ? 'Làn Vào' : g.GateType === 'Out' ? 'Làn Ra' : 'Hai Chiều'}
+                      </p>
+                    </div>
+                    {isSelected && <CheckCircle2 size={14} className="text-blue-600 dark:text-blue-400" />}
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const getInitials = (name) => {
   if (!name) return 'U'
@@ -97,6 +182,7 @@ const Navbar = ({ title = 'Dashboard', profileLink = '/profile' }) => {
     <header className="sticky top-0 z-30 flex h-20 shrink-0 items-center justify-between border-b border-slate-200/60 dark:border-gray-800 bg-white/80 backdrop-blur-md dark:bg-gray-900 px-6 transition-colors duration-300">
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-bold text-slate-800 dark:text-white hidden sm:block tracking-tight">{title}</h1>
+        <StaffGateSelector />
       </div>
 
       <div className="flex items-center gap-4">

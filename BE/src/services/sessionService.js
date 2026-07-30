@@ -340,39 +340,26 @@ export async function checkInVehicle(req) {
     // 🔹 QUERY 5 / 8 TRONG TRANSACTION (INSERT 1): Tạo phiên đỗ xe thực tế mới (ParkingSessions)
     // SQL Server tự động sinh ra SessionID mới (IDENTITY)
     const insertSessionResult = await new sql.Request(transaction)
-      // Truyền ID ô đỗ
       .input("SlotID", sql.Int, finalSlotId)
-      // Truyền ID tài xế
       .input("DriverID", sql.Int, finalDriverId)
-      // Truyền biển số xe
       .input("PlateNumber", sql.NVarChar(20), finalPlateNumber)
-      // Truyền loại xe
+      .input("CardCode", sql.NVarChar(50), reqData.cardCode || null)
+      .input("GateIn", sql.NVarChar(50), reqData.gateIn || 'Gate 1')
+      .input("GateInID", sql.Int, reqData.gateInId || null)
       .input("VehicleTypeID", sql.Int, finalVehicleTypeId)
-      // Chạy INSERT và dùng OUTPUT để trả về dòng dữ liệu vừa chèn
+      .input("ReservationID", sql.Int, finalReservationId || null)
+      .input("CreatedByStaffID", sql.Int, reqData.createdByStaffId || null)
       .query(`
             INSERT INTO ParkingSessions (
-              SlotID,
-              DriverID,
-              PlateNumber,
-              VehicleTypeID,
-              EntryTime,
-              SessionStatus
+              SlotID, DriverID, PlateNumber, CardCode, GateIn, GateInID,
+              VehicleTypeID, EntryTime, SessionStatus, ReservationID, CreatedByStaffID
             )
             OUTPUT
-              INSERTED.SessionID,
-              INSERTED.SlotID,
-              INSERTED.DriverID,
-              INSERTED.PlateNumber,
-              INSERTED.VehicleTypeID,
-              INSERTED.EntryTime,
-              INSERTED.SessionStatus
+              INSERTED.SessionID, INSERTED.SlotID, INSERTED.DriverID, INSERTED.PlateNumber,
+              INSERTED.CardCode, INSERTED.GateIn, INSERTED.GateInID, INSERTED.VehicleTypeID, INSERTED.EntryTime, INSERTED.SessionStatus
             VALUES (
-              @SlotID,
-              @DriverID,
-              UPPER(@PlateNumber),
-              @VehicleTypeID,
-              GETDATE(),
-              'Active'
+              @SlotID, @DriverID, UPPER(@PlateNumber), @CardCode, @GateIn, @GateInID,
+              @VehicleTypeID, GETDATE(), 'Active', @ReservationID, @CreatedByStaffID
             )
           `);
 

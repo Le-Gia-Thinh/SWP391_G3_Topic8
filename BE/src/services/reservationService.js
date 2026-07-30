@@ -1,11 +1,15 @@
 /**
  * FILE: reservationService.js
- * MÔ TẢ: Service xử lý nghiệp vụ đặt chỗ (Reservation).
- * Chức năng: Tìm vị trí trống (tích hợp AI gợi ý), Tạo/Hủy đặt chỗ, Lấy danh sách đặt chỗ của tài xế.
+ * MÔ TẢ: Service xử lý toàn bộ các nghiệp vụ Đặt chỗ xe trực tuyến (Online Parking Reservation Service).
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. QUẢN LÝ THỜI GIAN ĐẶT CHỖ (`dateTimeUtils`): Kiểm tra quy tắc đặt chỗ trước tối thiểu 15 phút, tính toán khung giờ đỗ và giờ kết thúc.
+ * 2. TÌM VỊ TRÍ ĐỖ XE KHẢ THI KHÔNG TRÙNG LỊCH (`getAvailableSlots`): Quét toàn bộ CSDL và tính toán `DisplayStatus` dựa trên 3 tiêu chí (Không bảo trì, Không có xe đỗ thực tế, Không có đơn khác đè giờ).
+ * 3. TÍCH HỢP AI GỢI Ý Ô ĐỖ (`aiAllocationService`): Tự động gọi thuật toán Heuristic tìm ô đỗ tối ưu nhất và gắn nhãn `isAIRec = true`.
+ * 4. TẠO ĐƠN ĐẶT CHỖ (`createReservation`): Quét kiểm tra chống trùng biển số (`PLATE_ALREADY_BOOKED`), chống đè xe đang đỗ (`PLATE_ALREADY_PARKED`), gọi Stored Procedure `sp_CreateReservation` và phát Email xác nhận qua Mailer.
+ * 5. HỦY ĐƠN ĐẶT CHỖ (`cancelReservation`): Dùng SQL Transaction thực thi 4 bước an toàn tuyệt đối (Kiểm tra quyền Driver, Kiểm tra chưa check-in, Cập nhật 'Cancelled', Mở lại trạng thái ô đỗ).
+ * 
+ * @module reservationService
  */
-/*
-hieu
-*/
 
 import { getPool, sql } from "../config/db.js";
 import { syncParkingSlotStatuses } from "./slotSyncService.js";
@@ -18,6 +22,10 @@ import {
 } from "../utils/dateTimeUtils.js";
 import { recommendOptimalSlot } from "./aiAllocationService.js";
 
+/**
+ * HÀM PHỤ: createHttpError
+ * TÁC DỤNG: Tạo đối tượng lỗi Error chuẩn kèm HTTP Status Code.
+ */
 function createHttpError(status, message) {
   const error = new Error(message);
   error.status = status;
@@ -25,14 +33,26 @@ function createHttpError(status, message) {
   return error;
 }
 
+/**
+ * HÀM PHỤ: getUserIdFromToken
+ * TÁC DỤNG: Trích xuất ID người dùng linh hoạt từ Payload của Token JWT.
+ */
 function getUserIdFromToken(req) {
   return req.user?.UserID || req.user?.userId || req.user?.id;
 }
 
+/**
+ * HÀM PHỤ: getRoleNameFromToken
+ * TÁC DỤNG: Trích xuất Tên Role người dùng linh hoạt từ Payload JWT.
+ */
 function getRoleNameFromToken(req) {
   return req.user?.RoleName || req.user?.roleName;
 }
 
+/**
+ * HÀM PHỤ: normalizeVehicleTypeId
+ * TÁC DỤNG: Chuẩn hóa dữ liệu Loại xe gửi từ Frontend (nhận cả dạng Số ID 1,2,3 hoặc Chuỗi 'moto', 'car', 'truck').
+ */
 function normalizeVehicleTypeId(value) {
   if (value === undefined || value === null || value === "") return null;
 
@@ -41,17 +61,25 @@ function normalizeVehicleTypeId(value) {
 
   const text = String(value).trim().toLowerCase();
 
-  if (["moto", "motorbike", "bike", "xe máy", "xe may"].includes(text)) return 1;
-  if (["car", "oto", "ô tô", "o to"].includes(text)) return 2;
-  if (["truck", "xe tải", "xe tai"].includes(text)) return 3;
+  if (["moto", "motorbike", "bike", "xe máy", "xe may"].includes(text)) return 1; // 1: Xe máy
+  if (["car", "oto", "ô tô", "o to"].includes(text)) return 2;                     // 2: Ô tô
+  if (["truck", "xe tải", "xe tai"].includes(text)) return 3;                    // 3: Xe tải
 
   return null;
 }
 
+/**
+ * HÀM PHỤ: expireOverdueReservations
+ * TÁC DỤNG: Tự động gọi Stored Proc đồng bộ dọn dẹp các đơn đặt chỗ đã quá hạn.
+ */
 async function expireOverdueReservations(pool) {
   await syncParkingSlotStatuses(pool);
 }
 
+/**
+ * HÀM PHỤ: reservationBaseSelect
+ * TÁC DỤNG: Trả về đoạn câu lệnh SQL SELECT cơ sở kết hợp nhiều bảng (JOIN 6 BẢNG) và kỹ thuật `OUTER APPLY` lấy phiên đỗ xe gần nhất.
+ */
 function reservationBaseSelect() {
   return `
     SELECT
@@ -124,6 +152,7 @@ function reservationBaseSelect() {
     LEFT JOIN Floors f ON z.FloorID = f.FloorID
     LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
 
+    -- KỸ THUẬT SQL OUTER APPLY: Lấy đúng 1 phiên đỗ xe mới nhất của tài xế này tại ô đỗ tương ứng
     OUTER APPLY (
       SELECT TOP 1
         s.SessionID,
@@ -136,9 +165,10 @@ function reservationBaseSelect() {
   `;
 }
 
-// =========================================================================
-// CHỨC NĂNG 1: LẤY DANH SÁCH TẤT CẢ ĐƠN ĐẶT CHỖ (CÓ PHÂN QUYỀN VAI TRÒ)
-// =========================================================================
+/**
+ * HÀM 1: getReservations
+ * TÁC DỤNG: Lấy danh sách toàn bộ các đơn đặt chỗ (Có phân quyền theo Vai trò).
+ */
 export async function getReservations(req) {
   const pool = await getPool();
 
@@ -167,9 +197,10 @@ export async function getReservations(req) {
   return result.recordset;
 }
 
-// =========================================================================
-// CHỨC NĂNG 2: XEM CHI TIẾT 1 ĐƠN ĐẶT CHỖ THEO ID
-// =========================================================================
+/**
+ * HÀM 2: getReservationById
+ * TÁC DỤNG: Truy vấn thông tin chi tiết một Đơn đặt chỗ theo ReservationID.
+ */
 export async function getReservationById(req) {
   const pool = await getPool();
 
@@ -208,9 +239,10 @@ export async function getReservationById(req) {
   return reservation;
 }
 
-// =========================================================================
-// CHỨC NĂNG 3: TÌM VỊ TRÍ ĐỖ CÒN TRỐNG (TÍCH HỢP THUẬT TOÁN AI GỢI Ý SLOT)
-// =========================================================================
+/**
+ * HÀM 3: getAvailableSlots
+ * TÁC DỤNG: Lấy sơ đồ danh sách các ô đỗ và tích hợp thuật toán AI chọn ô đỗ tối ưu nhất.
+ */
 export async function getAvailableSlots(req) {
   const pool = await getPool();
 
@@ -339,6 +371,10 @@ export async function getAvailableSlots(req) {
   return slots;
 }
 
+/**
+ * HÀM 4: createReservation
+ * TÁC DỤNG: Xử lý Đặt chỗ xe trực tuyến (Khởi tạo đơn đặt chỗ mới).
+ */
 export async function createReservation(req) {
   // =========================================================================
   // KHÚC 1: LẤY USER ID TỪ TOKEN & CHUẨN HÓA THÔNG TIN ĐẦU VÀO
@@ -597,9 +633,10 @@ export async function createReservation(req) {
   };
 }
 
-// =========================================================================
-// CHỨC NĂNG 4: HỦY ĐƠN ĐẶT CHỖ (DÙNG SQL TRANSACTION BẢO VỆ DỮ LIỆU)
-// =========================================================================
+/**
+ * HÀM 5: cancelReservation
+ * TÁC DỤNG: Hủy đơn đặt chỗ (Sử dụng SQL Transaction để đảm bảo tính toàn vẹn).
+ */
 export async function cancelReservation(req) {
   const pool = await getPool();
   const transaction = new sql.Transaction(pool); // Tạo Transaction để đảm bảo tính toàn vẹn
@@ -758,4 +795,4 @@ export async function cancelReservation(req) {
 
     throw err;
   }
-}
+}

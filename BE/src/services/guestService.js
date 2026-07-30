@@ -1,20 +1,28 @@
 /**
  * FILE: guestService.js
- * MÔ TẢ: Service xử lý các nghiệp vụ dành cho khách vãng lai (Guest).
- * Bao gồm: Tra cứu phiên gửi xe hiện tại, xem số liệu thống kê chung của bãi đỗ.
+ * MÔ TẢ: Service xử lý nghiệp vụ tra cứu công khai dành cho Khách vãng lai (Guest User).
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. Không yêu cầu Đăng nhập hay Token Xác thực (`Public Endpoints`).
+ * 2. Tra cứu vị trí ô đỗ & Phí đỗ xe tạm tính real-time qua Mã phiên (`SS-XXXX`, `SESS-YYYYMMDD-XXXX`) hoặc Biển số xe.
+ * 3. Gọi Stored Procedure `sp_CalcParkingFeeV2` để tính phí gửi xe theo thuật toán tính giờ lũy tiến & khung giờ đêm thực tế.
+ * 4. Cung cấp chỉ số thống kê tổng quan bãi đỗ (Tổng ô đỗ, Số ô đỗ trống, Tỷ lệ lấp đầy theo loại xe) hiển thị trên Trang chủ.
+ * 
+ * @module guestService
  */
-/*
-Hieu
-*/
 
 import { getPool, sql } from '../config/db.js';
+
 /**
- * Tra cứu phiên gửi xe cho khách vãng lai
- * @param {string} searchTerm - Biển số xe hoặc Mã phiên (VD: SS-00042)
+ * HÀM 1: trackSession
+ * TÁC DỤNG: Tra cứu thông tin phiên gửi xe chi tiết cho khách vãng lai bằng Biển số xe hoặc Mã phiên đỗ.
+ * 
+ * @param {string} searchTerm - Chuỗi tìm kiếm (vd: '51H-123.45' hoặc 'SS-00042' / 'SESS-20260728-0042')
+ * @returns {Promise<Object|null>} Đối tượng thông tin phiên đỗ xe hoặc null nếu không tìm thấy
  */
 export async function trackSession(searchTerm) {
   const pool = await getPool();
 
+  // CÂU TRUY VẤN SQL KẾT HỢP NHIỀU BẢNG (JOIN 6 BẢNG)
   let query = `
       SELECT TOP 1
         ps.SessionID,
@@ -43,68 +51,68 @@ export async function trackSession(searchTerm) {
   `;
 
   const request = pool.request();
-  const term = searchTerm.trim().toUpperCase();
+  const term = searchTerm.trim().toUpperCase(); // Chuẩn hóa chuỗi tìm kiếm về viết hoa
 
-  // Kiểm tra xem có phải mã phiên không (Hỗ trợ cả SESS-YYYYMMDD-XXXX và SS-XXXX)
-  const matchNew = term.match(/^SESS-\d{8}-(\d+)$/i);
-  const matchOld = term.match(/^SS-(\d+)$/i);
+  // REGULAR EXPRESSION (Regex): Phân tích cú pháp xem người dùng nhập Mã Phiên hay Biển số xe
+  const matchNew = term.match(/^SESS-\d{8}-(\d+)$/i); // Khớp định dạng mã mới: SESS-20260728-0042
+  const matchOld = term.match(/^SS-(\d+)$/i);          // Khớp định dạng mã cũ: SS-00042
   const matchID = matchNew ? matchNew[1] : (matchOld ? matchOld[1] : null);
 
   if (matchID) {
+    // Nếu nhập Mã phiên ➔ Tìm chính xác theo SessionID
     request.input('SessionID', sql.Int, parseInt(matchID, 10));
     query += ` AND ps.SessionID = @SessionID`;
   } else {
+    // Nếu nhập Biển số xe ➔ Tìm theo PlateNumber
     request.input('PlateNumber', sql.NVarChar(20), term);
     query += ` AND UPPER(ps.PlateNumber) = @PlateNumber`;
-    // Ưu tiên phiên đang Active, nếu không có thì lấy phiên mới nhất
+    // Sắp xếp ưu tiên: Phiên đang gửi ('Active') lên trước, nếu đã về hết thì lấy phiên mới nhất theo EntryTime DESC
     query += ` ORDER BY CASE WHEN ps.SessionStatus = 'Active' THEN 0 ELSE 1 END, ps.EntryTime DESC`;
   }
 
   const result = await request.query(query);
 
+  // Không tìm thấy dữ liệu phiên đỗ nào ➔ Trả về null
   if (result.recordset.length === 0) {
     return null;
   }
 
   const session = result.recordset[0];
 
-  // Tính thời gian đã gửi
+  // TÍNH TOÁN THỜI GIAN ĐÃ GỬI (Duration Calculation):
   const entryTime = new Date(session.EntryTime);
-  const endTime = session.ExitTime ? new Date(session.ExitTime) : new Date();
-  const durationMs = endTime - entryTime;
-  const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
-  const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+  const endTime = session.ExitTime ? new Date(session.ExitTime) : new Date(); // Nếu chưa xe ra ➔ Tính đến thời điểm hiện tại
+  const durationMs = endTime - entryTime; // Số milisecond đỗ
+  const durationHours = Math.floor(durationMs / (1000 * 60 * 60)); // Tính số giờ
+  const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60)); // Tính số phút lẻ
 
-  // Nếu phiên đang Active, tính phí tạm tính qua stored procedure
+  // BƯỚC TÍNH PHÍ TẠM TÍNH KHI XE ĐANG ĐỖ (Real-time Fee Calculation via Stored Procedure):
   let estimatedFee = session.FinalAmount || session.InitialFee || 0;
   if (session.SessionStatus === 'Active') {
     try {
-      const feeReq = pool.request();
-      feeReq.input('VehicleTypeID', sql.Int, null);
-      feeReq.input('DurationH', sql.Decimal(10, 2), durationMs / (1000 * 60 * 60));
-      feeReq.output('Fee', sql.Decimal(10, 2));
-
-      // Lấy VehicleTypeID từ session
+      // Lấy VehicleTypeID thực tế của phiên đỗ
       const vtResult = await pool.request()
         .input('SID', sql.Int, session.SessionID)
         .query('SELECT VehicleTypeID FROM ParkingSessions WHERE SessionID = @SID');
       
       if (vtResult.recordset.length > 0) {
+        // Gọi Stored Procedure sp_CalcParkingFeeV2 để tính phí lũy tiến chính xác theo thuật toán CSDL
         const feeCalc = pool.request();
         feeCalc.input('VehicleTypeID', sql.Int, vtResult.recordset[0].VehicleTypeID);
         feeCalc.input('EntryTime', sql.DateTime, entryTime);
         feeCalc.input('ExitTime', sql.DateTime, endTime);
-        feeCalc.output('Fee', sql.Decimal(10, 2));
-        feeCalc.output('Breakdown', sql.NVarChar(sql.MAX));
+        feeCalc.output('Fee', sql.Decimal(10, 2));         // Tham số đầu ra chứa số tiền phí
+        feeCalc.output('Breakdown', sql.NVarChar(sql.MAX)); // Phân tích chi tiết các khung giờ
         const feeResult = await feeCalc.execute('sp_CalcParkingFeeV2');
         estimatedFee = Number(feeResult.output.Fee || 0);
       }
     } catch (err) {
       console.error('Error calculating fee for guest tracking:', err);
-      // Fallback: giữ nguyên phí ban đầu
+      // Giữ nguyên phí tạm tính ban đầu nếu lỗi
     }
   }
 
+  // TRẢ VỀ DỮ LIỆU ĐÃ ĐƯỢC ĐỊNH DẠNG HOÀN CHỈNH CHO FRONTEND
   return {
     sessionCode: session.SessionCode,
     plateNumber: session.PlateNumber,
@@ -126,6 +134,7 @@ export async function trackSession(searchTerm) {
     },
     fee: {
       amount: estimatedFee,
+      // Định dạng hiển thị tiền tệ Việt Nam (vd: "35.000 VNĐ") bằng Intl.NumberFormat API của JavaScript
       formatted: `${new Intl.NumberFormat('vi-VN').format(estimatedFee)} VNĐ`,
       paymentStatus: session.PaymentStatus || 'Pending',
       isEstimated: session.SessionStatus === 'Active'
@@ -134,12 +143,15 @@ export async function trackSession(searchTerm) {
 }
 
 /**
- * Lấy dữ liệu thống kê cho trang chủ (Public)
+ * HÀM 2: getHomeStats
+ * TÁC DỤNG: Lấy dữ liệu thống kê công khai hiển thị trên Banner Trang chủ.
+ * 
+ * @returns {Promise<Object>} Đối tượng tổng quan gồm Tổng công suất, số ô trống và tỷ lệ lấp đầy từng loại xe
  */
 export async function getHomeStats() {
   const pool = await getPool();
   
-  // 1. Thống kê chung
+  // 1. Truy vấn thống kê tổng quan cơ sở hạ tầng bãi đỗ xe
   const statsQuery = await pool.request().query(`
     SELECT
       (SELECT COUNT(*) FROM ParkingSlots) AS TotalSlots,
@@ -149,7 +161,7 @@ export async function getHomeStats() {
   `);
   const s = statsQuery.recordset[0];
   
-  // 2. Thống kê theo loại xe
+  // 2. Truy vấn thống kê chi tiết theo từng Loại xe (Ô tô, Xe máy, Xe điện)
   const vehiclesQuery = await pool.request().query(`
     SELECT 
       vt.VehicleCode, 
@@ -161,6 +173,7 @@ export async function getHomeStats() {
     GROUP BY vt.VehicleCode, vt.VehicleName
   `);
   
+  // Ghép và trả về đối tượng cấu trúc thống kê hoàn chỉnh
   return {
     overview: {
       totalCapacity: s.TotalSlots || 0,
@@ -173,7 +186,9 @@ export async function getHomeStats() {
       name: v.VehicleName,
       total: v.TotalSlots || 0,
       available: v.AvailableSlots || 0,
+      // Tính tỷ lệ % lấp đầy theo công thức: ((Tổng - Trống) / Tổng) * 100
       occupancyRate: v.TotalSlots > 0 ? Math.round(((v.TotalSlots - v.AvailableSlots) / v.TotalSlots) * 100) : 0
     }))
   };
 }
+

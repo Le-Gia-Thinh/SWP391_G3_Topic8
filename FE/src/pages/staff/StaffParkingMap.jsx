@@ -161,12 +161,12 @@ const StaffParkingMap = () => {
 
   /* ── Derived zone data ── */
   const activeZoneData = useMemo(() => {
-    if (!selectedBuilding || !selectedFloor || !selectedZone) return null
-    const b = hierarchy.find(b => b.id === selectedBuilding)
+    if (selectedBuilding == null || selectedFloor == null || selectedZone == null) return null
+    const b = hierarchy.find(b => String(b.id) === String(selectedBuilding))
     if (!b) return null
-    const f = b.floors.find(f => f.id === selectedFloor)
+    const f = b.floors.find(f => String(f.id) === String(selectedFloor))
     if (!f) return null
-    return f.zones.find(z => z.id === selectedZone) || null
+    return f.zones.find(z => String(z.id) === String(selectedZone)) || null
   }, [hierarchy, selectedBuilding, selectedFloor, selectedZone])
 
   const slots = activeZoneData?.slots || []
@@ -275,7 +275,7 @@ const StaffParkingMap = () => {
                       <NavItem
                         icon={Layers}
                         label={floor.name}
-                        active={selectedFloor === floor.id && !isFloorExpanded}
+                        active={String(selectedFloor) === String(floor.id) && !isFloorExpanded}
                         count={floor.zones.length}
                         indent={1}
                         onClick={() => {
@@ -290,7 +290,7 @@ const StaffParkingMap = () => {
                           key={zone.id}
                           icon={Grid3X3}
                           label={zone.name.split(' ').slice(-2).join(' ')}
-                          active={selectedZone === zone.id}
+                          active={String(selectedZone) === String(zone.id)}
                           count={zone.slots.filter(s => s.status === 'available').length}
                           indent={2}
                           onClick={() => {
@@ -320,7 +320,7 @@ const StaffParkingMap = () => {
                 <>
                   <Building2 size={12} className="text-blue-500" />
                   <span className="font-semibold text-slate-700">
-                    {hierarchy.find(b => b.id === selectedBuilding)?.name?.split(' - ')[0]}
+                    {hierarchy.find(b => String(b.id) === String(selectedBuilding))?.name?.split(' - ')[0]}
                   </span>
                 </>
               )}
@@ -329,7 +329,7 @@ const StaffParkingMap = () => {
                   <ChevronRight size={12} />
                   <Layers size={12} className="text-blue-500" />
                   <span className="font-medium">
-                    {hierarchy.find(b => b.id === selectedBuilding)?.floors.find(f => f.id === selectedFloor)?.name}
+                    {hierarchy.find(b => String(b.id) === String(selectedBuilding))?.floors.find(f => String(f.id) === String(selectedFloor))?.name}
                   </span>
                 </>
               )}
