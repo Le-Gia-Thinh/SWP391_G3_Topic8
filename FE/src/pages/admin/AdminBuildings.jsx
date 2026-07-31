@@ -35,8 +35,10 @@ const AdminBuildings = () => {
   const [previewCoords, setPreviewCoords] = useState(null)
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm()
+  const watchedAddress = watch('Address')
   const watchedLat = watch('Latitude')
   const watchedLng = watch('Longitude')
+  const [geocoding, setGeocoding] = useState(false)
 
   const [staffModalBuilding, setStaffModalBuilding] = useState(null)
   const [mapModalBuilding, setMapModalBuilding] = useState(null)
@@ -95,6 +97,43 @@ const AdminBuildings = () => {
     setModalOpen(true)
   }
 
+  // Hàm Reverse Geocoding (Từ Lat/Lng -> Tên Địa Chỉ)
+  const reverseGeocode = async (lat, lng) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=vi`)
+      const data = await res.json()
+      if (data && data.display_name) {
+        setValue('Address', data.display_name)
+      }
+    } catch {
+      // Ignore network error for reverse geocoding
+    }
+  }
+
+  // Hàm Forward Geocoding (Từ Tên Địa Chỉ -> Lat/Lng)
+  const geocodeAddress = async (addrStr) => {
+    if (!addrStr || !addrStr.trim()) return
+    setGeocoding(true)
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addrStr.trim())}&limit=1`)
+      const data = await res.json()
+      if (data && data.length > 0) {
+        const foundLat = parseFloat(parseFloat(data[0].lat).toFixed(6))
+        const foundLng = parseFloat(parseFloat(data[0].lon).toFixed(6))
+        setValue('Latitude', foundLat)
+        setValue('Longitude', foundLng)
+        setPreviewCoords({ lat: foundLat, lng: foundLng })
+        toast.success(`Đã cập nhật tọa độ GPS: ${foundLat}, ${foundLng}`)
+      } else {
+        toast.warning('Không tìm thấy tọa độ cho địa chỉ này trên bản đồ.')
+      }
+    } catch {
+      toast.error('Lỗi khi tra cứu tọa độ từ địa chỉ.')
+    } finally {
+      setGeocoding(false)
+    }
+  }
+
   // Lấy vị trí GPS hiện tại từ trình duyệt
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -103,14 +142,15 @@ const AdminBuildings = () => {
     }
     setGettingLocation(true)
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const lat = parseFloat(pos.coords.latitude.toFixed(6))
         const lng = parseFloat(pos.coords.longitude.toFixed(6))
         setValue('Latitude', lat)
         setValue('Longitude', lng)
         setPreviewCoords({ lat, lng })
-        setGettingLocation(false)
         toast.success(`Đã lấy vị trí GPS: ${lat}, ${lng}`)
+        await reverseGeocode(lat, lng)
+        setGettingLocation(false)
       },
       () => {
         setGettingLocation(false)
@@ -288,10 +328,17 @@ const AdminBuildings = () => {
 
           {/* Địa chỉ */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
-              {t('admin.buildings.modal.address')}
-              <span className="ml-1 text-xs font-normal text-slate-400">(tên đường, quận, thành phố)</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {t('admin.buildings.modal.address')}
+                <span className="ml-1 text-xs font-normal text-slate-400">(tên đường, quận, thành phố)</span>
+              </label>
+              <button type="button" onClick={() => geocodeAddress(watchedAddress)} disabled={geocoding || !watchedAddress?.trim()}
+                className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition disabled:opacity-50">
+                <Search size={11} className={geocoding ? 'animate-spin' : ''} />
+                {geocoding ? 'Đang tìm...' : 'Định vị GPS theo địa chỉ'}
+              </button>
+            </div>
             <input {...register('Address')}
               placeholder="VD: Lô E2a-7, Đường D1, Khu CNC, P. Long Thạnh Mỹ, TP. Thủ Đức"
               className="w-full rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition" />
@@ -326,13 +373,16 @@ const AdminBuildings = () => {
             </div>
 
             {/* Preview mini map */}
-            {previewCoords && (
+            {(previewCoords || watchedAddress?.trim()) && (
               <div className="mt-3 rounded-2xl overflow-hidden border border-slate-200 shadow-sm" style={{ height: 200 }}>
                 <iframe
                   title="Preview Map"
                   width="100%" height="100%"
                   frameBorder="0" scrolling="no"
-                  src={`https://maps.google.com/maps?q=${previewCoords.lat},${previewCoords.lng}&z=16&output=embed`}
+                  src={previewCoords 
+                    ? `https://maps.google.com/maps?q=${previewCoords.lat},${previewCoords.lng}&z=16&output=embed`
+                    : `https://maps.google.com/maps?q=${encodeURIComponent(watchedAddress)}&z=15&output=embed`
+                  }
                 />
               </div>
             )}

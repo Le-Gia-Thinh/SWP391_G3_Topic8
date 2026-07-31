@@ -139,16 +139,26 @@ export async function createFloor({ buildingId, floorName, isActive = 1 }) {
     .query('SELECT FloorID FROM Floors WHERE BuildingID = @BuildingID AND FloorName = @FloorName')
   if (dup.recordset.length) throw conflict(`Tầng "${name}" đã tồn tại trong tòa nhà này.`, 'FLOOR_NAME_EXISTS')
 
-  // 4. INSERT TẦNG MỚI: Thêm bản ghi mới và dùng mệnh đề OUTPUT INSERTED.* để trả về đầy đủ object vừa tạo cho FE
+  // 4. INSERT TẦNG MỚI
   const ins = await pool.request()
     .input('BuildingID', sql.Int, Number(buildingId))
     .input('FloorName', sql.NVarChar(50), name)
     .input('IsActive', sql.Bit, isActive ? 1 : 0)
     .query(`
       INSERT INTO Floors (BuildingID, FloorName, IsActive)
-      OUTPUT INSERTED.*
-      VALUES (@BuildingID, @FloorName, @IsActive)
+      VALUES (@BuildingID, @FloorName, @IsActive);
+      SELECT * FROM Floors WHERE FloorID = SCOPE_IDENTITY();
     `)
+
+  // 5. ĐỒNG BỘ LẠI TỔNG SỐ TẦNG TRONG BẢNG BUILDINGS
+  await pool.request()
+    .input('BuildingID', sql.Int, Number(buildingId))
+    .query(`
+      UPDATE Buildings
+      SET TotalFloors = (SELECT COUNT(*) FROM Floors WHERE BuildingID = @BuildingID)
+      WHERE BuildingID = @BuildingID
+    `)
+
   return ins.recordset[0]
 }
 
@@ -215,20 +225,46 @@ export async function deleteFloor(floorId) {
   const cur = await pool.request()
     .input('FloorID', sql.Int, Number(floorId))
     .query('SELECT * FROM Floors WHERE FloorID = @FloorID')
-  if (!cur.recordset.length) throw notFound('Không tìm thấy tầng.', 'FLOOR_NOT_FOUND')
+  const targetFloor = cur.recordset[0]
+  const buildingId = targetFloor.BuildingID
+
+  // Kiểm tra xe đang đỗ hoặc đơn đặt chỗ trước trên tầng này
+  const activeRes = await pool.request()
+    .input('FloorID', sql.Int, Number(floorId))
+    .query(`
+      SELECT TOP 1 ps.SlotID
+      FROM ParkingSlots ps
+      JOIN Zones z ON ps.ZoneID = z.ZoneID
+      LEFT JOIN ParkingSessions psess ON ps.SlotID = psess.SlotID AND psess.SessionStatus = 'Active'
+      LEFT JOIN Reservations r ON ps.SlotID = r.SlotID AND r.ReservationStatus = 'Reserved'
+      WHERE z.FloorID = @FloorID AND (psess.SessionID IS NOT NULL OR r.ReservationID IS NOT NULL)
+    `)
+  if (activeRes.recordset.length > 0) {
+    throw conflict(`Không thể xóa tầng "${targetFloor.FloorName}" vì đang có xe đỗ hoặc có đơn đặt chỗ trước.`, 'FLOOR_HAS_ACTIVE_SESSIONS')
+  }
 
   // 2. CHECK RÀNG BUỘC KHÓA NGOẠI: Kiểm tra xem có Zone nào đang nằm trên Tầng này không
   const z = await pool.request()
     .input('FloorID', sql.Int, Number(floorId))
     .query('SELECT TOP 1 ZoneID FROM Zones WHERE FloorID = @FloorID')
   if (z.recordset.length) {
-    throw conflict('Không thể xóa tầng vì còn khu vực (zone) bên trong.', 'FLOOR_HAS_ZONES')
+    throw conflict(`Không thể xóa tầng "${targetFloor.FloorName}" vì còn khu vực (zone) bên trong.`, 'FLOOR_HAS_ZONES')
   }
 
   // 3. EXECUTE DELETE: Thực thi xóa dòng khỏi bảng Floors
   await pool.request()
     .input('FloorID', sql.Int, Number(floorId))
     .query('DELETE FROM Floors WHERE FloorID = @FloorID')
+
+  // 4. ĐỒNG BỘ LẠI TỔNG SỐ TẦNG TRONG BẢNG BUILDINGS
+  await pool.request()
+    .input('BuildingID', sql.Int, buildingId)
+    .query(`
+      UPDATE Buildings
+      SET TotalFloors = (SELECT COUNT(*) FROM Floors WHERE BuildingID = @BuildingID)
+      WHERE BuildingID = @BuildingID
+    `)
+
   return { floorId: Number(floorId), deleted: true }
 }
 
@@ -558,7 +594,7 @@ export async function getSlotsByZone(zoneId) {
         -- Subquery 2: Kiểm tra xem ô đỗ có đơn đặt chỗ trước đang ở trạng thái Reserved hay không
         CASE WHEN EXISTS (
           SELECT 1 FROM Reservations rv WHERE rv.SlotID = ps.SlotID AND rv.ReservationStatus = 'Reserved'
-        ) THEN 1 ELSE 0 END AS HasReservation
+        ) ELSE 1 ELSE 0 END AS HasReservation
 
       FROM ParkingSlots ps
       JOIN VehicleTypes vt ON vt.VehicleTypeID = ps.VehicleTypeID
@@ -585,7 +621,7 @@ export async function getSlotsByZone(zoneId) {
  * NGUỒN ĐẦU VÀO TỪ FE: `{ zoneId, slotCode, vehicleTypeId }`.
  * GIẢI THÍCH SQL:
  * - Query 1 (`SELECT SlotID FROM ParkingSlots WHERE SlotCode = @Code`): Kiểm tra trùng mã slot.
- * - Query 2 (`INSERT INTO ParkingSlots ... OUTPUT INSERTED.SlotID`): Chèn slot mới và lấy ID vừa tạo.
+ * - Query 2 (`INSERT INTO ParkingSlots ...`): Chèn slot mới và lấy ID vừa tạo bằng SCOPE_IDENTITY.
  */
 export async function createSlot({ zoneId, slotCode, vehicleTypeId }) {
   if (!zoneId) throw badRequest('Thiếu ZoneID.', 'ZONE_ID_REQUIRED')
@@ -622,8 +658,8 @@ export async function createSlot({ zoneId, slotCode, vehicleTypeId }) {
     .input('VehicleTypeID', sql.Int, finalVehicleTypeId)
     .query(`
       INSERT INTO ParkingSlots (ZoneID, SlotCode, SlotStatus, VehicleTypeID)
-      OUTPUT INSERTED.SlotID
-      VALUES (@ZoneID, @SlotCode, 'Available', @VehicleTypeID)
+      VALUES (@ZoneID, @SlotCode, 'Available', @VehicleTypeID);
+      SELECT SCOPE_IDENTITY() AS SlotID;
     `)
   return await getSlotFull(pool, ins.recordset[0].SlotID)
 }
@@ -1256,38 +1292,87 @@ export async function updateRolePermissions(roleId, permissionIds) {
   if (!role.recordset.length) throw notFound('Không tìm thấy vai trò.', 'ROLE_NOT_FOUND')
 
   const ids = [...new Set(permissionIds.map(Number))].filter(Number.isInteger)
+  const req = pool.request().input('RoleID', sql.Int, Number(roleId))
 
-  if (ids.length) {
-    const placeholders = ids.map((_, i) => `@p${i}`).join(', ')
-    const checkReq = pool.request()
-    ids.forEach((id, i) => checkReq.input(`p${i}`, sql.Int, id))
-    const found = await checkReq.query(`SELECT PermissionID FROM Permissions WHERE PermissionID IN (${placeholders})`)
-    if (found.recordset.length !== ids.length) {
-      throw badRequest('Một số PermissionID không tồn tại.', 'PERMISSION_NOT_FOUND')
-    }
-  }
+  if (ids.length === 0) {
+    await req.query('DELETE FROM RolePermissions WHERE RoleID = @RoleID')
+  } else {
+    const insertValues = ids.map((id, i) => {
+      req.input(`pid${i}`, sql.Int, id)
+      return `(@RoleID, @pid${i})`
+    }).join(', ')
 
-  const tx = new sql.Transaction(pool)
-  await tx.begin()
-  try {
-    await new sql.Request(tx)
-      .input('RoleID', sql.Int, Number(roleId))
-      .query('DELETE FROM RolePermissions WHERE RoleID = @RoleID')
-
-    for (const pid of ids) {
-      await new sql.Request(tx)
-        .input('RoleID', sql.Int, Number(roleId))
-        .input('PermissionID', sql.Int, pid)
-        .query('INSERT INTO RolePermissions (RoleID, PermissionID) VALUES (@RoleID, @PermissionID)')
-    }
-
-    await tx.commit()
-  } catch (err) {
-    await tx.rollback()
-    throw err
+    await req.query(`
+      DELETE FROM RolePermissions WHERE RoleID = @RoleID;
+      INSERT INTO RolePermissions (RoleID, PermissionID) VALUES ${insertValues};
+    `)
   }
 
   return { roleId: Number(roleId), permissionIds: ids }
+}
+
+export async function getUserPermissions(userId) {
+  if (!userId) throw badRequest('Thiếu UserID.', 'USER_ID_REQUIRED')
+  const pool = await getPool()
+
+  // 1. Kiểm tra xem user có ghi nhận quyền riêng trong UserPermissions không
+  const hasUserPerms = await pool.request()
+    .input('UserID', sql.Int, Number(userId))
+    .query(`SELECT COUNT(*) AS total FROM UserPermissions WHERE UserID = @UserID`)
+
+  if (hasUserPerms.recordset[0].total > 0) {
+    const custom = await pool.request()
+      .input('UserID', sql.Int, Number(userId))
+      .query(`
+        SELECT up.PermissionID
+        FROM UserPermissions up
+        WHERE up.UserID = @UserID AND up.IsGranted = 1
+      `)
+    return custom.recordset.map((r) => r.PermissionID)
+  }
+
+  // 2. Nếu chưa cài riêng, lấy quyền nhóm vai trò mặc định
+  const roleReq = await pool.request()
+    .input('UserID', sql.Int, Number(userId))
+    .query(`
+      SELECT rp.PermissionID
+      FROM RolePermissions rp
+      JOIN Users u ON u.RoleID = rp.RoleID
+      WHERE u.UserID = @UserID
+    `)
+
+  return roleReq.recordset.map((r) => r.PermissionID)
+}
+
+export async function updateUserPermissions(userId, permissionIds) {
+  if (!userId) throw badRequest('Thiếu UserID.', 'USER_ID_REQUIRED')
+  if (!Array.isArray(permissionIds)) {
+    throw badRequest('permissionIds phải là một mảng.', 'PERMISSION_IDS_INVALID')
+  }
+
+  const pool = await getPool()
+  const user = await pool.request()
+    .input('UserID', sql.Int, Number(userId))
+    .query('SELECT UserID FROM Users WHERE UserID = @UserID')
+  if (!user.recordset.length) throw notFound('Không tìm thấy người dùng.', 'USER_NOT_FOUND')
+
+  const grantedSet = new Set(permissionIds.map(Number))
+  const allPerms = await pool.request().query('SELECT PermissionID FROM Permissions')
+  const req = pool.request().input('UserID', sql.Int, Number(userId))
+
+  const insertValues = allPerms.recordset.map((p, i) => {
+    const isGranted = grantedSet.has(p.PermissionID) ? 1 : 0
+    req.input(`pid${i}`, sql.Int, p.PermissionID)
+    req.input(`granted${i}`, sql.Bit, isGranted)
+    return `(@UserID, @pid${i}, @granted${i})`
+  }).join(', ')
+
+  await req.query(`
+    DELETE FROM UserPermissions WHERE UserID = @UserID;
+    INSERT INTO UserPermissions (UserID, PermissionID, IsGranted) VALUES ${insertValues};
+  `)
+
+  return { userId: Number(userId), permissionIds: Array.from(grantedSet) }
 }
 
 /* =====================================================================
@@ -1347,7 +1432,7 @@ export async function createBuilding({ buildingName, address, operatingHours, to
   return newBuilding
 }
 
-export async function updateBuilding(buildingId, { buildingName, address, operatingHours, totalFloors }) {
+export async function updateBuilding(buildingId, { buildingName, address, operatingHours, totalFloors, latitude, longitude }) {
   if (!buildingId) throw badRequest('Thiếu BuildingID.', 'BUILDING_ID_REQUIRED')
 
   const pool = await getPool()
@@ -1377,8 +1462,77 @@ export async function updateBuilding(buildingId, { buildingName, address, operat
     sets.push('OperatingHours = @OperatingHours')
   }
 
-  if (totalFloors !== undefined) {
-    req.input('TotalFloors', sql.Int, totalFloors != null ? Number(totalFloors) : null)
+  if (totalFloors !== undefined && totalFloors !== null) {
+    const newTotal = Number(totalFloors)
+    if (!Number.isInteger(newTotal) || newTotal < 1) {
+      throw badRequest('Số tầng (TotalFloors) phải là số nguyên dương >= 1.', 'INVALID_TOTAL_FLOORS')
+    }
+
+    const currentFloorsRes = await pool.request()
+      .input('BuildingID', sql.Int, Number(buildingId))
+      .query('SELECT FloorID, FloorName FROM Floors WHERE BuildingID = @BuildingID ORDER BY FloorID ASC')
+    const existingFloors = currentFloorsRes.recordset
+    const currentCount = existingFloors.length
+
+    if (newTotal < currentCount) {
+      // Giảm số tầng -> Kiểm tra các tầng dôi dư xem có xe đỗ, đơn đặt chỗ hoặc khu vực (zone) không
+      const excessFloors = existingFloors.slice(newTotal)
+      for (const f of excessFloors) {
+        // Kiểm tra xe đang đỗ hoặc đơn đặt chỗ trước trên tầng này
+        const activeRes = await pool.request()
+          .input('FloorID', sql.Int, f.FloorID)
+          .query(`
+            SELECT TOP 1 ps.SlotID
+            FROM ParkingSlots ps
+            JOIN Zones z ON ps.ZoneID = z.ZoneID
+            LEFT JOIN ParkingSessions psess ON ps.SlotID = psess.SlotID AND psess.SessionStatus = 'Active'
+            LEFT JOIN Reservations r ON ps.SlotID = r.SlotID AND r.ReservationStatus = 'Reserved'
+            WHERE z.FloorID = @FloorID AND (psess.SessionID IS NOT NULL OR r.ReservationID IS NOT NULL)
+          `)
+        if (activeRes.recordset.length > 0) {
+          throw conflict(`Không thể giảm số tầng xuống ${newTotal} vì ${f.FloorName} đang có xe đỗ hoặc có đơn đặt chỗ trước.`, 'FLOOR_HAS_ACTIVE_SESSIONS')
+        }
+
+        // Kiểm tra khu vực đỗ xe (zones) trên tầng này
+        const zoneRes = await pool.request()
+          .input('FloorID', sql.Int, f.FloorID)
+          .query(`SELECT COUNT(*) AS zoneCount FROM Zones WHERE FloorID = @FloorID`)
+        if (zoneRes.recordset[0].zoneCount > 0) {
+          throw conflict(`Không thể giảm số tầng xuống ${newTotal} vì ${f.FloorName} vẫn còn chứa ${zoneRes.recordset[0].zoneCount} khu vực đỗ xe (Zone). Vui lòng di dời hoặc xóa các khu vực ở tầng này trước.`, 'FLOOR_HAS_ZONES')
+        }
+      }
+
+      // Nếu tất cả tầng dôi dư trống hoàn toàn, thực hiện xóa các tầng này
+      for (const f of excessFloors) {
+        await pool.request()
+          .input('FloorID', sql.Int, f.FloorID)
+          .query('DELETE FROM Floors WHERE FloorID = @FloorID')
+      }
+    } else if (newTotal > currentCount) {
+      // Tăng số tầng -> Tự động sinh thêm tầng mới (kiểm tra tránh trùng tên tầng đã có)
+      let added = 0;
+      let targetCount = newTotal - currentCount;
+      let floorNum = currentCount + 1;
+
+      while (added < targetCount) {
+        let floorName = 'Tang ' + floorNum;
+        const dupCheck = await pool.request()
+          .input('BuildingID', sql.Int, Number(buildingId))
+          .input('FloorName', sql.NVarChar(50), floorName)
+          .query('SELECT FloorID FROM Floors WHERE BuildingID = @BuildingID AND FloorName = @FloorName');
+
+        if (!dupCheck.recordset.length) {
+          await pool.request()
+            .input('BuildingID', sql.Int, Number(buildingId))
+            .input('FloorName', sql.NVarChar(50), floorName)
+            .query('INSERT INTO Floors (BuildingID, FloorName, IsActive) VALUES (@BuildingID, @FloorName, 1)');
+          added++;
+        }
+        floorNum++;
+      }
+    }
+
+    req.input('TotalFloors', sql.Int, newTotal)
     sets.push('TotalFloors = @TotalFloors')
   }
 

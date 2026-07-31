@@ -95,6 +95,7 @@ IF OBJECT_ID('RefreshTokens',        'U') IS NOT NULL DROP TABLE RefreshTokens;
 IF OBJECT_ID('UserAuthProviders',    'U') IS NOT NULL DROP TABLE UserAuthProviders;
 IF OBJECT_ID('Users',                'U') IS NOT NULL DROP TABLE Users;
 IF OBJECT_ID('VehicleTypes',         'U') IS NOT NULL DROP TABLE VehicleTypes;
+IF OBJECT_ID('UserPermissions',     'U') IS NOT NULL DROP TABLE UserPermissions;
 IF OBJECT_ID('RolePermissions',      'U') IS NOT NULL DROP TABLE RolePermissions;
 IF OBJECT_ID('Permissions',          'U') IS NOT NULL DROP TABLE Permissions;
 IF OBJECT_ID('Roles',                'U') IS NOT NULL DROP TABLE Roles;
@@ -124,6 +125,16 @@ CREATE TABLE RolePermissions (
     PRIMARY KEY (RoleID, PermissionID),
     FOREIGN KEY (RoleID)       REFERENCES Roles(RoleID),
     FOREIGN KEY (PermissionID) REFERENCES Permissions(PermissionID)
+);
+GO
+
+CREATE TABLE UserPermissions (
+    UserPermissionID INT IDENTITY(1,1) PRIMARY KEY,
+    UserID INT NOT NULL FOREIGN KEY REFERENCES Users(UserID) ON DELETE CASCADE,
+    PermissionID INT NOT NULL FOREIGN KEY REFERENCES Permissions(PermissionID) ON DELETE CASCADE,
+    IsGranted BIT NOT NULL DEFAULT 1,
+    GrantedAt DATETIME DEFAULT GETDATE(),
+    CONSTRAINT UQ_User_Permission UNIQUE (UserID, PermissionID)
 );
 GO
 
@@ -3581,7 +3592,7 @@ GO
    PHẦN 5: USERS MỚI
    ===================================================================== */
 
-DECLARE @PW NVARCHAR(256) = '$2a$10$T8Mv3Lg2vR9aI.3tGz.e2.gP0wR.Hj7yX0qA7zJ5rX5f5F5D5Q5g2';
+DECLARE @PW NVARCHAR(256) = '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW';
 
 -- Chỉ insert nếu email chưa tồn tại
 IF NOT EXISTS (SELECT 1 FROM Users WHERE Email = 'an.nguyen@gmail.com')

@@ -14,7 +14,9 @@ import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import {
-  getUsersAPI, getRolesAPI, updateUserAPI, toggleUserStatusAPI, resetUserPasswordAPI
+  getUsersAPI, getRolesAPI, updateUserAPI, toggleUserStatusAPI, resetUserPasswordAPI,
+  getPermissionsAPI, getRolePermissionsAPI, updateRolePermissionsAPI,
+  getUserPermissionsAPI, updateUserPermissionsAPI
 } from '../../apis/adminApi'
 
 const roleBadge = {
@@ -24,8 +26,26 @@ const roleBadge = {
   Admin: 'danger'
 }
 
-// Các vai trò được quản lý trong bảng này (bỏ Admin)
+// Các vai trò được quản lý trong bảng người dùng bên dưới (Driver, Staff, Manager)
 const MANAGED_ROLES = ['Driver', 'Staff', 'Manager']
+
+const DEFAULT_PERMISSIONS = [
+  { PermissionID: 1, PermissionName: 'VIEW_SLOTS', DescriptionKey: 'admin.roles.perms.VIEW_SLOTS' },
+  { PermissionID: 2, PermissionName: 'MANAGE_SESSIONS', DescriptionKey: 'admin.roles.perms.MANAGE_SESSIONS' },
+  { PermissionID: 3, PermissionName: 'MANAGE_USERS', DescriptionKey: 'admin.roles.perms.MANAGE_USERS' },
+  { PermissionID: 4, PermissionName: 'VIEW_REPORTS', DescriptionKey: 'admin.roles.perms.VIEW_REPORTS' },
+  { PermissionID: 5, PermissionName: 'MANAGE_PAYMENTS', DescriptionKey: 'admin.roles.perms.MANAGE_PAYMENTS' },
+  { PermissionID: 6, PermissionName: 'MANAGE_PRICING', DescriptionKey: 'admin.roles.perms.MANAGE_PRICING' },
+  { PermissionID: 7, PermissionName: 'MANAGE_BUILDINGS', DescriptionKey: 'admin.roles.perms.MANAGE_BUILDINGS' },
+  { PermissionID: 8, PermissionName: 'MANAGE_INCIDENTS', DescriptionKey: 'admin.roles.perms.MANAGE_INCIDENTS' },
+  { PermissionID: 9, PermissionName: 'MANAGE_SUPPORT', DescriptionKey: 'admin.roles.perms.MANAGE_SUPPORT' }
+]
+
+const DEFAULT_ROLE_PERMS = {
+  3: [1, 2, 3, 4, 5, 6, 7, 8, 9], // Manager
+  2: [1, 2, 5, 8],                // Staff
+  1: [1, 5]                       // Driver
+}
 
 const AdminRoles = () => {
   const { t } = useTranslation()
@@ -38,6 +58,69 @@ const AdminRoles = () => {
   const [busyId, setBusyId] = useState(null)
   const [trigger, setTrigger] = useState(0)
 
+  // State cho Ma trận Quyền hạn (Permissions Matrix)
+  const [allPermissions, setAllPermissions] = useState(DEFAULT_PERMISSIONS)
+  const [rolePermissionsMap, setRolePermissionsMap] = useState(DEFAULT_ROLE_PERMS)
+  const [activeRoleForPerms, setActiveRoleForPerms] = useState(3) // Mặc định chọn Manager (ID = 3)
+  const [savingPerms, setSavingPerms] = useState(false)
+
+  // Fetch permissions & role-permissions từ Backend SQL Server
+  const fetchPermissionsData = useCallback(async () => {
+    try {
+      const [permRes, rolePermRes] = await Promise.all([
+        getPermissionsAPI(),
+        getRolePermissionsAPI()
+      ])
+      const pList = permRes?.data?.data || permRes?.data || []
+      const rpList = rolePermRes?.data?.data || rolePermRes?.data || []
+      if (Array.isArray(pList) && pList.length > 0) {
+        setAllPermissions(pList)
+      }
+
+      if (Array.isArray(rpList) && rpList.length > 0) {
+        const map = {}
+        rpList.forEach(rp => {
+          if (!map[rp.RoleID]) map[rp.RoleID] = []
+          if (!map[rp.RoleID].includes(rp.PermissionID)) {
+            map[rp.RoleID].push(rp.PermissionID)
+          }
+        })
+        setRolePermissionsMap(map)
+      }
+    } catch {
+      // Keep default permissions if API call fails
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchPermissionsData()
+  }, [fetchPermissionsData])
+
+  const togglePermission = (permId) => {
+    setRolePermissionsMap(prev => {
+      const currentList = prev[activeRoleForPerms] || []
+      const newList = currentList.includes(permId)
+        ? currentList.filter(id => id !== permId)
+        : [...currentList, permId]
+      return { ...prev, [activeRoleForPerms]: newList }
+    })
+  }
+
+  const saveRolePermissions = async () => {
+    setSavingPerms(true)
+    try {
+      const currentList = rolePermissionsMap[activeRoleForPerms] || []
+      await updateRolePermissionsAPI(activeRoleForPerms, currentList)
+      const roleKey = activeRoleForPerms === 3 ? 'Manager' : activeRoleForPerms === 2 ? 'Staff' : 'Role'
+      const targetRoleName = t(`roles.${roleKey}`, roleKey)
+      toast.success(t('admin.roles.savePermsSuccess', { role: targetRoleName }))
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || t('admin.roles.savePermsFail'))
+    } finally {
+      setSavingPerms(false)
+    }
+  }
+
   // Modal đặt lại mật khẩu
   const [resetTarget, setResetTarget] = useState(null)
   const { register, handleSubmit, reset: resetForm, formState: { errors, isSubmitting } } = useForm()
@@ -49,7 +132,7 @@ const AdminRoles = () => {
       if (search.trim()) params.search = search.trim()
       if (roleFilter) params.roleId = roleFilter
       const res = await getUsersAPI(params)
-      // Chỉ giữ Driver/Staff/Manager
+      // Giữ Driver/Staff/Manager cho quản lý tài khoản & khóa MK
       setRows((res.data.data || []).filter((u) => MANAGED_ROLES.includes(u.RoleName)))
     } catch {
       toast.error(t('admin.roles.loadUsersFail'))
@@ -71,16 +154,31 @@ const AdminRoles = () => {
   const applyFilters = () => setTrigger((tt) => tt + 1)
 
   // ── Actions ──────────────────────────────────────────────────
-  const changeRole = async (user, newRoleId) => {
+  // ── Role change confirmation ─────────────────────────────────
+  const [confirmRoleModal, setConfirmRoleModal] = useState(null)
+  const [userPermTarget, setUserPermTarget] = useState(null)
+  const [userCustomPerms, setUserCustomPerms] = useState([])
+
+  const requestRoleChange = (user, newRoleId) => {
     if (Number(newRoleId) === user.RoleID) return
+    const newRoleObj = roles.find((r) => r.RoleID === Number(newRoleId))
+    setConfirmRoleModal({
+      user,
+      newRoleId: Number(newRoleId),
+      newRoleName: newRoleObj?.RoleName || newRoleId,
+      oldRoleName: user.RoleName
+    })
+  }
+
+  const executeRoleChange = async () => {
+    if (!confirmRoleModal) return
+    const { user, newRoleId, newRoleName } = confirmRoleModal
     setBusyId(user.UserID)
     try {
-      await updateUserAPI(user.UserID, { roleId: Number(newRoleId) })
-      const newRole = roles.find((r) => r.RoleID === Number(newRoleId))
-      setRows((prev) => prev.map((u) =>
-        u.UserID === user.UserID ? { ...u, RoleID: Number(newRoleId), RoleName: newRole?.RoleName || u.RoleName } : u
-      ))
-      toast.success(t('admin.roles.changeRoleSuccess', { name: user.FullName, role: newRole?.RoleName }))
+      await updateUserAPI(user.UserID, { roleId: newRoleId })
+      setRows((prev) => prev.map((u) => (u.UserID === user.UserID ? { ...u, RoleID: newRoleId, RoleName: newRoleName } : u)))
+      toast.success(t('admin.roles.changeRoleSuccess', { name: user.FullName, role: t(`roles.${newRoleName}`, newRoleName) }))
+      setConfirmRoleModal(null)
     } catch (err) {
       toast.error(err?.response?.data?.message || t('admin.roles.changeRoleFail'))
     } finally {
@@ -88,13 +186,38 @@ const AdminRoles = () => {
     }
   }
 
+  const openUserPermissions = async (user) => {
+    setUserPermTarget(user)
+    try {
+      const res = await getUserPermissionsAPI(user.UserID)
+      const pList = res?.data?.data || []
+      setUserCustomPerms(pList)
+    } catch {
+      const rolePerms = rolePermissionsMap[user.RoleID] || []
+      setUserCustomPerms([...rolePerms])
+    }
+  }
+
+  const toggleUserCustomPerm = (permId) => {
+    setUserCustomPerms((prev) => (prev.includes(permId) ? prev.filter((id) => id !== permId) : [...prev, permId]))
+  }
+
+  const saveUserCustomPermissions = async () => {
+    if (!userPermTarget) return
+    try {
+      await updateUserPermissionsAPI(userPermTarget.UserID, userCustomPerms)
+      toast.success(t('admin.roles.customPermsSuccess', { name: userPermTarget?.FullName }))
+      setUserPermTarget(null)
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err?.message || 'Cập nhật thất bại')
+    }
+  }
+
   const toggleStatus = async (user) => {
     setBusyId(user.UserID)
     try {
       await toggleUserStatusAPI(user.UserID, user.IsActive ? 0 : 1)
-      setRows((prev) => prev.map((u) =>
-        u.UserID === user.UserID ? { ...u, IsActive: u.IsActive ? 0 : 1 } : u
-      ))
+      setRows((prev) => prev.map((u) => (u.UserID === user.UserID ? { ...u, IsActive: u.IsActive ? 0 : 1 } : u)))
       toast.success(user.IsActive ? t('admin.roles.lockSuccess') : t('admin.roles.unlockSuccess'))
     } catch (err) {
       toast.error(err?.response?.data?.message || t('admin.roles.toggleStatusFail'))
@@ -137,7 +260,7 @@ const AdminRoles = () => {
       </div>
 
 
-      {/* Thống kê nhanh */}
+      {/* Thống kê nhanh vai trò */}
       <div className="grid gap-4 sm:grid-cols-3">
         {counts.map((c) => (
           <div key={c.role} className="rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-between">
@@ -148,6 +271,96 @@ const AdminRoles = () => {
             <p className="text-2xl font-black text-slate-800 font-black">{c.count}</p>
           </div>
         ))}
+      </div>
+
+      {/* ── BẢNG MA TRẬN PHÂN QUYỀN CHI TIẾT (PERMISSIONS MATRIX) ── */}
+      <div className="rounded-3xl bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-5 border-b border-slate-100 gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-slate-900">{t('admin.roles.matrixTitle')}</span>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200">
+                SQL Server RBAC
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              {t('admin.roles.matrixSub')}
+            </p>
+          </div>
+
+          <Button
+            onClick={saveRolePermissions}
+            isLoading={savingPerms}
+            className="rounded-2xl px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition"
+          >
+            💾 {t('admin.roles.savePerms')}
+          </Button>
+        </div>
+
+        {/* Tab chọn Vai trò nội bộ (Manager & Staff) */}
+        <div className="flex flex-wrap gap-2 mt-5 mb-6">
+          {[
+            { id: 3, name: 'Manager', label: t('roles.Manager', 'Manager'), badge: 'warning' },
+            { id: 2, name: 'Staff', label: t('roles.Staff', 'Staff'), badge: 'success' }
+          ].map((r) => {
+            const active = activeRoleForPerms === r.id
+            const activePermsCount = (rolePermissionsMap[r.id] || []).length
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setActiveRoleForPerms(r.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all border ${
+                  active
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <span>{r.label}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-black ${
+                  active ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {activePermsCount} perms
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Danh sách Checkbox Quyền hạn */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {(activeRoleForPerms === 2 ? allPermissions.filter(p => [1, 2, 5, 8].includes(p.PermissionID)) : allPermissions).map((p) => {
+            const currentRolePerms = rolePermissionsMap[activeRoleForPerms] || []
+            const isChecked = currentRolePerms.includes(p.PermissionID)
+            const desc = p.DescriptionKey ? t(p.DescriptionKey) : p.Description
+            return (
+              <label
+                key={p.PermissionID}
+                onClick={() => togglePermission(p.PermissionID)}
+                className={`flex items-start gap-3 p-4 rounded-2xl border transition-all cursor-pointer select-none ${
+                  isChecked
+                    ? 'bg-blue-50/60 border-blue-200 dark:bg-blue-900/20 shadow-sm'
+                    : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/60'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => {}}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-900 leading-snug">
+                    {p.PermissionName}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">
+                    {desc}
+                  </p>
+                </div>
+              </label>
+            )
+          })}
+        </div>
       </div>
 
       {/* Filters + Table */}
@@ -208,7 +421,7 @@ const AdminRoles = () => {
                           <select
                             value={u.RoleID}
                             disabled={busyId === u.UserID}
-                            onChange={(e) => changeRole(u, e.target.value)}
+                            onChange={(e) => requestRoleChange(u, e.target.value)}
                             className="rounded-xl bg-slate-50 dark:bg-slate-700 dark:text-white dark:border-slate-600 px-2.5 py-1.5 text-xs font-semibold text-slate-700 font-bold outline-none border border-slate-200 hover:border-blue-300 focus:border-blue-500 transition disabled:opacity-50"
                           >
                             {roles.map((r) => <option key={r.RoleID} value={r.RoleID}>{t(`roles.${r.RoleName}`, r.RoleName)}</option>)}
@@ -220,6 +433,12 @@ const AdminRoles = () => {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-2">
+                          {u.RoleName !== 'Driver' && (
+                            <button onClick={() => openUserPermissions(u)} disabled={busyId === u.UserID} title={t('admin.roles.customPermBtn')}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/50 px-2.5 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition disabled:opacity-50">
+                              <KeyRound size={14} /> {t('admin.roles.customPermBtn')}
+                            </button>
+                          )}
                           <button onClick={() => openResetPassword(u)} disabled={busyId === u.UserID} title={t('admin.roles.resetPasswordTitle')}
                             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition disabled:opacity-50">
                             <KeyRound size={14} /> {t('admin.roles.resetPassword')}
@@ -242,6 +461,70 @@ const AdminRoles = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Modal xác nhận chuyển vai trò ── */}
+      <Modal
+        isOpen={!!confirmRoleModal}
+        onClose={() => setConfirmRoleModal(null)}
+        title={t('admin.roles.confirmRoleTitle')}
+        footer={(
+          <>
+            <Button variant="secondary" onClick={() => setConfirmRoleModal(null)} disabled={busyId === confirmRoleModal?.user?.UserID}>{t('admin.roles.resetPasswordModal.cancel')}</Button>
+            <Button variant="warning" onClick={executeRoleChange} isLoading={busyId === confirmRoleModal?.user?.UserID}>{t('admin.roles.confirmRoleSubmit')}</Button>
+          </>
+        )}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            {t('admin.roles.confirmRoleDesc', { name: confirmRoleModal?.user?.FullName })}
+          </p>
+          <div className="flex items-center justify-center gap-4 p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-sm font-bold text-amber-900">
+            <Badge variant={roleBadge[confirmRoleModal?.oldRoleName] || 'default'}>{t(`roles.${confirmRoleModal?.oldRoleName}`, confirmRoleModal?.oldRoleName)}</Badge>
+            <span className="text-slate-400">➔</span>
+            <Badge variant={roleBadge[confirmRoleModal?.newRoleName] || 'default'}>{t(`roles.${confirmRoleModal?.newRoleName}`, confirmRoleModal?.newRoleName)}</Badge>
+          </div>
+          <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200">
+            {t('admin.roles.confirmRoleNotice')}
+          </p>
+        </div>
+      </Modal>
+
+      {/* ── Modal Phân quyền riêng cho cá nhân ── */}
+      <Modal
+        isOpen={!!userPermTarget}
+        onClose={() => setUserPermTarget(null)}
+        title={t('admin.roles.customPermsTitle', { name: userPermTarget?.FullName })}
+        footer={(
+          <>
+            <Button variant="secondary" onClick={() => setUserPermTarget(null)}>{t('admin.roles.resetPasswordModal.cancel')}</Button>
+            <Button onClick={saveUserCustomPermissions}>💾 {t('admin.roles.customPermsSave')}</Button>
+          </>
+        )}
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500">
+            {t('admin.roles.customPermsSub')}
+          </p>
+          <div className="grid gap-2 max-h-80 overflow-y-auto pr-1">
+            {(userPermTarget?.RoleName === 'Staff' || userPermTarget?.RoleID === 2 ? allPermissions.filter(p => [1, 2, 5, 8].includes(p.PermissionID)) : allPermissions).map((p) => {
+              const isChecked = userCustomPerms.includes(p.PermissionID)
+              const desc = p.DescriptionKey ? t(p.DescriptionKey) : p.Description
+              return (
+                <label key={p.PermissionID} onClick={() => toggleUserCustomPerm(p.PermissionID)}
+                  className={`flex items-center gap-3 p-3 rounded-2xl border text-xs cursor-pointer select-none transition ${
+                    isChecked ? 'bg-indigo-50/70 border-indigo-200 font-bold text-indigo-900' : 'bg-slate-50 border-slate-200 text-slate-700'
+                  }`}>
+                  <input type="checkbox" checked={isChecked} onChange={() => {}} className="h-4 w-4 text-indigo-600 rounded cursor-pointer" />
+                  <div>
+                    <p className="font-bold">{p.PermissionName}</p>
+                    <p className="text-[11px] text-slate-500">{desc}</p>
+                  </div>
+                </label>
+              )
+            })}
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal đặt lại mật khẩu */}
       <Modal

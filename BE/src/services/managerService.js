@@ -198,19 +198,79 @@ export async function getBuildings(managerUserId = null) {
 
 export async function updateBuilding(buildingId, data) {
   const pool = await getPool();
+  const lat = data.latitude !== undefined ? data.latitude : data.Latitude;
+  const lng = data.longitude !== undefined ? data.longitude : data.Longitude;
+  const totalFloorsVal = data.totalFloors !== undefined ? data.totalFloors : data.TotalFloors;
+
+  if (totalFloorsVal !== undefined && totalFloorsVal !== null) {
+    const newTotal = Number(totalFloorsVal);
+    if (!Number.isInteger(newTotal) || newTotal < 1) {
+      throw badRequest("Số tầng (TotalFloors) phải là số nguyên dương >= 1.", "INVALID_TOTAL_FLOORS");
+    }
+
+    const currentFloorsRes = await pool.request()
+      .input("BuildingID", sql.Int, Number(buildingId))
+      .query("SELECT FloorID, FloorName FROM Floors WHERE BuildingID = @BuildingID ORDER BY FloorID ASC");
+    const existingFloors = currentFloorsRes.recordset;
+    const currentCount = existingFloors.length;
+
+    if (newTotal < currentCount) {
+      const excessFloors = existingFloors.slice(newTotal);
+      for (const f of excessFloors) {
+        const activeRes = await pool.request()
+          .input("FloorID", sql.Int, f.FloorID)
+          .query(`
+            SELECT TOP 1 ps.SlotID
+            FROM ParkingSlots ps
+            JOIN Zones z ON ps.ZoneID = z.ZoneID
+            LEFT JOIN ParkingSessions psess ON ps.SlotID = psess.SlotID AND psess.SessionStatus = 'Active'
+            LEFT JOIN Reservations r ON ps.SlotID = r.SlotID AND r.ReservationStatus = 'Reserved'
+            WHERE z.FloorID = @FloorID AND (psess.SessionID IS NOT NULL OR r.ReservationID IS NOT NULL)
+          `);
+        if (activeRes.recordset.length > 0) {
+          throw conflict(`Không thể giảm số tầng xuống ${newTotal} vì ${f.FloorName} đang có xe đỗ hoặc có đơn đặt chỗ trước.`, "FLOOR_HAS_ACTIVE_SESSIONS");
+        }
+
+        const zoneRes = await pool.request()
+          .input("FloorID", sql.Int, f.FloorID)
+          .query(`SELECT COUNT(*) AS zoneCount FROM Zones WHERE FloorID = @FloorID`);
+        if (zoneRes.recordset[0].zoneCount > 0) {
+          throw conflict(`Không thể giảm số tầng xuống ${newTotal} vì ${f.FloorName} vẫn còn chứa ${zoneRes.recordset[0].zoneCount} khu vực đỗ xe (Zone). Vui lòng di dời hoặc xóa các khu vực ở tầng này trước.`, "FLOOR_HAS_ZONES");
+        }
+      }
+
+      for (const f of excessFloors) {
+        await pool.request()
+          .input("FloorID", sql.Int, f.FloorID)
+          .query("DELETE FROM Floors WHERE FloorID = @FloorID");
+      }
+    } else if (newTotal > currentCount) {
+      for (let i = currentCount + 1; i <= newTotal; i++) {
+        await pool.request()
+          .input("BuildingID", sql.Int, Number(buildingId))
+          .input("FloorName", sql.NVarChar(50), `Tang ${i}`)
+          .query("INSERT INTO Floors (BuildingID, FloorName, IsActive) VALUES (@BuildingID, @FloorName, 1)");
+      }
+    }
+  }
+
   // UPDATE TÒA NHÀ & TỰ ĐỘNG CẬP NHẬT MỐC THỜI GIAN UpdatedAt = GETDATE()
   await pool.request()
     .input("BuildingID", sql.Int, buildingId)
-    .input("BuildingName", sql.NVarChar(100), data.buildingName)
-    .input("Address", sql.NVarChar(200), data.address || null)
-    .input("OperatingHours", sql.NVarChar(50), data.operatingHours || null)
-    .input("TotalFloors", sql.Int, data.totalFloors || null)
+    .input("BuildingName", sql.NVarChar(100), data.buildingName || data.BuildingName)
+    .input("Address", sql.NVarChar(200), data.address || data.Address || null)
+    .input("OperatingHours", sql.NVarChar(50), data.operatingHours || data.OperatingHours || null)
+    .input("TotalFloors", sql.Int, totalFloorsVal != null ? Number(totalFloorsVal) : null)
+    .input("Latitude", sql.Decimal(9, 6), lat != null ? parseFloat(lat) : null)
+    .input("Longitude", sql.Decimal(9, 6), lng != null ? parseFloat(lng) : null)
     .query(`
       UPDATE Buildings
-      SET BuildingName   = @BuildingName,
-          Address        = @Address,
-          OperatingHours = @OperatingHours,
-          TotalFloors    = @TotalFloors,
+      SET BuildingName   = ISNULL(@BuildingName, BuildingName),
+          Address        = ISNULL(@Address, Address),
+          OperatingHours = ISNULL(@OperatingHours, OperatingHours),
+          TotalFloors    = ISNULL(@TotalFloors, TotalFloors),
+          Latitude       = @Latitude,
+          Longitude      = @Longitude,
           UpdatedAt      = GETDATE()
       WHERE BuildingID = @BuildingID
     `);
@@ -361,8 +421,8 @@ export async function createGate(data) {
     .input("IsActive", sql.Bit, data.isActive !== undefined ? (data.isActive ? 1 : 0) : 1)
     .query(`
       INSERT INTO Gates (BuildingID, GateName, GateType, IsActive)
-      OUTPUT INSERTED.*
-      VALUES (@BuildingID, @GateName, @GateType, @IsActive)
+      VALUES (@BuildingID, @GateName, @GateType, @IsActive);
+      SELECT * FROM Gates WHERE GateID = SCOPE_IDENTITY();
     `);
   return result.recordset[0];
 }

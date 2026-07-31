@@ -360,7 +360,7 @@
       "zone": {
         "editTitle": "Sửa khu vực",
         "deleteTitle": "Xóa khu vực",
-        "capacityLabel": "Sức chứa",
+        "capacityLabel": "Số ô đỗ đã tạo",
         "manageSlots": "Quản lý slot",
         "deleteConfirmLabel": "Xóa khu vực \"{{name}}\"? Khu vực phải không còn slot bên trong.",
         "deleteSuccess": "Đã xóa khu vực"
@@ -499,6 +499,31 @@
         "submit": "Đặt lại mật khẩu",
         "success": "Đã đặt lại mật khẩu cho \"{{name}}\"",
         "fail": "Không thể đặt lại mật khẩu"
+      },
+      "matrixTitle": "Ma trận Phân quyền theo Vai trò (Permissions Matrix)",
+      "matrixSub": "Bật/Tắt các danh mục quyền hạn cụ thể cho từng nhóm chức vụ nội bộ (Quản lý & Nhân viên bảo vệ).",
+      "savePerms": "Lưu cấu hình quyền",
+      "savePermsSuccess": "Đã cập nhật cấu hình quyền hạn cho vai trò {{role}} thành công!",
+      "savePermsFail": "Cập nhật quyền hạn thất bại.",
+      "confirmRoleTitle": "Xác nhận thay đổi vai trò",
+      "confirmRoleDesc": "Bạn có chắc chắn muốn thay đổi vai trò của người dùng {{name}} không?",
+      "confirmRoleNotice": "⚠️ Thao tác này sẽ cập nhật ngay quyền hạn truy cập của người dùng trên toàn hệ thống.",
+      "confirmRoleSubmit": "Xác nhận chuyển vai trò",
+      "customPermsTitle": "Cấu hình Quyền riêng — {{name}}",
+      "customPermsSub": "Tích chọn các quyền cấp thêm hoặc tùy chỉnh riêng cho tài khoản cá nhân này (Ưu tiên đè lên vai trò nhóm).",
+      "customPermsSave": "Lưu quyền cá nhân",
+      "customPermsSuccess": "Đã cập nhật quyền hạn riêng cho tài khoản {{name}} thành công!",
+      "customPermBtn": "Quyền riêng",
+      "perms": {
+        "VIEW_SLOTS": "Xem sơ đồ đỗ xe & trạng thái ô đỗ (Parking Map & Slots)",
+        "MANAGE_SESSIONS": "Soát vé Check-in / Check-out lượt đỗ (Parking Sessions)",
+        "MANAGE_USERS": "Quản lý tài khoản & Phân công nhân sự (Users & Staff)",
+        "VIEW_REPORTS": "Xem báo cáo doanh thu & Thống kê hệ thống (Reports & Analytics)",
+        "MANAGE_PAYMENTS": "Xử lý thanh toán & Quản lý lịch sử giao dịch (Payments)",
+        "MANAGE_PRICING": "Cấu hình bảng giá đỗ xe & Loại xe cho phép (Pricing & Vehicle Types)",
+        "MANAGE_BUILDINGS": "Cấu hình Tòa nhà, Tầng, Khu vực & Cổng (Buildings & Layout)",
+        "MANAGE_INCIDENTS": "Báo cáo & Xử lý sự cố tại bãi đỗ xe (Incidents Management)",
+        "MANAGE_SUPPORT": "Phản hồi Yêu cầu Hỗ trợ từ Tài xế (Driver Support Tickets)"
       }
     },
     "users": {
@@ -1155,12 +1180,12 @@
         "time": "Thời gian",
         "ratingPrompt": "Bạn đánh giá bao nhiêu sao?",
         "ratingHint": {
-          "select": "Chọn số sao",
           "1": "Rất tệ 😞",
           "2": "Tệ 😕",
           "3": "Bình thường 😐",
           "4": "Tốt 😊",
-          "5": "Tuyệt vời! 🤩"
+          "5": "Tuyệt vời! 🤩",
+          "select": "Chọn số sao"
         },
         "tagsLabel": "Gắn thẻ nhanh",
         "commentLabel": "Bình luận (tùy chọn)",
@@ -1301,7 +1326,7 @@
       "nightFlatRate": "Phí đêm cố định / đêm",
       "baseFee": "Phí cơ bản",
       "surcharge": "Phụ thu",
-      "totalFee": "Tổng cộng",
+      "totalFee": "Tổng phí gửi xe",
       "overnightBadge": "Qua đêm",
       "bracketLabel0": "0 – 4 giờ",
       "bracketLabel1": "4 – 8 giờ",
@@ -1325,7 +1350,6 @@
       "backCancel": "Quay lại / Huỷ đơn",
       "scanToPay": "Quét QR để thanh toán",
       "waiting": "Chờ thanh toán",
-      "totalFee": "Tổng phí gửi xe",
       "expiresIn": "Hết hạn sau:",
       "expired": "Hết hạn",
       "qrHint": "Mở app ngân hàng → QR / Scan → quét mã",
@@ -1667,10 +1691,10 @@
         "vehicleType": "Loại xe",
         "sortBy": "Sắp xếp",
         "vehicles": {
-          "all": "Tất cả loại xe",
           "1": "Xe máy",
           "2": "Ô tô",
-          "3": "Xe tải"
+          "3": "Xe tải",
+          "all": "Tất cả loại xe"
         },
         "sorts": {
           "newest": "Mới nhất",

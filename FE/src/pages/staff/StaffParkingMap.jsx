@@ -169,7 +169,27 @@ const StaffParkingMap = () => {
     return f.zones.find(z => String(z.id) === String(selectedZone)) || null
   }, [hierarchy, selectedBuilding, selectedFloor, selectedZone])
 
-  const slots = activeZoneData?.slots || []
+  const activeSlots = useMemo(() => {
+    if (selectedBuilding == null) return []
+    const b = hierarchy.find(b => String(b.id) === String(selectedBuilding))
+    if (!b) return []
+
+    if (selectedFloor == null) {
+      return b.floors.flatMap(f => f.zones.flatMap(z => z.slots))
+    }
+
+    const f = b.floors.find(f => String(f.id) === String(selectedFloor))
+    if (!f) return []
+
+    if (selectedZone == null) {
+      return f.zones.flatMap(z => z.slots)
+    }
+
+    const z = f.zones.find(z => String(z.id) === String(selectedZone))
+    return z?.slots || []
+  }, [hierarchy, selectedBuilding, selectedFloor, selectedZone])
+
+  const slots = activeSlots
   const rows = useMemo(() => {
     const sorted = [...slots].sort((a, b) => a.code.localeCompare(b.code))
     const out = []
@@ -252,36 +272,48 @@ const StaffParkingMap = () => {
 
           {hierarchy.map(building => {
             const isExpanded = expandedBuildings[building.id]
-            const bFloorCount = building.floors.reduce((acc, f) => acc + f.zones.length, 0)
+            const bSlotCount = building.floors.reduce((acc, f) => acc + f.zones.reduce((zAcc, z) => zAcc + z.slots.length, 0), 0)
 
             return (
               <div key={building.id} className="mb-1">
                 <NavItem
                   icon={Building2}
                   label={building.name.replace(/Toa [A-Z] - /, '').split(' - ')[0] || building.name}
-                  active={selectedBuilding === building.id && !expandedBuildings[building.id]}
-                  count={bFloorCount}
+                  active={selectedBuilding === building.id}
+                  count={bSlotCount}
                   onClick={() => {
                     setSelectedBuilding(building.id)
                     toggleBuilding(building.id)
+                    if (building.floors.length > 0) {
+                      const f = building.floors[0]
+                      setSelectedFloor(f.id)
+                      setExpandedFloors(prev => ({ ...prev, [f.id]: true }))
+                      if (f.zones.length > 0) {
+                        setSelectedZone(f.zones[0].id)
+                      }
+                    }
                   }}
                 />
 
                 {isExpanded && building.floors.map(floor => {
                   const isFloorExpanded = expandedFloors[floor.id]
+                  const fSlotCount = floor.zones.reduce((acc, z) => acc + z.slots.length, 0)
 
                   return (
                     <div key={floor.id}>
                       <NavItem
                         icon={Layers}
                         label={floor.name}
-                        active={String(selectedFloor) === String(floor.id) && !isFloorExpanded}
-                        count={floor.zones.length}
+                        active={String(selectedFloor) === String(floor.id)}
+                        count={fSlotCount}
                         indent={1}
                         onClick={() => {
                           setSelectedBuilding(building.id)
                           setSelectedFloor(floor.id)
                           toggleFloor(floor.id)
+                          if (floor.zones.length > 0) {
+                            setSelectedZone(floor.zones[0].id)
+                          }
                         }}
                       />
 
@@ -291,7 +323,7 @@ const StaffParkingMap = () => {
                           icon={Grid3X3}
                           label={zone.name.split(' ').slice(-2).join(' ')}
                           active={String(selectedZone) === String(zone.id)}
-                          count={zone.slots.filter(s => s.status === 'available').length}
+                          count={zone.slots.length}
                           indent={2}
                           onClick={() => {
                             setSelectedBuilding(building.id)

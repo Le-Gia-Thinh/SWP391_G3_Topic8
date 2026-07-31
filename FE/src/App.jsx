@@ -30,6 +30,7 @@ const UserProfile = React.lazy(() => import('./pages/common/UserProfile'))
 import { VerifyEmailPending, VerifyEmailSuccess, VerifyEmailError } from './pages/VerifyEmailPages'
 
 // Manager Pages (Lazy)
+// ManagerLayout riêng đã được thay bằng DashboardLayout chung để đồng bộ sidebar/navbar với Admin & Staff
 const ManagerDashboard = React.lazy(() => import('./pages/manager/ManagerDashboard'))
 const ManagerSlots = React.lazy(() => import('./pages/manager/ManagerSlots'))
 const ManagerConfig = React.lazy(() => import('./pages/manager/ManagerConfig'))
@@ -87,22 +88,23 @@ const DriverTopUpPayment = React.lazy(() => import('./pages/driver/DriverTopUpPa
 // Guest Pages (Lazy)
 const GuestTracking = React.lazy(() => import('./pages/guest/GuestTracking'))
 
+import PermissionGuard from './components/PermissionGuard'
 import './index.css'
 
 const managerLinks = [
   { path: '/manager/dashboard', labelKey: 'sidebar.overview', icon: LayoutDashboard },
-  { path: '/manager/positions', labelKey: 'sidebar.manager.positions', icon: Map },
-  { path: '/manager/reports', labelKey: 'sidebar.manager.reports', icon: FileText },
+  { path: '/manager/positions', labelKey: 'sidebar.manager.positions', icon: Map, perm: 'VIEW_SLOTS' },
+  { path: '/manager/reports', labelKey: 'sidebar.manager.reports', icon: FileText, perm: 'VIEW_REPORTS' },
   { isDivider: true },
   { labelOnlyKey: 'sidebar.groups.config' },
-  { path: '/manager/config', labelKey: 'sidebar.manager.config', icon: Settings },
-  { path: '/manager/vehicle-types', labelKey: 'sidebar.manager.vehicleTypes', icon: Car },
-  { path: '/manager/pricing', labelKey: 'sidebar.manager.pricing', icon: Wallet },
+  { path: '/manager/config', labelKey: 'sidebar.manager.config', icon: Settings, perm: 'MANAGE_BUILDINGS' },
+  { path: '/manager/vehicle-types', labelKey: 'sidebar.manager.vehicleTypes', icon: Car, perm: 'MANAGE_PRICING' },
+  { path: '/manager/pricing', labelKey: 'sidebar.manager.pricing', icon: Wallet, perm: 'MANAGE_PRICING' },
   { isDivider: true },
   { labelOnlyKey: 'sidebar.groups.monitor' },
-  { path: '/manager/incidents', labelKey: 'sidebar.manager.incidents', icon: AlertTriangle },
-  { path: '/manager/unpaid', labelKey: 'sidebar.manager.unpaid', icon: Wallet },
-  { path: '/manager/feedback', labelKey: 'sidebar.manager.feedback', icon: Star }
+  { path: '/manager/incidents', labelKey: 'sidebar.manager.incidents', icon: AlertTriangle, perm: 'MANAGE_INCIDENTS' },
+  { path: '/manager/unpaid', labelKey: 'sidebar.manager.unpaid', icon: Wallet, perm: 'MANAGE_PAYMENTS' },
+  { path: '/manager/feedback', labelKey: 'sidebar.manager.feedback', icon: Star, perm: 'MANAGE_SUPPORT' }
 ]
 
 
@@ -122,18 +124,18 @@ const adminLinks = [
 
 const staffLinks = [
   { path: '/staff/dashboard', labelKey: 'sidebar.overview', icon: LayoutDashboard },
-  { path: '/staff/parking-map', labelKey: 'sidebar.staff.parkingMap', icon: Map },
+  { path: '/staff/parking-map', labelKey: 'sidebar.staff.parkingMap', icon: Map, perm: 'VIEW_SLOTS' },
   { isDivider: true },
   { labelOnlyKey: 'sidebar.groups.operations' },
-  { path: '/staff/checkin', labelKey: 'sidebar.staff.checkin', icon: CheckSquare },
-  { path: '/staff/checkout', labelKey: 'sidebar.staff.checkout', icon: LogOut },
-  { path: '/staff/search-session', labelKey: 'sidebar.staff.searchSession', icon: Search },
-  { path: '/staff/verify-booking', labelKey: 'sidebar.staff.verifyBooking', icon: ShieldCheck },
-  { path: '/staff/payment-confirm', labelKey: 'sidebar.staff.paymentConfirm', icon: Wallet },
+  { path: '/staff/checkin', labelKey: 'sidebar.staff.checkin', icon: CheckSquare, perm: 'MANAGE_SESSIONS' },
+  { path: '/staff/checkout', labelKey: 'sidebar.staff.checkout', icon: LogOut, perm: 'MANAGE_PAYMENTS' },
+  { path: '/staff/search-session', labelKey: 'sidebar.staff.searchSession', icon: Search, perm: 'MANAGE_SESSIONS' },
+  { path: '/staff/verify-booking', labelKey: 'sidebar.staff.verifyBooking', icon: ShieldCheck, perm: 'MANAGE_SESSIONS' },
+  { path: '/staff/payment-confirm', labelKey: 'sidebar.staff.paymentConfirm', icon: Wallet, perm: 'MANAGE_PAYMENTS' },
 
   { isDivider: true },
   { labelOnlyKey: 'sidebar.groups.other' },
-  { path: '/staff/create-incident', labelKey: 'sidebar.staff.createIncident', icon: AlertTriangle },
+  { path: '/staff/create-incident', labelKey: 'sidebar.staff.createIncident', icon: AlertTriangle, perm: 'MANAGE_INCIDENTS' },
   { path: '/staff/user-guide', labelKey: 'sidebar.staff.userGuide', icon: BookOpen },
   { path: '/staff/support', labelKey: 'sidebar.staff.support', icon: HelpCircle },
   { path: '/staff/feedback', labelKey: 'sidebar.staff.feedback', icon: Star }
@@ -215,15 +217,15 @@ const App = () => {
           <Route path="/manager" element={<DashboardLayout links={managerLinks} roleName="Manager" profileLink="/manager/profile" />}>
             <Route index element={<ManagerDashboard />} />
             <Route path="dashboard" element={<ManagerDashboard />} />
-            <Route path="positions" element={<ManagerSlots />} />
-            <Route path="config" element={<ManagerConfig />} />
-            <Route path="pricing" element={<ManagerPricing />} />
-            <Route path="incidents" element={<ManagerIncidents />} />
-            <Route path="reports" element={<ManagerReports />} />
+            <Route path="positions" element={<PermissionGuard permission="VIEW_SLOTS"><ManagerSlots /></PermissionGuard>} />
+            <Route path="config" element={<PermissionGuard permission="MANAGE_BUILDINGS"><ManagerConfig /></PermissionGuard>} />
+            <Route path="pricing" element={<PermissionGuard permission="MANAGE_PRICING"><ManagerPricing /></PermissionGuard>} />
+            <Route path="incidents" element={<PermissionGuard permission="MANAGE_INCIDENTS"><ManagerIncidents /></PermissionGuard>} />
+            <Route path="reports" element={<PermissionGuard permission="VIEW_REPORTS"><ManagerReports /></PermissionGuard>} />
             <Route path="profile" element={<UserProfile />} />
-            <Route path="vehicle-types" element={<ManagerVehicleTypes />} />
-            <Route path="unpaid" element={<ManagerUnpaid />} />
-            <Route path="feedback" element={<StaffFeedback />} />
+            <Route path="vehicle-types" element={<PermissionGuard permission="MANAGE_PRICING"><ManagerVehicleTypes /></PermissionGuard>} />
+            <Route path="unpaid" element={<PermissionGuard permission="MANAGE_PAYMENTS"><ManagerUnpaid /></PermissionGuard>} />
+            <Route path="feedback" element={<PermissionGuard permission="MANAGE_SUPPORT"><StaffFeedback /></PermissionGuard>} />
           </Route>
         </Route>
 
@@ -235,13 +237,13 @@ const App = () => {
             <Route path="dashboard" element={<StaffDashboardScreen />} />
 
             {/* Check-in */}
-            <Route path="checkin" element={<StaffCheckIn />} />
-            <Route path="checkin-walkin" element={<StaffCheckIn />} />
-            <Route path="checkin-booking" element={<StaffCheckIn />} />
+            <Route path="checkin" element={<PermissionGuard permission="MANAGE_SESSIONS"><StaffCheckIn /></PermissionGuard>} />
+            <Route path="checkin-walkin" element={<PermissionGuard permission="MANAGE_SESSIONS"><StaffCheckIn /></PermissionGuard>} />
+            <Route path="checkin-booking" element={<PermissionGuard permission="MANAGE_SESSIONS"><StaffCheckIn /></PermissionGuard>} />
 
             {/* Verify Booking với reservationId */}
-            <Route path="verify-booking" element={<StaffVerifyBooking />} />
-            <Route path="verify-booking/:reservationId" element={<StaffVerifyBooking />} />
+            <Route path="verify-booking" element={<PermissionGuard permission="MANAGE_SESSIONS"><StaffVerifyBooking /></PermissionGuard>} />
+            <Route path="verify-booking/:reservationId" element={<PermissionGuard permission="MANAGE_SESSIONS"><StaffVerifyBooking /></PermissionGuard>} />
 
             {/* Action Success */}
             <Route path="checkin-success" element={<StaffActionSuccess />} />
@@ -249,19 +251,19 @@ const App = () => {
             <Route path="checkout-completed" element={<StaffActionSuccess />} />
 
             {/* Checkout */}
-            <Route path="checkout" element={<StaffVehicleCheckOut />} />
-            <Route path="checkout/:sessionId" element={<StaffPaymentConfirm />} />
-            <Route path="payment-confirm" element={<StaffPaymentHistory />} />
+            <Route path="checkout" element={<PermissionGuard permission="MANAGE_PAYMENTS"><StaffVehicleCheckOut /></PermissionGuard>} />
+            <Route path="checkout/:sessionId" element={<PermissionGuard permission="MANAGE_PAYMENTS"><StaffPaymentConfirm /></PermissionGuard>} />
+            <Route path="payment-confirm" element={<PermissionGuard permission="MANAGE_PAYMENTS"><StaffPaymentHistory /></PermissionGuard>} />
             {/* Create Incident */}
-            <Route path="create-incident" element={<StaffCreateIncident />} />
+            <Route path="create-incident" element={<PermissionGuard permission="MANAGE_INCIDENTS"><StaffCreateIncident /></PermissionGuard>} />
 
 
             {/* Parking Map */}
-            <Route path="parking-map" element={<StaffParkingMap />} />
+            <Route path="parking-map" element={<PermissionGuard permission="VIEW_SLOTS"><StaffParkingMap /></PermissionGuard>} />
 
 
             {/* Search Session */}
-            <Route path="search-session" element={<StaffSearchSession />} />
+            <Route path="search-session" element={<PermissionGuard permission="MANAGE_SESSIONS"><StaffSearchSession /></PermissionGuard>} />
 
             {/* Profile / Settings */}
             <Route path="profile" element={<UserProfile />} />

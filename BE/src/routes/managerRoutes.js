@@ -7,10 +7,16 @@
  */
 
 import express from "express";
+import { isAuthorized, isManager, hasPermission } from "../middlewares/authMiddleware.js";
 // Import toàn bộ handler từ ManagerController (`BE/src/controllers/managerController.js`)
 import * as mc from "../controllers/managerController.js";
 
 const router = express.Router();
+
+// ⚠️ Áp dụng isAuthorized + isManager cho TOÀN BỘ các route trong router này.
+// Đảm bảo req.user luôn được set trước khi hasPermission kiểm tra.
+router.use(isAuthorized, isManager);
+
 
 // ─────────────────────────────────────────────────────────────
 // 1. DASHBOARD BÁO CÁO TỔNG QUAN MANAGER
@@ -211,54 +217,18 @@ router.get("/incidents/:id", mc.getIncidentById);
  */
 router.patch("/incidents/:id/status", mc.updateIncidentStatus);
 
+// hasPermission đã được import ở trên cùng file
+
+
 // ─────────────────────────────────────────────────────────────
 // 5. BÁO CÁO THỐNG KÊ & CHỈ SỐ KINH DOANH (REPORTS & ANALYTICS)
 // ─────────────────────────────────────────────────────────────
 
-/**
- * ROUTE: GET /manager/reports/revenue
- * CONTROLLER BE: `BE/src/controllers/managerController.js` -> `getRevenueReport()`
- * FE FILE GỌI: `FE/src/apis/managerApi.js` -> `getRevenueReport(params)` | Page `FE/src/pages/Manager/RevenueReport.jsx`
- * DỮ LIỆU FE GỬI: Query params `?startDate=2026-01-01&endDate=2026-01-31`
- * DỮ LIỆU BE TRẢ VỀ: `{ success: true, data: [ { Date, TotalRevenue, CashAmount, PayOSAmount } ] }`
- */
-router.get("/reports/revenue", mc.getRevenueReport);
-
-/**
- * ROUTE: GET /manager/reports/occupancy
- * CONTROLLER BE: `BE/src/controllers/managerController.js` -> `getOccupancyReport()`
- * FE FILE GỌI: `FE/src/apis/managerApi.js` -> `getOccupancyReport()`
- * DỮ LIỆU FE GỬI: Header Token Manager
- * DỮ LIỆU BE TRẢ VỀ: `{ success: true, data: [ { FloorName, TotalSlots, OccupiedSlots, OccupancyRate } ] }`
- */
-router.get("/reports/occupancy", mc.getOccupancyReport);
-
-/**
- * ROUTE: GET /manager/reports/sessions
- * CONTROLLER BE: `BE/src/controllers/managerController.js` -> `getSessionsReport()`
- * FE FILE GỌI: `FE/src/apis/managerApi.js` -> `getSessionsReport(params)`
- * DỮ LIỆU FE GỬI: Query string `?page=1&limit=20`
- * DỮ LIỆU BE TRẢ VỀ: `{ success: true, data: [ { SessionID, PlateNumber, EntryTime, ExitTime, Fee } ] }`
- */
-router.get("/reports/sessions", mc.getSessionsReport);
-
-/**
- * ROUTE: GET /manager/reports/peak-hours
- * CONTROLLER BE: `BE/src/controllers/managerController.js` -> `getPeakHoursReport()`
- * FE FILE GỌI: `FE/src/apis/managerApi.js` -> `getPeakHoursReport()`
- * DỮ LIỆU FE GỬI: Header Token Manager
- * DỮ LIỆU BE TRẢ VỀ: `{ success: true, data: [ { Hour, VehicleCount } ] }`
- */
-router.get("/reports/peak-hours", mc.getPeakHoursReport);
-
-/**
- * ROUTE: GET /manager/reports/vehicle-flow
- * CONTROLLER BE: `BE/src/controllers/managerController.js` -> `getVehicleFlowReport()`
- * FE FILE GỌI: `FE/src/apis/managerApi.js` -> `getVehicleFlowReport()`
- * DỮ LIỆU FE GỬI: Header Token Manager
- * DỮ LIỆU BE TRẢ VỀ: `{ success: true, data: [ { Date, CheckInCount, CheckOutCount } ] }`
- */
-router.get("/reports/vehicle-flow", mc.getVehicleFlowReport);
+router.get("/reports/revenue", hasPermission('VIEW_REPORTS'), mc.getRevenueReport);
+router.get("/reports/occupancy", hasPermission('VIEW_REPORTS'), mc.getOccupancyReport);
+router.get("/reports/sessions", hasPermission('VIEW_REPORTS'), mc.getSessionsReport);
+router.get("/reports/peak-hours", hasPermission('VIEW_REPORTS'), mc.getPeakHoursReport);
+router.get("/reports/vehicle-flow", hasPermission('VIEW_REPORTS'), mc.getVehicleFlowReport);
 
 // ─────────────────────────────────────────────────────────────
 // 6. QUẢN LÝ LOẠI XE, CHƯA THANH TOÁN & NHÂN SỰ (STAFF)

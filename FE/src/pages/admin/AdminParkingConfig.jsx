@@ -379,7 +379,7 @@ const ZoneCard = ({ zone, onManage, onEdit, onDelete }) => {
       <div className="mt-3">
         <div className="flex items-center justify-between text-[11px] font-semibold mb-1">
           <span className="text-slate-500 font-medium">{t('admin.parkingConfig.zone.capacityLabel')}</span>
-          <span className={full ? 'text-amber-600' : 'text-slate-700 font-bold'}>{actual}<span className="text-slate-400 font-normal"> / {total || '—'}</span></span>
+          <span className={full ? 'text-amber-600' : 'text-slate-700 font-bold'}>{actual}<span className="text-slate-400 font-normal"> / {total || '—'} ô ({pct}%)</span></span>
         </div>
         <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
           <div className={`h-full rounded-full transition-all ${full ? 'bg-amber-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />

@@ -257,8 +257,8 @@ export async function updateSlotStatus(slotId, slotStatus) {
         .query(`
         UPDATE ParkingSlots
         SET SlotStatus = @slotStatus
-        OUTPUT INSERTED.*
-        WHERE SlotID = @slotId
+        WHERE SlotID = @slotId;
+        SELECT * FROM ParkingSlots WHERE SlotID = @slotId;
         `)
 
     const slot = result.recordset[0]
@@ -1236,11 +1236,11 @@ export async function createIncident({
                 SessionID, DriverID, IncidentType, IncidentStatus,
                 Priority, Description, AssignedStaffID, Attachments, CreatedAt, UpdatedAt
             )
-            OUTPUT INSERTED.*
             VALUES (
                 @sessionId, @driverId, @incidentType, 'Open',
                 @priority, @description, @staffId, @attachments, GETDATE(), GETDATE()
-            )
+            );
+            SELECT * FROM Incidents WHERE IncidentID = SCOPE_IDENTITY();
         `)
 
     const row = result.recordset[0]
@@ -1388,8 +1388,8 @@ export async function updateIncidentStatus(incidentId, { status, note, attachmen
                 ELSE Description END
             ${attachmentClause},
             UpdatedAt = GETDATE()
-        OUTPUT INSERTED.*
-        WHERE IncidentID = @id
+        WHERE IncidentID = @id;
+        SELECT * FROM Incidents WHERE IncidentID = @id;
     `)
 
     const incident = result.recordset[0]

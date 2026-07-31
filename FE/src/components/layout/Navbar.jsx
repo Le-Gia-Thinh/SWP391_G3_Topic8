@@ -114,7 +114,9 @@ const Navbar = ({ title = 'Dashboard', profileLink = '/profile' }) => {
   const { theme, toggleTheme } = useAppTheme()
   const navigate = useNavigate()
   const userName = user?.fullName || user?.name || t('navbar.defaultUser')
-  const isDriver = user?.roleName?.toLowerCase() === 'driver' || user?.RoleName?.toLowerCase() === 'driver'
+  const roleStr = (user?.roleName || user?.RoleName || user?.role?.roleName || user?.role || '').toLowerCase()
+  const isDriver = roleStr === 'driver'
+  const isStaff = roleStr === 'staff'
 
   const [unreadCount, setUnreadCount] = useState(0)
   const [showNotifications, setShowNotifications] = useState(false)
@@ -182,7 +184,7 @@ const Navbar = ({ title = 'Dashboard', profileLink = '/profile' }) => {
     <header className="sticky top-0 z-30 flex h-20 shrink-0 items-center justify-between border-b border-slate-200/60 dark:border-gray-800 bg-white/80 backdrop-blur-md dark:bg-gray-900 px-6 transition-colors duration-300">
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-bold text-slate-800 dark:text-white hidden sm:block tracking-tight">{title}</h1>
-        <StaffGateSelector />
+        {isStaff && <StaffGateSelector />}
       </div>
 
       <div className="flex items-center gap-4">

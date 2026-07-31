@@ -17,6 +17,8 @@ const Sidebar = ({ links, isOpen, setIsOpen, onHoverEnter, onHoverLeave, roleNam
   const navigate = useNavigate()
   const { logout } = useAuth()
 
+  const visibleLinks = links
+
   const handleLogout = async () => {
     setIsOpen(false)
     await logout()
@@ -73,7 +75,7 @@ const Sidebar = ({ links, isOpen, setIsOpen, onHoverEnter, onHoverLeave, roleNam
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-4">
           <nav className="space-y-1">
-            {links.map((link, index) => {
+            {visibleLinks.map((link, index) => {
               if (link.isDivider) {
                 return <div key={`div-${index}`} className="my-4 border-t border-slate-100 dark:border-gray-800" />
               }
@@ -108,7 +110,7 @@ const Sidebar = ({ links, isOpen, setIsOpen, onHoverEnter, onHoverLeave, roleNam
                         className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}
                       />
                     </div>
-                    <span className={`font-semibold transition-all duration-300 overflow-hidden ${isOpen ? 'opacity-100 ml-3 w-32' : 'lg:opacity-0 lg:w-0'}`}>
+                    <span className={`font-semibold transition-all duration-300 overflow-hidden ${isOpen ? 'opacity-100 ml-3 w-48' : 'lg:opacity-0 lg:w-0'}`}>
                       {linkLabel}
                     </span>
                   </div>
@@ -135,7 +137,7 @@ const Sidebar = ({ links, isOpen, setIsOpen, onHoverEnter, onHoverLeave, roleNam
             <div className="flex w-5 h-5 shrink-0 items-center justify-center">
               <LogOut size={20} />
             </div>
-            <span className={`transition-all duration-300 overflow-hidden ${isOpen ? 'opacity-100 ml-3 w-32 text-left' : 'lg:opacity-0 lg:w-0'}`}>
+            <span className={`transition-all duration-300 overflow-hidden ${isOpen ? 'opacity-100 ml-3 w-48 text-left' : 'lg:opacity-0 lg:w-0'}`}>
               {t('sidebar.logout')}
             </span>
           </button>

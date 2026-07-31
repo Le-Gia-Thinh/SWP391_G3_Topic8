@@ -188,7 +188,10 @@ export async function loginService({ email, password }, ip) {
 
     // Sinh cặp Token và trả về thành công
     const { accessToken, refreshToken } = await generateAndSaveTokens(pool, user, ip);
-    return { accessToken, refreshToken, user: formatUser(user) };
+    const formattedUser = formatUser(user);
+    formattedUser.permissions = await getUserEffectivePermissions(pool, user.UserID, user.RoleName, user.RoleID);
+
+    return { accessToken, refreshToken, user: formattedUser };
 }
 
 /**
@@ -355,6 +358,42 @@ export async function logoutService(rawRefreshToken) {
     } catch { }
 }
 
+async function getUserEffectivePermissions(pool, userId, roleName, roleId) {
+    if (roleName === 'Admin') {
+        return [
+            'VIEW_SLOTS', 'MANAGE_SESSIONS', 'MANAGE_USERS', 'VIEW_REPORTS',
+            'MANAGE_PAYMENTS', 'MANAGE_PRICING', 'MANAGE_BUILDINGS', 'MANAGE_INCIDENTS', 'MANAGE_SUPPORT'
+        ];
+    }
+
+    const hasUserPerms = await pool.request()
+        .input('UserID', sql.Int, userId)
+        .query(`SELECT COUNT(*) AS total FROM UserPermissions WHERE UserID = @UserID`);
+
+    if (hasUserPerms.recordset[0].total > 0) {
+        const custom = await pool.request()
+            .input('UserID', sql.Int, userId)
+            .query(`
+                SELECT p.PermissionName
+                FROM UserPermissions up
+                JOIN Permissions p ON p.PermissionID = up.PermissionID
+                WHERE up.UserID = @UserID AND up.IsGranted = 1
+            `);
+        return custom.recordset.map(r => r.PermissionName);
+    }
+
+    const rolePerms = await pool.request()
+        .input('RoleID', sql.Int, roleId)
+        .query(`
+            SELECT p.PermissionName
+            FROM RolePermissions rp
+            JOIN Permissions p ON p.PermissionID = rp.PermissionID
+            WHERE rp.RoleID = @RoleID
+        `);
+
+    return rolePerms.recordset.map(r => r.PermissionName);
+}
+
 /**
  * HÀM 9: getMeService
  * TÁC DỤNG: Lấy toàn bộ hồ sơ thông tin của chính tài khoản đang đăng nhập.
@@ -380,7 +419,10 @@ export async function getMeService(userId) {
         err.statusCode = 404; throw err;
     }
 
-    return formatUser(result.recordset[0]);
+    const rawUser = result.recordset[0];
+    const formatted = formatUser(rawUser);
+    formatted.permissions = await getUserEffectivePermissions(pool, rawUser.UserID, rawUser.RoleName, rawUser.RoleID);
+    return formatted;
 }
 
 /**

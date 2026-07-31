@@ -436,8 +436,21 @@ export async function getRolePermissions(req, res, next) {
 export async function updateRolePermissions(req, res, next) {
   try {
     const data = await infra.updateRolePermissions(Number(req.params.id), req.body.permissionIds)
-    await audit(req, 'Update', 'Phân quyền', `Cập nhật quyền cho Role ID ${req.params.id}`)
     return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật phân quyền thành công', data })
+  } catch (err) { next(err) }
+}
+
+export async function getUserPermissions(req, res, next) {
+  try {
+    const data = await infra.getUserPermissions(Number(req.params.id))
+    return res.status(StatusCodes.OK).json({ success: true, data })
+  } catch (err) { next(err) }
+}
+
+export async function updateUserPermissions(req, res, next) {
+  try {
+    const data = await infra.updateUserPermissions(Number(req.params.id), req.body.permissionIds)
+    return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật quyền hạn cá nhân thành công', data })
   } catch (err) { next(err) }
 }
 
@@ -467,10 +480,12 @@ export async function getBuildings(req, res, next) {
 export async function createBuilding(req, res, next) {
   try {
     const data = await infra.createBuilding({
-      buildingName: req.body.buildingName,
-      address: req.body.address,
-      operatingHours: req.body.operatingHours,
-      totalFloors: req.body.totalFloors,
+      buildingName: req.body.buildingName || req.body.BuildingName,
+      address: req.body.address || req.body.Address,
+      operatingHours: req.body.operatingHours || req.body.OperatingHours,
+      totalFloors: req.body.totalFloors || req.body.TotalFloors,
+      latitude: req.body.latitude !== undefined ? req.body.latitude : req.body.Latitude,
+      longitude: req.body.longitude !== undefined ? req.body.longitude : req.body.Longitude,
     })
     await audit(req, 'Create', 'Tòa nhà', `Thêm tòa nhà "${data.BuildingName}"`)
     return res.status(StatusCodes.CREATED).json({ success: true, message: 'Tạo tòa nhà thành công', data })
@@ -487,10 +502,12 @@ export async function createBuilding(req, res, next) {
 export async function updateBuilding(req, res, next) {
   try {
     const data = await infra.updateBuilding(Number(req.params.id), {
-      buildingName: req.body.buildingName,
-      address: req.body.address,
-      operatingHours: req.body.operatingHours,
-      totalFloors: req.body.totalFloors,
+      buildingName: req.body.buildingName || req.body.BuildingName,
+      address: req.body.address || req.body.Address,
+      operatingHours: req.body.operatingHours || req.body.OperatingHours,
+      totalFloors: req.body.totalFloors || req.body.TotalFloors,
+      latitude: req.body.latitude !== undefined ? req.body.latitude : req.body.Latitude,
+      longitude: req.body.longitude !== undefined ? req.body.longitude : req.body.Longitude,
     })
     await audit(req, 'Update', 'Tòa nhà', `Cập nhật tòa nhà ID ${req.params.id}`)
     return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật tòa nhà thành công', data })

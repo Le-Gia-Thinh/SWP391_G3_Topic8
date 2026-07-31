@@ -52,6 +52,12 @@ export const getRolePermissionsAPI = () =>
 export const updateRolePermissionsAPI = (roleId, permissionIds) =>
   authorizeAxios.put(`${BASE}/roles/${roleId}/permissions`, { permissionIds })
 
+export const getUserPermissionsAPI = (userId) =>
+  authorizeAxios.get(`${BASE}/users/${userId}/permissions`)
+
+export const updateUserPermissionsAPI = (userId, permissionIds) =>
+  authorizeAxios.put(`${BASE}/users/${userId}/permissions`, { permissionIds })
+
 /* ── Buildings ───────────────────────────────────────────────── */
 export const getBuildingsAPI = (params = {}) =>
   authorizeAxios.get(`${BASE}/buildings`, { params })

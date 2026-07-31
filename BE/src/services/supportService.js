@@ -34,8 +34,8 @@ export const createTicket = async (driverId, subject, content) => {
   // OUTPUT INSERTED.*: Trả về trực tiếp bản ghi vừa được chèn vào SQL Server mà không cần SELECT lại
   const result = await request.query(`
     INSERT INTO SupportTickets (DriverID, Subject, Content, Status, CreatedAt, UpdatedAt)
-    OUTPUT INSERTED.*
-    VALUES (@DriverID, @Subject, @Content, 'Open', GETDATE(), GETDATE())
+    VALUES (@DriverID, @Subject, @Content, 'Open', GETDATE(), GETDATE());
+    SELECT * FROM SupportTickets WHERE TicketID = SCOPE_IDENTITY();
   `);
   
   return result.recordset[0];
@@ -167,8 +167,8 @@ export const replyTicket = async (ticketId, senderId, content) => {
 
     const replyResult = await txRequest.query(`
       INSERT INTO TicketReplies (TicketID, SenderID, Content, CreatedAt)
-      OUTPUT INSERTED.*
-      VALUES (@TicketID, @SenderID, @Content, GETDATE())
+      VALUES (@TicketID, @SenderID, @Content, GETDATE());
+      SELECT * FROM TicketReplies WHERE ReplyID = SCOPE_IDENTITY();
     `);
 
     // 2. Kiểm tra Role người gửi để cập nhật trạng thái Ticket phù hợp
@@ -247,8 +247,8 @@ export const updateTicketStatus = async (ticketId, status) => {
   const result = await request.query(`
     UPDATE SupportTickets
     SET Status = @Status, UpdatedAt = GETDATE()
-    OUTPUT INSERTED.DriverID, INSERTED.Subject
-    WHERE TicketID = @TicketID
+    WHERE TicketID = @TicketID;
+    SELECT DriverID, Subject FROM SupportTickets WHERE TicketID = @TicketID;
   `);
   
   // Nếu chuyển sang trạng thái Closed/Resolved ➔ Bắn thông báo thông báo cho Tài xế biết

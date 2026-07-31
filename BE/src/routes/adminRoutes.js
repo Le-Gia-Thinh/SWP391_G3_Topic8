@@ -119,6 +119,9 @@ router.get('/role-permissions', adminController.getRolePermissions);
  */
 router.put('/roles/:id/permissions', adminController.updateRolePermissions);
 
+router.get('/users/:id/permissions', adminController.getUserPermissions);
+router.put('/users/:id/permissions', adminController.updateUserPermissions);
+
 // ─────────────────────────────────────────────────────────────
 // 4. QUẢN LÝ CƠ SỞ HẠ TẦNG (BUILDINGS, FLOORS, ZONES, SLOTS)
 // ─────────────────────────────────────────────────────────────

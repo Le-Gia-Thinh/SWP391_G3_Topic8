@@ -360,7 +360,7 @@
       "zone": {
         "editTitle": "Edit zone",
         "deleteTitle": "Delete zone",
-        "capacityLabel": "Capacity",
+        "capacityLabel": "Created slots",
         "manageSlots": "Manage slots",
         "deleteConfirmLabel": "Delete zone \"{{name}}\"? The zone must have no slots inside.",
         "deleteSuccess": "Zone deleted"
@@ -499,6 +499,31 @@
         "submit": "Reset password",
         "success": "Password reset for \"{{name}}\"",
         "fail": "Could not reset password"
+      },
+      "matrixTitle": "Role Permissions Matrix",
+      "matrixSub": "Enable/Disable specific permission categories for internal staff roles (Manager & Staff).",
+      "savePerms": "Save Permissions",
+      "savePermsSuccess": "Successfully updated role permissions for {{role}}!",
+      "savePermsFail": "Failed to update permissions.",
+      "confirmRoleTitle": "Confirm Role Change",
+      "confirmRoleDesc": "Are you sure you want to change the role for user {{name}}?",
+      "confirmRoleNotice": "⚠️ This action will immediately update the user's access permissions across the system.",
+      "confirmRoleSubmit": "Confirm Role Change",
+      "customPermsTitle": "Custom Permissions — {{name}}",
+      "customPermsSub": "Select additional or custom permissions for this individual account (overrides group role).",
+      "customPermsSave": "Save Custom Permissions",
+      "customPermsSuccess": "Successfully updated custom permissions for {{name}}!",
+      "customPermBtn": "Custom Perms",
+      "perms": {
+        "VIEW_SLOTS": "View parking slots & status (Parking Map & Slots)",
+        "MANAGE_SESSIONS": "Check-in / Check-out parking sessions (Parking Sessions)",
+        "MANAGE_USERS": "Manage user accounts & staff assignments (Users & Staff)",
+        "VIEW_REPORTS": "View revenue reports & system analytics (Reports & Analytics)",
+        "MANAGE_PAYMENTS": "Process payments & transaction history (Payments)",
+        "MANAGE_PRICING": "Configure pricing policies & allowed vehicle types (Pricing & Vehicle Types)",
+        "MANAGE_BUILDINGS": "Configure Buildings, Floors, Zones & Gates (Buildings & Layout)",
+        "MANAGE_INCIDENTS": "Report & resolve parking lot incidents (Incidents Management)",
+        "MANAGE_SUPPORT": "Reply to driver support tickets (Driver Support Tickets)"
       }
     },
     "users": {
@@ -1155,12 +1180,12 @@
         "time": "Time",
         "ratingPrompt": "How many stars would you give?",
         "ratingHint": {
-          "select": "Select a rating",
           "1": "Very poor 😞",
           "2": "Poor 😕",
           "3": "Average 😐",
           "4": "Good 😊",
-          "5": "Excellent! 🤩"
+          "5": "Excellent! 🤩",
+          "select": "Select a rating"
         },
         "tagsLabel": "Quick tags",
         "commentLabel": "Comment (optional)",
@@ -1301,7 +1326,7 @@
       "nightFlatRate": "Fixed night rate / night",
       "baseFee": "Base fee",
       "surcharge": "Surcharge",
-      "totalFee": "Total",
+      "totalFee": "Total parking fee",
       "overnightBadge": "Overnight",
       "bracketLabel0": "0 – 4 hours",
       "bracketLabel1": "4 – 8 hours",
@@ -1325,7 +1350,6 @@
       "backCancel": "Back / Cancel order",
       "scanToPay": "Scan QR to pay",
       "waiting": "Awaiting payment",
-      "totalFee": "Total parking fee",
       "expiresIn": "Expires in:",
       "expired": "Expired",
       "qrHint": "Open your banking app → QR / Scan → scan the code",
@@ -1667,10 +1691,10 @@
         "vehicleType": "Vehicle Type",
         "sortBy": "Sort By",
         "vehicles": {
-          "all": "All vehicle types",
           "1": "Motorbike",
           "2": "Car",
-          "3": "Truck"
+          "3": "Truck",
+          "all": "All vehicle types"
         },
         "sorts": {
           "newest": "Newest entry",

@@ -124,7 +124,9 @@ authorizeAxios.interceptors.response.use(
 
     // _noToast: true → component tự xử lý toast, interceptor không toast thêm
     if (status !== 401 && !isRefreshRequest && !original._noToast) {
-      toast.error(translateError(error))
+      toast.error(translateError(error), {
+        toastId: status === 403 ? 'http_403_forbidden_global' : undefined
+      })
     }
 
     return Promise.reject(error)

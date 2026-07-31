@@ -167,3 +167,54 @@ export function isAdmin(req, res, next) {
     });
   next();
 }
+
+/**
+ * Middleware kiểm tra danh mục quyền hạn cụ thể (Dynamic RBAC + User Custom Permissions).
+ */
+export function hasPermission(permissionName) {
+  return async (req, res, next) => {
+    try {
+      if (!req.user) return res.status(401).json({ success: false, message: 'Chưa xác thực.' })
+
+      if (req.user.RoleName === 'Admin') return next()
+
+      const pool = await getPool()
+      const userPerm = await pool.request()
+        .input('UserID', sql.Int, req.user.UserID)
+        .input('PermissionName', sql.NVarChar, permissionName)
+        .query(`
+          SELECT up.IsGranted
+          FROM UserPermissions up
+          JOIN Permissions p ON p.PermissionID = up.PermissionID
+          WHERE up.UserID = @UserID AND p.PermissionName = @PermissionName
+        `)
+
+      if (userPerm.recordset.length > 0) {
+        if (userPerm.recordset[0].IsGranted) return next()
+        return res.status(403).json({
+          success: false,
+          message: `Bạn không có quyền thực hiện thao tác này (${permissionName}).`,
+          code: 'FORBIDDEN_CUSTOM_PERMISSION'
+        })
+      }
+
+      const rolePerm = await pool.request()
+        .input('RoleID', sql.Int, req.user.RoleID)
+        .input('PermissionName', sql.NVarChar, permissionName)
+        .query(`
+          SELECT 1
+          FROM RolePermissions rp
+          JOIN Permissions p ON p.PermissionID = rp.PermissionID
+          WHERE rp.RoleID = @RoleID AND p.PermissionName = @PermissionName
+        `)
+
+      if (rolePerm.recordset.length > 0) return next()
+
+      return res.status(403).json({
+        success: false,
+        message: `Bạn không có quyền thực hiện thao tác này (${permissionName}).`,
+        code: 'FORBIDDEN_PERMISSION'
+      })
+    } catch (err) { next(err) }
+  }
+}
