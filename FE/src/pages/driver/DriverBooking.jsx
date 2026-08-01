@@ -33,6 +33,18 @@ const DEFAULT_BUILDINGS = []
  */
 const padNumber = (value) => String(value).padStart(2, '0')
 
+const formatTimeDisplay = (t) => {
+  if (!t) return ''
+  if (typeof t === 'string' && t.includes('T')) {
+    const d = new Date(t)
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+  if (typeof t === 'string') {
+    return t.split(':').slice(0, 2).join(':')
+  }
+  return String(t)
+}
+
 /**
  * Lấy ngày hiện tại theo định dạng YYYY-MM-DD
  * @returns {string} Ngày hiện tại
@@ -44,6 +56,13 @@ const padNumber = (value) => String(value).padStart(2, '0')
 const getTodayDateValue = () => {
   const now = new Date()
   return `${now.getFullYear()}-${padNumber(now.getMonth() + 1)}-${padNumber(now.getDate())}`
+}
+
+const getDaysDiff = (d1, d2) => {
+  if (!d1 || !d2) return 0
+  const t1 = new Date(d1 + 'T00:00:00')
+  const t2 = new Date(d2 + 'T00:00:00')
+  return Math.max(0, Math.round((t2.getTime() - t1.getTime()) / (24 * 60 * 60 * 1000)))
 }
 
 /**
@@ -166,6 +185,7 @@ const DriverBooking = () => {
   const [vehicles, setVehicles] = useState([])
   const [selectedVehicleId, setSelectedVehicleId] = useState('manual')
   const [bookingDate, setBookingDate] = useState(getTodayDateValue())
+  const [exitDate, setExitDate] = useState(getTodayDateValue())
   const [startTime, setStartTime] = useState(getMinimumStartTimeValue())
   const [isStartTimeTouched, setIsStartTimeTouched] = useState(false)
   const [duration, setDuration] = useState('4h')
@@ -197,14 +217,17 @@ const DriverBooking = () => {
     if (relevantPolicies.length === 0) return []
 
     const generated = []
-    for (let i = 1; i <= 8; i++) {
+    for (let i = 1; i <= 24; i++) {
       let policy = relevantPolicies.find(p => p.MaxHours >= i)
+      if (!policy) {
+        policy = pricingPolicies.find(p => p.VehicleTypeID === activeVehicleTypeId && !p.IsOvernight && p.MaxHours === 999)
+      }
       if (!policy) policy = relevantPolicies[relevantPolicies.length - 1]
 
       generated.push({
         value: `${i}h`,
         label: `${i}h`,
-        price: policy.Fee
+        price: policy ? policy.Fee : 0
       })
     }
     return generated
@@ -217,9 +240,87 @@ const DriverBooking = () => {
   }, [durations, duration])
 
   const selectedDuration = durations.find((item) => item.value === duration) || durations[0]
-  const temporaryPrice = selectedDuration?.price || 0
+
+  const totalHours = useMemo(() => {
+    const days = getDaysDiff(bookingDate, exitDate)
+    const hours = parseInt(duration, 10) || 4
+    return days * 24 + hours
+  }, [bookingDate, exitDate, duration])
+
+  const temporaryPrice = useMemo(() => {
+    const baseHourPrice = selectedDuration?.price || 0
+    const days = getDaysDiff(bookingDate, exitDate)
+    if (days > 0) {
+      const maxFeePolicy = pricingPolicies.find(p => p.VehicleTypeID === activeVehicleTypeId && !p.IsOvernight && p.MaxHours === 999)
+      const dailyMaxFee = maxFeePolicy ? maxFeePolicy.Fee : 120000
+      return days * dailyMaxFee + baseHourPrice
+    }
+    return baseHourPrice
+  }, [bookingDate, exitDate, selectedDuration, pricingPolicies, activeVehicleTypeId])
 
   const isBookingTimeValid = isStartTimeValid(bookingDate, startTime)
+
+  const selectedBuildingData = useMemo(() => {
+    return buildingOptions.find(b => String(b.value) === String(buildingId))
+  }, [buildingOptions, buildingId])
+
+  const exitDateTimeText = useMemo(() => {
+    const start = buildLocalDateTime(bookingDate, startTime)
+    if (!start) return ''
+    const end = new Date(start.getTime() + totalHours * 60 * 60 * 1000)
+    
+    const pad = (n) => String(n).padStart(2, '0')
+    const timeStr = `${pad(end.getHours())}:${pad(end.getMinutes())}`
+    const dateStr = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`
+    return `${timeStr} - ${dateStr}`
+  }, [bookingDate, startTime, totalHours])
+
+  const isTimeInClosedWindow = useMemo(() => {
+    if (!selectedBuildingData || selectedBuildingData.is247) return false
+    
+    if (!selectedBuildingData.openTime || !selectedBuildingData.closeTime) return false
+
+    const formatTimePart = (t) => {
+      if (!t) return ''
+      if (typeof t === 'string' && t.includes('T')) {
+        const d = new Date(t)
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      }
+      if (typeof t === 'string') {
+        return t.split(':').slice(0, 2).join(':')
+      }
+      return String(t)
+    }
+
+    const openTimeStr = formatTimePart(selectedBuildingData.openTime)
+    const closeTimeStr = formatTimePart(selectedBuildingData.closeTime)
+
+    if (!openTimeStr || !closeTimeStr) return false
+
+    const toMinutes = (timeStr) => {
+      const [h, m] = timeStr.split(':').map(Number)
+      return h * 60 + m
+    }
+
+    const openMin = toMinutes(openTimeStr)
+    const closeMin = toMinutes(closeTimeStr)
+
+    const isOutsideOpenHours = (date) => {
+      const min = date.getHours() * 60 + date.getMinutes()
+      if (openMin < closeMin) {
+        return min < openMin || min > closeMin
+      } else {
+        return min > closeMin && min < openMin
+      }
+    }
+
+    const start = buildLocalDateTime(bookingDate, startTime)
+    if (!start) return false
+    
+    const end = new Date(start.getTime() + totalHours * 60 * 60 * 1000)
+
+    return isOutsideOpenHours(start) || isOutsideOpenHours(end)
+  }, [selectedBuildingData, bookingDate, startTime, totalHours])
 
   const floorOptions = useMemo(() => {
     return uniqueBy(
@@ -306,7 +407,10 @@ const DriverBooking = () => {
         setBuildingOptions(
           buildings.map((building) => ({
             value: String(building.BuildingID),
-            label: building.BuildingName
+            label: building.BuildingName,
+            openTime: building.OpenTime,
+            closeTime: building.CloseTime,
+            is247: building.Is247
           }))
         )
 
@@ -418,7 +522,7 @@ const DriverBooking = () => {
           vehicleType,
           bookingDate,
           startTime,
-          duration
+          duration: `${totalHours}h`
         }
       })
 
@@ -495,7 +599,7 @@ const DriverBooking = () => {
   useEffect(() => {
     void Promise.resolve().then(fetchAvailableSlots)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buildingId, vehicleType, bookingDate, startTime, duration])
+  }, [buildingId, vehicleType, bookingDate, exitDate, startTime, duration])
 
   useEffect(() => {
     fetchBuildings()
@@ -588,6 +692,7 @@ const DriverBooking = () => {
 
     if (value < today) {
       setBookingDate(today)
+      setExitDate(today)
       setStartTime(getMinimumStartTimeValue())
       setIsStartTimeTouched(false)
       setErrorMessage(t('driver.booking.errPastDate'))
@@ -595,6 +700,9 @@ const DriverBooking = () => {
     }
 
     setBookingDate(value)
+    if (exitDate < value) {
+      setExitDate(value)
+    }
 
     if (value === today) {
       const minimumTime = getMinimumStartTimeValue()
@@ -608,25 +716,34 @@ const DriverBooking = () => {
     setErrorMessage('')
   }
 
+  const handleChangeExitDate = (event) => {
+    const value = event.target.value
+    if (value < bookingDate) {
+      setExitDate(bookingDate)
+      return
+    }
+    setExitDate(value)
+    setErrorMessage('')
+  }
+
   /**
    * Hàm xử lý logic: handleChangeStartTime
    * Cập nhật thời gian bắt đầu đỗ xe. Reset về thời gian tối thiểu nếu không hợp lệ.
    */
   const handleChangeStartTime = (event) => {
     const value = event.target.value
-    const minimumTime = getMinimumStartTimeValue()
-
     setIsStartTimeTouched(true)
+    setStartTime(value)
+    setErrorMessage('')
+  }
 
-    if (isToday(bookingDate) && !isStartTimeValid(bookingDate, value)) {
+  const handleBlurStartTime = () => {
+    const minimumTime = getMinimumStartTimeValue()
+    if (isToday(bookingDate) && !isStartTimeValid(bookingDate, startTime)) {
       setStartTime(minimumTime)
       setIsStartTimeTouched(false)
       setErrorMessage(t('driver.booking.errTimeAdjusted'))
-      return
     }
-
-    setStartTime(value)
-    setErrorMessage('')
   }
 
   /**
@@ -811,7 +928,7 @@ const DriverBooking = () => {
         licensePlate: licensePlate.trim().toUpperCase(),
         bookingDate,
         startTime,
-        duration,
+        duration: `${totalHours}h`,
         buildingId: Number(buildingId),
         slotId: selectedSlotId
       })
@@ -987,7 +1104,8 @@ const DriverBooking = () => {
               </span>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3">
+            <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+              {/* Entry Date */}
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
                   {t('driver.booking.date')}
@@ -1005,6 +1123,30 @@ const DriverBooking = () => {
                 </div>
               </div>
 
+              {/* Exit Date */}
+              <div>
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <CalendarDays size={12} className="text-orange-500" />
+                  {t('driver.booking.exitDate', 'Ngày ra')}
+                  {getDaysDiff(bookingDate, exitDate) > 0 && (
+                    <span className="ml-1 rounded-full bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 text-[9px] font-black text-orange-600 dark:text-orange-400">
+                      +{getDaysDiff(bookingDate, exitDate)}d
+                    </span>
+                  )}
+                </label>
+                <div className="relative">
+                  <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400" />
+                  <input
+                    type="date"
+                    value={exitDate}
+                    min={bookingDate}
+                    onChange={handleChangeExitDate}
+                    className="w-full rounded-xl border border-orange-200 dark:border-orange-900/40 bg-orange-50/50 dark:bg-orange-900/10 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+              </div>
+
+              {/* Start Time */}
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
                   {t('driver.booking.startTime')}
@@ -1015,15 +1157,22 @@ const DriverBooking = () => {
                     type="time"
                     value={startTime}
                     onChange={handleChangeStartTime}
+                    onBlur={handleBlurStartTime}
                     className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
               </div>
 
+              {/* Duration slider */}
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
                   {t('driver.booking.durationLabel', { value: duration.replace('h', t('driver.booking.hourSuffix')) })}
+                  {getDaysDiff(bookingDate, exitDate) > 0 && (
+                    <span className="ml-2 text-orange-500 font-black">
+                      (+{getDaysDiff(bookingDate, exitDate) * 24}h) = {totalHours}h {t('driver.booking.totalLabel', 'tổng')}
+                    </span>
+                  )}
                 </label>
                 <div className="pt-2 pb-1">
                   <input
@@ -1038,21 +1187,60 @@ const DriverBooking = () => {
                     }}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-blue-600"
                   />
-                  <div className="flex justify-between text-[10px] text-gray-500 font-medium mt-2 px-1">
-                    {durations.map((item, idx) => (
-                      <span
-                        key={item.value}
-                        className={durations.findIndex(d => d.value === duration) === idx ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}
-                        onClick={() => setDuration(item.value)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {item.label}
-                      </span>
-                    ))}
+                  <div className="relative h-5 mt-2.5 mx-1">
+                    {[1, 4, 8, 12, 16, 20, 24].map((h) => {
+                      const idx = h - 1
+                      const pct = (idx / 23) * 100
+                      const isSelected = duration === `${h}h`
+
+                      return (
+                        <span
+                          key={h}
+                          className={`absolute -translate-x-1/2 text-[10px] text-slate-400 font-bold transition-all hover:text-blue-600 ${
+                            isSelected ? 'text-blue-600 dark:text-blue-400 font-black scale-110' : ''
+                          }`}
+                          onClick={() => setDuration(`${h}h`)}
+                          style={{
+                            cursor: 'pointer',
+                            left: `${pct}%`
+                          }}
+                        >
+                          {h}h
+                        </span>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Calculated Exit Time Info */}
+            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-semibold text-gray-500 dark:text-gray-400">
+                  {t('driver.booking.exitTimeCalculated', 'Giờ ra dự kiến:')}
+                </span>
+                <span className="font-black text-gray-950 dark:text-white bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">
+                  {exitDateTimeText}
+                </span>
+              </div>
+
+              {selectedBuildingData && !selectedBuildingData.is247 && (
+                <div className="text-xs text-gray-500 dark:text-gray-400 bg-slate-50 dark:bg-slate-900/30 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
+                  ⚡ {t('driver.booking.operatingHoursInfo', 'Giờ mở cửa:')} <span className="font-bold text-gray-800 dark:text-gray-200">{formatTimeDisplay(selectedBuildingData.openTime)} - {formatTimeDisplay(selectedBuildingData.closeTime)}</span>
+                </div>
+              )}
+            </div>
+
+            {isTimeInClosedWindow && (
+              <div className="mt-4 flex items-start gap-2.5 p-3.5 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 rounded-xl text-xs font-semibold border border-red-200/60 dark:border-red-900/40 shadow-sm animate-pulse">
+                <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-500" />
+                <div>
+                  <p className="font-bold">{t('driver.booking.closedHoursWarningTitle', 'Ngoài giờ hoạt động!')}</p>
+                  <p className="mt-0.5 font-medium leading-relaxed">{t('driver.booking.closedHoursWarning', 'Thời gian đỗ xe (giờ vào hoặc giờ ra) nằm ngoài giờ mở cửa của tòa nhà này. Vui lòng điều chỉnh hoặc chọn tòa nhà khác!')}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-6 shadow-sm">
@@ -1247,7 +1435,8 @@ const DriverBooking = () => {
               <SummaryRow icon={<Car size={16} />} label={t('driver.booking.plateLabel')} value={licensePlate || t('driver.booking.plateNotEntered')} />
               <SummaryRow label={t('driver.booking.vehicleLabel')} value={vehicleLabel} />
               <SummaryRow icon={<Clock size={16} />} label={t('driver.booking.timeIn')} value={`${startTime} - ${bookingDate}`} />
-              <SummaryRow label={t('driver.booking.durationSummary')} value={durationLabel} />
+              <SummaryRow icon={<Clock size={16} />} label={t('driver.booking.timeOut', 'Giờ ra dự kiến')} value={exitDateTimeText} />
+              <SummaryRow label={t('driver.booking.durationSummary')} value={`${totalHours}h`} />
 
               <div className="flex items-center justify-between pb-2 text-sm">
                 <span className="flex items-center gap-2 text-gray-500 dark:text-gray-400">

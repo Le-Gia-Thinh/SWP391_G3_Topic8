@@ -1073,6 +1073,7 @@
       "plateNotEntered": "Not entered",
       "vehicleLabel": "Vehicle type",
       "timeIn": "Entry time",
+      "timeOut": "Exit time",
       "durationSummary": "Duration",
       "slotPos": "Parking slot",
       "tempPrice": "Estimated price",

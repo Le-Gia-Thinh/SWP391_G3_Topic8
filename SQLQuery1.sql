@@ -1299,9 +1299,9 @@ GO
    BUILDINGS V2 GỐC (Toa A, Toa B - giữ nguyên)
    =================================================================== */
 
-INSERT INTO Buildings (BuildingName,Address,Latitude,Longitude,OperatingHours,TotalFloors) VALUES
-(N'Toa A - Dai Hoc FPT TP.HCM (Khuon Vien Chinh)', N'Lo E2a-7, Duong D1, Khu Cong Nghe Cao, P. Long Thanh My, TP. Thu Duc, TP.HCM', 10.841517, 106.809883, '06:00-22:00', 3),
-(N'Toa B - Ky Tuc Xa & FPT Villa',                 N'Duong D2, Khu Cong Nghe Cao, P. Long Thanh My, TP. Thu Duc, TP.HCM',       10.843210, 106.808520, '00:00-23:59', 2);
+INSERT INTO Buildings (BuildingName,Address,Latitude,Longitude,OperatingHours,OpenTime,CloseTime,Is247,TotalFloors) VALUES
+(N'Toa A - Dai Hoc FPT TP.HCM (Khuon Vien Chinh)', N'Lo E2a-7, Duong D1, Khu Cong Nghe Cao, P. Long Thanh My, TP. Thu Duc, TP.HCM', 10.841517, 106.809883, '00:00-23:59', '00:00:00', '23:59:59', 1, 3),
+(N'Toa B - Ky Tuc Xa & FPT Villa',                 N'Duong D2, Khu Cong Nghe Cao, P. Long Thanh My, TP. Thu Duc, TP.HCM',       10.843210, 106.808520, '00:00-23:59', '00:00:00', '23:59:59', 1, 2);
 GO
 
 INSERT INTO Gates (BuildingID,GateName,GateType,IsActive) VALUES
@@ -1538,10 +1538,10 @@ GO
    ===================================================================== */
 
 -- Thêm 3 tòa mới (tầng hầm thực tế)
-INSERT INTO Buildings (BuildingName, Address, Latitude, Longitude, OperatingHours, TotalFloors) VALUES
-(N'Toa C - Trung Tam CNTT FPT Software (F-Town 3)', N'Lo E3-1c, Duong D1, Khu Cong Nghe Cao, P. Long Thanh My, TP. Thu Duc, TP.HCM', 10.840250, 106.812310, N'06:00-22:00', 3),
-(N'Toa D - Vien Dao Tao Quoc Te FPT Greenwich',     N'Duong N2, Khu Cong Nghe Cao, P. Tang Nhon Phu B, TP. Thu Duc, TP.HCM',      10.845120, 106.795430, N'00:00-23:59', 2),
-(N'Toa E - Trung Tam Dao Tao VietinBank Khu CNC',  N'Duong D1, Khu Cong Nghe Cao, P. Tan Phu, TP. Thu Duc, TP.HCM',              10.847250, 106.793810, N'08:00-22:00', 3);
+INSERT INTO Buildings (BuildingName, Address, Latitude, Longitude, OperatingHours, OpenTime, CloseTime, Is247, TotalFloors) VALUES
+(N'Toa C - Trung Tam CNTT FPT Software (F-Town 3)', N'Lo E3-1c, Duong D1, Khu Cong Nghe Cao, P. Long Thanh My, TP. Thu Duc, TP.HCM', 10.840250, 106.812310, N'00:00-23:59', '00:00:00', '23:59:59', 1, 3),
+(N'Toa D - Vien Dao Tao Quoc Te FPT Greenwich',     N'Duong N2, Khu Cong Nghe Cao, P. Tang Nhon Phu B, TP. Thu Duc, TP.HCM',      10.845120, 106.795430, N'00:00-23:59', '00:00:00', '23:59:59', 1, 2),
+(N'Toa E - Trung Tam Dao Tao VietinBank Khu CNC',  N'Duong D1, Khu Cong Nghe Cao, P. Tan Phu, TP. Thu Duc, TP.HCM',              10.847250, 106.793810, N'00:00-23:59', '00:00:00', '23:59:59', 1, 3);
 GO
 
 -- Floors for C/D/E: dùng LIKE khớp với tên mới đã được cập nhật
