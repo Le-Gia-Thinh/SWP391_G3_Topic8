@@ -151,41 +151,42 @@ async function calcParkingFee(pool, vehicleTypeId, entryTime, exitTime) {
  * NGUỒN ĐẦU VÀO TỪ FE: Gọi từ `GET /api/staff/dashboard`.
  * DỮ LIỆU TRẢ VỀ CHO FE: `stats` (các chỉ số ca trực), `recentCheckIns` (8 lượt vào gần nhất), `alerts` (các sự cố mở).
  */
-export async function getGates(buildingId = null) {
+export async function getGates(buildingId = null, staffUserId = null) {
     const pool = await getPool()
     const request = pool.request()
     request.input('BuildingID', sql.Int, buildingId || null)
+    request.input('StaffUserID', sql.Int, staffUserId || null)
     const result = await request.query(`
         SELECT g.GateID, g.BuildingID, b.BuildingName, g.GateName, g.GateType, g.IsActive
         FROM Gates g
         JOIN Buildings b ON g.BuildingID = b.BuildingID
         WHERE (@BuildingID IS NULL OR g.BuildingID = @BuildingID) AND g.IsActive = 1
+          AND (@StaffUserID IS NULL OR g.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @StaffUserID))
         ORDER BY g.BuildingID, g.GateID
     `)
     return result.recordset
 }
 
-export async function getDashboard() {
+export async function getDashboard(staffUserId = null) {
     const pool = await getPool()
+    const request = pool.request()
+    request.input('staffUserId', sql.Int, staffUserId || null)
 
-    // 1. QUERY DASHBOARD STATS: Sử dụng 8 câu truy vấn con Subquery SELECT độc lập trong cùng 1 câu lệnh để tối ưu hiệu năng
-    const stats = await pool.request().query(`
+    const stats = await request.query(`
         SELECT
-        (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Active') AS activeSessions, -- Xe đang đỗ thực tế
-        (SELECT COUNT(*) FROM ParkingSessions WHERE CAST(EntryTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckIns, -- Số lượt xe vào trong ngày
-        (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Completed' AND CAST(ExitTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckOuts, -- Số lượt xe ra trong ngày
-        (SELECT ISNULL(SUM(ISNULL(FinalAmount, Amount)), 0)
-        FROM Payments
-        WHERE PaymentStatus = 'Completed'
-            AND CAST(ISNULL(PaymentTime, SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE)) AS todayRevenue, -- Doanh thu trong ngày
-        (SELECT COUNT(*) FROM Incidents WHERE IncidentStatus IN ('Open', 'InProgress')) AS openIncidents, -- Sự cố chưa xử lý
-        (SELECT COUNT(*) FROM Reservations WHERE ReservationStatus = 'Reserved') AS pendingBookings, -- Đơn đặt trước chờ tới
-        (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Available') AS availableSlots, -- Số ô đỗ đang trống
-        (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Occupied') AS occupiedSlots -- Số ô đỗ đang bị chiếm
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Active' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS activeSessions,
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE CAST(s.EntryTime AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayCheckIns,
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Completed' AND CAST(s.ExitTime AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayCheckOuts,
+        (SELECT ISNULL(SUM(ISNULL(p.FinalAmount, p.Amount)), 0) FROM Payments p JOIN ParkingSessions s ON p.SessionID = s.SessionID JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE p.PaymentStatus = 'Completed' AND CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayRevenue,
+        (SELECT COUNT(*) FROM Incidents i WHERE i.IncidentStatus IN ('Open', 'InProgress') AND (@staffUserId IS NULL OR i.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS openIncidents,
+        (SELECT COUNT(*) FROM Reservations r WHERE r.ReservationStatus = 'Reserved' AND (@staffUserId IS NULL OR r.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS pendingBookings,
+        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Available' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS availableSlots,
+        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Occupied' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS occupiedSlots
     `)
 
-    // 2. QUERY RECENT CHECK-INS: Truy vấn TOP 8 lượt xe vừa check-in gần nhất (JOIN 5 BẢNG: ParkingSessions, VehicleTypes, ParkingSlots, Zones, Floors, Buildings, Users)
-    const recentCheckIns = await pool.request().query(`
+    const recentCheckIns = await pool.request()
+        .input('staffUserId', sql.Int, staffUserId || null)
+        .query(`
         SELECT TOP 8
         ps.SessionID,
         CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
@@ -206,11 +207,13 @@ export async function getDashboard() {
         JOIN Floors f ON z.FloorID = f.FloorID
         JOIN Buildings b ON f.BuildingID = b.BuildingID
         LEFT JOIN Users u ON ps.DriverID = u.UserID
+        WHERE (@staffUserId IS NULL OR b.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))
         ORDER BY ps.EntryTime DESC
     `)
 
-    // 3. QUERY ALERTS: Truy vấn TOP 6 sự cố khẩn cấp đang mở (`Open`, `InProgress`), ưu tiên hiển thị Priority 'High' trước
-    const alerts = await pool.request().query(`
+    const alerts = await pool.request()
+        .input('staffUserId', sql.Int, staffUserId || null)
+        .query(`
         SELECT TOP 6
         IncidentID,
         IncidentType,
@@ -220,6 +223,7 @@ export async function getDashboard() {
         CreatedAt
         FROM Incidents
         WHERE IncidentStatus IN ('Open', 'InProgress')
+          AND (@staffUserId IS NULL OR BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))
         ORDER BY
         CASE Priority
             WHEN 'High' THEN 1
@@ -1470,13 +1474,14 @@ export async function getVehicleTypes() {
   `)
     return result.recordset
 }
-export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status } = {}) {
+export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status } = {}, staffUserId = null) {
     const pool = await getPool()
 
     const result = await pool.request()
         .input('BuildingID', sql.Int, buildingId || null)
         .input('FloorID', sql.Int, floorId || null)
         .input('VehicleTypeID', sql.Int, vehicleTypeId || null)
+        .input('StaffUserID', sql.Int, staffUserId || null)
         .query(`
             SELECT 
                 ps.SlotID,
@@ -1522,6 +1527,7 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
               AND (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
               AND (@FloorID IS NULL OR z.FloorID = @FloorID)
               AND (@VehicleTypeID IS NULL OR ps.VehicleTypeID = @VehicleTypeID)
+              AND (@StaffUserID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @StaffUserID))
             ORDER BY z.ZoneID, ps.SlotCode
         `)
 

@@ -179,6 +179,32 @@ export function hasPermission(permissionName) {
       if (req.user.RoleName === 'Admin') return next()
 
       const pool = await getPool()
+
+      // ── BƯỚC 1: Kiểm tra quyền cấp VAI TRÒ (Role-level) ────────────────
+      // Đây là "quyền chung" - nếu vai trò không có quyền này thì TỪ CHỐI HOÀN TOÀN
+      // Quyền cá nhân (UserPermissions) KHÔNG thể ghi đè lên khi role đã tắt
+      const rolePerm = await pool.request()
+        .input('RoleID', sql.Int, req.user.RoleID)
+        .input('PermissionName', sql.NVarChar, permissionName)
+        .query(`
+          SELECT 1
+          FROM RolePermissions rp
+          JOIN Permissions p ON p.PermissionID = rp.PermissionID
+          WHERE rp.RoleID = @RoleID AND p.PermissionName = @PermissionName
+        `)
+
+      // Nếu vai trò KHÔNG có quyền → từ chối ngay, không xét quyền cá nhân
+      if (rolePerm.recordset.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: `Bạn không có quyền thực hiện thao tác này (${permissionName}). Vai trò của bạn chưa được cấp quyền này.`,
+          code: 'FORBIDDEN_PERMISSION'
+        })
+      }
+
+      // ── BƯỚC 2: Vai trò CÓ quyền → kiểm tra xem có quyền cá nhân thu hồi không ──
+      // UserPermissions chỉ dùng để TU HẸP (revoke) quyền mà role đã có
+      // IsGranted=0 có nghĩa là Admin đã thu hồi quyền này khỏi user cụ thể
       try {
         const userPerm = await pool.request()
           .input('UserID', sql.Int, req.user.UserID)
@@ -191,37 +217,20 @@ export function hasPermission(permissionName) {
           `)
 
         if (userPerm.recordset.length > 0) {
+          // Có record cá nhân → tuân theo giá trị IsGranted của nó
           if (userPerm.recordset[0].IsGranted) return next()
           return res.status(403).json({
             success: false,
-            message: `Bạn không có quyền thực hiện thao tác này (${permissionName}).`,
+            message: `Bạn không có quyền thực hiện thao tác này (${permissionName}). Quyền cá nhân của bạn đã bị thu hồi.`,
             code: 'FORBIDDEN_CUSTOM_PERMISSION'
           })
         }
-
-        const rolePerm = await pool.request()
-          .input('RoleID', sql.Int, req.user.RoleID)
-          .input('PermissionName', sql.NVarChar, permissionName)
-          .query(`
-            SELECT 1
-            FROM RolePermissions rp
-            JOIN Permissions p ON p.PermissionID = rp.PermissionID
-            WHERE rp.RoleID = @RoleID AND p.PermissionName = @PermissionName
-          `)
-
-        if (rolePerm.recordset.length > 0) return next()
       } catch (dbErr) {
-        console.warn('⚠️ Lỗi kiểm tra bảng Permissions:', dbErr.message)
-        if (Array.isArray(req.user?.permissions) && req.user.permissions.includes(permissionName)) {
-          return next()
-        }
+        console.warn('⚠️ Lỗi kiểm tra bảng UserPermissions:', dbErr.message)
       }
 
-      return res.status(403).json({
-        success: false,
-        message: `Bạn không có quyền thực hiện thao tác này (${permissionName}).`,
-        code: 'FORBIDDEN_PERMISSION'
-      })
+      // ── BƯỚC 3: Không có override cá nhân → dùng quyền vai trò (đã pass bước 1) ──
+      return next()
     } catch (err) { next(err) }
   }
-}
+}

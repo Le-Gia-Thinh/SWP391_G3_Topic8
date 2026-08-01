@@ -124,6 +124,9 @@ export const getAuditLogsAPI = (params = {}) =>
 export const getBuildingAssignmentsAPI = (buildingId) =>
   authorizeAxios.get(`${BASE}/buildings/${buildingId}/assignments`)
 
+export const getUserAssignmentsAPI = (userId) =>
+  authorizeAxios.get(`${BASE}/users/${userId}/assignments`)
+
 export const assignUserToBuildingAPI = (data) => // { buildingId, userId, isPrimary? }
   authorizeAxios.post(`${BASE}/assignments`, data)
 

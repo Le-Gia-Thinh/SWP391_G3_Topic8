@@ -1108,7 +1108,7 @@ const DriverBooking = () => {
               {/* Entry Date */}
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  {t('driver.booking.date')}
+                  {t('driver.booking.date', 'Ngày vào')}
                 </label>
                 <div className="relative">
                   <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -1117,7 +1117,34 @@ const DriverBooking = () => {
                     value={bookingDate}
                     min={getTodayDateValue()}
                     onChange={handleChangeDate}
-                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 font-semibold"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Start Time */}
+              <div>
+                <label className="mb-1.5 flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <span>{t('driver.booking.startTime', 'Giờ vào')}</span>
+                  {isToday(bookingDate) && (
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                      Sớm nhất: {getMinimumStartTimeValue()}
+                    </span>
+                  )}
+                </label>
+                <div className="relative">
+                  <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500" />
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => {
+                      setStartTime(e.target.value)
+                      setIsStartTimeTouched(true)
+                      setErrorMessage('')
+                    }}
+                    onBlur={handleBlurStartTime}
+                    className="w-full rounded-xl border border-blue-200 dark:border-slate-700 bg-blue-50/40 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 font-semibold text-blue-900 dark:text-blue-300"
                     required
                   />
                 </div>
@@ -1127,10 +1154,10 @@ const DriverBooking = () => {
               <div>
                 <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300">
                   <CalendarDays size={12} className="text-orange-500" />
-                  {t('driver.booking.exitDate', 'Ngày ra')}
+                  {t('driver.booking.exitDate', 'Ngày ra (nếu đỗ qua ngày)')}
                   {getDaysDiff(bookingDate, exitDate) > 0 && (
-                    <span className="ml-1 rounded-full bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 text-[9px] font-black text-orange-600 dark:text-orange-400">
-                      +{getDaysDiff(bookingDate, exitDate)}d
+                    <span className="ml-1 rounded-full bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 text-[10px] font-black text-orange-600 dark:text-orange-400">
+                      +{getDaysDiff(bookingDate, exitDate)} ngày
                     </span>
                   )}
                 </label>
@@ -1141,38 +1168,18 @@ const DriverBooking = () => {
                     value={exitDate}
                     min={bookingDate}
                     onChange={handleChangeExitDate}
-                    className="w-full rounded-xl border border-orange-200 dark:border-orange-900/40 bg-orange-50/50 dark:bg-orange-900/10 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-orange-400"
-                  />
-                </div>
-              </div>
-
-              {/* Start Time */}
-              <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  {t('driver.booking.startTime')}
-                </label>
-                <div className="relative">
-                  <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={handleChangeStartTime}
-                    onBlur={handleBlurStartTime}
-                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500"
-                    required
+                    className="w-full rounded-xl border border-orange-200 dark:border-orange-900/40 bg-orange-50/50 dark:bg-orange-900/10 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-orange-400 font-semibold"
                   />
                 </div>
               </div>
 
               {/* Duration slider */}
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  {t('driver.booking.durationLabel', { value: duration.replace('h', t('driver.booking.hourSuffix')) })}
-                  {getDaysDiff(bookingDate, exitDate) > 0 && (
-                    <span className="ml-2 text-orange-500 font-black">
-                      (+{getDaysDiff(bookingDate, exitDate) * 24}h) = {totalHours}h {t('driver.booking.totalLabel', 'tổng')}
-                    </span>
-                  )}
+                <label className="mb-1.5 flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <span>Thời gian đỗ trong ngày:</span>
+                  <span className="font-black text-blue-600 dark:text-blue-400 text-sm">
+                    {duration.replace('h', ' giờ')}
+                  </span>
                 </label>
                 <div className="pt-2 pb-1">
                   <input
@@ -1185,62 +1192,75 @@ const DriverBooking = () => {
                       const idx = parseInt(event.target.value, 10)
                       if (durations[idx]) setDuration(durations[idx].value)
                     }}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-blue-600"
+                    className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
-                  <div className="relative h-5 mt-2.5 mx-1">
-                    {[1, 4, 8, 12, 16, 20, 24].map((h) => {
-                      const idx = h - 1
-                      const pct = (idx / 23) * 100
-                      const isSelected = duration === `${h}h`
-
-                      return (
-                        <span
-                          key={h}
-                          className={`absolute -translate-x-1/2 text-[10px] text-slate-400 font-bold transition-all hover:text-blue-600 ${
-                            isSelected ? 'text-blue-600 dark:text-blue-400 font-black scale-110' : ''
-                          }`}
-                          onClick={() => setDuration(`${h}h`)}
-                          style={{
-                            cursor: 'pointer',
-                            left: `${pct}%`
-                          }}
-                        >
-                          {h}h
-                        </span>
-                      )
-                    })}
-                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Calculated Exit Time Info */}
-            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-semibold text-gray-500 dark:text-gray-400">
-                  {t('driver.booking.exitTimeCalculated', 'Giờ ra dự kiến:')}
-                </span>
-                <span className="font-black text-gray-950 dark:text-white bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">
-                  {exitDateTimeText}
-                </span>
+            {/* Quick Duration Presets & Total summary */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 mr-1">Chọn nhanh:</span>
+              {[2, 4, 8, 12, 16, 24].map((h) => {
+                const val = `${h}h`
+                const isSelected = duration === val
+                return (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => setDuration(val)}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm scale-105'
+                        : 'bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {h === 24 ? '1 Ngày (24h)' : `${h}h`}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Calculated Exit Time Info & Operating Hours Card */}
+            <div className="mt-5 p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-slate-50 dark:from-slate-900/60 dark:to-slate-800/60 border border-blue-100 dark:border-slate-700/60">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <Clock size={14} className="text-blue-600 dark:text-blue-400" />
+                    <span>Thời gian lấy xe ra dự kiến:</span>
+                  </div>
+                  <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
+                    {exitDateTimeText}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1.5 rounded-xl text-xs font-black bg-blue-600 text-white shadow-sm">
+                    ⏱️ Tổng: {getDaysDiff(bookingDate, exitDate) > 0 ? `${getDaysDiff(bookingDate, exitDate)} ngày ` : ''}{parseInt(duration, 10)} giờ ({totalHours}h)
+                  </span>
+
+                  {selectedBuildingData && !selectedBuildingData.is247 && (
+                    <div className="text-xs text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-medium">
+                      ⚡ Giờ mở cửa: <span className="font-bold text-blue-600 dark:text-blue-400">{formatTimeDisplay(selectedBuildingData.openTime)} - {formatTimeDisplay(selectedBuildingData.closeTime)}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {selectedBuildingData && !selectedBuildingData.is247 && (
-                <div className="text-xs text-gray-500 dark:text-gray-400 bg-slate-50 dark:bg-slate-900/30 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
-                  ⚡ {t('driver.booking.operatingHoursInfo', 'Giờ mở cửa:')} <span className="font-bold text-gray-800 dark:text-gray-200">{formatTimeDisplay(selectedBuildingData.openTime)} - {formatTimeDisplay(selectedBuildingData.closeTime)}</span>
+              {/* Warning if Exit/Entry is outside operating hours */}
+              {isTimeInClosedWindow && (
+                <div className="mt-3.5 flex items-start gap-2.5 p-3.5 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 rounded-xl text-xs border border-rose-200 dark:border-rose-800 shadow-sm animate-pulse">
+                  <AlertCircle size={18} className="shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                  <div>
+                    <p className="font-black text-sm text-rose-800 dark:text-rose-200">⚠️ Cảnh báo: Thời gian đỗ rơi vào giờ đóng cửa!</p>
+                    <p className="mt-1 leading-relaxed font-medium">
+                      Thời gian đỗ xe (giờ vào hoặc giờ lấy xe ra dự kiến <strong className="font-black">{exitDateTimeText}</strong>) nằm ngoài giờ hoạt động mở cửa của tòa nhà ({selectedBuildingData ? `${formatTimeDisplay(selectedBuildingData.openTime)} - ${formatTimeDisplay(selectedBuildingData.closeTime)}` : ''}).
+                      Vui lòng chọn thời gian ra trước giờ đóng cửa!
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
-
-            {isTimeInClosedWindow && (
-              <div className="mt-4 flex items-start gap-2.5 p-3.5 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 rounded-xl text-xs font-semibold border border-red-200/60 dark:border-red-900/40 shadow-sm animate-pulse">
-                <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-500" />
-                <div>
-                  <p className="font-bold">{t('driver.booking.closedHoursWarningTitle', 'Ngoài giờ hoạt động!')}</p>
-                  <p className="mt-0.5 font-medium leading-relaxed">{t('driver.booking.closedHoursWarning', 'Thời gian đỗ xe (giờ vào hoặc giờ ra) nằm ngoài giờ mở cửa của tòa nhà này. Vui lòng điều chỉnh hoặc chọn tòa nhà khác!')}</p>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="rounded-2xl border border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-6 shadow-sm">

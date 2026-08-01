@@ -453,35 +453,26 @@ export async function deleteGate(gateId) {
 // ─────────────────────────────────────────────────────────────
 // CONFIG – FLOORS
 // ─────────────────────────────────────────────────────────────
-export async function getFloors(buildingId) {
+export async function getFloors(buildingId = null, managerUserId = null) {
   const pool = await getPool();
   const result = await pool.request()
     .input("BuildingID", sql.Int, buildingId || null)
+    .input("ManagerUserID", sql.Int, managerUserId || null)
     .query(`
       SELECT
-        -- 1. Lấy thông tin tầng và tòa nhà
         f.FloorID,
         f.BuildingID,
         b.BuildingName,
         f.FloorName,
         f.IsActive,
-
-        -- 2. Đếm số lượng Zone và số lượng ô đỗ
         COUNT(DISTINCT z.ZoneID)   AS ZoneCount,
         COUNT(DISTINCT ps.SlotID)  AS SlotCount
-
-      -- 3. BẢNG CHÍNH: Floors
       FROM Floors f
-
-      -- 4. INNER JOIN Buildings lấy tên tòa nhà & LEFT JOIN Zones, ParkingSlots để đếm ô đỗ
-      JOIN Buildings b       ON b.BuildingID = f.BuildingID
-      LEFT JOIN Zones z      ON z.FloorID    = f.FloorID
-      LEFT JOIN ParkingSlots ps ON ps.ZoneID = z.ZoneID
-
-      -- 5. MỆNH ĐỀ WHERE: Lọc theo buildingId nếu có
+      JOIN Buildings b          ON b.BuildingID = f.BuildingID
+      LEFT JOIN Zones z         ON z.FloorID    = f.FloorID
+      LEFT JOIN ParkingSlots ps ON ps.ZoneID    = z.ZoneID
       WHERE (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
-
-      -- 6. MỆNH ĐỀ GROUP BY & ORDER BY
+        AND (@ManagerUserID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID))
       GROUP BY f.FloorID, f.BuildingID, b.BuildingName, f.FloorName, f.IsActive
       ORDER BY f.BuildingID, f.FloorID
     `);
@@ -508,13 +499,13 @@ export async function updateFloor(floorId, data) {
 // ─────────────────────────────────────────────────────────────
 // CONFIG – ZONES
 // ─────────────────────────────────────────────────────────────
-export async function getZones(floorId) {
+export async function getZones(floorId = null, managerUserId = null) {
   const pool = await getPool();
   const result = await pool.request()
     .input("FloorID", sql.Int, floorId || null)
+    .input("ManagerUserID", sql.Int, managerUserId || null)
     .query(`
       SELECT
-        -- 1. Lấy thuộc tính khu vực
         z.ZoneID,
         z.FloorID,
         f.FloorName,
@@ -525,26 +516,15 @@ export async function getZones(floorId) {
         vt.VehicleName  AS AllowedVehicleName,
         vt.VehicleCode  AS AllowedVehicleCode,
         z.TotalSlots,
-
-        -- 2. Đếm số lượng ô đỗ thực tế đã tạo dưới DB
         COUNT(ps.SlotID) AS ActualSlots
-
-      -- 3. BẢNG CHÍNH: Zones
       FROM Zones z
-
-      -- 4. INNER JOIN Floors, Buildings, VehicleTypes
-      JOIN Floors f        ON f.FloorID       = z.FloorID
-      JOIN Buildings b     ON b.BuildingID    = f.BuildingID
+      JOIN Floors f        ON f.FloorID        = z.FloorID
+      JOIN Buildings b     ON b.BuildingID     = f.BuildingID
       JOIN VehicleTypes vt ON vt.VehicleTypeID = z.AllowedVehicleTypeID
-
-      -- 5. LEFT JOIN ParkingSlots để giữ Zone nguyên vẹn khi chưa có ô đỗ
       LEFT JOIN ParkingSlots ps ON ps.ZoneID  = z.ZoneID
-
-      -- 6. MỆNH ĐỀ WHERE: Lọc theo Tầng và chỉ lấy Tầng đang hoạt động (IsActive = 1)
       WHERE (@FloorID IS NULL OR z.FloorID = @FloorID)
         AND f.IsActive = 1
-
-      -- 7. MỆNH ĐỀ GROUP BY & ORDER BY
+        AND (@ManagerUserID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID))
       GROUP BY z.ZoneID, z.FloorID, f.FloorName, b.BuildingID, b.BuildingName,
                z.ZoneName, z.AllowedVehicleTypeID, vt.VehicleName, vt.VehicleCode,
                z.TotalSlots
@@ -578,12 +558,7 @@ export async function updateZone(zoneId, data) {
 // ─────────────────────────────────────────────────────────────
 export async function getVehicleTypes() {
   const pool = await getPool();
-  const result = await pool.request().query(`
-    SELECT VehicleTypeID, VehicleCode, VehicleName, Description, IsActive
-    FROM VehicleTypes
-    WHERE IsActive = 1
-    ORDER BY VehicleTypeID
-  `);
+  const result = await pool.request().query("SELECT * FROM VehicleTypes ORDER BY VehicleTypeID");
   return result.recordset;
 }
 
@@ -592,7 +567,7 @@ export async function getVehicleTypes() {
 // ─────────────────────────────────────────────────────────────
 export async function getParkingSlots({
   buildingId, floorId, zoneId, status, vehicleTypeId, search, page = 1, limit = 50
-}) {
+} = {}, managerUserId = null) {
   const pool = await getPool();
   const offset = (page - 1) * limit;
 
@@ -603,6 +578,7 @@ export async function getParkingSlots({
     .input("Status", sql.NVarChar(20), status || null)
     .input("VehicleTypeID", sql.Int, vehicleTypeId || null)
     .input("Search", sql.NVarChar(50), search || null)
+    .input("ManagerUserID", sql.Int, managerUserId || null)
     .input("Offset", sql.Int, offset)
     .input("Limit", sql.Int, limit)
     .query(`
@@ -644,6 +620,7 @@ export async function getParkingSlots({
         AND (@VehicleTypeID IS NULL OR ps.VehicleTypeID = @VehicleTypeID)
         AND (@Search        IS NULL OR ps.SlotCode LIKE '%' + @Search + '%'
                                     OR sess.PlateNumber LIKE '%' + @Search + '%')
+        AND (@ManagerUserID IS NULL OR b.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID))
       ORDER BY b.BuildingID, f.FloorID, z.ZoneID, ps.SlotCode
       OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
     `);
@@ -655,6 +632,7 @@ export async function getParkingSlots({
     .input("Status", sql.NVarChar(20), status || null)
     .input("VehicleTypeID", sql.Int, vehicleTypeId || null)
     .input("Search", sql.NVarChar(50), search || null)
+    .input("ManagerUserID", sql.Int, managerUserId || null)
     .query(`
       SELECT COUNT(*) AS Total
       FROM ParkingSlots ps
@@ -672,6 +650,7 @@ export async function getParkingSlots({
         AND (@VehicleTypeID IS NULL OR ps.VehicleTypeID = @VehicleTypeID)
         AND (@Search        IS NULL OR ps.SlotCode LIKE '%' + @Search + '%'
                                     OR sess.PlateNumber LIKE '%' + @Search + '%')
+        AND (@ManagerUserID IS NULL OR b.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID))
     `);
 
   return {
@@ -749,7 +728,7 @@ export async function getSlotById(slotId) {
     `);
 
   return {
-    slot: slotResult.recordset[0],
+    ...slotResult.recordset[0],
     currentSession: sessResult.recordset[0] || null,
     history: histResult.recordset,
   };
@@ -781,14 +760,18 @@ export async function updateSlotStatus(slotId, { status, notes }) {
 // ─────────────────────────────────────────────────────────────
 // PRICING POLICIES
 // ─────────────────────────────────────────────────────────────
-export async function getPricingPolicies({ vehicleTypeId, isActive } = {}) {
+export async function getPricingPolicies({ vehicleTypeId, isActive, buildingId } = {}, managerUserId = null) {
   const pool = await getPool();
   const result = await pool.request()
     .input("VehicleTypeID", sql.Int, vehicleTypeId || null)
     .input("IsActive", sql.Bit, isActive !== undefined ? isActive : null)
+    .input("BuildingID", sql.Int, buildingId || null)
+    .input("ManagerUserID", sql.Int, managerUserId || null)
     .query(`
       SELECT
         pp.PricingPolicyID,
+        pp.BuildingID,
+        b.BuildingName,
         pp.VehicleTypeID,
         vt.VehicleName,
         vt.VehicleCode,
@@ -799,9 +782,14 @@ export async function getPricingPolicies({ vehicleTypeId, isActive } = {}) {
         pp.IsActive
       FROM PricingPolicies pp
       JOIN VehicleTypes vt ON vt.VehicleTypeID = pp.VehicleTypeID
+      LEFT JOIN Buildings b ON b.BuildingID = pp.BuildingID
       WHERE (@VehicleTypeID IS NULL OR pp.VehicleTypeID = @VehicleTypeID)
         AND (@IsActive      IS NULL OR pp.IsActive      = @IsActive)
-      ORDER BY pp.VehicleTypeID, pp.MinHours
+        AND (@BuildingID    IS NULL OR pp.BuildingID    = @BuildingID)
+        AND (@ManagerUserID IS NULL OR pp.BuildingID IS NULL OR pp.BuildingID IN (
+              SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID
+            ))
+      ORDER BY pp.BuildingID, pp.VehicleTypeID, pp.MinHours
     `);
   return result.recordset;
 }

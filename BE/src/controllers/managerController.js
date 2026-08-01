@@ -155,8 +155,9 @@ export async function deleteGate(req, res, next) {
  */
 export async function getFloors(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null;
-        const data = await managerService.getFloors(buildingId);
+        const data = await managerService.getFloors(buildingId, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -193,8 +194,9 @@ export async function updateFloor(req, res, next) {
  */
 export async function getZones(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const floorId = req.query.floorId ? Number(req.query.floorId) : null;
-        const data = await managerService.getZones(floorId);
+        const data = await managerService.getZones(floorId, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -231,6 +233,7 @@ export async function updateZone(req, res, next) {
  */
 export async function getParkingSlots(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const result = await managerService.getParkingSlots({
             buildingId: req.query.buildingId ? Number(req.query.buildingId) : undefined,
             floorId: req.query.floorId ? Number(req.query.floorId) : undefined,
@@ -240,7 +243,7 @@ export async function getParkingSlots(req, res, next) {
             search: req.query.search || undefined,
             page: req.query.page ? Number(req.query.page) : 1,
             limit: req.query.limit ? Number(req.query.limit) : 50,
-        });
+        }, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, ...result });
     } catch (err) { next(err); }
 }
@@ -291,10 +294,12 @@ export async function updateSlotStatus(req, res, next) {
  */
 export async function getPricingPolicies(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.getPricingPolicies({
             vehicleTypeId: req.query.vehicleTypeId ? Number(req.query.vehicleTypeId) : undefined,
             isActive: req.query.isActive !== undefined ? Number(req.query.isActive) : undefined,
-        });
+            buildingId: req.query.buildingId ? Number(req.query.buildingId) : undefined,
+        }, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }

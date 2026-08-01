@@ -185,6 +185,7 @@ router.post('/notify-manager', adminController.notifyManagers);
 // 6. PHẦN BỔ SUNG: QUẢN LÝ PHÂN CÔNG & ĐIỀU CHUYỂN NHÂN SỰ
 // ─────────────────────────────────────────────────────────────
 router.get('/buildings/:buildingId/assignments', adminController.getBuildingAssignments);
+router.get('/users/:userId/assignments', adminController.getUserAssignments);
 router.post('/assignments', adminController.assignUserToBuilding);
 router.delete('/assignments/:id', adminController.removeBuildingAssignment);
 router.post('/staff/transfer', adminController.transferStaff);

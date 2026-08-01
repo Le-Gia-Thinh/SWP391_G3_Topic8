@@ -1316,33 +1316,34 @@ export async function getUserPermissions(userId) {
   const pool = await getPool()
 
   try {
-    // 1. Kiểm tra xem user có ghi nhận quyền riêng trong UserPermissions không
+    // Kiểm tra xem user có ghi nhận quyền riêng trong UserPermissions không
     const hasUserPerms = await pool.request()
       .input('UserID', sql.Int, Number(userId))
       .query(`SELECT COUNT(*) AS total FROM UserPermissions WHERE UserID = @UserID`)
 
     if (hasUserPerms.recordset[0]?.total > 0) {
+      // Trả về TẤT CẢ records kèm IsGranted để FE biết cái nào đang bị revoke
       const custom = await pool.request()
         .input('UserID', sql.Int, Number(userId))
         .query(`
-          SELECT up.PermissionID
+          SELECT up.PermissionID, up.IsGranted
           FROM UserPermissions up
-          WHERE up.UserID = @UserID AND up.IsGranted = 1
+          WHERE up.UserID = @UserID
         `)
-      return custom.recordset.map((r) => r.PermissionID)
+      return custom.recordset // [{ PermissionID, IsGranted }, ...]
     }
 
-    // 2. Nếu chưa cài riêng, lấy quyền nhóm vai trò mặc định
+    // Nếu chưa cài riêng, lấy quyền nhóm vai trò mặc định (IsGranted mặc định = true)
     const roleReq = await pool.request()
       .input('UserID', sql.Int, Number(userId))
       .query(`
-        SELECT rp.PermissionID
+        SELECT rp.PermissionID, 1 AS IsGranted
         FROM RolePermissions rp
         JOIN Users u ON u.RoleID = rp.RoleID
         WHERE u.UserID = @UserID
       `)
 
-    return roleReq.recordset.map((r) => r.PermissionID)
+    return roleReq.recordset
   } catch (err) {
     console.warn('⚠️ Lỗi truy vấn bảng UserPermissions/RolePermissions:', err.message)
     return []
@@ -1676,6 +1677,21 @@ export async function getBuildingAssignments(buildingId) {
   return result.recordset;
 }
 
+export async function getUserAssignments(userId) {
+  const pool = await getPool();
+  const result = await pool.request()
+    .input('userId', sql.Int, userId)
+    .query(`
+      SELECT ba.AssignmentID, ba.BuildingID, ba.IsPrimary, ba.AssignedDate,
+             b.BuildingName, b.Address
+      FROM BuildingAssignments ba
+      JOIN Buildings b ON ba.BuildingID = b.BuildingID
+      WHERE ba.UserID = @userId
+      ORDER BY ba.IsPrimary DESC, b.BuildingName ASC
+    `);
+  return result.recordset;
+}
+
 export async function removeBuildingAssignment(assignmentId) {
   const pool = await getPool();
   await pool.request()
@@ -1684,7 +1700,7 @@ export async function removeBuildingAssignment(assignmentId) {
   return { success: true, message: 'Xóa phân công thành công' };
 }
 
-export async function transferStaff({ userId, fromBuildingId = null, toBuildingId, isPrimary = true }) {
+export async function transferStaff({ userId, fromBuildingId = null, toBuildingId, isPrimary = true, replaceAll = true }) {
   const pool = await getPool();
   const transaction = new sql.Transaction(pool);
   await transaction.begin();
@@ -1693,8 +1709,14 @@ export async function transferStaff({ userId, fromBuildingId = null, toBuildingI
       await new sql.Request(transaction)
         .input('userId', sql.Int, userId)
         .input('fromBuildingId', sql.Int, fromBuildingId)
-        .query(`UPDATE BuildingAssignments SET IsPrimary = 0 WHERE UserID = @userId AND BuildingID = @fromBuildingId`);
+        .query(`DELETE FROM BuildingAssignments WHERE UserID = @userId AND BuildingID = @fromBuildingId`);
+    } else if (replaceAll) {
+      // Điều chuyển hẳn -> Xóa tất cả phân công cũ của nhân sự này để chuyển sang Tòa mới
+      await new sql.Request(transaction)
+        .input('userId', sql.Int, userId)
+        .query(`DELETE FROM BuildingAssignments WHERE UserID = @userId`);
     }
+
     await new sql.Request(transaction)
       .input('buildingId', sql.Int, toBuildingId)
       .input('userId', sql.Int, userId)
@@ -1706,14 +1728,15 @@ export async function transferStaff({ userId, fromBuildingId = null, toBuildingI
         WHEN MATCHED THEN UPDATE SET IsPrimary = @isPrimary, AssignedDate = GETDATE()
         WHEN NOT MATCHED THEN INSERT (BuildingID, UserID, IsPrimary) VALUES (@buildingId, @userId, @isPrimary);
       `);
+
     await new sql.Request(transaction)
       .input('userId', sql.Int, userId)
       .input('action', sql.NVarChar(50), 'STAFF_TRANSFER')
-      .input('desc', sql.NVarChar(500), `Điều chuyển nhân sự UserID #${userId} sang Tòa nhà #${toBuildingId}`)
+      .input('desc', sql.NVarChar(500), `Phân công/Điều chuyển nhân sự UserID #${userId} sang Tòa nhà #${toBuildingId} (replaceAll=${replaceAll})`)
       .query(`INSERT INTO AuditLogs (UserID, Action, Description, CreatedAt) VALUES (@userId, @action, @desc, GETDATE())`);
 
     await transaction.commit();
-    return { success: true, message: 'Điều chuyển nhân sự sang tòa nhà mới thành công' };
+    return { success: true, message: 'Phân công / điều chuyển nhân sự thành công' };
   } catch (err) {
     await transaction.rollback();
     throw err;

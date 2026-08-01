@@ -588,6 +588,14 @@ export async function getBuildingAssignments(req, res, next) {
   } catch (err) { next(err); }
 }
 
+export async function getUserAssignments(req, res, next) {
+  try {
+    const userId = Number(req.params.userId);
+    const data = await infra.getUserAssignments(userId);
+    return res.status(StatusCodes.OK).json({ success: true, data });
+  } catch (err) { next(err); }
+}
+
 export async function removeBuildingAssignment(req, res, next) {
   try {
     const result = await infra.removeBuildingAssignment(Number(req.params.id));

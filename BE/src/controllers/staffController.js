@@ -32,9 +32,8 @@ const getUserId = (req) =>
  */
 export async function getDashboard(req, res, next) {
     try {
-        // GỌI SERVICE LẤY DASHBOARD BẢO VỆ:
-        // LIÊN KẾT: Gọi hàm `staffService.getDashboard()` trong `BE/src/services/staffService.js`.
-        const data = await staffService.getDashboard()
+        const staffUserId = req.user?.RoleName === 'Staff' ? req.user.UserID : null;
+        const data = await staffService.getDashboard(staffUserId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
         next(error)
@@ -43,8 +42,9 @@ export async function getDashboard(req, res, next) {
 
 export async function getGates(req, res, next) {
     try {
+        const staffUserId = req.user?.RoleName === 'Staff' ? req.user.UserID : null;
         const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null;
-        const data = await staffService.getGates(buildingId);
+        const data = await staffService.getGates(buildingId, staffUserId);
         res.status(StatusCodes.OK).json({ success: true, data });
     } catch (error) {
         next(error);
@@ -60,8 +60,8 @@ export async function getGates(req, res, next) {
  */
 export async function getParkingMap(req, res, next) {
     try {
-        // Lấy tất cả tham số lọc từ URL query string (`req.query`)
-        const data = await staffService.getParkingMap(req.query)
+        const staffUserId = req.user?.RoleName === 'Staff' ? req.user.UserID : null;
+        const data = await staffService.getParkingMap(req.query, staffUserId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
         next(error)

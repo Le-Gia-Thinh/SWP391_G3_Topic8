@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
-import { Search, RefreshCcw, Lock, Unlock, KeyRound, Users } from 'lucide-react'
+import { Search, RefreshCcw, Lock, Unlock, KeyRound, Users, ShieldAlert, ShieldCheck, ShieldOff, LayoutDashboard, Car, FileText, Wrench, DollarSign } from 'lucide-react'
 import { toast } from 'react-toastify'
 import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
@@ -41,10 +41,120 @@ const DEFAULT_PERMISSIONS = [
   { PermissionID: 9, PermissionName: 'MANAGE_SUPPORT', DescriptionKey: 'admin.roles.perms.MANAGE_SUPPORT' }
 ]
 
+// Nhóm permissions theo trang/chức năng (theo navbar/page flow)
+const PERMISSION_GROUPS = [
+  {
+    group: 'Bãi đỗ xe',
+    icon: Car,
+    color: 'blue',
+    ids: [1, 2] // VIEW_SLOTS, MANAGE_SESSIONS
+  },
+  {
+    group: 'Tài chính',
+    icon: DollarSign,
+    color: 'emerald',
+    ids: [5, 6] // MANAGE_PAYMENTS, MANAGE_PRICING
+  },
+  {
+    group: 'Hệ thống',
+    icon: Wrench,
+    color: 'purple',
+    ids: [3, 7, 8, 9] // MANAGE_USERS, MANAGE_BUILDINGS, MANAGE_INCIDENTS, MANAGE_SUPPORT
+  },
+  {
+    group: 'Báo cáo',
+    icon: FileText,
+    color: 'amber',
+    ids: [4] // VIEW_REPORTS
+  }
+]
+
 const DEFAULT_ROLE_PERMS = {
-  3: [1, 2, 3, 4, 5, 6, 7, 8, 9], // Manager
-  2: [1, 2, 5, 8],                // Staff
-  1: [1, 5]                       // Driver
+  3: [1, 2, 3, 4, 5, 6, 7, 8, 9], // Manager: all
+  2: [1, 2, 5, 8],                // Staff: operational
+  1: [1]                          // Driver
+}
+
+// Permissions chia theo navbar của từng vai trò
+const ROLE_NAVBAR_GROUPS = {
+  // Manager Portal navbar groups
+  3: [
+    {
+      group: 'Tổng quan (Dashboard)',
+      page: '/manager',
+      color: 'slate',
+      ids: [] // Dashboard ko cần permission riêng
+    },
+    {
+      group: 'Bãi xe & Phiên (Parking Slots)',
+      page: '/manager/positions',
+      color: 'blue',
+      ids: [1, 2] // VIEW_SLOTS, MANAGE_SESSIONS
+    },
+    {
+      group: 'Cấu hình & Tòa nhà (Parking Setup)',
+      page: '/manager/config',
+      color: 'indigo',
+      ids: [7] // MANAGE_BUILDINGS
+    },
+    {
+      group: 'Bảng giá (Pricing)',
+      page: '/manager/pricing',
+      color: 'emerald',
+      ids: [5, 6] // MANAGE_PAYMENTS, MANAGE_PRICING
+    },
+    {
+      group: 'Sự cố & Hỗ trợ (Incidents)',
+      page: '/manager/incidents',
+      color: 'orange',
+      ids: [8, 9] // MANAGE_INCIDENTS, MANAGE_SUPPORT
+    },
+    {
+      group: 'Báo cáo (Reports)',
+      page: '/manager/reports',
+      color: 'violet',
+      ids: [4] // VIEW_REPORTS
+    },
+    {
+      group: 'Quản lý nhân viên (Users)',
+      page: '/manager/staff',
+      color: 'rose',
+      ids: [3] // MANAGE_USERS
+    }
+  ],
+  // Staff Portal navbar groups
+  2: [
+    {
+      group: 'Bảng điều khiển (Dashboard)',
+      page: '/staff/dashboard',
+      color: 'slate',
+      ids: [] // no permission needed
+    },
+    {
+      group: 'Nhận xe & Vận hành (Check-in/out)',
+      page: '/staff/checkin-walkin',
+      color: 'blue',
+      ids: [2] // MANAGE_SESSIONS
+    },
+    {
+      group: 'Bản đồ & Tra cứu (Parking Map)',
+      page: '/staff/parking-map',
+      color: 'indigo',
+      ids: [1] // VIEW_SLOTS
+    },
+    {
+      group: 'Thanh toán (Payments)',
+      page: '/staff/checkout',
+      color: 'emerald',
+      ids: [5] // MANAGE_PAYMENTS
+    },
+    {
+      group: 'Báo cáo sự cố (Incidents)',
+      page: '/staff/create-incident',
+      color: 'orange',
+      ids: [8] // MANAGE_INCIDENTS
+    }
+  ]
 }
 
 const AdminRoles = () => {
@@ -186,26 +296,43 @@ const AdminRoles = () => {
     }
   }
 
+  // userCustomPerms: [{ PermissionID, IsGranted }, ...]
   const openUserPermissions = async (user) => {
     setUserPermTarget(user)
     try {
       const res = await getUserPermissionsAPI(user.UserID)
-      const pList = res?.data?.data || []
-      setUserCustomPerms(pList)
+      const raw = res?.data?.data || []
+      // raw có thể là [{PermissionID, IsGranted}] hoặc [id, id, ...] tuỳ version
+      if (raw.length > 0 && typeof raw[0] === 'object' && 'IsGranted' in raw[0]) {
+        setUserCustomPerms(raw)
+      } else {
+        // Fallback: flat array of IDs → convert to [{PermissionID, IsGranted}]
+        const rolePerms = rolePermissionsMap[user.RoleID] || []
+        setUserCustomPerms(rolePerms.map(id => ({ PermissionID: id, IsGranted: raw.includes(id) ? 1 : 1 })))
+      }
     } catch {
       const rolePerms = rolePermissionsMap[user.RoleID] || []
-      setUserCustomPerms([...rolePerms])
+      setUserCustomPerms(rolePerms.map(id => ({ PermissionID: id, IsGranted: 1 })))
     }
   }
 
+  // Toggle IsGranted cho một permission (chỉ toggle trong phạm vi quyền role)
   const toggleUserCustomPerm = (permId) => {
-    setUserCustomPerms((prev) => (prev.includes(permId) ? prev.filter((id) => id !== permId) : [...prev, permId]))
+    setUserCustomPerms(prev => {
+      const existing = prev.find(p => p.PermissionID === permId)
+      if (existing) {
+        return prev.map(p => p.PermissionID === permId ? { ...p, IsGranted: p.IsGranted ? 0 : 1 } : p)
+      }
+      return [...prev, { PermissionID: permId, IsGranted: 1 }]
+    })
   }
 
   const saveUserCustomPermissions = async () => {
     if (!userPermTarget) return
     try {
-      await updateUserPermissionsAPI(userPermTarget.UserID, userCustomPerms)
+      // Chỉ gửi những PermissionID có IsGranted=true để backend lưu
+      const grantedIds = userCustomPerms.filter(p => p.IsGranted).map(p => p.PermissionID)
+      await updateUserPermissionsAPI(userPermTarget.UserID, grantedIds)
       toast.success(t('admin.roles.customPermsSuccess', { name: userPermTarget?.FullName }))
       setUserPermTarget(null)
     } catch (err) {
@@ -297,23 +424,24 @@ const AdminRoles = () => {
           </Button>
         </div>
 
-        {/* Tab chọn Vai trò nội bộ (Manager & Staff) */}
+        {/* Tab chọn Vai trò nội bộ (Manager & Staff) — Tách riêng toàn bộ */}
         <div className="flex flex-wrap gap-2 mt-5 mb-6">
           {[
-            { id: 3, name: 'Manager', label: t('roles.Manager', 'Manager'), badge: 'warning' },
-            { id: 2, name: 'Staff', label: t('roles.Staff', 'Staff'), badge: 'success' }
+            { id: 3, name: 'Manager', label: t('roles.Manager', 'Quản lý'), badge: 'warning', color: 'amber' },
+            { id: 2, name: 'Staff', label: t('roles.Staff', 'Nhân viên'), badge: 'success', color: 'emerald' }
           ].map((r) => {
             const active = activeRoleForPerms === r.id
             const activePermsCount = (rolePermissionsMap[r.id] || []).length
+            const colorActive = r.color === 'amber'
+              ? 'bg-amber-500 text-white border-amber-500'
+              : 'bg-emerald-600 text-white border-emerald-600'
             return (
               <button
                 key={r.id}
                 type="button"
                 onClick={() => setActiveRoleForPerms(r.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all border ${
-                  active
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  active ? colorActive + ' shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                 }`}
               >
                 <span>{r.label}</span>
@@ -327,40 +455,81 @@ const AdminRoles = () => {
           })}
         </div>
 
-        {/* Danh sách Checkbox Quyền hạn */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(activeRoleForPerms === 2 ? allPermissions.filter(p => [1, 2, 5, 8].includes(p.PermissionID)) : allPermissions).map((p) => {
-            const currentRolePerms = rolePermissionsMap[activeRoleForPerms] || []
-            const isChecked = currentRolePerms.includes(p.PermissionID)
-            const desc = p.DescriptionKey ? t(p.DescriptionKey) : p.Description
-            return (
-              <label
-                key={p.PermissionID}
-                onClick={() => togglePermission(p.PermissionID)}
-                className={`flex items-start gap-3 p-4 rounded-2xl border transition-all cursor-pointer select-none ${
-                  isChecked
-                    ? 'bg-blue-50/60 border-blue-200 dark:bg-blue-900/20 shadow-sm'
-                    : 'bg-slate-50/50 border-slate-200 hover:bg-slate-100/60'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={() => {}}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-900 leading-snug">
-                    {p.PermissionName}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">
-                    {desc}
-                  </p>
-                </div>
-              </label>
-            )
-          })}
-        </div>
+        {/* Permissions chia theo navbar từng role */}
+        {(() => {
+          const groups = ROLE_NAVBAR_GROUPS[activeRoleForPerms] || []
+          const currentRolePerms = rolePermissionsMap[activeRoleForPerms] || []
+          const colorMap = {
+            slate:   { card: 'border-slate-200',   header: 'bg-slate-50 text-slate-600',   badge: 'bg-slate-100 text-slate-500', checked: 'bg-slate-50 border-slate-200' },
+            blue:    { card: 'border-blue-200',     header: 'bg-blue-50 text-blue-700',     badge: 'bg-blue-50 text-blue-600',   checked: 'bg-blue-50/60 border-blue-200' },
+            indigo:  { card: 'border-indigo-200',   header: 'bg-indigo-50 text-indigo-700', badge: 'bg-indigo-50 text-indigo-600', checked: 'bg-indigo-50/60 border-indigo-200' },
+            emerald: { card: 'border-emerald-200',  header: 'bg-emerald-50 text-emerald-700', badge: 'bg-emerald-50 text-emerald-600', checked: 'bg-emerald-50/60 border-emerald-200' },
+            orange:  { card: 'border-orange-200',   header: 'bg-orange-50 text-orange-700', badge: 'bg-orange-50 text-orange-600', checked: 'bg-orange-50/60 border-orange-200' },
+            violet:  { card: 'border-violet-200',   header: 'bg-violet-50 text-violet-700', badge: 'bg-violet-50 text-violet-600', checked: 'bg-violet-50/60 border-violet-200' },
+            rose:    { card: 'border-rose-200',     header: 'bg-rose-50 text-rose-700',     badge: 'bg-rose-50 text-rose-600',   checked: 'bg-rose-50/60 border-rose-200' }
+          }
+
+          return (
+            <div className="space-y-4">
+              {groups.map((group) => {
+                const c = colorMap[group.color] || colorMap.slate
+                const groupPerms = allPermissions.filter(p => group.ids.includes(p.PermissionID))
+
+                return (
+                  <div key={group.group} className={`rounded-2xl border overflow-hidden ${c.card}`}>
+                    {/* Group header with page path */}
+                    <div className={`flex items-center justify-between px-4 py-2.5 ${c.header}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black">{group.group}</span>
+                      </div>
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${c.badge}`}>
+                        {group.page}
+                      </span>
+                    </div>
+
+                    {/* Permissions trong group */}
+                    {groupPerms.length === 0 ? (
+                      <div className="px-4 py-3 text-[11px] text-slate-400 italic">
+                        Trang này không yêu cầu quyền đặc biệt nào
+                      </div>
+                    ) : (
+                      <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {groupPerms.map((p) => {
+                          const isChecked = currentRolePerms.includes(p.PermissionID)
+                          const desc = p.DescriptionKey ? t(p.DescriptionKey) : p.Description
+                          return (
+                            <label
+                              key={p.PermissionID}
+                              onClick={() => togglePermission(p.PermissionID)}
+                              className={`flex items-start gap-2.5 p-3 rounded-xl border transition-all cursor-pointer select-none ${
+                                isChecked ? c.checked + ' shadow-sm' : 'bg-white border-slate-100 hover:bg-slate-50'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {}}
+                                className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-900 leading-snug">
+                                  {p.PermissionName}
+                                </p>
+                                <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed line-clamp-2">
+                                  {desc}
+                                </p>
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
       </div>
 
       {/* Filters + Table */}
@@ -493,35 +662,135 @@ const AdminRoles = () => {
       <Modal
         isOpen={!!userPermTarget}
         onClose={() => setUserPermTarget(null)}
-        title={t('admin.roles.customPermsTitle', { name: userPermTarget?.FullName })}
+        title={
+          <div className="flex items-center gap-2">
+            <ShieldAlert size={18} className="text-indigo-500" />
+            <span>{t('admin.roles.customPermsTitle', { name: userPermTarget?.FullName })}</span>
+          </div>
+        }
         footer={(
           <>
             <Button variant="secondary" onClick={() => setUserPermTarget(null)}>{t('admin.roles.resetPasswordModal.cancel')}</Button>
-            <Button onClick={saveUserCustomPermissions}>💾 {t('admin.roles.customPermsSave')}</Button>
+            <Button onClick={saveUserCustomPermissions}>
+              <ShieldCheck size={14} className="mr-1" /> {t('admin.roles.customPermsSave')}
+            </Button>
           </>
         )}
       >
-        <div className="space-y-4">
-          <p className="text-xs text-slate-500">
-            {t('admin.roles.customPermsSub')}
-          </p>
-          <div className="grid gap-2 max-h-80 overflow-y-auto pr-1">
-            {(userPermTarget?.RoleName === 'Staff' || userPermTarget?.RoleID === 2 ? allPermissions.filter(p => [1, 2, 5, 8].includes(p.PermissionID)) : allPermissions).map((p) => {
-              const isChecked = userCustomPerms.includes(p.PermissionID)
-              const desc = p.DescriptionKey ? t(p.DescriptionKey) : p.Description
+        <div className="space-y-3">
+          {/* Mô tả nguyên tắc phân quyền */}
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] text-amber-800 leading-relaxed">
+            <strong>📋 Nguyên tắc:</strong> Quyền riêng chỉ có thể <strong>thu hẹp</strong> quyền mà vai trò đã được cấp.
+            Nếu vai trò không có quyền nào đó, quyền cá nhân cũng không thể thêm vào.
+          </div>
+
+          {/* Nhóm permissions theo page/chức năng */}
+          <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+            {PERMISSION_GROUPS.map((group) => {
+              const rolePermIds = rolePermissionsMap[userPermTarget?.RoleID] || []
+              // Lọc permissions trong group mà role có
+              const groupPerms = allPermissions.filter(p => group.ids.includes(p.PermissionID))
+              if (groupPerms.length === 0) return null
+
+              const GroupIcon = group.icon
+              const colorMap = {
+                blue: { header: 'bg-blue-50 border-blue-200 text-blue-700', badge: 'bg-blue-100 text-blue-700' },
+                emerald: { header: 'bg-emerald-50 border-emerald-200 text-emerald-700', badge: 'bg-emerald-100 text-emerald-700' },
+                purple: { header: 'bg-purple-50 border-purple-200 text-purple-700', badge: 'bg-purple-100 text-purple-700' },
+                amber: { header: 'bg-amber-50 border-amber-200 text-amber-700', badge: 'bg-amber-100 text-amber-700' }
+              }
+              const colors = colorMap[group.color] || colorMap.blue
+
               return (
-                <label key={p.PermissionID} onClick={() => toggleUserCustomPerm(p.PermissionID)}
-                  className={`flex items-center gap-3 p-3 rounded-2xl border text-xs cursor-pointer select-none transition ${
-                    isChecked ? 'bg-indigo-50/70 border-indigo-200 font-bold text-indigo-900' : 'bg-slate-50 border-slate-200 text-slate-700'
-                  }`}>
-                  <input type="checkbox" checked={isChecked} onChange={() => {}} className="h-4 w-4 text-indigo-600 rounded cursor-pointer" />
-                  <div>
-                    <p className="font-bold">{p.PermissionName}</p>
-                    <p className="text-[11px] text-slate-500">{desc}</p>
+                <div key={group.group} className="rounded-xl border border-slate-200 overflow-hidden">
+                  {/* Group header */}
+                  <div className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold border-b ${colors.header}`}>
+                    <GroupIcon size={12} />
+                    <span>{group.group}</span>
                   </div>
-                </label>
+                  {/* Permission items */}
+                  <div className="divide-y divide-slate-100">
+                    {groupPerms.map((p) => {
+                      const roleHasIt = rolePermIds.includes(p.PermissionID)
+                      const customEntry = userCustomPerms.find(c => c.PermissionID === p.PermissionID)
+                      // Nếu không có entry cá nhân thì dùng role-level
+                      const isGranted = customEntry ? !!customEntry.IsGranted : roleHasIt
+                      const desc = p.DescriptionKey ? t(p.DescriptionKey) : p.Description
+                      const isRoleBlocked = !roleHasIt // Role không có quyền này
+
+                      return (
+                        <div
+                          key={p.PermissionID}
+                          onClick={() => !isRoleBlocked && toggleUserCustomPerm(p.PermissionID)}
+                          className={`flex items-center gap-3 px-3 py-2 transition-all ${
+                            isRoleBlocked
+                              ? 'opacity-40 cursor-not-allowed bg-slate-50'
+                              : isGranted
+                                ? 'cursor-pointer hover:bg-indigo-50/50 bg-white'
+                                : 'cursor-pointer hover:bg-rose-50/30 bg-slate-50/50'
+                          }`}
+                        >
+                          {/* Checkbox / status icon */}
+                          <div className={`flex-shrink-0 w-4 h-4 rounded flex items-center justify-center border ${
+                            isRoleBlocked
+                              ? 'border-slate-300 bg-slate-100'
+                              : isGranted
+                                ? 'border-indigo-500 bg-indigo-500'
+                                : 'border-rose-300 bg-white'
+                          }`}>
+                            {!isRoleBlocked && isGranted && (
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
+                                <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            )}
+                            {!isRoleBlocked && !isGranted && (
+                              <svg className="w-2.5 h-2.5 text-rose-400" fill="none" viewBox="0 0 12 12">
+                                <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                              </svg>
+                            )}
+                          </div>
+
+                          {/* Label */}
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[11px] font-bold leading-none ${
+                              isRoleBlocked ? 'text-slate-400' : isGranted ? 'text-slate-800' : 'text-slate-500 line-through'
+                            }`}>{p.PermissionName}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">{desc}</p>
+                          </div>
+
+                          {/* Status badge */}
+                          {isRoleBlocked ? (
+                            <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                              <ShieldOff size={8} /> Vai trò tắt
+                            </span>
+                          ) : customEntry ? (
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 ${
+                              isGranted ? 'bg-indigo-100 text-indigo-600' : 'bg-rose-100 text-rose-500'
+                            }`}>
+                              {isGranted ? <ShieldCheck size={8} /> : <ShieldOff size={8} />}
+                              {isGranted ? 'Cấp riêng' : 'Thu hồi'}
+                            </span>
+                          ) : (
+                            <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-full ${
+                              colors.badge
+                            }`}>
+                              Theo nhóm
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
               )
             })}
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-wrap gap-2 pt-1 text-[10px] text-slate-500">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-indigo-500"></span> Được phép</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-rose-300"></span> Thu hồi (cá nhân)</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-slate-200"></span> Vai trò không có</span>
           </div>
         </div>
       </Modal>

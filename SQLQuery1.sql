@@ -1249,15 +1249,31 @@ INSERT INTO Roles (RoleName,Description) VALUES
 GO
 
 INSERT INTO Permissions (PermissionName,Description) VALUES
-('VIEW_SLOTS',      'View parking slots'),
-('MANAGE_SESSIONS', 'Manage parking sessions'),
-('MANAGE_USERS',    'Manage users'),
-('VIEW_REPORTS',    'View reports'),
-('MANAGE_PAYMENTS', 'Manage payments');
+('VIEW_SLOTS',       'View parking slots'),
+('MANAGE_SESSIONS',  'Manage parking sessions'),
+('MANAGE_USERS',     'Manage users'),
+('VIEW_REPORTS',     'View reports'),
+('MANAGE_PAYMENTS',  'Manage payments'),
+('MANAGE_PRICING',   'Manage pricing policies'),
+('MANAGE_BUILDINGS', 'Manage buildings and infrastructure'),
+('MANAGE_INCIDENTS', 'Manage incidents'),
+('MANAGE_SUPPORT',   'Manage support tickets');
 GO
 
+-- RoleID: 1=Driver, 2=Staff, 3=Manager, 4=Admin
+-- Manager: ALL permissions (1-9)
+-- Staff: VIEW_SLOTS(1), MANAGE_SESSIONS(2), MANAGE_PAYMENTS(5), MANAGE_INCIDENTS(8)
+-- Driver: VIEW_SLOTS(1)
+-- Admin: ALL permissions (1-9)
 INSERT INTO RolePermissions (RoleID,PermissionID) VALUES
-(1,1),(2,1),(2,2),(2,5),(3,1),(3,2),(3,3),(3,4),(3,5),(4,1),(4,2),(4,3),(4,4),(4,5);
+-- Driver
+(1,1),
+-- Staff: bãi xe, phiên, thanh toán, sự cố
+(2,1),(2,2),(2,5),(2,8),
+-- Manager: tất cả quyền
+(3,1),(3,2),(3,3),(3,4),(3,5),(3,6),(3,7),(3,8),(3,9),
+-- Admin: tất cả quyền
+(4,1),(4,2),(4,3),(4,4),(4,5),(4,6),(4,7),(4,8),(4,9);
 GO
 
 INSERT INTO VehicleTypes (VehicleCode,VehicleName,Description) VALUES

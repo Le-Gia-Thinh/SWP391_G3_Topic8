@@ -8,14 +8,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
-import { Search, RefreshCcw, UserPlus, Pencil, Lock, Unlock, ShieldCheck, MailCheck, MailX, Building2 } from 'lucide-react'
+import { Search, RefreshCcw, UserPlus, Pencil, Lock, Unlock, ShieldCheck, MailCheck, MailX, Building2, X } from 'lucide-react'
 import { toast } from 'react-toastify'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import {
   getUsersAPI, getRolesAPI, createUserAPI, updateUserAPI, toggleUserStatusAPI,
-  getBuildingsAPI, transferStaffAPI
+  getBuildingsAPI, transferStaffAPI, getUserAssignmentsAPI, removeBuildingAssignmentAPI
 } from '../../apis/adminApi'
 
 const roleBadge = {
@@ -59,12 +59,29 @@ const AdminUsers = () => {
   const [transferModalOpen, setTransferModalOpen] = useState(false)
   const [transferUser, setTransferUser] = useState(null)
   const [buildingsList, setBuildingsList] = useState([])
+  const [userAssignments, setUserAssignments] = useState([])
+  const [loadingAssignments, setLoadingAssignments] = useState(false)
   const [targetBuildingId, setTargetBuildingId] = useState('')
+  const [transferMode, setTransferMode] = useState('replace') // 'replace' = chuyển hẳn 1 tòa | 'add' = kiêm nhiệm nhiều tòa
   const [transferring, setTransferring] = useState(false)
+
+  const fetchUserAssignments = async (userId) => {
+    setLoadingAssignments(true)
+    try {
+      const res = await getUserAssignmentsAPI(userId)
+      setUserAssignments(res?.data?.data || [])
+    } catch {
+      toast.error('Không thể tải danh sách phân công hiện tại.')
+    } finally {
+      setLoadingAssignments(false)
+    }
+  }
 
   const openTransfer = async (u) => {
     setTransferUser(u)
     setTargetBuildingId('')
+    setTransferMode('replace')
+    fetchUserAssignments(u.UserID)
     try {
       const res = await getBuildingsAPI()
       const bList = res?.data?.data || []
@@ -76,6 +93,17 @@ const AdminUsers = () => {
     setTransferModalOpen(true)
   }
 
+  const handleRemoveSingleAssignment = async (assignmentId, buildingName) => {
+    try {
+      await removeBuildingAssignmentAPI(assignmentId)
+      toast.success(`Đã gỡ bỏ phân công nhân sự khỏi Tòa nhà "${buildingName}".`)
+      fetchUserAssignments(transferUser.UserID)
+      applyFilters()
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Gỡ bỏ phân công thất bại.')
+    }
+  }
+
   const handleTransferSubmit = async () => {
     if (!targetBuildingId) return toast.warning('Vui lòng chọn Tòa nhà công tác.')
     setTransferring(true)
@@ -83,9 +111,14 @@ const AdminUsers = () => {
       await transferStaffAPI({
         userId: transferUser.UserID,
         toBuildingId: Number(targetBuildingId),
-        isPrimary: true
+        isPrimary: true,
+        replaceAll: transferMode === 'replace'
       })
-      toast.success(`Đã điều chuyển nhân sự ${transferUser.FullName} sang Tòa nhà mới thành công!`)
+      const modeMsg = transferMode === 'replace'
+        ? 'chuyển hẳn sang Tòa nhà mới'
+        : 'bổ sung thêm Tòa nhà kiêm nhiệm mới'
+      toast.success(`Đã ${modeMsg} cho nhân sự ${transferUser.FullName} thành công!`)
+      fetchUserAssignments(transferUser.UserID)
       setTransferModalOpen(false)
       applyFilters()
     } catch (err) {
@@ -448,7 +481,7 @@ const AdminUsers = () => {
           <>
             <Button variant="secondary" onClick={() => setTransferModalOpen(false)}>Hủy</Button>
             <Button onClick={handleTransferSubmit} disabled={transferring}>
-              {transferring ? 'Đang điều chuyển...' : 'Xác nhận điều chuyển'}
+              {transferring ? 'Đang thực hiện...' : 'Xác nhận phân công'}
             </Button>
           </>
         )}
@@ -459,9 +492,89 @@ const AdminUsers = () => {
             <p>Vai trò: <span className="font-bold">{transferUser?.RoleName}</span> · Email: {transferUser?.Email}</p>
           </div>
 
+          {/* Danh sách Tòa nhà hiện đang phụ trách */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/50 p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                📍 Tòa nhà đang phụ trách hiện tại ({userAssignments.length}):
+              </span>
+              {loadingAssignments && <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />}
+            </div>
+
+            {userAssignments.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">Nhân sự này hiện chưa được phân công phụ trách Tòa nhà nào.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {userAssignments.map(a => (
+                  <div key={a.AssignmentID} className="inline-flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-100 shadow-2xs">
+                    <Building2 size={14} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>{a.BuildingName}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSingleAssignment(a.AssignmentID, a.BuildingName)}
+                      title={`Gỡ bỏ ${transferUser?.FullName} khỏi ${a.BuildingName}`}
+                      className="ml-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg p-0.5 transition cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+              Hình thức phân công:
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className={`flex flex-col p-3 rounded-2xl border cursor-pointer transition-all ${
+                transferMode === 'replace'
+                  ? 'border-blue-500 bg-blue-50/50 text-blue-900 font-bold shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="transferMode"
+                    value="replace"
+                    checked={transferMode === 'replace'}
+                    onChange={() => setTransferMode('replace')}
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-xs font-bold">Chuyển hẳn (Chỉ 1 Tòa)</span>
+                </div>
+                <p className="text-[10px] text-slate-500 font-medium mt-1.5 pl-5 leading-relaxed">
+                  Bỏ phân công ở các cơ sở cũ, nhân sự sẽ chuyển sang phụ trách duy nhất 1 Tòa nhà mới chọn.
+                </p>
+              </label>
+
+              <label className={`flex flex-col p-3 rounded-2xl border cursor-pointer transition-all ${
+                transferMode === 'add'
+                  ? 'border-indigo-500 bg-indigo-50/50 text-indigo-900 font-bold shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="transferMode"
+                    value="add"
+                    checked={transferMode === 'add'}
+                    onChange={() => setTransferMode('add')}
+                    className="text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-xs font-bold">Phân công thêm (Kiêm nhiệm)</span>
+                </div>
+                <p className="text-[10px] text-slate-500 font-medium mt-1.5 pl-5 leading-relaxed">
+                  Giữ phân công ở Tòa cũ, giao thêm Tòa nhà mới này cho nhân sự (quản lý từ 2 cơ sở trở lên).
+                </p>
+              </label>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
-              Chọn Tòa nhà công tác mới:
+              Chọn Tòa nhà công tác:
             </label>
             <select
               value={targetBuildingId}
@@ -476,7 +589,7 @@ const AdminUsers = () => {
             </select>
           </div>
           <p className="text-xs text-slate-500 font-medium">
-            * Khi điều chuyển, nhân sự này sẽ được phân công trực tiếp tại Tòa nhà đã chọn và ghi nhận lịch sử trong Audit Logs.
+            * Lịch sử phân công / điều chuyển nhân sự sẽ được ghi lại tự động trong Audit Logs hệ thống.
           </p>
         </div>
       </Modal>
