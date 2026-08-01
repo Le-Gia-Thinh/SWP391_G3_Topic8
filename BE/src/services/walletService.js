@@ -254,7 +254,7 @@ export async function payParkingByWalletService(sessionId, driverId) {
             SELECT ps.SessionID, ps.VehicleTypeID, ps.EntryTime, ps.SessionStatus,
                    p.PaymentStatus, p.Amount
             FROM ParkingSessions ps
-            JOIN Payments p ON ps.SessionID = p.SessionID
+            LEFT JOIN Payments p ON ps.SessionID = p.SessionID
             WHERE ps.SessionID = @SessionID AND ps.DriverID = @DriverID AND ps.SessionStatus = 'Active'
         `);
 
@@ -263,11 +263,9 @@ export async function payParkingByWalletService(sessionId, driverId) {
     // Nếu không tìm thấy phiên đỗ xe hợp lệ -> Ném lỗi HTTP 404
     if (!session) throw Object.assign(new Error('Không tìm thấy phiên đỗ xe'), { statusCode: 404 });
     // Nếu phiên đỗ đã được thanh toán rồi -> Ném lỗi HTTP 400
-    if (session.PaymentStatus === 'Completed' || session.PaymentStatus === 'Prepaid')
+    if (session.PaymentStatus === 'Completed' || session.PaymentStatus === 'Prepaid' || session.PaymentStatus === 'Paid')
         throw Object.assign(new Error('Phiên đã được thanh toán'), { statusCode: 400 });
 
-    // Nạp linh hoạt module db để chuẩn bị tính giá tiền
-    const { getPool: gp, sql: s } = await import('../config/db.js');
     // Tính tổng số giờ đỗ thực tế
     const diffH = Math.max(0.017, (Date.now() - new Date(session.EntryTime).getTime()) / 3_600_000);
     // Query tra bảng giá PricingPolicies theo loại xe và số giờ đỗ
