@@ -20,12 +20,13 @@ import { getPool, sql } from "../config/db.js";
  */
 export async function getDashboardStats(buildingId = null, managerUserId = null) {
   const pool = await getPool();
-  const request = pool.request();
-  request.input('buildingId', sql.Int, buildingId || null);
-  request.input('managerUserId', sql.Int, managerUserId || null);
+
+  const makeReq = () => pool.request()
+    .input('buildingId', sql.Int, buildingId || null)
+    .input('managerUserId', sql.Int, managerUserId || null);
 
   // 1. QUERY SLOT STATS: Đếm tổng số ô đỗ và phân loại trạng thái theo Tòa nhà
-  const slotStats = await request.query(`
+  const slotStats = await makeReq().query(`
     SELECT
       COUNT(ps.SlotID) AS TotalSlots,
       SUM(CASE WHEN ps.SlotStatus = 'Available'   THEN 1 ELSE 0 END) AS Available,
@@ -37,74 +38,97 @@ export async function getDashboardStats(buildingId = null, managerUserId = null)
     JOIN Zones z ON ps.ZoneID = z.ZoneID
     JOIN Floors f ON z.FloorID = f.FloorID
     JOIN Buildings b ON f.BuildingID = b.BuildingID
-    LEFT JOIN BuildingAssignments ba ON b.BuildingID = ba.BuildingID
     WHERE (@buildingId IS NULL OR b.BuildingID = @buildingId)
-      AND (@managerUserId IS NULL OR ba.UserID = @managerUserId)
+      AND (@managerUserId IS NULL OR b.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @managerUserId))
   `);
 
-  // 2. QUERY SESSION STATS: Đếm tổng số lượt xe vào bãi trong hôm nay và số xe đang đỗ thực tế (`ActiveSessions`)
-  const sessionStats = await pool.request().query(`
+  // 2. QUERY SESSION STATS
+  const sessionStats = await makeReq().query(`
     SELECT
-      COUNT(*) AS TodaySessions, -- Tổng số phiên gửi xe được tạo trong ngày hôm nay
-      SUM(CASE WHEN SessionStatus = 'Active' THEN 1 ELSE 0 END) AS ActiveSessions -- Số xe hiện đang nằm trong bãi
-    FROM ParkingSessions
-    WHERE CAST(EntryTime AS DATE) = CAST(GETDATE() AS DATE) -- Lọc theo ngày hiện tại của SQL Server
+      COUNT(*) AS TodaySessions,
+      SUM(CASE WHEN s.SessionStatus = 'Active' THEN 1 ELSE 0 END) AS ActiveSessions
+    FROM ParkingSessions s
+    JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+    JOIN Zones z ON ps.ZoneID = z.ZoneID
+    JOIN Floors f ON z.FloorID = f.FloorID
+    WHERE CAST(s.EntryTime AS DATE) = CAST(GETDATE() AS DATE)
+      AND (@buildingId IS NULL OR f.BuildingID = @buildingId)
+      AND (@managerUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @managerUserId))
   `);
 
-  // 3. QUERY REVENUE TODAY: Tính tổng doanh thu thu được trong ngày hôm nay từ các hóa đơn đã thanh toán ('Completed' hoặc 'Prepaid')
-  const revenueToday = await pool.request().query(`
+  // 3. QUERY REVENUE TODAY
+  const revenueToday = await makeReq().query(`
     SELECT ISNULL(SUM(ISNULL(p.FinalAmount, p.Amount)), 0) AS RevenueToday
     FROM Payments p
+    JOIN ParkingSessions s ON p.SessionID = s.SessionID
+    JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+    JOIN Zones z ON ps.ZoneID = z.ZoneID
+    JOIN Floors f ON z.FloorID = f.FloorID
     WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
       AND CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE)
+      AND (@buildingId IS NULL OR f.BuildingID = @buildingId)
+      AND (@managerUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @managerUserId))
   `);
 
-  // 4. QUERY REVENUE 7 DAYS: Gom nhóm doanh thu theo từng ngày trong 7 ngày gần nhất (từ DATEADD DAY -6 đến nay) để vẽ biểu đồ đường
-  const revenue7Days = await pool.request().query(`
+  // 4. QUERY REVENUE 7 DAYS
+  const revenue7Days = await makeReq().query(`
     SELECT
-      CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE) AS Period, -- Mốc ngày thanh toán (YYYY-MM-DD)
-      ISNULL(SUM(ISNULL(p.FinalAmount, p.Amount)), 0)        AS TotalRevenue -- Tổng doanh thu trong ngày đó
+      CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE) AS Period,
+      ISNULL(SUM(ISNULL(p.FinalAmount, p.Amount)), 0)        AS TotalRevenue
     FROM Payments p
+    JOIN ParkingSessions s ON p.SessionID = s.SessionID
+    JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+    JOIN Zones z ON ps.ZoneID = z.ZoneID
+    JOIN Floors f ON z.FloorID = f.FloorID
     WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
       AND ISNULL(p.PaymentTime, p.SurchargePaidAt) >= DATEADD(DAY, -6, CAST(GETDATE() AS DATE))
+      AND (@buildingId IS NULL OR f.BuildingID = @buildingId)
+      AND (@managerUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @managerUserId))
     GROUP BY CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE)
     ORDER BY Period
   `);
 
-  // 5. QUERY FLOOR OCCUPANCY: Tính tỷ lệ % lấp đầy ô đỗ trên từng Tầng (`OccupancyPct`) bằng công thức `(OccupiedSlots / TotalSlots) * 100`
-  const floorOccupancy = await pool.request().query(`
+  // 5. QUERY FLOOR OCCUPANCY
+  const floorOccupancy = await makeReq().query(`
     SELECT
       f.FloorID,
       f.FloorName,
-      COUNT(ps.SlotID) AS TotalSlots, -- Tổng số ô đỗ trên tầng
-      SUM(CASE WHEN ps.SlotStatus = 'Occupied' THEN 1 ELSE 0 END) AS OccupiedSlots, -- Số ô đỗ đang bị chiếm
+      COUNT(ps.SlotID) AS TotalSlots,
+      SUM(CASE WHEN ps.SlotStatus = 'Occupied' THEN 1 ELSE 0 END) AS OccupiedSlots,
       CASE WHEN COUNT(ps.SlotID) = 0 THEN 0
            ELSE ROUND(
              100.0 * SUM(CASE WHEN ps.SlotStatus = 'Occupied' THEN 1 ELSE 0 END)
              / COUNT(ps.SlotID), 1)
-      END AS OccupancyPct -- Tỷ lệ phần trăm lấp đầy tầng
+      END AS OccupancyPct
     FROM Floors f
     JOIN Zones z         ON z.FloorID  = f.FloorID
     JOIN ParkingSlots ps ON ps.ZoneID  = z.ZoneID
     WHERE f.IsActive = 1
+      AND (@buildingId IS NULL OR f.BuildingID = @buildingId)
+      AND (@managerUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @managerUserId))
     GROUP BY f.FloorID, f.FloorName
     ORDER BY f.FloorID
   `);
 
-  // 6. QUERY VEHICLE BREAKDOWN: Phân loại số lượng xe đang đỗ trong bãi theo loại phương tiện (Xe máy / Ô tô / Xe tải)
-  const vehicleBreakdown = await pool.request().query(`
+  // 6. QUERY VEHICLE BREAKDOWN
+  const vehicleBreakdown = await makeReq().query(`
     SELECT
       vt.VehicleName,
       vt.VehicleCode,
       COUNT(*) AS Count
     FROM ParkingSessions s
     JOIN VehicleTypes vt ON s.VehicleTypeID = vt.VehicleTypeID
+    JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+    JOIN Zones z ON ps.ZoneID = z.ZoneID
+    JOIN Floors f ON z.FloorID = f.FloorID
     WHERE s.SessionStatus = 'Active'
+      AND (@buildingId IS NULL OR f.BuildingID = @buildingId)
+      AND (@managerUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @managerUserId))
     GROUP BY vt.VehicleTypeID, vt.VehicleName, vt.VehicleCode
   `);
 
-  // 7. QUERY RECENT CHECK-INS: Truy vấn danh sách TOP 10 lượt xe vừa mới vào bãi gần đây nhất (sắp xếp giảm dần theo EntryTime)
-  const recentCheckIns = await pool.request().query(`
+  // 7. QUERY RECENT CHECK-INS
+  const recentCheckIns = await makeReq().query(`
     SELECT TOP 10
       s.SessionID,
       CONCAT('SES-', RIGHT('0000' + CAST(s.SessionID AS VARCHAR), 4)) AS SessionCode,
@@ -114,12 +138,16 @@ export async function getDashboardStats(buildingId = null, managerUserId = null)
       vt.VehicleName
     FROM ParkingSessions s
     JOIN ParkingSlots ps ON s.SlotID        = ps.SlotID
+    JOIN Zones z ON ps.ZoneID = z.ZoneID
+    JOIN Floors f ON z.FloorID = f.FloorID
     JOIN VehicleTypes vt ON s.VehicleTypeID = vt.VehicleTypeID
+    WHERE (@buildingId IS NULL OR f.BuildingID = @buildingId)
+      AND (@managerUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @managerUserId))
     ORDER BY s.EntryTime DESC
   `);
 
-  // 8. QUERY RECENT PAYMENTS: Truy vấn danh sách TOP 10 hóa đơn vừa mới hoàn tất thanh toán gần nhất
-  const recentPayments = await pool.request().query(`
+  // 8. QUERY RECENT PAYMENTS
+  const recentPayments = await makeReq().query(`
     SELECT TOP 10
       p.PaymentID,
       CONCAT('SES-', RIGHT('0000' + CAST(s.SessionID AS VARCHAR), 4)) AS SessionCode,
@@ -130,6 +158,11 @@ export async function getDashboardStats(buildingId = null, managerUserId = null)
       p.PaymentMethod
     FROM Payments p
     JOIN ParkingSessions s ON p.SessionID = s.SessionID
+    JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+    JOIN Zones z ON ps.ZoneID = z.ZoneID
+    JOIN Floors f ON z.FloorID = f.FloorID
+    WHERE (@buildingId IS NULL OR f.BuildingID = @buildingId)
+      AND (@managerUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @managerUserId))
     ORDER BY ISNULL(p.PaymentTime, p.SurchargePaidAt) DESC
   `);
 
@@ -138,14 +171,14 @@ export async function getDashboardStats(buildingId = null, managerUserId = null)
 
   return {
     kpis: {
-      totalSlots: slot.TotalSlots,
-      available: slot.Available,
-      occupied: slot.Occupied,
-      reserved: slot.Reserved,
-      maintenance: slot.Maintenance,
-      revenueToday: revenueToday.recordset[0].RevenueToday,
-      todaySessions: sess.TodaySessions,
-      activeSessions: sess.ActiveSessions,
+      totalSlots: slot?.TotalSlots || 0,
+      available: slot?.Available || 0,
+      occupied: slot?.Occupied || 0,
+      reserved: slot?.Reserved || 0,
+      maintenance: slot?.Maintenance || 0,
+      revenueToday: revenueToday.recordset[0]?.RevenueToday || 0,
+      todaySessions: sess?.TodaySessions || 0,
+      activeSessions: sess?.ActiveSessions || 0,
     },
     revenue7Days: revenue7Days.recordset,
     floorOccupancy: floorOccupancy.recordset,
