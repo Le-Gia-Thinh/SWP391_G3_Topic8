@@ -45,6 +45,7 @@ createRoot(document.getElementById('root')).render(
               hideProgressBar={false}
               closeOnClick
               pauseOnHover
+              style={{ zIndex: 99999 }}
             />
           </AuthProvider>
         </BrowserRouter>

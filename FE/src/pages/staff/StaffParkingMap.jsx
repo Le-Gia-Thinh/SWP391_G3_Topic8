@@ -63,6 +63,9 @@ function buildHierarchy(slots) {
       status: (slot.SlotStatus || 'Available').toLowerCase(),
       sessionId: slot.SessionID,
       reservationId: slot.ReservationID,
+      zoneName: slot.ZoneName,
+      floorName: slot.FloorName,
+      buildingName: slot.BuildingName
     })
   })
 
@@ -86,21 +89,21 @@ function StatPill({ value, label, color }) {
 }
 
 /* ─── Sidebar nav item ──────────────────────────────────────── */
-function NavItem({ icon: Icon, label, active, onClick, count, indent = 0 }) {
+function NavItem({ icon: Icon, label, active, onClick, count, indent = 0, activeClassName = 'bg-blue-600 text-white' }) {
   return (
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all text-sm
         ${indent === 1 ? 'pl-6' : indent === 2 ? 'pl-9' : ''}
         ${active
-          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 hover:shadow-blue-500/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-blue-200 font-semibold'
+          ? `${activeClassName} text-white shadow-md font-semibold`
           : 'text-slate-600 hover:bg-slate-100 font-medium'}`}
     >
-      <Icon size={14} className={active ? 'text-blue-100' : 'text-slate-400'} />
+      <Icon size={14} className={active ? 'text-white' : 'text-slate-400'} />
       <span className="flex-1 truncate">{label}</span>
       {count !== undefined && (
         <span className={`text-xs rounded-full px-1.5 py-0.5 font-bold
-          ${active ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+          ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
           {count}
         </span>
       )}
@@ -133,17 +136,11 @@ const StaffParkingMap = () => {
           const tree = buildHierarchy(slots)
           setHierarchy(tree)
 
-          // Auto-select first building/floor/zone
+          // Auto-select first building
           if (tree.length > 0) {
             const b = tree[0]
             setSelectedBuilding(b.id)
             setExpandedBuildings({ [b.id]: true })
-            if (b.floors.length > 0) {
-              const f = b.floors[0]
-              setSelectedFloor(f.id)
-              setExpandedFloors({ [f.id]: true })
-              if (f.zones.length > 0) setSelectedZone(f.zones[0].id)
-            }
           }
         } catch {
           if (!cancelled) setHierarchy([])
@@ -159,16 +156,7 @@ const StaffParkingMap = () => {
     setRefreshTrigger(t => t + 1)
   }
 
-  /* ── Derived zone data ── */
-  const activeZoneData = useMemo(() => {
-    if (selectedBuilding == null || selectedFloor == null || selectedZone == null) return null
-    const b = hierarchy.find(b => String(b.id) === String(selectedBuilding))
-    if (!b) return null
-    const f = b.floors.find(f => String(f.id) === String(selectedFloor))
-    if (!f) return null
-    return f.zones.find(z => String(z.id) === String(selectedZone)) || null
-  }, [hierarchy, selectedBuilding, selectedFloor, selectedZone])
-
+  /* ── Derived active slots (supports Building, Floor, or Zone level selection) ── */
   const activeSlots = useMemo(() => {
     if (selectedBuilding == null) return []
     const b = hierarchy.find(b => String(b.id) === String(selectedBuilding))
@@ -215,12 +203,17 @@ const StaffParkingMap = () => {
       setSelectedSlot({
         id: slot.code,
         status: slot.status,
-        zone: activeZoneData?.name,
+        zone: slot.zoneName ? `${slot.buildingName} / ${slot.floorName} / ${slot.zoneName}` : t('staff.parkingMap.noDataShort'),
         ...(data || {}),
         error: !data ? t('staff.parkingMap.noDataShort') : null
       })
     } catch {
-      setSelectedSlot({ id: slot.code, status: slot.status, zone: activeZoneData?.name, error: t('staff.parkingMap.loadError') })
+      setSelectedSlot({
+        id: slot.code,
+        status: slot.status,
+        zone: slot.zoneName ? `${slot.buildingName} / ${slot.floorName} / ${slot.zoneName}` : t('staff.parkingMap.loadError'),
+        error: t('staff.parkingMap.loadError')
+      })
     }
   }
 
@@ -273,66 +266,67 @@ const StaffParkingMap = () => {
           {hierarchy.map(building => {
             const isExpanded = expandedBuildings[building.id]
             const bSlotCount = building.floors.reduce((acc, f) => acc + f.zones.reduce((zAcc, z) => zAcc + z.slots.length, 0), 0)
+            const isBuildingSelected = selectedBuilding === building.id && selectedFloor === null && selectedZone === null
 
             return (
               <div key={building.id} className="mb-1">
                 <NavItem
                   icon={Building2}
                   label={building.name.replace(/Toa [A-Z] - /, '').split(' - ')[0] || building.name}
-                  active={selectedBuilding === building.id}
+                  active={isBuildingSelected}
+                  activeClassName="bg-indigo-600 text-white shadow-lg shadow-indigo-100/50 hover:bg-indigo-700"
                   count={bSlotCount}
                   onClick={() => {
                     setSelectedBuilding(building.id)
+                    setSelectedFloor(null)
+                    setSelectedZone(null)
                     toggleBuilding(building.id)
-                    if (building.floors.length > 0) {
-                      const f = building.floors[0]
-                      setSelectedFloor(f.id)
-                      setExpandedFloors(prev => ({ ...prev, [f.id]: true }))
-                      if (f.zones.length > 0) {
-                        setSelectedZone(f.zones[0].id)
-                      }
-                    }
                   }}
                 />
 
                 {isExpanded && building.floors.map(floor => {
                   const isFloorExpanded = expandedFloors[floor.id]
                   const fSlotCount = floor.zones.reduce((acc, z) => acc + z.slots.length, 0)
+                  const isFloorSelected = selectedBuilding === building.id && String(selectedFloor) === String(floor.id) && selectedZone === null
 
                   return (
                     <div key={floor.id}>
                       <NavItem
                         icon={Layers}
                         label={floor.name}
-                        active={String(selectedFloor) === String(floor.id)}
+                        active={isFloorSelected}
+                        activeClassName="bg-purple-600 text-white shadow-lg shadow-purple-100/50 hover:bg-purple-700"
                         count={fSlotCount}
                         indent={1}
                         onClick={() => {
                           setSelectedBuilding(building.id)
                           setSelectedFloor(floor.id)
+                          setSelectedZone(null)
                           toggleFloor(floor.id)
-                          if (floor.zones.length > 0) {
-                            setSelectedZone(floor.zones[0].id)
-                          }
                         }}
                       />
 
-                      {isFloorExpanded && floor.zones.map(zone => (
-                        <NavItem
-                          key={zone.id}
-                          icon={Grid3X3}
-                          label={zone.name.split(' ').slice(-2).join(' ')}
-                          active={String(selectedZone) === String(zone.id)}
-                          count={zone.slots.length}
-                          indent={2}
-                          onClick={() => {
-                            setSelectedBuilding(building.id)
-                            setSelectedFloor(floor.id)
-                            setSelectedZone(zone.id)
-                            setSelectedSlot(null)
-                          }}
-                        />
-                      ))}
+                      {isFloorExpanded && floor.zones.map(zone => {
+                        const isZoneSelected = selectedBuilding === building.id && String(selectedFloor) === String(floor.id) && String(selectedZone) === String(zone.id)
+
+                        return (
+                          <NavItem
+                            key={zone.id}
+                            icon={Grid3X3}
+                            label={zone.name.split(' ').slice(-2).join(' ')}
+                            active={isZoneSelected}
+                            activeClassName="bg-blue-600 text-white shadow-lg shadow-blue-100/50 hover:bg-blue-700"
+                            count={zone.slots.length}
+                            indent={2}
+                            onClick={() => {
+                              setSelectedBuilding(building.id)
+                              setSelectedFloor(floor.id)
+                              setSelectedZone(zone.id)
+                              setSelectedSlot(null)
+                            }}
+                          />
+                        )
+                      })}
                     </div>
                   )
                 })}
@@ -347,7 +341,7 @@ const StaffParkingMap = () => {
           {/* Breadcrumb + stats */}
           <div className="flex items-center justify-between flex-wrap gap-2">
             {/* Breadcrumb */}
-            <div className="flex items-center gap-1 text-xs text-slate-500">
+            <div className="flex items-center gap-1 text-xs text-slate-500 font-bold">
               {selectedBuilding && (
                 <>
                   <Building2 size={12} className="text-blue-500" />
@@ -360,16 +354,20 @@ const StaffParkingMap = () => {
                 <>
                   <ChevronRight size={12} />
                   <Layers size={12} className="text-blue-500" />
-                  <span className="font-medium">
+                  <span className="font-medium text-slate-600">
                     {hierarchy.find(b => String(b.id) === String(selectedBuilding))?.floors.find(f => String(f.id) === String(selectedFloor))?.name}
                   </span>
                 </>
               )}
-              {activeZoneData && (
+              {selectedZone && (
                 <>
                   <ChevronRight size={12} />
                   <Grid3X3 size={12} className="text-blue-500" />
-                  <span className="font-medium">{activeZoneData.name}</span>
+                  <span className="font-medium text-slate-600">
+                    {hierarchy.find(b => String(b.id) === String(selectedBuilding))
+                      ?.floors.find(f => String(f.id) === String(selectedFloor))
+                      ?.zones.find(z => String(z.id) === String(selectedZone))?.name}
+                  </span>
                 </>
               )}
             </div>
@@ -403,7 +401,7 @@ const StaffParkingMap = () => {
 
           {/* Map canvas */}
           <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex-1 overflow-auto p-5">
-            {activeZoneData ? (
+            {slots && slots.length > 0 ? (
               <>
                 {/* Gate indicator */}
                 <div className="flex items-center justify-center mb-5">
@@ -451,7 +449,7 @@ const StaffParkingMap = () => {
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-300">
                 <Grid3X3 size={48} />
-                <p className="text-sm font-medium">{t('staff.parkingMap.selectZoneHint')}</p>
+                <p className="text-sm font-medium">{t('staff.parkingMap.selectZoneHint', 'Chọn một vị trí từ menu bên trái')}</p>
               </div>
             )}
           </div>

@@ -594,7 +594,7 @@ export async function getSlotsByZone(zoneId) {
         -- Subquery 2: Kiểm tra xem ô đỗ có đơn đặt chỗ trước đang ở trạng thái Reserved hay không
         CASE WHEN EXISTS (
           SELECT 1 FROM Reservations rv WHERE rv.SlotID = ps.SlotID AND rv.ReservationStatus = 'Reserved'
-        ) ELSE 1 ELSE 0 END AS HasReservation
+        ) THEN 1 ELSE 0 END AS HasReservation
 
       FROM ParkingSlots ps
       JOIN VehicleTypes vt ON vt.VehicleTypeID = ps.VehicleTypeID
