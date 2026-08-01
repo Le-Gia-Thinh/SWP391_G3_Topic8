@@ -729,6 +729,7 @@ export async function getSlotById(slotId) {
 
   return {
     ...slotResult.recordset[0],
+    slot: slotResult.recordset[0],
     currentSession: sessResult.recordset[0] || null,
     history: histResult.recordset,
   };
