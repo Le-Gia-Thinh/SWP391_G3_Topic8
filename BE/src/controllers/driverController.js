@@ -99,6 +99,13 @@ export async function getDriverHome(req, res, next) {
 
     const pool = await getPool();
 
+    // 0. Đồng bộ trạng thái ô đỗ thời gian thực (Occupied / Reserved / Available) từ Sessions và Reservations
+    try {
+      await pool.request().execute("sp_SyncParkingSlotStatuses");
+    } catch (syncErr) {
+      console.warn("⚠️ Lỗi đồng bộ sp_SyncParkingSlotStatuses:", syncErr.message);
+    }
+
     // Chạy song song 5 truy vấn SQL bằng Promise.all
     const [
       userResult,
@@ -127,9 +134,11 @@ export async function getDriverHome(req, res, next) {
           WHERE u.UserID = @DriverID
         `),
 
-      // 2. Thống kê tổng số ô đỗ trống/đang dùng theo từng loại xe
+      // 2. Thống kê tổng số ô đỗ trống/đang dùng theo từng bãi xe (Tòa nhà) và loại xe
       pool.request().query(`
         SELECT
+          b.BuildingID,
+          b.BuildingName,
           vt.VehicleTypeID,
           vt.VehicleCode,
           vt.VehicleName,
@@ -137,10 +146,13 @@ export async function getDriverHome(req, res, next) {
           SUM(CASE WHEN ps.SlotStatus = 'Available' THEN 1 ELSE 0 END) AS AvailableSlots,
           SUM(CASE WHEN ps.SlotStatus = 'Occupied' THEN 1 ELSE 0 END) AS OccupiedSlots,
           SUM(CASE WHEN ps.SlotStatus = 'Reserved' THEN 1 ELSE 0 END) AS ReservedSlots
-        FROM VehicleTypes vt
-        LEFT JOIN ParkingSlots ps ON vt.VehicleTypeID = ps.VehicleTypeID
-        GROUP BY vt.VehicleTypeID, vt.VehicleCode, vt.VehicleName
-        ORDER BY vt.VehicleTypeID
+        FROM Buildings b
+        JOIN Floors f ON b.BuildingID = f.BuildingID
+        JOIN Zones z ON f.FloorID = z.FloorID
+        JOIN ParkingSlots ps ON z.ZoneID = ps.ZoneID
+        JOIN VehicleTypes vt ON ps.VehicleTypeID = vt.VehicleTypeID
+        GROUP BY b.BuildingID, b.BuildingName, vt.VehicleTypeID, vt.VehicleCode, vt.VehicleName
+        ORDER BY b.BuildingID, vt.VehicleTypeID
       `),
 
       // 3. Báo cáo tổng quan lịch sử Đặt chỗ đỗ xe

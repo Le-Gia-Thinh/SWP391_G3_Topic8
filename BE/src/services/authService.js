@@ -366,32 +366,40 @@ async function getUserEffectivePermissions(pool, userId, roleName, roleId) {
         ];
     }
 
-    const hasUserPerms = await pool.request()
-        .input('UserID', sql.Int, userId)
-        .query(`SELECT COUNT(*) AS total FROM UserPermissions WHERE UserID = @UserID`);
-
-    if (hasUserPerms.recordset[0].total > 0) {
-        const custom = await pool.request()
+    try {
+        const hasUserPerms = await pool.request()
             .input('UserID', sql.Int, userId)
+            .query(`SELECT COUNT(*) AS total FROM UserPermissions WHERE UserID = @UserID`);
+
+        if (hasUserPerms.recordset[0]?.total > 0) {
+            const custom = await pool.request()
+                .input('UserID', sql.Int, userId)
+                .query(`
+                    SELECT p.PermissionName
+                    FROM UserPermissions up
+                    JOIN Permissions p ON p.PermissionID = up.PermissionID
+                    WHERE up.UserID = @UserID AND up.IsGranted = 1
+                `);
+            return custom.recordset.map(r => r.PermissionName);
+        }
+
+        const rolePerms = await pool.request()
+            .input('RoleID', sql.Int, roleId)
             .query(`
                 SELECT p.PermissionName
-                FROM UserPermissions up
-                JOIN Permissions p ON p.PermissionID = up.PermissionID
-                WHERE up.UserID = @UserID AND up.IsGranted = 1
+                FROM RolePermissions rp
+                JOIN Permissions p ON p.PermissionID = rp.PermissionID
+                WHERE rp.RoleID = @RoleID
             `);
-        return custom.recordset.map(r => r.PermissionName);
+
+        return rolePerms.recordset.map(r => r.PermissionName);
+    } catch (err) {
+        console.warn('⚠️ Lỗi truy vấn bảng RBAC (CSDL có thể chưa cập nhật script tạo bảng UserPermissions):', err.message);
+        if (roleName === 'Staff') return ['VIEW_SLOTS', 'MANAGE_SESSIONS', 'MANAGE_PAYMENTS'];
+        if (roleName === 'Manager') return ['VIEW_SLOTS', 'MANAGE_SESSIONS', 'MANAGE_USERS', 'VIEW_REPORTS', 'MANAGE_PAYMENTS'];
+        if (roleName === 'Driver') return ['VIEW_SLOTS'];
+        return [];
     }
-
-    const rolePerms = await pool.request()
-        .input('RoleID', sql.Int, roleId)
-        .query(`
-            SELECT p.PermissionName
-            FROM RolePermissions rp
-            JOIN Permissions p ON p.PermissionID = rp.PermissionID
-            WHERE rp.RoleID = @RoleID
-        `);
-
-    return rolePerms.recordset.map(r => r.PermissionName);
 }
 
 /**

@@ -1315,33 +1315,38 @@ export async function getUserPermissions(userId) {
   if (!userId) throw badRequest('Thiếu UserID.', 'USER_ID_REQUIRED')
   const pool = await getPool()
 
-  // 1. Kiểm tra xem user có ghi nhận quyền riêng trong UserPermissions không
-  const hasUserPerms = await pool.request()
-    .input('UserID', sql.Int, Number(userId))
-    .query(`SELECT COUNT(*) AS total FROM UserPermissions WHERE UserID = @UserID`)
+  try {
+    // 1. Kiểm tra xem user có ghi nhận quyền riêng trong UserPermissions không
+    const hasUserPerms = await pool.request()
+      .input('UserID', sql.Int, Number(userId))
+      .query(`SELECT COUNT(*) AS total FROM UserPermissions WHERE UserID = @UserID`)
 
-  if (hasUserPerms.recordset[0].total > 0) {
-    const custom = await pool.request()
+    if (hasUserPerms.recordset[0]?.total > 0) {
+      const custom = await pool.request()
+        .input('UserID', sql.Int, Number(userId))
+        .query(`
+          SELECT up.PermissionID
+          FROM UserPermissions up
+          WHERE up.UserID = @UserID AND up.IsGranted = 1
+        `)
+      return custom.recordset.map((r) => r.PermissionID)
+    }
+
+    // 2. Nếu chưa cài riêng, lấy quyền nhóm vai trò mặc định
+    const roleReq = await pool.request()
       .input('UserID', sql.Int, Number(userId))
       .query(`
-        SELECT up.PermissionID
-        FROM UserPermissions up
-        WHERE up.UserID = @UserID AND up.IsGranted = 1
+        SELECT rp.PermissionID
+        FROM RolePermissions rp
+        JOIN Users u ON u.RoleID = rp.RoleID
+        WHERE u.UserID = @UserID
       `)
-    return custom.recordset.map((r) => r.PermissionID)
+
+    return roleReq.recordset.map((r) => r.PermissionID)
+  } catch (err) {
+    console.warn('⚠️ Lỗi truy vấn bảng UserPermissions/RolePermissions:', err.message)
+    return []
   }
-
-  // 2. Nếu chưa cài riêng, lấy quyền nhóm vai trò mặc định
-  const roleReq = await pool.request()
-    .input('UserID', sql.Int, Number(userId))
-    .query(`
-      SELECT rp.PermissionID
-      FROM RolePermissions rp
-      JOIN Users u ON u.RoleID = rp.RoleID
-      WHERE u.UserID = @UserID
-    `)
-
-  return roleReq.recordset.map((r) => r.PermissionID)
 }
 
 export async function updateUserPermissions(userId, permissionIds) {

@@ -677,7 +677,7 @@
         "cancelled": "Cancelled / Expired"
       },
       "capacity": {
-        "title": "Capacity Status (Live)",
+        "title": "Live Slot Lookup",
         "updatedAt": "Updated at {{time}}",
         "empty": "No slot capacity data available.",
         "fillRate": "Fill rate",
@@ -1433,6 +1433,7 @@
     },
     "driver": {
       "home": "Home",
+      "booking": "Reserve Slot",
       "session": "Parking Session",
       "history": "History",
       "payment": "Payment",

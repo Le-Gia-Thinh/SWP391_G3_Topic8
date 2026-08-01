@@ -11,7 +11,7 @@ import React, { Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { GuestRoute, ProtectedRoute, RoleRoute } from './components/ProtectedRoute'
 import {
-  LayoutGrid, LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut, Bell, Car, Star, Users, KeyRound, Building2, ScrollText, Crown, CreditCard
+  LayoutGrid, LayoutDashboard, Map, FileText, CheckSquare, Search, BookOpen, Clock, Settings, Wallet, AlertTriangle, ShieldCheck, Home as HomeIcon, HelpCircle, LogOut, Bell, Car, Star, Users, KeyRound, Building2, ScrollText, Crown, CreditCard, CalendarDays
 } from 'lucide-react'
 
 // Import Layouts
@@ -143,6 +143,7 @@ const staffLinks = [
 
 const driverLinks = [
   { path: '/driver/home', labelKey: 'sidebar.driver.home', icon: HomeIcon },
+  { path: '/driver/booking', labelKey: 'sidebar.driver.booking', icon: CalendarDays },
   { path: '/driver/session', labelKey: 'sidebar.driver.session', icon: Clock },
   { path: '/driver/history', labelKey: 'sidebar.driver.history', icon: FileText },
   { path: '/driver/payment', labelKey: 'sidebar.driver.payment', icon: Wallet },

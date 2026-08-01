@@ -18,6 +18,7 @@ import staffApi from '../../apis/staffApi'
 import LanguageSwitcher from '../ui/LanguageSwitcher'
 
 function StaffGateSelector() {
+  const { user } = useAuth()
   const [gates, setGates] = useState([])
   const [selectedGate, setSelectedGate] = useState(() => {
     try {
@@ -28,6 +29,9 @@ function StaffGateSelector() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
   useEffect(() => {
+    const role = (user?.roleName || user?.RoleName || '').toLowerCase()
+    if (role !== 'staff') return
+
     let active = true
     staffApi.getGates()
       .then(res => {
@@ -42,7 +46,7 @@ function StaffGateSelector() {
       })
       .catch(() => { })
     return () => { active = false }
-  }, [])
+  }, [user])
 
   const handleSelectGate = (gate) => {
     setSelectedGate(gate)

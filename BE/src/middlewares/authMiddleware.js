@@ -179,36 +179,43 @@ export function hasPermission(permissionName) {
       if (req.user.RoleName === 'Admin') return next()
 
       const pool = await getPool()
-      const userPerm = await pool.request()
-        .input('UserID', sql.Int, req.user.UserID)
-        .input('PermissionName', sql.NVarChar, permissionName)
-        .query(`
-          SELECT up.IsGranted
-          FROM UserPermissions up
-          JOIN Permissions p ON p.PermissionID = up.PermissionID
-          WHERE up.UserID = @UserID AND p.PermissionName = @PermissionName
-        `)
+      try {
+        const userPerm = await pool.request()
+          .input('UserID', sql.Int, req.user.UserID)
+          .input('PermissionName', sql.NVarChar, permissionName)
+          .query(`
+            SELECT up.IsGranted
+            FROM UserPermissions up
+            JOIN Permissions p ON p.PermissionID = up.PermissionID
+            WHERE up.UserID = @UserID AND p.PermissionName = @PermissionName
+          `)
 
-      if (userPerm.recordset.length > 0) {
-        if (userPerm.recordset[0].IsGranted) return next()
-        return res.status(403).json({
-          success: false,
-          message: `Bạn không có quyền thực hiện thao tác này (${permissionName}).`,
-          code: 'FORBIDDEN_CUSTOM_PERMISSION'
-        })
+        if (userPerm.recordset.length > 0) {
+          if (userPerm.recordset[0].IsGranted) return next()
+          return res.status(403).json({
+            success: false,
+            message: `Bạn không có quyền thực hiện thao tác này (${permissionName}).`,
+            code: 'FORBIDDEN_CUSTOM_PERMISSION'
+          })
+        }
+
+        const rolePerm = await pool.request()
+          .input('RoleID', sql.Int, req.user.RoleID)
+          .input('PermissionName', sql.NVarChar, permissionName)
+          .query(`
+            SELECT 1
+            FROM RolePermissions rp
+            JOIN Permissions p ON p.PermissionID = rp.PermissionID
+            WHERE rp.RoleID = @RoleID AND p.PermissionName = @PermissionName
+          `)
+
+        if (rolePerm.recordset.length > 0) return next()
+      } catch (dbErr) {
+        console.warn('⚠️ Lỗi kiểm tra bảng Permissions:', dbErr.message)
+        if (Array.isArray(req.user?.permissions) && req.user.permissions.includes(permissionName)) {
+          return next()
+        }
       }
-
-      const rolePerm = await pool.request()
-        .input('RoleID', sql.Int, req.user.RoleID)
-        .input('PermissionName', sql.NVarChar, permissionName)
-        .query(`
-          SELECT 1
-          FROM RolePermissions rp
-          JOIN Permissions p ON p.PermissionID = rp.PermissionID
-          WHERE rp.RoleID = @RoleID AND p.PermissionName = @PermissionName
-        `)
-
-      if (rolePerm.recordset.length > 0) return next()
 
       return res.status(403).json({
         success: false,

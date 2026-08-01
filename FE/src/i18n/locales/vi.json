@@ -677,7 +677,7 @@
         "cancelled": "Đã hủy / hết hạn"
       },
       "capacity": {
-        "title": "Trạng thái Sức chứa (Live)",
+        "title": "Tra cứu Chỗ trống (Live)",
         "updatedAt": "Cập nhật lúc {{time}}",
         "empty": "Chưa có dữ liệu vị trí đỗ được cập nhật.",
         "fillRate": "Tỷ lệ lấp đầy",
@@ -1433,6 +1433,7 @@
     },
     "driver": {
       "home": "Trang chủ",
+      "booking": "Đặt chỗ đỗ xe",
       "session": "Phiên đỗ xe",
       "history": "Lịch sử",
       "payment": "Thanh toán",

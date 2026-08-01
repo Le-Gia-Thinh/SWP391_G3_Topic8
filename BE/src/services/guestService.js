@@ -150,7 +150,13 @@ export async function trackSession(searchTerm) {
  */
 export async function getHomeStats() {
   const pool = await getPool();
-  
+
+  try {
+    await pool.request().execute("sp_SyncParkingSlotStatuses");
+  } catch (syncErr) {
+    console.warn("⚠️ Lỗi đồng bộ sp_SyncParkingSlotStatuses:", syncErr.message);
+  }
+
   // 1. Truy vấn thống kê tổng quan cơ sở hạ tầng bãi đỗ xe
   const statsQuery = await pool.request().query(`
     SELECT
@@ -160,8 +166,8 @@ export async function getHomeStats() {
       (SELECT COUNT(*) FROM ParkingSessions WHERE CAST(EntryTime AS DATE) = CAST(GETDATE() AS DATE)) AS TodaySessions
   `);
   const s = statsQuery.recordset[0];
-  
-  // 2. Truy vấn thống kê chi tiết theo từng Loại xe (Ô tô, Xe máy, Xe điện)
+
+  // 2. Truy vấn thống kê chi tiết theo từng Loại xe
   const vehiclesQuery = await pool.request().query(`
     SELECT 
       vt.VehicleCode, 

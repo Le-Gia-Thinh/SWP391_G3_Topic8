@@ -195,6 +195,7 @@ const LocationCard = ({ label, value, active = false }) => {
 const SessionListItem = ({ session, active, onClick, currentTime }) => {
   const { t } = useTranslation()
   const parkedDuration = getParkedDuration(session.EntryTime, currentTime, t)
+  const isPaid = ['completed', 'prepaid', 'paid'].includes(String(session.PaymentStatus || '').toLowerCase())
 
   return (
     <button
@@ -220,12 +221,15 @@ const SessionListItem = ({ session, active, onClick, currentTime }) => {
         </div>
 
         <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${active
-            ? 'bg-blue-600 text-white'
-            : 'bg-emerald-50 text-emerald-600'
+          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+            isPaid
+              ? 'bg-emerald-500 text-white'
+              : active
+              ? 'bg-blue-600 text-white'
+              : 'bg-emerald-50 text-emerald-600'
           }`}
         >
-          {t(getSessionStatusKey(session.SessionStatus))}
+          {isPaid ? t('driver.session.paidStatus', 'Đã thanh toán') : t(getSessionStatusKey(session.SessionStatus))}
         </span>
       </div>
 
@@ -256,6 +260,8 @@ const SessionDetail = ({
   onViewMap
 }) => {
   const { t } = useTranslation()
+  const isPaid = ['completed', 'prepaid', 'paid'].includes(String(session.PaymentStatus || '').toLowerCase())
+
   const parkedDuration = useMemo(() => {
     return getParkedDuration(session.EntryTime, currentTime, t)
   }, [session.EntryTime, currentTime, t])
@@ -276,8 +282,12 @@ const SessionDetail = ({
                 {getSessionTitle(session)}
               </h2>
 
-              <span className="rounded-full bg-blue-50 dark:bg-blue-900/20 px-3 py-1 text-xs font-bold text-blue-600 dark:text-blue-400">
-                {t(getSessionStatusKey(session.SessionStatus))}
+              <span className={`rounded-full px-3 py-1 text-xs font-bold ${
+                isPaid
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+              }`}>
+                {isPaid ? t('driver.session.paidStatus', 'Đã thanh toán') : t(getSessionStatusKey(session.SessionStatus))}
               </span>
             </div>
 
@@ -286,14 +296,21 @@ const SessionDetail = ({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => onGoPayment(session.SessionID)}
-            className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700"
-          >
-            <CreditCard size={16} />
-            {t('driver.session.pay')}
-          </button>
+          {!isPaid ? (
+            <button
+              type="button"
+              onClick={() => onGoPayment(session.SessionID)}
+              className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+            >
+              <CreditCard size={16} />
+              {t('driver.session.pay')}
+            </button>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 px-3.5 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-200">
+              <ShieldCheck size={16} />
+              <span>{t('driver.session.paidStatus', 'Đã thanh toán')}</span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -433,9 +450,16 @@ const SessionDetail = ({
                 {t('driver.session.feeEstimate')}
               </h3>
 
-              <span className="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
-                {session.PaymentStatus || 'Pending'}
-              </span>
+              {isPaid ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-1 text-xs font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                  <ShieldCheck size={13} />
+                  {t('driver.session.paidStatus', 'Đã thanh toán')}
+                </span>
+              ) : (
+                <span className="rounded bg-amber-50 dark:bg-amber-900/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 border border-amber-200">
+                  {session.PaymentStatus || t('driver.session.unpaidStatus', 'Chưa thanh toán')}
+                </span>
+              )}
             </div>
 
             <div className="space-y-3 text-sm">
@@ -472,14 +496,21 @@ const SessionDetail = ({
             </div>
 
             <div className="mt-5 space-y-3">
-              <button
-                type="button"
-                onClick={() => onGoPayment(session.SessionID)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700"
-              >
-                <CreditCard size={18} />
-                {t('driver.session.payThisSession')}
-              </button>
+              {isPaid ? (
+                <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white shadow-md shadow-emerald-600/20 cursor-default">
+                  <ShieldCheck size={18} />
+                  <span>{t('driver.session.paidButton', 'Phiên đỗ đã được thanh toán')}</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onGoPayment(session.SessionID)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+                >
+                  <CreditCard size={18} />
+                  {t('driver.session.payThisSession')}
+                </button>
+              )}
 
               <button
                 type="button"
