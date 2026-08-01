@@ -253,7 +253,8 @@
         "Update": "Update",
         "Delete": "Delete",
         "Lock": "Lock",
-        "Unlock": "Unlock"
+        "Unlock": "Unlock",
+        "Permission": "Permission"
       }
     },
     "buildings": {
@@ -1417,6 +1418,45 @@
     "membershipPage": {
       "loadError": "Could not load membership plan info",
       "cancelSuccess": "Auto-renewal cancelled. You can still use the plan until the end of the current cycle."
+    },
+    "topup": {
+      "title": "Top Up Account",
+      "description": "Top up your wallet to easily pay parking fees and other services.",
+      "balanceLabel": "Current Balance",
+      "selectAmount": "Select Top Up Amount",
+      "customAmountLabel": "Or enter custom amount (VND)",
+      "customAmountPlaceholder": "Enter amount...",
+      "minAmountWarning": "Minimum top up amount is 10,000 VND",
+      "processPayment": "Proceed to Payment",
+      "processing": "Processing...",
+      "successTitle": "Top Up Successful!",
+      "securityHint": "Transaction is 100% encrypted and secure",
+      "sidebarTitle": "Supported Payment Methods",
+      "sidebarATM": "Domestic Card (ATM)",
+      "sidebarInt": "International Card (Visa/Mastercard)",
+      "sidebarWallet": "E-Wallet (Momo, ZaloPay)",
+      "sidebarVietQR": "Bank Transfer (VietQR)",
+      "historyTitle": "Recent Top Up History",
+      "historyEmpty": "No recent top up transactions.",
+      "historyLink": "View all transaction history →",
+      "paymentTitle": "Wallet Top Up Payment",
+      "orderCodeLabel": "Order Code",
+      "timeLeftLabel": "Time Remaining",
+      "qrInstruction": "Use your mobile banking app or e-wallet to scan this QR code",
+      "bankLabel": "Bank Name",
+      "accountNumberLabel": "Account Number",
+      "accountNameLabel": "Account Name",
+      "contentLabel": "Transfer Content",
+      "amountLabel": "Payment Amount",
+      "paymentWarning": "The system will automatically update your balance after receiving payment. Please keep the receipt for reference if needed.",
+      "openPayOS": "Open PayOS payment link",
+      "copied": "Copied",
+      "copy": "Copy",
+      "initPayment": "Initializing payment...",
+      "errorTitle": "An error occurred",
+      "goBack": "Go Back",
+      "successDetail": "You have successfully topped up {{amount}} VND to your wallet account.",
+      "redirecting": "Automatically redirecting to home page..."
     }
   },
   "sidebar": {

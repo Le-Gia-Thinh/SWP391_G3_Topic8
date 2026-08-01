@@ -436,6 +436,7 @@ export async function getRolePermissions(req, res, next) {
 export async function updateRolePermissions(req, res, next) {
   try {
     const data = await infra.updateRolePermissions(Number(req.params.id), req.body.permissionIds)
+    await audit(req, 'Permission', 'Vai trò', `Cập nhật phân quyền cho vai trò ID ${req.params.id}`)
     return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật phân quyền thành công', data })
   } catch (err) { next(err) }
 }
@@ -450,6 +451,7 @@ export async function getUserPermissions(req, res, next) {
 export async function updateUserPermissions(req, res, next) {
   try {
     const data = await infra.updateUserPermissions(Number(req.params.id), req.body.permissionIds)
+    await audit(req, 'Permission', 'Người dùng', `Cập nhật quyền hạn cá nhân cho người dùng ID ${req.params.id}`)
     return res.status(StatusCodes.OK).json({ success: true, message: 'Cập nhật quyền hạn cá nhân thành công', data })
   } catch (err) { next(err) }
 }

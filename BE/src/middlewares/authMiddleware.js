@@ -108,7 +108,7 @@ export async function isAuthorized(req, res, next) {
 export function isManager(req, res, next) {
   if (!req.user)
     return res.status(401).json({ success: false, message: "Chưa xác thực." });
-  if (req.user.RoleName !== "Manager")
+  if (!["Manager", "Admin"].includes(req.user.RoleName))
     return res.status(403).json({
       success: false,
       message: "Không có quyền. Yêu cầu: Manager.",
@@ -119,13 +119,13 @@ export function isManager(req, res, next) {
 
 /**
  * Middleware kiểm tra quyền Staff hoặc Manager.
- * Cho phép cả Staff và Manager truy cập.
+ * Cho phép cả Staff, Manager và Admin truy cập.
  * Phải đặt SAU middleware isAuthorized.
  */
 export function isStaffOrManager(req, res, next) {
   if (!req.user)
     return res.status(401).json({ success: false, message: "Chưa xác thực." });
-  if (!["Staff", "Manager"].includes(req.user.RoleName))
+  if (!["Staff", "Manager", "Admin"].includes(req.user.RoleName))
     return res.status(403).json({
       success: false,
       message: "Không có quyền. Yêu cầu: Staff hoặc Manager.",

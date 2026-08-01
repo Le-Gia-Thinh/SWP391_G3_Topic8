@@ -9,8 +9,19 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { ToastContainer } from 'react-toastify'
+import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
+
+// Monkey-patch toast.error globally to prevent duplicate toast messages within 500ms
+const originalError = toast.error
+const recentErrors = new Set()
+toast.error = (content, options) => {
+  const key = typeof content === 'string' ? content : JSON.stringify(content)
+  if (recentErrors.has(key)) return
+  recentErrors.add(key)
+  setTimeout(() => recentErrors.delete(key), 500)
+  return originalError(content, options)
+}
 import { ThemeProvider, CssBaseline } from '@mui/material'
 import { createTheme } from '@mui/material/styles'
 import { GoogleOAuthProvider } from '@react-oauth/google'

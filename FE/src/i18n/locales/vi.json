@@ -253,7 +253,8 @@
         "Update": "Cập nhật",
         "Delete": "Xoá",
         "Lock": "Khoá",
-        "Unlock": "Mở khoá"
+        "Unlock": "Mở khoá",
+        "Permission": "Phân quyền"
       }
     },
     "buildings": {
@@ -1417,6 +1418,45 @@
     "membershipPage": {
       "loadError": "Không thể tải thông tin gói hội viên",
       "cancelSuccess": "Hủy gia hạn thành công. Bạn vẫn có thể sử dụng gói đến hết chu kỳ."
+    },
+    "topup": {
+      "title": "Nạp tiền tài khoản",
+      "description": "Nạp tiền vào ví để dễ dàng thanh toán phí đỗ xe và các dịch vụ khác.",
+      "balanceLabel": "Số dư hiện tại",
+      "selectAmount": "Chọn mệnh giá nạp",
+      "customAmountLabel": "Hoặc nhập số tiền khác (VNĐ)",
+      "customAmountPlaceholder": "Nhập số tiền...",
+      "minAmountWarning": "Số tiền nạp tối thiểu là 10,000 VNĐ",
+      "processPayment": "Tiến hành thanh toán",
+      "processing": "Đang xử lý...",
+      "successTitle": "Nạp tiền thành công!",
+      "securityHint": "Giao dịch được mã hóa và bảo mật an toàn 100%",
+      "sidebarTitle": "Phương thức hỗ trợ",
+      "sidebarATM": "Thẻ nội địa (ATM)",
+      "sidebarInt": "Thẻ quốc tế (Visa/Mastercard)",
+      "sidebarWallet": "Ví điện tử (Momo, ZaloPay)",
+      "sidebarVietQR": "Chuyển khoản ngân hàng (VietQR)",
+      "historyTitle": "Lịch sử nạp gần đây",
+      "historyEmpty": "Chưa có giao dịch nạp tiền nào gần đây.",
+      "historyLink": "Xem tất cả lịch sử giao dịch →",
+      "paymentTitle": "Thanh toán nạp tiền ví",
+      "orderCodeLabel": "Mã đơn hàng",
+      "timeLeftLabel": "Thời gian còn lại",
+      "qrInstruction": "Sử dụng ứng dụng ngân hàng hoặc ví điện tử để quét mã QR này",
+      "bankLabel": "Ngân hàng",
+      "accountNumberLabel": "Số tài khoản",
+      "accountNameLabel": "Tên tài khoản",
+      "contentLabel": "Nội dung CK",
+      "amountLabel": "Số tiền thanh toán",
+      "paymentWarning": "Hệ thống sẽ tự động cập nhật số dư sau khi nhận được tiền. Vui lòng giữ lại biên lai để đối chiếu nếu cần.",
+      "openPayOS": "Mở link thanh toán PayOS",
+      "copied": "Đã copy",
+      "copy": "Copy",
+      "initPayment": "Đang khởi tạo thanh toán...",
+      "errorTitle": "Đã xảy ra lỗi",
+      "goBack": "Quay lại",
+      "successDetail": "Bạn đã nạp thành công {{amount}} VNĐ vào tài khoản ví.",
+      "redirecting": "Đang tự động chuyển hướng về trang chủ..."
     }
   },
   "sidebar": {

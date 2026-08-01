@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { QrCode, Copy, CheckCircle2, AlertCircle, ArrowLeft, Clock, XCircle, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import walletApi from '../../apis/walletApi'
 
 // ── QR Canvas ───────────────
@@ -28,7 +29,7 @@ const QRCanvas = ({ data, size = 220 }) => {
 
   if (error) return (
     <div className="flex items-center justify-center bg-slate-100 rounded-xl p-4 text-sm text-slate-500 font-medium text-center" style={{ width: size, height: size }}>
-      Không thể tạo mã QR.<br />Vui lòng thử lại.
+      Không thể tạo mã QR / Failed to generate QR.
     </div>
   );
   return (
@@ -39,6 +40,7 @@ const QRCanvas = ({ data, size = 220 }) => {
 };
 
 const DriverTopUpPayment = () => {
+  const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -60,7 +62,7 @@ const DriverTopUpPayment = () => {
        if (statusParam === 'success') {
           // Giao diện sẽ tự động polling và chuyển trạng thái
        } else {
-          setError('Thanh toán đã bị huỷ')
+          setError(t('driver.topup.paymentCancelled', 'Thanh toán đã bị huỷ'))
        }
        return
     }
@@ -80,7 +82,7 @@ const DriverTopUpPayment = () => {
           const diff = Math.floor((expiresAt - Date.now()) / 1000)
           setTimeLeft(diff > 0 ? diff : 600)
         } else {
-          setError(res.message || 'Lỗi tạo thanh toán')
+          setError(res.message || t('driver.topup.createPaymentError', 'Lỗi tạo thanh toán'))
         }
       } catch (err) {
         setError(err.response?.data?.message || err.message)
@@ -91,8 +93,8 @@ const DriverTopUpPayment = () => {
 
     if (!payment && !error) {
        initPayment()
-    }
-  }, [amount, payment, error, statusParam])
+     }
+  }, [amount, payment, error, statusParam, t])
 
   // Polling check status
   useEffect(() => {
@@ -110,7 +112,7 @@ const DriverTopUpPayment = () => {
               setPayment(prev => ({ ...prev, status: 'PAID' }))
               setTimeout(() => navigate('/driver/home'), 3000)
            } else if (res.success && (res.data.status === 'CANCELLED' || res.data.status === 'EXPIRED')) {
-              setError('Thanh toán đã bị huỷ hoặc hết hạn')
+              setError(t('driver.topup.paymentCancelledOrExpired', 'Thanh toán đã bị huỷ hoặc hết hạn'))
            }
         } catch (e) {
            console.error('Polling error', e)
@@ -119,7 +121,7 @@ const DriverTopUpPayment = () => {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [timeLeft, payment, navigate])
+  }, [timeLeft, payment, navigate, t])
 
   const formatTime = (seconds) => {
     if (seconds <= 0) return '00:00'
@@ -143,7 +145,7 @@ const DriverTopUpPayment = () => {
      return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center py-12 px-4">
            <Loader2 size={32} className="animate-spin text-blue-500 mb-4" />
-           <p className="text-slate-500 font-medium">Đang khởi tạo thanh toán...</p>
+           <p className="text-slate-500 font-medium">{t('driver.topup.initPayment')}</p>
         </div>
      )
   }
@@ -152,10 +154,10 @@ const DriverTopUpPayment = () => {
      return (
         <div className="min-h-screen bg-slate-50 pt-10 pb-12 px-4 flex flex-col items-center justify-center text-center">
             <XCircle className="w-20 h-20 text-red-500 mb-4 drop-shadow-md" />
-            <h2 className="text-2xl font-black text-slate-800 mb-2">Đã xảy ra lỗi</h2>
+            <h2 className="text-2xl font-black text-slate-800 mb-2">{t('driver.topup.errorTitle')}</h2>
             <p className="text-slate-500 font-medium mb-8 max-w-sm">{error}</p>
             <button onClick={() => navigate(-1)} className="px-8 py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl shadow-md transition-colors">
-              Quay lại
+              {t('driver.topup.goBack')}
             </button>
         </div>
      )
@@ -168,14 +170,14 @@ const DriverTopUpPayment = () => {
           <CheckCircle2 size={56} className="text-green-500" />
         </div>
         <h2 className="text-3xl font-black text-slate-800 mb-4 tracking-tight">
-          Nạp tiền thành công!
+          {t('driver.topup.successTitle')}
         </h2>
         <p className="text-slate-600 mb-8 text-lg font-medium">
-          Bạn đã nạp thành công <strong className="text-green-600 text-xl">{payment.amount.toLocaleString('vi-VN')} VNĐ</strong> vào tài khoản ví.
+          {t('driver.topup.successDetail', { amount: payment.amount.toLocaleString('vi-VN') })}
         </p>
         <div className="flex items-center gap-3 px-6 py-3 bg-white rounded-full border border-slate-200 shadow-sm">
           <Loader2 size={16} className="animate-spin text-slate-400" />
-          <span className="text-sm font-bold text-slate-500">Đang tự động chuyển hướng về trang chủ...</span>
+          <span className="text-sm font-bold text-slate-500">{t('driver.topup.redirecting')}</span>
         </div>
       </div>
     )
@@ -188,19 +190,19 @@ const DriverTopUpPayment = () => {
           onClick={() => navigate(-1)} 
           className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors mb-4 group"
         >
-          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Quay lại
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> {t('driver.topup.goBack')}
         </button>
 
         <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100 overflow-hidden">
           {/* Header */}
           <div className="p-6 md:px-8 border-b border-slate-100 bg-slate-50/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Thanh toán nạp tiền ví</h1>
-              <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">Mã đơn hàng: <span className="text-slate-600">{payment?.orderCode}</span></p>
+              <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">{t('driver.topup.paymentTitle')}</h1>
+              <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">{t('driver.topup.orderCodeLabel')}: <span className="text-slate-600">{payment?.orderCode}</span></p>
             </div>
             <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-sm border ${timeLeft < 120 ? 'bg-red-50 text-red-600 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
               <Clock size={16} className={timeLeft < 120 ? 'animate-pulse' : ''} />
-              Thời gian còn lại: <span className="font-mono text-base">{formatTime(timeLeft)}</span>
+              {t('driver.topup.timeLeftLabel')}: <span className="font-mono text-base">{formatTime(timeLeft)}</span>
             </div>
           </div>
 
@@ -211,7 +213,7 @@ const DriverTopUpPayment = () => {
                 <QRCanvas data={payment?.qrCode} size={256} />
               </div>
               <p className="text-sm font-medium text-center text-slate-500 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-                Sử dụng ứng dụng ngân hàng hoặc ví điện tử để quét mã QR này
+                {t('driver.topup.qrInstruction')}
               </p>
             </div>
 
@@ -219,10 +221,10 @@ const DriverTopUpPayment = () => {
             <div className="flex flex-col justify-center space-y-6">
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
                 {[
-                  { label: 'Ngân hàng', value: payment?.bankBin, field: 'bank' },
-                  { label: 'Số tài khoản', value: payment?.accountNumber, field: 'account', highlight: true },
-                  { label: 'Tên tài khoản', value: payment?.accountName, field: 'name' },
-                  { label: 'Nội dung CK', value: payment?.description, field: 'desc', highlight: true }
+                  { label: t('driver.topup.bankLabel'), value: payment?.bankBin, field: 'bank' },
+                  { label: t('driver.topup.accountNumberLabel'), value: payment?.accountNumber, field: 'account', highlight: true },
+                  { label: t('driver.topup.accountNameLabel'), value: payment?.accountName, field: 'name' },
+                  { label: t('driver.topup.contentLabel'), value: payment?.description, field: 'desc', highlight: true }
                 ].map(({ label, value, field, highlight }) => (
                   <div key={field} className="flex justify-between items-center pb-4 border-b border-slate-200/60 last:border-0 last:pb-0">
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">{label}</span>
@@ -237,7 +239,7 @@ const DriverTopUpPayment = () => {
                         >
                           {copiedField === field ? <CheckCircle2 size={16} /> : <Copy size={16} />}
                           <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity">
-                            {copiedField === field ? 'Đã copy' : 'Copy'}
+                            {copiedField === field ? t('driver.topup.copied') : t('driver.topup.copy')}
                           </div>
                         </button>
                       )}
@@ -246,7 +248,7 @@ const DriverTopUpPayment = () => {
                 ))}
 
                 <div className="flex justify-between items-center pt-4 mt-2 border-t border-slate-200/60">
-                  <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Số tiền thanh toán</span>
+                  <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">{t('driver.topup.amountLabel')}</span>
                   <span className="font-black text-2xl text-blue-600">
                     {payment?.amount?.toLocaleString('vi-VN')} đ
                   </span>
@@ -256,7 +258,7 @@ const DriverTopUpPayment = () => {
               <div className="flex items-start gap-3 p-4 bg-blue-50 text-blue-800 rounded-2xl border border-blue-100 text-sm">
                 <AlertCircle size={20} className="shrink-0 mt-0.5 text-blue-500" />
                 <p className="font-medium text-xs leading-relaxed">
-                  Hệ thống sẽ tự động cập nhật số dư sau khi nhận được tiền. Vui lòng giữ lại biên lai để đối chiếu nếu cần.
+                  {t('driver.topup.paymentWarning')}
                 </p>
               </div>
               
@@ -266,7 +268,7 @@ const DriverTopUpPayment = () => {
                 rel="noreferrer"
                 className="w-full flex items-center justify-center gap-2 py-4 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold transition-all shadow-md active:scale-[0.98]"
               >
-                Mở link thanh toán PayOS <ExternalLinkIcon size={18} />
+                {t('driver.topup.openPayOS')} <ExternalLinkIcon size={18} />
               </a>
             </div>
           </div>

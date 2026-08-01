@@ -355,7 +355,7 @@ const StaffParkingMap = () => {
                   <ChevronRight size={12} />
                   <Layers size={12} className="text-blue-500" />
                   <span className="font-medium text-slate-600">
-                    {hierarchy.find(b => String(b.id) === String(selectedBuilding))?.floors.find(f => String(f.id) === String(selectedFloor))?.name}
+                    {hierarchy.find(b => String(b.id) === String(selectedBuilding))?.floors?.find(f => String(f.id) === String(selectedFloor))?.name}
                   </span>
                 </>
               )}
@@ -365,8 +365,8 @@ const StaffParkingMap = () => {
                   <Grid3X3 size={12} className="text-blue-500" />
                   <span className="font-medium text-slate-600">
                     {hierarchy.find(b => String(b.id) === String(selectedBuilding))
-                      ?.floors.find(f => String(f.id) === String(selectedFloor))
-                      ?.zones.find(z => String(z.id) === String(selectedZone))?.name}
+                      ?.floors?.find(f => String(f.id) === String(selectedFloor))
+                      ?.zones?.find(z => String(z.id) === String(selectedZone))?.name}
                   </span>
                 </>
               )}

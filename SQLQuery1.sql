@@ -93,12 +93,12 @@ IF OBJECT_ID('Notifications',        'U') IS NOT NULL DROP TABLE Notifications;
 IF OBJECT_ID('AuditLogs',            'U') IS NOT NULL DROP TABLE AuditLogs;
 IF OBJECT_ID('RefreshTokens',        'U') IS NOT NULL DROP TABLE RefreshTokens;
 IF OBJECT_ID('UserAuthProviders',    'U') IS NOT NULL DROP TABLE UserAuthProviders;
-IF OBJECT_ID('Users',                'U') IS NOT NULL DROP TABLE Users;
-IF OBJECT_ID('VehicleTypes',         'U') IS NOT NULL DROP TABLE VehicleTypes;
 IF OBJECT_ID('UserPermissions',     'U') IS NOT NULL DROP TABLE UserPermissions;
 IF OBJECT_ID('RolePermissions',      'U') IS NOT NULL DROP TABLE RolePermissions;
 IF OBJECT_ID('Permissions',          'U') IS NOT NULL DROP TABLE Permissions;
+IF OBJECT_ID('Users',                'U') IS NOT NULL DROP TABLE Users;
 IF OBJECT_ID('Roles',                'U') IS NOT NULL DROP TABLE Roles;
+IF OBJECT_ID('VehicleTypes',         'U') IS NOT NULL DROP TABLE VehicleTypes;
 GO
 
 /* =====================================================================
@@ -128,16 +128,6 @@ CREATE TABLE RolePermissions (
 );
 GO
 
-CREATE TABLE UserPermissions (
-    UserPermissionID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT NOT NULL FOREIGN KEY REFERENCES Users(UserID) ON DELETE CASCADE,
-    PermissionID INT NOT NULL FOREIGN KEY REFERENCES Permissions(PermissionID) ON DELETE CASCADE,
-    IsGranted BIT NOT NULL DEFAULT 1,
-    GrantedAt DATETIME DEFAULT GETDATE(),
-    CONSTRAINT UQ_User_Permission UNIQUE (UserID, PermissionID)
-);
-GO
-
 CREATE TABLE Users (
     UserID              INT IDENTITY(1,1) PRIMARY KEY,
     FullName            NVARCHAR(100) NOT NULL,
@@ -158,6 +148,16 @@ CREATE TABLE Users (
     CreatedAt           DATETIME NOT NULL DEFAULT GETDATE(),
     UpdatedAt           DATETIME NOT NULL DEFAULT GETDATE(),
     FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)
+);
+GO
+
+CREATE TABLE UserPermissions (
+    UserPermissionID INT IDENTITY(1,1) PRIMARY KEY,
+    UserID INT NOT NULL FOREIGN KEY REFERENCES Users(UserID) ON DELETE CASCADE,
+    PermissionID INT NOT NULL FOREIGN KEY REFERENCES Permissions(PermissionID) ON DELETE CASCADE,
+    IsGranted BIT NOT NULL DEFAULT 1,
+    GrantedAt DATETIME DEFAULT GETDATE(),
+    CONSTRAINT UQ_User_Permission UNIQUE (UserID, PermissionID)
 );
 GO
 
