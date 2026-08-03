@@ -26,9 +26,6 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 
-/**
- * Chuyển đổi an toàn giá trị ngày tháng từ backend thành đối tượng Date của Javascript.
- */
 const parseBackendDate = (value) => {
   if (!value) return null
   if (value instanceof Date) return value
@@ -59,7 +56,8 @@ const formatCurrency = (value) => {
 
 // getParkedDuration nhận t để i18n hoá chuỗi "X giờ Y phút Z giây"
 /**
- * Tính thời gian xe đã đỗ trong bãi (thực tế) từ lúc vào cổng đến hiện tại.
+ * Hàm xử lý logic: getParkedDuration
+ * Tính toán và định dạng thời gian đã đỗ thành chuỗi "X giờ Y phút Z giây".
  */
 const getParkedDuration = (entryTime, currentTime, t) => {
   const entry = parseBackendDate(entryTime)
@@ -80,7 +78,8 @@ const getParkedDuration = (entryTime, currentTime, t) => {
 }
 
 /**
- * Tính % tiến trình đỗ xe (mặc định lấy mốc 4 tiếng = 100% để vẽ thanh Progress UI).
+ * Hàm xử lý logic: getProgress
+ * Tính toán tiến trình đỗ xe (mặc định lấy 4 tiếng = 240 phút làm 100% để hiển thị progress bar).
  */
 const getProgress = (session, currentTime) => {
   const entry = parseBackendDate(session?.EntryTime)
@@ -102,6 +101,10 @@ const getProgress = (session, currentTime) => {
 }
 
 // Trả về key i18n thay vì label cứng
+/**
+ * Hàm xử lý logic: getSessionStatusKey
+ * Chuyển đổi trạng thái Session thành key i18n tương ứng.
+ */
 const getSessionStatusKey = (status) => {
   const map = {
     Active: 'driver.session.statusActive',
@@ -113,10 +116,18 @@ const getSessionStatusKey = (status) => {
   return map[status] || 'driver.session.statusActive'
 }
 
+/**
+ * Hàm xử lý logic: getSessionTitle
+ * Lấy tiêu đề hiển thị cho Session (Ưu tiên SessionCode, nếu không dùng SessionID).
+ */
 const getSessionTitle = (session) => {
   return session?.SessionCode || `SS-${session?.SessionID || '--'}`
 }
 
+/**
+ * Hàm xử lý logic: getSessionSubTitle
+ * Lấy tiêu đề phụ hiển thị cho Session (Biển số xe • Mã ô đỗ).
+ */
 const getSessionSubTitle = (session, t) => {
   const plate = session?.PlateNumber || t('driver.session.noPlate')
   const slot = session?.SlotCode || t('driver.session.noSlot')
@@ -184,6 +195,7 @@ const LocationCard = ({ label, value, active = false }) => {
 const SessionListItem = ({ session, active, onClick, currentTime }) => {
   const { t } = useTranslation()
   const parkedDuration = getParkedDuration(session.EntryTime, currentTime, t)
+  const isPaid = ['completed', 'prepaid', 'paid'].includes(String(session.PaymentStatus || '').toLowerCase())
 
   return (
     <button
@@ -209,12 +221,15 @@ const SessionListItem = ({ session, active, onClick, currentTime }) => {
         </div>
 
         <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${active
-            ? 'bg-blue-600 text-white'
-            : 'bg-emerald-50 text-emerald-600'
+          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+            isPaid
+              ? 'bg-emerald-500 text-white'
+              : active
+              ? 'bg-blue-600 text-white'
+              : 'bg-emerald-50 text-emerald-600'
           }`}
         >
-          {t(getSessionStatusKey(session.SessionStatus))}
+          {isPaid ? t('driver.session.paidStatus', 'Đã thanh toán') : t(getSessionStatusKey(session.SessionStatus))}
         </span>
       </div>
 
@@ -245,6 +260,8 @@ const SessionDetail = ({
   onViewMap
 }) => {
   const { t } = useTranslation()
+  const isPaid = ['completed', 'prepaid', 'paid'].includes(String(session.PaymentStatus || '').toLowerCase())
+
   const parkedDuration = useMemo(() => {
     return getParkedDuration(session.EntryTime, currentTime, t)
   }, [session.EntryTime, currentTime, t])
@@ -265,8 +282,12 @@ const SessionDetail = ({
                 {getSessionTitle(session)}
               </h2>
 
-              <span className="rounded-full bg-blue-50 dark:bg-blue-900/20 px-3 py-1 text-xs font-bold text-blue-600 dark:text-blue-400">
-                {t(getSessionStatusKey(session.SessionStatus))}
+              <span className={`rounded-full px-3 py-1 text-xs font-bold ${
+                isPaid
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+              }`}>
+                {isPaid ? t('driver.session.paidStatus', 'Đã thanh toán') : t(getSessionStatusKey(session.SessionStatus))}
               </span>
             </div>
 
@@ -275,14 +296,21 @@ const SessionDetail = ({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => onGoPayment(session.SessionID)}
-            className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700"
-          >
-            <CreditCard size={16} />
-            {t('driver.session.pay')}
-          </button>
+          {!isPaid ? (
+            <button
+              type="button"
+              onClick={() => onGoPayment(session.SessionID)}
+              className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+            >
+              <CreditCard size={16} />
+              {t('driver.session.pay')}
+            </button>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 px-3.5 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-200">
+              <ShieldCheck size={16} />
+              <span>{t('driver.session.paidStatus', 'Đã thanh toán')}</span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -422,9 +450,16 @@ const SessionDetail = ({
                 {t('driver.session.feeEstimate')}
               </h3>
 
-              <span className="rounded bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
-                {session.PaymentStatus || 'Pending'}
-              </span>
+              {isPaid ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-1 text-xs font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                  <ShieldCheck size={13} />
+                  {t('driver.session.paidStatus', 'Đã thanh toán')}
+                </span>
+              ) : (
+                <span className="rounded bg-amber-50 dark:bg-amber-900/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 border border-amber-200">
+                  {session.PaymentStatus || t('driver.session.unpaidStatus', 'Chưa thanh toán')}
+                </span>
+              )}
             </div>
 
             <div className="space-y-3 text-sm">
@@ -461,14 +496,21 @@ const SessionDetail = ({
             </div>
 
             <div className="mt-5 space-y-3">
-              <button
-                type="button"
-                onClick={() => onGoPayment(session.SessionID)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700"
-              >
-                <CreditCard size={18} />
-                {t('driver.session.payThisSession')}
-              </button>
+              {isPaid ? (
+                <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white shadow-md shadow-emerald-600/20 cursor-default">
+                  <ShieldCheck size={18} />
+                  <span>{t('driver.session.paidButton', 'Phiên đỗ đã được thanh toán')}</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onGoPayment(session.SessionID)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+                >
+                  <CreditCard size={18} />
+                  {t('driver.session.payThisSession')}
+                </button>
+              )}
 
               <button
                 type="button"
@@ -508,7 +550,9 @@ const DriverSession = () => {
   const [mapModal, setMapModal] = useState({ isOpen: false })
 
   /**
-   * Gọi API lấy danh sách các phiên đỗ xe (sessions) đang diễn ra của tài xế.
+   * Hàm xử lý logic: fetchCurrentSessions
+   * Gọi API lấy danh sách các phiên đỗ xe ĐANG DIỄN RA (Active) của tài xế
+   * Tự động set phiên đầu tiên làm selectedSessionId nếu danh sách không rỗng
    */
   const fetchCurrentSessions = async () => {
     try {
@@ -558,7 +602,9 @@ const DriverSession = () => {
   }, [sessions, selectedSessionId])
 
   /**
-   * Chuyển hướng sang trang Thanh toán cho một phiên đỗ xe.
+   * Hàm xử lý logic: handleGoPayment
+   * Xử lý chuyển trang sang Màn hình Thanh toán
+   * Kèm theo sessionId để màn hình thanh toán tự động chọn phiên này
    */
   const handleGoPayment = (sessionId) => {
     navigate('/driver/payment', {
@@ -566,12 +612,21 @@ const DriverSession = () => {
     })
   }
 
+  /**
+   * Hàm xử lý logic: handleGoReport
+   * Xử lý chuyển trang sang Màn hình Báo cáo sự cố
+   * @param {string} sessionId - ID của phiên đỗ xe hiện tại
+   */
   const handleGoReport = (sessionId) => {
     navigate('/driver/report', {
       state: { sessionId }
     })
   }
 
+  /**
+   * Hàm xử lý logic: handleViewMap
+   * Mở modal xem bản đồ.
+   */
   const handleViewMap = () => {
     setMapModal({ isOpen: true })
   }

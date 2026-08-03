@@ -22,6 +22,8 @@ const authorizeAxios = axios.create({
   withCredentials: true
 })
 
+//const dataToSend = JSON.stringify(payload); Cục Object biến thành chuỗi chữ thô đại diện dạng JSON
+
 // ── CÁCH ĐANG DÙNG TRONG PROJECT: isRefreshing + waitingQueue ─────
 // Mục tiêu:
 // Nếu nhiều request cùng bị TOKEN_EXPIRED,
@@ -122,7 +124,9 @@ authorizeAxios.interceptors.response.use(
 
     // _noToast: true → component tự xử lý toast, interceptor không toast thêm
     if (status !== 401 && !isRefreshRequest && !original._noToast) {
-      toast.error(translateError(error))
+      toast.error(translateError(error), {
+        toastId: status === 403 ? 'http_403_forbidden_global' : undefined
+      })
     }
 
     return Promise.reject(error)

@@ -108,7 +108,8 @@ const DriverSubscriptionUpgrade = () => {
     .sort((a, b) => a.basePrice - b.basePrice);
 
   /**
-   * Tính toán giá sau khi đã áp dụng phần trăm giảm giá.
+   * Hàm xử lý logic: getDiscountedPrice
+   * Tính toán giá tiền thực tế của gói sau khi trừ đi chiết khấu (nếu có).
    */
   const getDiscountedPrice = (basePrice, months, discountPercent) => {
     const totalBase = basePrice * months;

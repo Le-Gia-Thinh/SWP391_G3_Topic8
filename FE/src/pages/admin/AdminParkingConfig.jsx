@@ -379,7 +379,7 @@ const ZoneCard = ({ zone, onManage, onEdit, onDelete }) => {
       <div className="mt-3">
         <div className="flex items-center justify-between text-[11px] font-semibold mb-1">
           <span className="text-slate-500 font-medium">{t('admin.parkingConfig.zone.capacityLabel')}</span>
-          <span className={full ? 'text-amber-600' : 'text-slate-700 font-bold'}>{actual}<span className="text-slate-400 font-normal"> / {total || '—'}</span></span>
+          <span className={full ? 'text-amber-600' : 'text-slate-700 font-bold'}>{actual}<span className="text-slate-400 font-normal"> / {total || '—'} ô ({pct}%)</span></span>
         </div>
         <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
           <div className={`h-full rounded-full transition-all ${full ? 'bg-amber-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
@@ -617,19 +617,20 @@ const SlotPanel = ({ zone, onClose, onChanged }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="w-full max-w-4xl rounded-3xl bg-white shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">{zone.ZoneName}</h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              {t('admin.parkingConfig.slot.panel.floorAndVehicle', { floor: zone.FloorName, vehicle: zone.AllowedVehicleName })}
-              {cap && <> · <strong className={full ? 'text-amber-600' : 'text-slate-700 font-bold'}>{cap.actualSlots}/{cap.totalSlots ?? '—'}</strong> {t('admin.parkingConfig.slot.panel.slotCountSuffix')}</>}
-            </p>
-          </div>
-          <button onClick={onClose} className="rounded-xl p-2 hover:bg-slate-100 transition"><X size={18} /></button>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      maxWidth="max-w-4xl"
+      title={
+        <div>
+          <h3 className="text-lg font-bold text-slate-900">{zone.ZoneName}</h3>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            {t('admin.parkingConfig.slot.panel.floorAndVehicle', { floor: zone.FloorName, vehicle: zone.AllowedVehicleName })}
+            {cap && <> · <strong className={full ? 'text-amber-600' : 'text-slate-700'}>{cap.actualSlots}/{cap.totalSlots ?? '—'}</strong> {t('admin.parkingConfig.slot.panel.slotCountSuffix')}</>}
+          </p>
         </div>
+      }
+    >
 
         {/* Tabs */}
         <div className="flex gap-1 px-6 pt-4 shrink-0">
@@ -773,8 +774,7 @@ const SlotPanel = ({ zone, onClose, onChanged }) => {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 

@@ -9,9 +9,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   FileText, Download, DollarSign, CarFront,
-  RefreshCcw, Calendar, Clock, BarChart3, Sparkles
+  RefreshCcw, Calendar, Clock, BarChart3, Sparkles, ShieldAlert
 } from 'lucide-react'
 import { toast } from 'react-toastify'
+import { useNavigate } from 'react-router-dom'
 import {
   getRevenueReportAPI,
   getOccupancyReportAPI,
@@ -26,8 +27,10 @@ const daysAgoStr = (d) => new Date(Date.now() - d * 86400000).toISOString().slic
 
 const ManagerReports = () => {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [tab, setTab] = useState('revenue')
   const [loading, setLoading] = useState(false)
+  const [permissionDenied, setPermissionDenied] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   const [startDate, setStartDate] = useState(daysAgoStr(30))
@@ -46,32 +49,33 @@ const ManagerReports = () => {
     { key: 'peak', label: t('manager.reports.tabs.peak'), icon: Clock }
   ]
 
-  const exportCsv = useCallback((filename, rows) => {
-    if (!rows || rows.length === 0) {
-      toast.info(t('manager.reports.exportEmpty'))
-      return
+  const exportCsv = useCallback(() => {
+    let rows = []
+    let filename = `report_${tab}_${todayStr()}.csv`
+
+    if (tab === 'revenue' && revenue?.chart) {
+      rows = [['Ngày/Giờ', 'Doanh thu (đ)'], ...revenue.chart.map((r) => [r.Period, r.TotalRevenue])]
+    } else if (tab === 'sessions' && sessions?.dailyTrend) {
+      rows = [['Ngày', 'Lượt gửi'], ...sessions.dailyTrend.map((r) => [r.Date, r.SessionCount])]
+    } else if (tab === 'occupancy' && occupancy) {
+      rows = [['Tầng', 'Tổng ô đỗ', 'Ô có xe', 'Tỷ lệ (%)'], ...occupancy.map((r) => [r.FloorName, r.TotalSlots, r.OccupiedSlots, r.OccupancyRate])]
+    } else if (tab === 'peak' && peak) {
+      rows = [['Khung giờ', 'Số lượt xe'], ...peak.map((r) => [`${r.Hour}:00`, r.VehicleCount])]
     }
-    const headers = Object.keys(rows[0])
-    const escape = (v) => {
-      const s = v == null ? '' : String(v)
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-    }
-    const csv = [
-      headers.join(','),
-      ...rows.map(r => headers.map(h => escape(r[h])).join(','))
-    ].join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
+
+    if (!rows.length) return
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + rows.map((e) => e.join(',')).join('\n')
+    const encodedUri = encodeURI(csvContent)
     const a = document.createElement('a')
-    a.href = url
+    a.href = encodedUri
     a.download = filename
     a.click()
-    URL.revokeObjectURL(url)
     toast.success(t('manager.reports.exportSuccess'))
-  }, [t])
+  }, [tab, revenue, sessions, occupancy, peak, t])
 
   const fetchReport = useCallback(async (which) => {
     setLoading(true)
+    setPermissionDenied(false)
     try {
       const params = { startDate, endDate, groupBy }
       if (which === 'revenue') {
@@ -87,8 +91,12 @@ const ManagerReports = () => {
         const res = await getPeakHoursReportAPI(params)
         setPeak(res.data.data)
       }
-    } catch {
-      toast.error(t('manager.reports.loadFail'))
+    } catch (err) {
+      if (err?.response?.status === 403) {
+        setPermissionDenied(true)
+      } else {
+        toast.error(t('manager.reports.loadFail'))
+      }
     } finally {
       setLoading(false)
       setTimeout(() => setMounted(true), 80)
@@ -96,6 +104,24 @@ const ManagerReports = () => {
   }, [startDate, endDate, groupBy, t])
 
   useEffect(() => { fetchReport(tab) }, [tab, fetchReport])
+
+  if (permissionDenied) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60 my-6">
+        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-rose-50 text-rose-500 mb-5 border border-rose-100 shadow-inner">
+          <ShieldAlert size={40} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900">Quyền truy cập bị từ chối (403 Forbidden)</h2>
+        <p className="text-sm text-slate-500 max-w-md mt-2 leading-relaxed">
+          Tài khoản cá nhân của bạn hiện không được cấp quyền <code className="px-2 py-0.5 rounded bg-slate-100 text-rose-600 font-mono text-xs">VIEW_REPORTS</code> (Xem báo cáo doanh thu & thống kê).
+        </p>
+        <p className="text-xs text-slate-400 mt-1">Vui lòng liên hệ Admin hệ thống để được bật lại quyền xem báo cáo.</p>
+        <button onClick={() => navigate('/manager')} className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-lg hover:bg-slate-800 transition cursor-pointer">
+          Quay lại Trang chủ Dashboard
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 pb-12">

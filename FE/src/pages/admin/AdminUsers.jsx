@@ -8,13 +8,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
-import { Search, RefreshCcw, UserPlus, Pencil, Lock, Unlock, ShieldCheck, MailCheck, MailX } from 'lucide-react'
+import { Search, RefreshCcw, UserPlus, Pencil, Lock, Unlock, ShieldCheck, MailCheck, MailX, Building2, X } from 'lucide-react'
 import { toast } from 'react-toastify'
 import Modal from '../../components/ui/Modal'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import {
-  getUsersAPI, getRolesAPI, createUserAPI, updateUserAPI, toggleUserStatusAPI
+  getUsersAPI, getRolesAPI, createUserAPI, updateUserAPI, toggleUserStatusAPI,
+  getBuildingsAPI, transferStaffAPI, getUserAssignmentsAPI, removeBuildingAssignmentAPI
 } from '../../apis/adminApi'
 
 const roleBadge = {
@@ -53,6 +54,79 @@ const AdminUsers = () => {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm()
+
+  // Modal Phân công & Điều chuyển Nhân sự Tòa nhà
+  const [transferModalOpen, setTransferModalOpen] = useState(false)
+  const [transferUser, setTransferUser] = useState(null)
+  const [buildingsList, setBuildingsList] = useState([])
+  const [userAssignments, setUserAssignments] = useState([])
+  const [loadingAssignments, setLoadingAssignments] = useState(false)
+  const [targetBuildingId, setTargetBuildingId] = useState('')
+  const [transferMode, setTransferMode] = useState('replace') // 'replace' = chuyển hẳn 1 tòa | 'add' = kiêm nhiệm nhiều tòa
+  const [transferring, setTransferring] = useState(false)
+
+  const fetchUserAssignments = async (userId) => {
+    setLoadingAssignments(true)
+    try {
+      const res = await getUserAssignmentsAPI(userId)
+      setUserAssignments(res?.data?.data || [])
+    } catch {
+      toast.error('Không thể tải danh sách phân công hiện tại.')
+    } finally {
+      setLoadingAssignments(false)
+    }
+  }
+
+  const openTransfer = async (u) => {
+    setTransferUser(u)
+    setTargetBuildingId('')
+    setTransferMode('replace')
+    fetchUserAssignments(u.UserID)
+    try {
+      const res = await getBuildingsAPI()
+      const bList = res?.data?.data || []
+      setBuildingsList(bList)
+      if (bList.length > 0) setTargetBuildingId(String(bList[0].BuildingID))
+    } catch {
+      toast.error('Không thể tải danh sách Tòa nhà.')
+    }
+    setTransferModalOpen(true)
+  }
+
+  const handleRemoveSingleAssignment = async (assignmentId, buildingName) => {
+    try {
+      await removeBuildingAssignmentAPI(assignmentId)
+      toast.success(`Đã gỡ bỏ phân công nhân sự khỏi Tòa nhà "${buildingName}".`)
+      fetchUserAssignments(transferUser.UserID)
+      applyFilters()
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Gỡ bỏ phân công thất bại.')
+    }
+  }
+
+  const handleTransferSubmit = async () => {
+    if (!targetBuildingId) return toast.warning('Vui lòng chọn Tòa nhà công tác.')
+    setTransferring(true)
+    try {
+      await transferStaffAPI({
+        userId: transferUser.UserID,
+        toBuildingId: Number(targetBuildingId),
+        isPrimary: true,
+        replaceAll: transferMode === 'replace'
+      })
+      const modeMsg = transferMode === 'replace'
+        ? 'chuyển hẳn sang Tòa nhà mới'
+        : 'bổ sung thêm Tòa nhà kiêm nhiệm mới'
+      toast.success(`Đã ${modeMsg} cho nhân sự ${transferUser.FullName} thành công!`)
+      fetchUserAssignments(transferUser.UserID)
+      setTransferModalOpen(false)
+      applyFilters()
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Điều chuyển nhân sự thất bại.')
+    } finally {
+      setTransferring(false)
+    }
+  }
 
   const selectedRoleId = watch('RoleID')
   const selectedRoleName = roles.find(r => String(r.RoleID) === String(selectedRoleId))?.RoleName
@@ -283,6 +357,12 @@ const AdminUsers = () => {
                                 className="rounded-xl p-2 text-slate-500 font-medium hover:bg-blue-50 hover:text-blue-600 transition">
                                 <Pencil size={16} />
                               </button>
+                              {['Staff', 'Manager'].includes(u.RoleName) && (
+                                <button onClick={() => openTransfer(u)} title="Phân công / Điều chuyển Tòa nhà"
+                                  className="rounded-xl p-2 text-indigo-500 font-medium hover:bg-indigo-50 hover:text-indigo-600 transition">
+                                  <Building2 size={16} />
+                                </button>
+                              )}
                               <button onClick={() => toggleStatus(u)} title={u.IsActive ? t('admin.users.lockTitle') : t('admin.users.unlockTitle')}
                                 className={`rounded-xl p-2 transition ${u.IsActive ? 'text-slate-500 font-medium hover:bg-rose-50 hover:text-rose-600' : 'text-slate-500 font-medium hover:bg-emerald-50 hover:text-emerald-600'}`}>
                                 {u.IsActive ? <Lock size={16} /> : <Unlock size={16} />}
@@ -390,6 +470,128 @@ const AdminUsers = () => {
             </>
           )}
         </form>
+      </Modal>
+
+      {/* Modal Phân công & Điều chuyển Tòa nhà */}
+      <Modal
+        isOpen={transferModalOpen}
+        onClose={() => setTransferModalOpen(false)}
+        title="Phân công & Điều chuyển Tòa nhà công tác"
+        footer={(
+          <>
+            <Button variant="secondary" onClick={() => setTransferModalOpen(false)}>Hủy</Button>
+            <Button onClick={handleTransferSubmit} disabled={transferring}>
+              {transferring ? 'Đang thực hiện...' : 'Xác nhận phân công'}
+            </Button>
+          </>
+        )}
+      >
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs text-blue-800 space-y-1">
+            <p className="font-bold text-sm text-blue-900">{transferUser?.FullName}</p>
+            <p>Vai trò: <span className="font-bold">{transferUser?.RoleName}</span> · Email: {transferUser?.Email}</p>
+          </div>
+
+          {/* Danh sách Tòa nhà hiện đang phụ trách */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/50 p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                📍 Tòa nhà đang phụ trách hiện tại ({userAssignments.length}):
+              </span>
+              {loadingAssignments && <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />}
+            </div>
+
+            {userAssignments.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">Nhân sự này hiện chưa được phân công phụ trách Tòa nhà nào.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {userAssignments.map(a => (
+                  <div key={a.AssignmentID} className="inline-flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-100 shadow-2xs">
+                    <Building2 size={14} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>{a.BuildingName}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSingleAssignment(a.AssignmentID, a.BuildingName)}
+                      title={`Gỡ bỏ ${transferUser?.FullName} khỏi ${a.BuildingName}`}
+                      className="ml-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg p-0.5 transition cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+              Hình thức phân công:
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className={`flex flex-col p-3 rounded-2xl border cursor-pointer transition-all ${
+                transferMode === 'replace'
+                  ? 'border-blue-500 bg-blue-50/50 text-blue-900 font-bold shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="transferMode"
+                    value="replace"
+                    checked={transferMode === 'replace'}
+                    onChange={() => setTransferMode('replace')}
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-xs font-bold">Chuyển hẳn (Chỉ 1 Tòa)</span>
+                </div>
+                <p className="text-[10px] text-slate-500 font-medium mt-1.5 pl-5 leading-relaxed">
+                  Bỏ phân công ở các cơ sở cũ, nhân sự sẽ chuyển sang phụ trách duy nhất 1 Tòa nhà mới chọn.
+                </p>
+              </label>
+
+              <label className={`flex flex-col p-3 rounded-2xl border cursor-pointer transition-all ${
+                transferMode === 'add'
+                  ? 'border-indigo-500 bg-indigo-50/50 text-indigo-900 font-bold shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="transferMode"
+                    value="add"
+                    checked={transferMode === 'add'}
+                    onChange={() => setTransferMode('add')}
+                    className="text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-xs font-bold">Phân công thêm (Kiêm nhiệm)</span>
+                </div>
+                <p className="text-[10px] text-slate-500 font-medium mt-1.5 pl-5 leading-relaxed">
+                  Giữ phân công ở Tòa cũ, giao thêm Tòa nhà mới này cho nhân sự (quản lý từ 2 cơ sở trở lên).
+                </p>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+              Chọn Tòa nhà công tác:
+            </label>
+            <select
+              value={targetBuildingId}
+              onChange={e => setTargetBuildingId(e.target.value)}
+              className="w-full rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 dark:text-white px-4 py-2.5 text-sm font-bold outline-none focus:border-blue-500 transition"
+            >
+              {buildingsList.map(b => (
+                <option key={b.BuildingID} value={b.BuildingID}>
+                  {b.BuildingName} ({b.Address || 'Chưa có địa chỉ'})
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="text-xs text-slate-500 font-medium">
+            * Lịch sử phân công / điều chuyển nhân sự sẽ được ghi lại tự động trong Audit Logs hệ thống.
+          </p>
+        </div>
       </Modal>
     </div>
   )

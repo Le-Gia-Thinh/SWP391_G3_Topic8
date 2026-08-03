@@ -108,7 +108,7 @@ export async function isAuthorized(req, res, next) {
 export function isManager(req, res, next) {
   if (!req.user)
     return res.status(401).json({ success: false, message: "Chưa xác thực." });
-  if (req.user.RoleName !== "Manager")
+  if (!["Manager", "Admin"].includes(req.user.RoleName))
     return res.status(403).json({
       success: false,
       message: "Không có quyền. Yêu cầu: Manager.",
@@ -119,13 +119,13 @@ export function isManager(req, res, next) {
 
 /**
  * Middleware kiểm tra quyền Staff hoặc Manager.
- * Cho phép cả Staff và Manager truy cập.
+ * Cho phép cả Staff, Manager và Admin truy cập.
  * Phải đặt SAU middleware isAuthorized.
  */
 export function isStaffOrManager(req, res, next) {
   if (!req.user)
     return res.status(401).json({ success: false, message: "Chưa xác thực." });
-  if (!["Staff", "Manager"].includes(req.user.RoleName))
+  if (!["Staff", "Manager", "Admin"].includes(req.user.RoleName))
     return res.status(403).json({
       success: false,
       message: "Không có quyền. Yêu cầu: Staff hoặc Manager.",
@@ -167,3 +167,70 @@ export function isAdmin(req, res, next) {
     });
   next();
 }
+
+/**
+ * Middleware kiểm tra danh mục quyền hạn cụ thể (Dynamic RBAC + User Custom Permissions).
+ */
+export function hasPermission(permissionName) {
+  return async (req, res, next) => {
+    try {
+      if (!req.user) return res.status(401).json({ success: false, message: 'Chưa xác thực.' })
+
+      if (req.user.RoleName === 'Admin') return next()
+
+      const pool = await getPool()
+
+      // ── BƯỚC 1: Kiểm tra quyền cấp VAI TRÒ (Role-level) ────────────────
+      // Đây là "quyền chung" - nếu vai trò không có quyền này thì TỪ CHỐI HOÀN TOÀN
+      // Quyền cá nhân (UserPermissions) KHÔNG thể ghi đè lên khi role đã tắt
+      const rolePerm = await pool.request()
+        .input('RoleID', sql.Int, req.user.RoleID)
+        .input('PermissionName', sql.NVarChar, permissionName)
+        .query(`
+          SELECT 1
+          FROM RolePermissions rp
+          JOIN Permissions p ON p.PermissionID = rp.PermissionID
+          WHERE rp.RoleID = @RoleID AND p.PermissionName = @PermissionName
+        `)
+
+      // Nếu vai trò KHÔNG có quyền → từ chối ngay, không xét quyền cá nhân
+      if (rolePerm.recordset.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: `Bạn không có quyền thực hiện thao tác này (${permissionName}). Vai trò của bạn chưa được cấp quyền này.`,
+          code: 'FORBIDDEN_PERMISSION'
+        })
+      }
+
+      // ── BƯỚC 2: Vai trò CÓ quyền → kiểm tra xem có quyền cá nhân thu hồi không ──
+      // UserPermissions chỉ dùng để TU HẸP (revoke) quyền mà role đã có
+      // IsGranted=0 có nghĩa là Admin đã thu hồi quyền này khỏi user cụ thể
+      try {
+        const userPerm = await pool.request()
+          .input('UserID', sql.Int, req.user.UserID)
+          .input('PermissionName', sql.NVarChar, permissionName)
+          .query(`
+            SELECT up.IsGranted
+            FROM UserPermissions up
+            JOIN Permissions p ON p.PermissionID = up.PermissionID
+            WHERE up.UserID = @UserID AND p.PermissionName = @PermissionName
+          `)
+
+        if (userPerm.recordset.length > 0) {
+          // Có record cá nhân → tuân theo giá trị IsGranted của nó
+          if (userPerm.recordset[0].IsGranted) return next()
+          return res.status(403).json({
+            success: false,
+            message: `Bạn không có quyền thực hiện thao tác này (${permissionName}). Quyền cá nhân của bạn đã bị thu hồi.`,
+            code: 'FORBIDDEN_CUSTOM_PERMISSION'
+          })
+        }
+      } catch (dbErr) {
+        console.warn('⚠️ Lỗi kiểm tra bảng UserPermissions:', dbErr.message)
+      }
+
+      // ── BƯỚC 3: Không có override cá nhân → dùng quyền vai trò (đã pass bước 1) ──
+      return next()
+    } catch (err) { next(err) }
+  }
+}

@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Bike, CarFront, Truck, Clock, CalendarDays, FileText, AlertCircle,
   ChevronRight, ExternalLink, RefreshCcw, CalendarCheck2, Activity,
-  CheckCircle2, XCircle, TrendingUp, MessageSquare, Sparkles
+  CheckCircle2, XCircle, TrendingUp, MessageSquare, Sparkles, Building2
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -30,11 +30,6 @@ const COLOR_CLASSES = {
   green: { border: 'border-emerald-200/60', bg: 'bg-gradient-to-br from-emerald-50 to-white', iconBg: 'bg-emerald-100/80', iconText: 'text-emerald-600', progress: 'bg-emerald-500', progressBg: 'bg-emerald-100' }
 }
 
-/**
- * Chuyển đổi chuỗi thời gian ISO thành định dạng giờ:phút ngày/tháng/năm
- * @param {string} value Chuỗi thời gian
- * @returns {string} Chuỗi đã định dạng
- */
 const formatDateTime = (value) => {
   if (!value) return '--'
   const date = new Date(value)
@@ -42,18 +37,11 @@ const formatDateTime = (value) => {
   return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-/**
- * Định dạng số thành chuỗi tiền tệ VNĐ
- * @param {number|string} value Số tiền
- * @returns {string} Chuỗi tiền tệ
- */
 const formatCurrency = (value) => `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))} VNĐ`
 
 /**
- * Lấy Icon và màu sắc dựa trên mã loại xe
- * @param {string} vehicleCode Mã xe
- * @param {string} vehicleName Tên xe
- * @returns {Object} Đối tượng chứa Icon và mã màu
+ * Hàm xử lý logic: getVehicleIconAndColor
+ * Trả về icon và màu sắc phù hợp dựa trên tên và mã phương tiện.
  */
 const getVehicleIconAndColor = (vehicleCode, vehicleName) => {
   const text = `${vehicleCode || ''} ${vehicleName || ''}`.toLowerCase()
@@ -62,9 +50,6 @@ const getVehicleIconAndColor = (vehicleCode, vehicleName) => {
   return { Icon: CarFront, color: 'blue' }
 }
 
-/**
- * Component hiển thị Tiêu đề của một khu vực (Section) có kèm nút "Xem thêm" (Action).
- */
 const SectionHeader = ({ icon: Icon, title, actionText, actionTo }) => (
   <div className="mb-5 flex items-center justify-between">
     <h2 className="flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white">
@@ -86,26 +71,34 @@ const VehicleStatusCard = ({ vehicle }) => {
   const classes = COLOR_CLASSES[color] || COLOR_CLASSES.blue
   const available = Number(vehicle.AvailableSlots || 0)
   const total = Number(vehicle.TotalSlots || 0)
-  const used = total - available
-  const percentage = total > 0 ? (used / total) * 100 : 0
+
+  let statusBadge = { label: 'Còn nhiều chỗ', bg: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800', dot: 'bg-emerald-500' }
+  if (available === 0) {
+    statusBadge = { label: 'Hết chỗ', bg: 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 border-rose-200/60 dark:border-rose-800', dot: 'bg-rose-500' }
+  } else if (total > 0 && (available / total) < 0.15) {
+    statusBadge = { label: 'Sắp hết chỗ', bg: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200/60 dark:border-amber-800', dot: 'bg-amber-500' }
+  }
+
   return (
-    <div className={`relative overflow-hidden rounded-[1.25rem] border p-5 transition-all hover:shadow-md hover:-translate-y-1 ${classes.border} ${classes.bg}`}>
-      <div className="flex items-start justify-between">
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${classes.iconBg} ${classes.iconText}`}><Icon size={24} /></div>
-        <div className="text-right">
-          <p className="mb-0.5 text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase">{vehicle.VehicleName || t('driver.home.vehicleFallback')}</p>
-          <div className="flex items-baseline justify-end gap-1">
-            <span className="text-2xl font-black text-slate-900 dark:text-white">{available}</span>
-            <span className="text-xs font-bold text-slate-400">{t('driver.home.capacity.available', { total })}</span>
+    <div className={`relative overflow-hidden rounded-[1.25rem] border p-4.5 transition-all hover:shadow-md hover:-translate-y-0.5 ${classes.border} ${classes.bg}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3.5">
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${classes.iconBg} ${classes.iconText}`}>
+            <Icon size={24} />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-slate-800 dark:text-white">
+              {vehicle.VehicleName || t('driver.home.vehicleFallback')}
+            </h4>
+            <span className={`inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${statusBadge.bg}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${statusBadge.dot}`} />
+              {statusBadge.label}
+            </span>
           </div>
         </div>
-      </div>
-      <div className="mt-5">
-        <div className="flex justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5">
-          <span>{t('driver.home.capacity.fillRate')}</span><span>{percentage.toFixed(1)}%</span>
-        </div>
-        <div className={`h-2 w-full overflow-hidden rounded-full ${classes.progressBg}`}>
-          <div className={`h-full rounded-full transition-all duration-1000 ease-out ${classes.progress}`} style={{ width: `${percentage}%` }} />
+        <div className="text-right">
+          <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{available}</p>
+          <p className="text-[11px] font-bold text-slate-400">chỗ trống</p>
         </div>
       </div>
     </div>
@@ -212,6 +205,8 @@ const ActiveSessionCard = ({ session }) => {
     }
   }
 
+  const isPaid = ['completed', 'prepaid', 'paid'].includes(String(session.PaymentStatus || '').toLowerCase())
+
   const slotText = `${session.FloorName || '--'} / ${t('driver.home.zoneWord')} ${session.ZoneName || '--'} / Slot ${session.SlotCode || '--'}`
   return (
     <div className={`relative flex h-full min-h-[400px] flex-col overflow-hidden rounded-[1.5rem] border p-6 shadow-md transition-all duration-300 ${
@@ -257,12 +252,28 @@ const ActiveSessionCard = ({ session }) => {
             <span className="text-xl font-black text-blue-600 dark:text-blue-400">{formatCurrency(session.Amount)}</span>
           </div>
           <div className="text-right">
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">{t('driver.home.workflows.unpaid')}</span>
+            {isPaid ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 border border-emerald-200">
+                <CheckCircle2 size={12} /> Đã thanh toán
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-900/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400 border border-amber-200">
+                {t('driver.home.workflows.unpaid')}
+              </span>
+            )}
           </div>
         </div>
         <div className="grid grid-cols-[1fr_2fr] gap-3">
           <Link to="/driver/report" className="flex h-12 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-50 hover:border-slate-300 active:scale-95">{t('driver.home.workflows.issue')}</Link>
-          <Link to="/driver/session" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 active:scale-95">{t('driver.home.workflows.payNow')} <ExternalLink size={16} /></Link>
+          {isPaid ? (
+            <Link to="/driver/session" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-md shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-95">
+              <CheckCircle2 size={16} /> Đã thanh toán <ExternalLink size={16} />
+            </Link>
+          ) : (
+            <Link to="/driver/session" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 active:scale-95">
+              {t('driver.home.workflows.payNow')} <ExternalLink size={16} />
+            </Link>
+          )}
         </div>
       </div>
     </div>
@@ -300,7 +311,8 @@ const DriverHome = () => {
   const [isLoaded, setIsLoaded] = useState(false)
 
   /**
-   * Gọi API để lấy tổng hợp dữ liệu trang chủ (số dư, trạng thái chỗ đỗ, phiên đỗ xe hiện hành).
+   * Hàm xử lý logic: fetchHomeData
+   * Gọi API để lấy dữ liệu tổng hợp cho trang chủ (thống kê, lượt đặt chỗ hiện tại, phiên đỗ xe, ...).
    */
   const fetchHomeData = async () => {
     try {
@@ -323,6 +335,27 @@ const DriverHome = () => {
   const bookingSummary = homeData?.bookingSummary || {}
   const displayName = homeData?.user?.FullName || user?.fullName || user?.FullName || 'Driver'
   const updatedAt = useMemo(() => formatDateTime(homeData?.serverTime || new Date()), [homeData?.serverTime])
+
+  const buildingsWithSlots = useMemo(() => {
+    if (!slotSummary || slotSummary.length === 0) return []
+    const map = new Map()
+    for (const item of slotSummary) {
+      const bId = item.BuildingID || 0
+      const bName = item.BuildingName || 'Bãi đỗ xe'
+      if (!map.has(bId)) {
+        map.set(bId, { buildingId: bId, buildingName: bName, vehicles: [] })
+      }
+      map.get(bId).vehicles.push(item)
+    }
+    return Array.from(map.values())
+  }, [slotSummary])
+
+  const [selectedBuildingId, setSelectedBuildingId] = useState('all')
+
+  const filteredBuildings = useMemo(() => {
+    if (selectedBuildingId === 'all') return buildingsWithSlots
+    return buildingsWithSlots.filter(b => String(b.buildingId) === String(selectedBuildingId))
+  }, [buildingsWithSlots, selectedBuildingId])
 
   if (isLoading && !homeData) {
     return (
@@ -371,23 +404,68 @@ const DriverHome = () => {
       </section>
 
       <section className="rounded-[1.5rem] border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 p-7 shadow-sm">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="flex items-center gap-2.5 text-lg font-bold text-slate-900 dark:text-white">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-500"><Activity size={18} /></div>
             {t('driver.home.capacity.title')}
           </h2>
-          <div className="hidden sm:flex items-center gap-2 text-[11px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700/50">
-            <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
-            {t('driver.home.capacity.updatedAt', { time: updatedAt })}
-          </div>
-        </div>
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          {slotSummary.length > 0 ? (
-            slotSummary.map((vehicle) => (<VehicleStatusCard key={vehicle.VehicleTypeID} vehicle={vehicle} />))
-          ) : (
-            <div className="col-span-full py-8 text-center text-sm font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">{t('driver.home.capacity.empty')}</div>
+
+          {buildingsWithSlots.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedBuildingId('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  selectedBuildingId === 'all'
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                    : 'bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                Tất cả bãi đỗ
+              </button>
+              {buildingsWithSlots.map((b) => (
+                <button
+                  key={b.buildingId}
+                  type="button"
+                  onClick={() => setSelectedBuildingId(b.buildingId)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    String(selectedBuildingId) === String(b.buildingId)
+                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                      : 'bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <Building2 size={13} />
+                  <span>{b.buildingName}</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
+
+        {filteredBuildings.length > 0 ? (
+          <div className="space-y-6">
+            {filteredBuildings.map((b) => (
+              <div key={b.buildingId} className="rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-900/30 p-4">
+                <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-slate-200/60 dark:border-slate-700/60">
+                  <div className="flex items-center gap-2">
+                    <Building2 size={16} className="text-blue-600 dark:text-blue-400" />
+                    <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200">{b.buildingName}</h3>
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-400">
+                    Cập nhật {updatedAt}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {b.vehicles.map((vehicle) => (
+                    <VehicleStatusCard key={vehicle.VehicleTypeID} vehicle={vehicle} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="col-span-full py-8 text-center text-sm font-medium text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">{t('driver.home.capacity.empty')}</div>
+        )}
       </section>
 
       <section>

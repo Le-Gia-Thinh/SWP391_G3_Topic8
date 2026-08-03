@@ -25,17 +25,24 @@ import { useTranslation } from 'react-i18next'
 // ── Core logic (không phụ thuộc hook) ────────────────────────────
 // Dùng được cả trong interceptor lẫn component.
 export function translateError(err) {
+  const status = err?.response?.status
   const code = err?.response?.data?.code
+  const beMessage = err?.response?.data?.message
 
-  // Ưu tiên dịch theo error code trong errors.*
+  // 1. Ưu tiên dịch theo error code trong errors.*
   if (code) {
     const key = `errors.${code}`
     const translated = i18next.t(key)
     if (translated !== key) return translated
   }
 
-  const beMessage = err?.response?.data?.message
+  // 2. Thông điệp từ Backend trả về (ví dụ: "Bạn không có quyền thực hiện thao tác này (VIEW_REPORTS).")
   if (beMessage) return beMessage
+
+  // 3. Fallback cho 403 Forbidden
+  if (status === 403) {
+    return i18next.t('errors.FORBIDDEN', 'Bạn không có quyền thực hiện thao tác này. Vui lòng liên hệ Admin để được cấp quyền.')
+  }
 
   return i18next.t('errors.DEFAULT')
 }

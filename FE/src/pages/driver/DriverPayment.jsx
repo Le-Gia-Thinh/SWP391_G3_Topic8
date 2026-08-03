@@ -57,6 +57,10 @@ const getDuration = (entry, now = new Date()) => {
   return { text: `${h}h ${m}m ${s}s`, h, m, s, totalSec }
 }
 
+/**
+ * Hàm xử lý logic: getVehicleIcon
+ * Trả về Icon tương ứng với loại phương tiện.
+ */
 const getVehicleIcon = (code) => {
   const c = (code || '').toLowerCase()
   if (c.includes('moto') || c.includes('bike')) return <BikeIcon size={16} />
@@ -72,10 +76,6 @@ const DAY_BRACKETS = {
 }
 const NIGHT_FEE = { 1: 12000, 2: 120000, 3: 200000 }
 
-/**
- * Tách khoảng thời gian đỗ xe thành các đoạn ban ngày (06:00 - 22:00) và ban đêm (22:00 - 06:00) 
- * để tính phí chính xác theo từng block.
- */
 const splitDayNightSegs = (start, end) => {
   const segs = []
   let cur = new Date(start.getTime())
@@ -94,10 +94,6 @@ const splitDayNightSegs = (start, end) => {
   return segs
 }
 
-/**
- * Hàm tính toán chi tiết phí đỗ xe (dự kiến) dựa trên thời gian vào và biểu giá của loại xe.
- * Logic này mô phỏng lại Stored Procedure sp_CalcParkingFeeV2 dưới Backend.
- */
 const calcBreakdown = (entryTime, vehicleTypeId) => {
   if (!entryTime || !vehicleTypeId) return null
   const entry = new Date(entryTime)
@@ -518,9 +514,7 @@ const DriverPayment = () => {
     return () => clearInterval(pollerRef.current)
   }, [])
 
-  /**
-   * Tải danh sách các phiên đỗ xe (sessions) đang active (chưa thanh toán hoặc đang thanh toán dở).
-   */
+  // Load sessions
   const loadSessions = useCallback(async () => {
     setLS(true)
     try {
@@ -538,8 +532,15 @@ const DriverPayment = () => {
     return () => clearTimeout(timer)
   }, [loadSessions])
 
+  // Tạo QR
   /**
-   * Gọi API tạo mã thanh toán QR Code (qua cổng PayOS) cho phiên đỗ xe được chọn.
+   * Xử lý bấm nút "Thanh Toán" (Tạo mã QR PayOS)
+   * Gọi API POST tạo đơn thanh toán, sau đó chuyển sang step 'qr' và bắt đầu polling
+   * @param {Object} session - Phiên đỗ xe cần thanh toán
+   */
+  /**
+   * Hàm xử lý logic: handlePay
+   * Xử lý tạo thanh toán qua PayOS (chọn thanh toán quét mã QR).
    */
   const handlePay = async (session) => {
     setPaying(session)
@@ -557,6 +558,12 @@ const DriverPayment = () => {
   }
 
   // Poll trạng thái mỗi 3s
+  /**
+   * Hàm Polling: Gọi liên tục mỗi 3 giây để kiểm tra trạng thái thanh toán từ PayOS
+   * Nếu trạng thái là PAID -> Chuyển sang bước thành công
+   * Nếu CANCELLED/EXPIRED -> Chuyển sang bước thất bại
+   * @param {string} orderCode - Mã giao dịch PayOS
+   */
   const startPolling = (orderCode) => {
     clearInterval(pollerRef.current)
     pollerRef.current = setInterval(async () => {
@@ -578,6 +585,14 @@ const DriverPayment = () => {
   }
 
   // Huỷ đơn
+  /**
+   * Xử lý bấm nút Hủy đơn thanh toán (quay lại)
+   * Gọi API báo PayOS hủy order và quay về trang chọn phiên đỗ
+   */
+  /**
+   * Hàm xử lý logic: handleCancel
+   * Hủy giao dịch đang tiến hành và quay lại danh sách chọn.
+   */
   const handleCancel = async () => {
     setCancelling(true)
     clearInterval(pollerRef.current)
@@ -596,8 +611,10 @@ const DriverPayment = () => {
     }
   }
 
+  // Thanh toán bằng ví (từ trang QR)
   /**
-   * Gọi API thanh toán bằng Ví nội bộ (dành cho màn hình đã hiển thị QR).
+   * Hàm xử lý logic: handlePayByWallet
+   * Xử lý thanh toán thông qua số dư Ví, gọi từ màn hình QR.
    */
   const handlePayByWallet = async () => {
     try {
@@ -616,6 +633,15 @@ const DriverPayment = () => {
   }
 
   // Thanh toán bằng ví trực tiếp từ danh sách (không cần qua QR)
+  /**
+   * Xử lý thanh toán trực tiếp qua Số dư Ví (Wallet) mà không cần quét QR
+   * Rút gọn bước quét mã nếu người dùng có đủ tiền trong ví
+   * @param {Object} session - Phiên đỗ xe cần thanh toán
+   */
+  /**
+   * Hàm xử lý logic: handlePayByWalletDirect
+   * Xử lý thanh toán nhanh bằng Ví (ngay từ danh sách phiên).
+   */
   const handlePayByWalletDirect = async (session) => {
     try {
       setIsWalletPaying(true)

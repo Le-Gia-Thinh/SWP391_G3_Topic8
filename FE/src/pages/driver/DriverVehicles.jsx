@@ -31,16 +31,10 @@ const VEHICLE_ICONS = {
   TRUCK: { Icon: Truck, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' }
 }
 
-/**
- * Lấy đối tượng giao diện (Icon, màu sắc) tương ứng với loại xe.
- */
 function getVehicleStyle(vehicleCode) {
   return VEHICLE_ICONS[vehicleCode] || VEHICLE_ICONS.CAR
 }
 
-/**
- * Chuyển đổi chuỗi ngày tháng sang dạng chuỗi hiển thị DD/MM/YYYY.
- */
 function formatDate(value) {
   if (!value) return '—'
   const date = new Date(value)
@@ -49,7 +43,17 @@ function formatDate(value) {
 }
 
 const DriverVehicles = () => {
+  // Hook useTranslation: Hỗ trợ dịch đa ngôn ngữ.
   const { t } = useTranslation()
+  
+  // Hook useState: Quản lý các trạng thái của trang Quản lý xe
+  // - vehicles: Danh sách xe của người dùng hiện tại
+  // - vehicleTypes: Danh sách các loại xe (VD: Xe máy, Ô tô, Xe tải) lấy từ server
+  // - loading: Trạng thái đang tải dữ liệu ban đầu
+  // - saving: Trạng thái đang lưu (thêm/sửa xe) để disable nút bấm
+  // - showForm: Trạng thái hiển thị form thêm/sửa xe
+  // - editingVehicle: Thông tin của xe đang được chọn để sửa (nếu null là đang thêm mới)
+  // - deleteConfirm: ID của xe đang được yêu cầu xác nhận xóa (nếu null là không hiển thị popup xóa)
   const [vehicles, setVehicles] = useState([])
   const [vehicleTypes, setVehicleTypes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -58,6 +62,7 @@ const DriverVehicles = () => {
   const [editingVehicle, setEditingVehicle] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
+  // - form: Lưu trữ các giá trị đầu vào của form thêm/sửa xe
   const [form, setForm] = useState({
     plateNumber: '',
     vehicleTypeId: '',
@@ -65,18 +70,15 @@ const DriverVehicles = () => {
     vehicleColor: ''
   })
 
-  /**
-   * Xóa trắng form nhập liệu và đóng form (Hủy bỏ trạng thái Edit/Add).
-   */
+  // Hàm resetForm: Xóa sạch dữ liệu trong form và đóng form
   const resetForm = () => {
     setForm({ plateNumber: '', vehicleTypeId: '', vehicleBrand: '', vehicleColor: '' })
     setEditingVehicle(null)
     setShowForm(false)
   }
 
-  /**
-   * Tải danh sách xe của tài xế và danh sách các loại xe từ server.
-   */
+  // Hook useCallback: Ghi nhớ hàm fetchData để tránh tạo lại hàm sau mỗi lần render.
+  // fetchData sử dụng Promise.allSettled để gọi song song 2 API lấy danh sách xe và loại xe.
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
@@ -98,21 +100,18 @@ const DriverVehicles = () => {
     }
   }, [t])
 
+  // Hook useEffect: Tự động chạy fetchData 1 lần khi vào trang.
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
-  /**
-   * Mở form ở chế độ "Thêm mới xe".
-   */
+  // Hàm openAddForm: Mở form ở chế độ Thêm xe mới (xóa hết dữ liệu cũ)
   const openAddForm = () => {
     resetForm()
     setShowForm(true)
   }
 
-  /**
-   * Mở form ở chế độ "Chỉnh sửa xe" và nạp dữ liệu cũ vào form.
-   */
+  // Hàm openEditForm: Mở form ở chế độ Sửa xe, nạp dữ liệu xe cũ vào state 'form'
   const openEditForm = (vehicle) => {
     setEditingVehicle(vehicle)
     setForm({
@@ -125,7 +124,12 @@ const DriverVehicles = () => {
   }
 
   /**
-   * Xử lý sự kiện Submit form (Thêm mới hoặc Cập nhật xe).
+   * Hàm xử lý logic: handleSubmit
+   * Xử lý sự kiện gửi form (thêm mới hoặc cập nhật thông tin xe).
+   * Kiểm tra tính hợp lệ của biển số và loại xe trước khi gọi API.
+   * Dựa vào state 'editingVehicle' để quyết định là gọi API updateVehicle hay addVehicle.
+   * 
+   * @param {Event} e Sự kiện submit của thẻ form
    */
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -157,16 +161,17 @@ const DriverVehicles = () => {
       }
 
       resetForm()
-      fetchData()
+      fetchData() // Tải lại danh sách sau khi lưu thành công
     } catch {
-      // authorizeAxios đã toast lỗi
+      // authorizeAxios đã tự động toast lỗi nếu có
     } finally {
       setSaving(false)
     }
   }
 
   /**
-   * Gọi API xóa xe theo ID.
+   * Hàm xử lý logic: handleDelete
+   * Gọi API để xóa xe dựa vào ID. Sau khi thành công, reset trạng thái xác nhận và tải lại danh sách.
    */
   const handleDelete = async (vehicleId) => {
     try {
@@ -175,12 +180,13 @@ const DriverVehicles = () => {
       setDeleteConfirm(null)
       fetchData()
     } catch {
-      // authorizeAxios đã toast lỗi
+      // authorizeAxios đã tự động toast lỗi
     }
   }
 
   /**
-   * Thiết lập một xe làm xe mặc định (sẽ được ưu tiên chọn khi đặt chỗ).
+   * Hàm xử lý logic: handleSetDefault
+   * Gọi API thiết lập một chiếc xe cụ thể làm xe ưu tiên (mặc định) khi đặt chỗ.
    */
   const handleSetDefault = async (vehicleId) => {
     try {
@@ -188,7 +194,7 @@ const DriverVehicles = () => {
       toast.success(t('driver.vehicles.setDefaultSuccess'))
       fetchData()
     } catch {
-      // authorizeAxios đã toast lỗi
+      // authorizeAxios đã tự động toast lỗi
     }
   }
 

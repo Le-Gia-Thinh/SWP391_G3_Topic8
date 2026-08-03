@@ -17,9 +17,7 @@ import walletApi from '../../apis/walletApi';
 // ── Helpers ──────────────────────────────────────────────────────
 const fmt = (n) => new Intl.NumberFormat('vi-VN').format(Number(n || 0)) + ' VNĐ';
 
-/**
- * Component hiển thị mã QR Code từ chuỗi dữ liệu đầu vào.
- */
+// ── QR Canvas (reuse cùng style với DriverPayment) ───────────────
 const QRCanvas = ({ data, size = 220 }) => {
   const canvasRef = useRef(null);
   const [error, setError] = useState(false);
@@ -47,9 +45,7 @@ const QRCanvas = ({ data, size = 220 }) => {
   );
 };
 
-/**
- * Component đếm ngược thời gian còn lại của mã QR thanh toán.
- */
+// ── Countdown Timer ──────────────────────────────────────────────
 const Countdown = ({ expiredAt }) => {
   const [timeLeft, setTimeLeft] = useState('');
 
@@ -71,6 +67,10 @@ const Countdown = ({ expiredAt }) => {
 // ── Copy Button ──────────────────────────────────────────────────
 const CopyButton = ({ text }) => {
   const { t } = useTranslation();
+  /**
+   * Hàm xử lý logic: handleCopy
+   * Copy chuỗi văn bản vào bộ nhớ tạm (clipboard).
+   */
   const handleCopy = () => {
     navigator.clipboard.writeText(String(text || ''));
     toast.info(t('driver.subscriptionPayment.copied'));
@@ -161,10 +161,8 @@ const DriverSubscriptionPayment = () => {
     return () => clearInterval(pollerRef.current);
   }, [step, payment]);
 
-  // Confirm subscription after payment
-  /**
-   * Gọi API xác nhận đã thanh toán xong (để backend kích hoạt gói).
-   */
+  // Hook useCallback: Ghi nhớ hàm handleConfirm để tái sử dụng mà không cần tạo lại.
+  // Gọi API xác nhận thanh toán thành công và lưu trạng thái tự động gia hạn vào localStorage.
   const handleConfirm = useCallback(async () => {
     try {
       setConfirming(true);
@@ -182,7 +180,8 @@ const DriverSubscriptionPayment = () => {
   }, [payment]);
 
   /**
-   * Gọi API thanh toán bằng Ví nội bộ thay vì chuyển khoản.
+   * Hàm xử lý logic: handlePayByWallet
+   * Xử lý thanh toán gói hội viên trực tiếp bằng số dư trong Ví nội bộ.
    */
   const handlePayByWallet = async () => {
     try {

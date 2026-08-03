@@ -63,6 +63,10 @@ const DriverPaymentResult = () => {
     }
 
     const timer = setTimeout(() => {
+      /**
+       * Hàm xử lý logic: fetchPaymentInfo
+       * Gọi API lấy thông tin thanh toán của session.
+       */
       const fetchPaymentInfo = async () => {
         try {
           const r = await authorizeAxios.get(`/driver/payment/session-info/${sessionId}`)

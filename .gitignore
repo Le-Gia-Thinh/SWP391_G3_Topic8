@@ -10,6 +10,7 @@ node_modules/
 # Environment variables (Crucial for Express/Node)
 # BE/.env
 # .env
+# FE/.env
 
 # Logs
 npm-debug.log*

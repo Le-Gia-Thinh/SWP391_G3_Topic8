@@ -21,7 +21,7 @@ const config = {
   password: process.env.DB_PASSWORD,       // Mật khẩu database
   server: process.env.DB_SERVER,           // Địa chỉ máy chủ (host) database
   database: process.env.DB_DATABASE,       // Tên database cần kết nối
-  port: Number(process.env.DB_PORT) || 1433, // Cổng kết nối (mặc định SQL Server là 1433)
+  requestTimeout: 60000, // Đặt timeout truy vấn lên 60 giây
 
   options: {
     encrypt: process.env.DB_ENCRYPT === "true", // Bật mã hóa kết nối (thường cần cho Azure SQL)

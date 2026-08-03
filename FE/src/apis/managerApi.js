@@ -18,8 +18,45 @@ export const getDashboardAPI = () =>
 export const getBuildingsAPI = () =>
   authorizeAxios.get(`${BASE}/buildings`)
 
+export const createBuildingAPI = (data) =>
+  authorizeAxios.post(`${BASE}/buildings`, data)
+
 export const updateBuildingAPI = (id, data) =>
   authorizeAxios.patch(`${BASE}/buildings/${id}`, data)
+
+export const deleteBuildingAPI = (id) =>
+  authorizeAxios.delete(`${BASE}/buildings/${id}`)
+
+// ── Config – Gates ───────────────────────────────────────────
+export const getGatesAPI = (buildingId) =>
+  authorizeAxios.get(`${BASE}/gates`, {
+    params: buildingId ? { buildingId } : {}
+  })
+
+export const getGateByIdAPI = (id) =>
+  authorizeAxios.get(`${BASE}/gates/${id}`)
+
+export const createGateAPI = (data) =>
+  authorizeAxios.post(`${BASE}/gates`, data)
+
+export const updateGateAPI = (id, data) =>
+  authorizeAxios.patch(`${BASE}/gates/${id}`, data)
+
+export const deleteGateAPI = (id) =>
+  authorizeAxios.delete(`${BASE}/gates/${id}`)
+
+// ── Staff Management ─────────────────────────────────────────
+export const getBuildingStaffAPI = (buildingId) =>
+  authorizeAxios.get(`${BASE}/buildings/${buildingId}/staff`)
+
+export const getUnassignedStaffAPI = () =>
+  authorizeAxios.get(`${BASE}/staff/unassigned`)
+
+export const assignStaffToBuildingAPI = (data) => // { buildingId, staffUserId, isPrimary? }
+  authorizeAxios.post(`${BASE}/staff/assign`, data)
+
+export const removeStaffFromBuildingAPI = (id) =>
+  authorizeAxios.delete(`${BASE}/staff/assignments/${id}`)
 
 // ── Config – Floors ───────────────────────────────────────────
 export const getFloorsAPI = (buildingId) =>

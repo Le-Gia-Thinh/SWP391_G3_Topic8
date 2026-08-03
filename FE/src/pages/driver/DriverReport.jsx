@@ -25,10 +25,6 @@ const ISSUE_TYPES = [
   { id: 'other', severity: 'Thấp' }
 ]
 
-/**
- * Helper: Lấy giá trị đầu tiên khác undefined/null từ một danh sách các keys trong object.
- * Giúp fallback khi các API trả về cấu trúc field name khác nhau (camelCase vs PascalCase).
- */
 function getValue(obj, ...keys) {
   for (const key of keys) {
     if (obj && obj[key] !== undefined && obj[key] !== null) return obj[key]
@@ -53,9 +49,6 @@ function formatDateTime(value) {
   })
 }
 
-/**
- * Chuẩn hóa danh sách file đính kèm thành format metadata rút gọn để hiển thị.
- */
 function normalizeAttachments(files) {
   return files.map((file) => ({
     id: `${file.name}-${file.lastModified}-${file.size}`,
@@ -91,7 +84,10 @@ const DriverReport = () => {
   // Helper: lấy label i18n cho issue id
   const getIssueLabel = (id) => t(`driver.report.issues.${id}`)
 
-  // Helper: lấy label trạng thái sự cố
+  /**
+   * Hàm xử lý logic: getStatusLabel
+   * Dịch trạng thái sự cố từ tiếng Anh sang tiếng Việt dựa vào hệ thống i18n.
+   */
   const getStatusLabel = (status) => {
     if (!status) return '—'
     return t(`driver.report.incidentStatus.${status}`, status)
@@ -181,10 +177,6 @@ const DriverReport = () => {
     return relatedOptions.find((item) => item.id === selectedRelatedId) || relatedOptions[0]
   }, [relatedOptions, selectedRelatedId])
 
-  /**
-   * Gọi API lấy ngữ cảnh báo cáo (session hiện tại, các session đang active,
-   * các reservation chưa hoàn thành, lịch sử report gần đây) để đưa vào dropdown.
-   */
   const loadReportContext = useCallback(async () => {
     setLoading(true)
 
@@ -222,7 +214,11 @@ const DriverReport = () => {
   }, [relatedOptions, selectedRelatedId])
 
   /**
-   * Xử lý khi người dùng chọn file ảnh đính kèm (giới hạn dung lượng & loại file).
+   * Hàm xử lý logic: handleFileChange
+   * Xử lý khi người dùng chọn file hình ảnh tải lên.
+   * - Kiểm tra định dạng (chỉ cho phép PNG, JPEG, JPG).
+   * - Kiểm tra dung lượng (tối đa 5MB mỗi file).
+   * - Giới hạn tối đa 5 file đính kèm.
    */
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files || [])
@@ -252,12 +248,18 @@ const DriverReport = () => {
     event.target.value = ''
   }
 
+  /**
+   * Hàm xử lý logic: handleRemoveAttachment
+   * Xóa một file đã đính kèm khỏi danh sách.
+   */
   const handleRemoveAttachment = (fileId) => {
     setAttachments((prev) => prev.filter((file) => file.id !== fileId))
   }
 
   /**
-   * Gửi dữ liệu báo cáo sự cố (loại, ID liên quan, mô tả, đính kèm) lên server.
+   * Hàm xử lý logic: handleSubmit
+   * Gửi báo cáo sự cố lên server.
+   * Validate thông tin loại sự cố và mô tả (ít nhất 5 ký tự) trước khi gọi API createReport.
    */
   const handleSubmit = async () => {
     if (!selectedIssue) {
@@ -299,6 +301,10 @@ const DriverReport = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: handleCancel
+   * Đặt lại form báo cáo về trạng thái ban đầu.
+   */
   const handleCancel = () => {
     setSelectedIssue('not_found')
     setDescription('')

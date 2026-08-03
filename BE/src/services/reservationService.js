@@ -1,11 +1,15 @@
 /**
  * FILE: reservationService.js
- * MÔ TẢ: Service xử lý nghiệp vụ đặt chỗ (Reservation).
- * Chức năng: Tìm vị trí trống (tích hợp AI gợi ý), Tạo/Hủy đặt chỗ, Lấy danh sách đặt chỗ của tài xế.
+ * MÔ TẢ: Service xử lý toàn bộ các nghiệp vụ Đặt chỗ xe trực tuyến (Online Parking Reservation Service).
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. QUẢN LÝ THỜI GIAN ĐẶT CHỖ (`dateTimeUtils`): Kiểm tra quy tắc đặt chỗ trước tối thiểu 15 phút, tính toán khung giờ đỗ và giờ kết thúc.
+ * 2. TÌM VỊ TRÍ ĐỖ XE KHẢ THI KHÔNG TRÙNG LỊCH (`getAvailableSlots`): Quét toàn bộ CSDL và tính toán `DisplayStatus` dựa trên 3 tiêu chí (Không bảo trì, Không có xe đỗ thực tế, Không có đơn khác đè giờ).
+ * 3. TÍCH HỢP AI GỢI Ý Ô ĐỖ (`aiAllocationService`): Tự động gọi thuật toán Heuristic tìm ô đỗ tối ưu nhất và gắn nhãn `isAIRec = true`.
+ * 4. TẠO ĐƠN ĐẶT CHỖ (`createReservation`): Quét kiểm tra chống trùng biển số (`PLATE_ALREADY_BOOKED`), chống đè xe đang đỗ (`PLATE_ALREADY_PARKED`), gọi Stored Procedure `sp_CreateReservation` và phát Email xác nhận qua Mailer.
+ * 5. HỦY ĐƠN ĐẶT CHỖ (`cancelReservation`): Dùng SQL Transaction thực thi 4 bước an toàn tuyệt đối (Kiểm tra quyền Driver, Kiểm tra chưa check-in, Cập nhật 'Cancelled', Mở lại trạng thái ô đỗ).
+ * 
+ * @module reservationService
  */
-/*
-hieu
-*/
 
 import { getPool, sql } from "../config/db.js";
 import { syncParkingSlotStatuses } from "./slotSyncService.js";
@@ -18,6 +22,10 @@ import {
 } from "../utils/dateTimeUtils.js";
 import { recommendOptimalSlot } from "./aiAllocationService.js";
 
+/**
+ * HÀM PHỤ: createHttpError
+ * TÁC DỤNG: Tạo đối tượng lỗi Error chuẩn kèm HTTP Status Code.
+ */
 function createHttpError(status, message) {
   const error = new Error(message);
   error.status = status;
@@ -25,14 +33,26 @@ function createHttpError(status, message) {
   return error;
 }
 
+/**
+ * HÀM PHỤ: getUserIdFromToken
+ * TÁC DỤNG: Trích xuất ID người dùng linh hoạt từ Payload của Token JWT.
+ */
 function getUserIdFromToken(req) {
   return req.user?.UserID || req.user?.userId || req.user?.id;
 }
 
+/**
+ * HÀM PHỤ: getRoleNameFromToken
+ * TÁC DỤNG: Trích xuất Tên Role người dùng linh hoạt từ Payload JWT.
+ */
 function getRoleNameFromToken(req) {
   return req.user?.RoleName || req.user?.roleName;
 }
 
+/**
+ * HÀM PHỤ: normalizeVehicleTypeId
+ * TÁC DỤNG: Chuẩn hóa dữ liệu Loại xe gửi từ Frontend (nhận cả dạng Số ID 1,2,3 hoặc Chuỗi 'moto', 'car', 'truck').
+ */
 function normalizeVehicleTypeId(value) {
   if (value === undefined || value === null || value === "") return null;
 
@@ -41,17 +61,25 @@ function normalizeVehicleTypeId(value) {
 
   const text = String(value).trim().toLowerCase();
 
-  if (["moto", "motorbike", "bike", "xe máy", "xe may"].includes(text)) return 1;
-  if (["car", "oto", "ô tô", "o to"].includes(text)) return 2;
-  if (["truck", "xe tải", "xe tai"].includes(text)) return 3;
+  if (["moto", "motorbike", "bike", "xe máy", "xe may"].includes(text)) return 1; // 1: Xe máy
+  if (["car", "oto", "ô tô", "o to"].includes(text)) return 2;                     // 2: Ô tô
+  if (["truck", "xe tải", "xe tai"].includes(text)) return 3;                    // 3: Xe tải
 
   return null;
 }
 
+/**
+ * HÀM PHỤ: expireOverdueReservations
+ * TÁC DỤNG: Tự động gọi Stored Proc đồng bộ dọn dẹp các đơn đặt chỗ đã quá hạn.
+ */
 async function expireOverdueReservations(pool) {
   await syncParkingSlotStatuses(pool);
 }
 
+/**
+ * HÀM PHỤ: reservationBaseSelect
+ * TÁC DỤNG: Trả về đoạn câu lệnh SQL SELECT cơ sở kết hợp nhiều bảng (JOIN 6 BẢNG) và kỹ thuật `OUTER APPLY` lấy phiên đỗ xe gần nhất.
+ */
 function reservationBaseSelect() {
   return `
     SELECT
@@ -124,6 +152,7 @@ function reservationBaseSelect() {
     LEFT JOIN Floors f ON z.FloorID = f.FloorID
     LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
 
+    -- KỸ THUẬT SQL OUTER APPLY: Lấy đúng 1 phiên đỗ xe mới nhất của tài xế này tại ô đỗ tương ứng
     OUTER APPLY (
       SELECT TOP 1
         s.SessionID,
@@ -136,9 +165,14 @@ function reservationBaseSelect() {
   `;
 }
 
+/**
+ * HÀM 1: getReservations
+ * TÁC DỤNG: Lấy danh sách toàn bộ các đơn đặt chỗ (Có phân quyền theo Vai trò).
+ */
 export async function getReservations(req) {
   const pool = await getPool();
 
+  // Tự động dọn dẹp các đơn đặt chỗ đã quá hạn
   await expireOverdueReservations(pool);
 
   const userId = getUserIdFromToken(req);
@@ -147,11 +181,13 @@ export async function getReservations(req) {
   const request = pool.request();
   let whereSql = "";
 
+  // Phân quyền dữ liệu: Nếu là Tài xế (Driver), chỉ lọc ra danh sách đặt chỗ của chính tài xế đó
   if (roleName === "Driver") {
     request.input("DriverID", sql.Int, userId);
     whereSql = "WHERE r.DriverID = @DriverID";
   }
 
+  // Chạy câu SQL lấy danh sách (kèm JOIN thông tin Tòa nhà, Tầng, Vị trí đỗ và Phiên đỗ mới nhất)
   const result = await request.query(`
     ${reservationBaseSelect()}
     ${whereSql}
@@ -161,9 +197,14 @@ export async function getReservations(req) {
   return result.recordset;
 }
 
+/**
+ * HÀM 2: getReservationById
+ * TÁC DỤNG: Truy vấn thông tin chi tiết một Đơn đặt chỗ theo ReservationID.
+ */
 export async function getReservationById(req) {
   const pool = await getPool();
 
+  // Tự động dọn dẹp các đơn đặt chỗ đã quá hạn
   await expireOverdueReservations(pool);
 
   const reservationId = Number(req.params.id);
@@ -177,6 +218,7 @@ export async function getReservationById(req) {
   const request = pool.request().input("ReservationID", sql.Int, reservationId);
   let driverFilterSql = "";
 
+  // Bảo mật: Nếu là Driver, chỉ cho phép xem chi tiết đơn của CHÍNH MÌNH
   if (roleName === "Driver") {
     request.input("DriverID", sql.Int, userId);
     driverFilterSql = "AND r.DriverID = @DriverID";
@@ -197,11 +239,16 @@ export async function getReservationById(req) {
   return reservation;
 }
 
+/**
+ * HÀM 3: getAvailableSlots
+ * TÁC DỤNG: Lấy sơ đồ danh sách các ô đỗ và tích hợp thuật toán AI chọn ô đỗ tối ưu nhất.
+ */
 export async function getAvailableSlots(req) {
   const pool = await getPool();
 
   await expireOverdueReservations(pool);
 
+  // 1. Đọc & chuẩn hóa thông số tìm kiếm từ Query String (vehicleTypeId, buildingId, ngày, giờ...)
   const vehicleTypeId = normalizeVehicleTypeId(
     req.query.vehicleTypeId || req.query.vehicleType
   );
@@ -220,6 +267,7 @@ export async function getAvailableSlots(req) {
     throw createHttpError(400, "Ngày và giờ bắt đầu là bắt buộc.");
   }
 
+  // 2. Tính mốc giờ Start & End
   const start = buildDateTime(reservationDate, startTime);
   const durationHours = getDurationHours(duration);
   const end = endTimeInput
@@ -232,6 +280,7 @@ export async function getAvailableSlots(req) {
     throw createHttpError(400, "Thời gian không hợp lệ.");
   }
 
+  // 3. Validation: Không cho tìm chỗ sát dưới 15 phút so với hiện tại
   if (start < minimumStart) {
     throw createHttpError(
       400,
@@ -246,6 +295,7 @@ export async function getAvailableSlots(req) {
     );
   }
 
+  // 4. Query SQL quét tất cả các ô đỗ và tính toán trạng thái DisplayStatus ('occupied' hay 'available')
   const result = await pool.request()
     .input("BuildingID", sql.Int, buildingId)
     .input("VehicleTypeID", sql.Int, vehicleTypeId)
@@ -271,10 +321,11 @@ export async function getAvailableSlots(req) {
         b.BuildingName,
         b.Address,
 
+        -- TÍNH TRẠNG THÁI HIỂN THỊ TRÊN SƠ ĐỒ BÃI ĐỖ:
         CASE
-          WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN 'occupied'
+          WHEN ps.SlotStatus IN ('Maintenance', 'Blocked') THEN 'occupied'  -- Đang bảo trì/bị khóa
 
-          WHEN EXISTS (
+          WHEN EXISTS (  -- Có xe đang đỗ thực tế
             SELECT 1
             FROM ParkingSessions s
             WHERE s.SlotID = ps.SlotID
@@ -282,7 +333,7 @@ export async function getAvailableSlots(req) {
               AND s.ExitTime IS NULL
           ) THEN 'occupied'
 
-          WHEN EXISTS (
+          WHEN EXISTS (  -- Có đơn đặt chỗ trùng khung giờ
             SELECT 1
             FROM Reservations r
             WHERE r.SlotID = ps.SlotID
@@ -291,7 +342,7 @@ export async function getAvailableSlots(req) {
               AND @EndTime > r.StartTime
           ) THEN 'occupied'
 
-          ELSE 'available'
+          ELSE 'available'  -- Trống hoàn toàn -> Có thể đặt
         END AS DisplayStatus
 
       FROM ParkingSlots ps
@@ -311,7 +362,7 @@ export async function getAvailableSlots(req) {
 
   const slots = result.recordset;
 
-  // Áp dụng AI Allocation Service để gán AIScore cho các slot available
+  // 5. TÍCH HỢP AI GỢI Ý: Chạy thuật toán AI chọn ô đỗ tối ưu nhất và gắn cờ isAIRec = true
   const bestSlot = recommendOptimalSlot(slots);
   if (bestSlot) {
     bestSlot.isAIRec = true;
@@ -320,7 +371,14 @@ export async function getAvailableSlots(req) {
   return slots;
 }
 
+/**
+ * HÀM 4: createReservation
+ * TÁC DỤNG: Xử lý Đặt chỗ xe trực tuyến (Khởi tạo đơn đặt chỗ mới).
+ */
 export async function createReservation(req) {
+  // =========================================================================
+  // KHÚC 1: LẤY USER ID TỪ TOKEN & CHUẨN HÓA THÔNG TIN ĐẦU VÀO
+  // =========================================================================
   const driverId = getUserIdFromToken(req);
 
   if (!driverId) {
@@ -330,6 +388,7 @@ export async function createReservation(req) {
     );
   }
 
+  // Đổi các tên loại xe "moto"/"car" thành ID số tương ứng (1, 2, 3)
   const vehicleTypeId = normalizeVehicleTypeId(
     req.body.vehicleTypeId || req.body.vehicleType
   );
@@ -341,11 +400,17 @@ export async function createReservation(req) {
   const durationHours = getDurationHours(req.body.duration);
   const licensePlate = req.body.licensePlate ? req.body.licensePlate.trim().toUpperCase() : null;
 
+  // =========================================================================
+  // KHÚC 2: TÍNH TOÁN NGÀY-GIỜ & KIỂM TRA THỜI GIAN HỢP LỆ (VALIDATION)
+  // =========================================================================
+  // Ghép ngày và giờ bắt đầu thành Date object đầy đủ
   const start = buildDateTime(reservationDate, startTime);
+  // Tính giờ kết thúc: nếu không có endTime thì lấy (Start + duration)
   const end = req.body.endTime
     ? buildDateTime(reservationDate, req.body.endTime)
     : addHours(start, durationHours || 4);
 
+  // Mốc thời gian tối thiểu được phép đặt (Thời gian hiện tại + 15 phút)
   const minimumStart = getMinimumReservationStartTime();
 
   if (!vehicleTypeId) {
@@ -360,6 +425,7 @@ export async function createReservation(req) {
     throw createHttpError(400, "Thời gian đặt chỗ không hợp lệ.");
   }
 
+  // Chặn đặt lịch dưới 15 phút so với hiện tại
   if (start < minimumStart) {
     throw createHttpError(
       400,
@@ -367,6 +433,7 @@ export async function createReservation(req) {
     );
   }
 
+  // Chặn giờ kết thúc nhỏ hơn hoặc bằng giờ bắt đầu
   if (end <= start) {
     throw createHttpError(
       400,
@@ -374,13 +441,17 @@ export async function createReservation(req) {
     );
   }
 
+  // =========================================================================
+  // KHÚC 3: QUÉT DATABASE CHECK CHỐNG TRÙNG BIỂN SỐ & CHỐNG GIAN LẬN
+  // =========================================================================
   const pool = await getPool();
 
+  // Quét dọn các đơn cũ quá hạn trong DB
   await expireOverdueReservations(pool);
 
   if (licensePlate) {
-    // Chặn trùng giờ: cùng biển số, cùng khoảng thời gian (overlap) → không cho đặt
-    // Cho phép: cùng biển số, 2 khung giờ liên tiếp không chồng nhau (gia hạn)
+    // 1. CHECK TRÙNG GIỜ: Cùng biển số xem có đơn nào 'Reserved' bị chồng khung giờ không
+    // (Cho phép: 2 khung giờ nối tiếp nhau không chồng đè)
     const overlapCheck = await pool.request()
       .input("PlateNumber", sql.NVarChar(20), licensePlate)
       .input("StartTime", sql.DateTime, start)
@@ -400,7 +471,7 @@ export async function createReservation(req) {
       throw err
     }
 
-    // Chặn nếu xe đang trong bãi (Active session) → không thể đặt thêm
+    // 2. CHECK XE TRONG BÃI: Cùng biển số xem có đang có phiên đỗ (Active session) chưa ra không
     const activeSessionCheck = await pool.request()
       .input("PlateNumber", sql.NVarChar(20), licensePlate)
       .query(`
@@ -418,6 +489,9 @@ export async function createReservation(req) {
     }
   }
 
+  // =========================================================================
+  // KHÚC 4: KIỂM TRA Ô ĐỖ (SLOT) CHỌN CÓ THỰC SỰ CÒN TRỐNG KHÔNG
+  // =========================================================================
   const slotRequest = pool.request()
     .input("BuildingID", sql.Int, buildingId)
     .input("VehicleTypeID", sql.Int, vehicleTypeId)
@@ -431,6 +505,7 @@ export async function createReservation(req) {
     requestedSlotFilter = "AND ps.SlotID = @RequestedSlotID";
   }
 
+  // Truy vấn kiểm tra 3 điều kiện: Không bảo trì, Không có xe đỗ thực tế, Không có ai đè giờ
   const slotResult = await slotRequest.query(`
     SELECT TOP 1
       ps.SlotID,
@@ -477,6 +552,10 @@ export async function createReservation(req) {
     );
   }
 
+  // =========================================================================
+  // KHÚC 5: GỌI STORED PROCEDURE LƯU DB & SELECT LẠI BẢN GHI VỪA TẠO
+  // =========================================================================
+  // Thực thi Stored Procedure để chèn bản ghi mới vào bảng Reservations
   await pool.request()
     .input("DriverID", sql.Int, driverId)
     .input("VehicleTypeID", sql.Int, vehicleTypeId)
@@ -487,6 +566,7 @@ export async function createReservation(req) {
     .input("PlateNumber", sql.NVarChar(20), licensePlate)
     .execute("sp_CreateReservation");
 
+  // Query lấy lại chính bản ghi vừa tạo để lấy ReservationID và định dạng văn bản (BK-xxxx)
   const newestReservation = await pool.request()
     .input("DriverID", sql.Int, driverId)
     .input("SlotID", sql.Int, slot.SlotID)
@@ -519,6 +599,9 @@ export async function createReservation(req) {
       ORDER BY r.ReservationID DESC
     `);
 
+  // =========================================================================
+  // KHÚC 6: ĐÓNG GÓI KẾT QUẢ & BẮN EMAIL XÁC NHẬN BẤT ĐỒNG BỘ (BACKGROUND)
+  // =========================================================================
   const reservation = newestReservation.recordset[0];
   const fullBooking = {
     ...reservation,
@@ -531,7 +614,7 @@ export async function createReservation(req) {
     StatusLabel: "Đang hoạt động",
   };
 
-  // Gửi email xác nhận đặt chỗ bất đồng bộ
+  // Gửi email xác nhận đặt chỗ bất đồng bộ (không dùng await để tránh làm chậm response)
   pool.request()
     .input("DriverID", sql.Int, driverId)
     .query(`SELECT FullName, Email FROM Users WHERE UserID = @DriverID`)
@@ -550,9 +633,13 @@ export async function createReservation(req) {
   };
 }
 
+/**
+ * HÀM 5: cancelReservation
+ * TÁC DỤNG: Hủy đơn đặt chỗ (Sử dụng SQL Transaction để đảm bảo tính toàn vẹn).
+ */
 export async function cancelReservation(req) {
   const pool = await getPool();
-  const transaction = new sql.Transaction(pool);
+  const transaction = new sql.Transaction(pool); // Tạo Transaction để đảm bảo tính toàn vẹn
 
   try {
     const reservationId = Number(req.params.id);
@@ -571,7 +658,10 @@ export async function cancelReservation(req) {
       );
     }
 
+    // 1. Quét dọn các đơn hết hạn
     await expireOverdueReservations(pool);
+    
+    // 2. Bắt đầu Transaction
     await transaction.begin();
 
     const request = new sql.Request(transaction)
@@ -579,11 +669,15 @@ export async function cancelReservation(req) {
 
     let driverFilterSql = "";
 
+    // Phân quyền: Driver chỉ được hủy đơn của CHÍNH MÌNH
     if (roleName === "Driver") {
       request.input("DriverID", sql.Int, driverId);
       driverFilterSql = "AND r.DriverID = @DriverID";
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // 🔹 QUERY 1 / 4 TRONG TRANSACTION: ĐỌC THÔNG TIN ĐƠN ĐẶT CHỖ (SELECT)
+    // ─────────────────────────────────────────────────────────────────
     const reservationResult = await request.query(`
       SELECT TOP 1
         r.ReservationID,
@@ -608,6 +702,7 @@ export async function cancelReservation(req) {
       );
     }
 
+    // 4. CHECK ĐIỀU KIỆN 1: Chỉ cho phép hủy đơn đang ở trạng thái 'Reserved'
     if (reservation.ReservationStatus !== "Reserved") {
       throw createHttpError(
         400,
@@ -615,10 +710,14 @@ export async function cancelReservation(req) {
       );
     }
 
+    // 5. CHECK ĐIỀU KIỆN 2: Không thể hủy đơn đã quá hạn thời gian
     if (reservation.EndTime < new Date()) {
       throw createHttpError(400, "Đặt chỗ đã hết hạn, không thể hủy.");
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // 🔹 QUERY 2 / 4 TRONG TRANSACTION: CHECK XE ĐÃ CHECK-IN CHƯA (SELECT)
+    // ─────────────────────────────────────────────────────────────────
     const activeSessionResult = await new sql.Request(transaction)
       .input("DriverID", sql.Int, reservation.DriverID)
       .input("SlotID", sql.Int, reservation.SlotID)
@@ -638,6 +737,9 @@ export async function cancelReservation(req) {
       );
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // 🔹 QUERY 3 / 4 TRONG TRANSACTION: CẬP NHẬT TRẠNG THÁI HỦY (UPDATE 1)
+    // ─────────────────────────────────────────────────────────────────
     await new sql.Request(transaction)
       .input("ReservationID", sql.Int, reservationId)
       .query(`
@@ -646,6 +748,9 @@ export async function cancelReservation(req) {
         WHERE ReservationID = @ReservationID
       `);
 
+    // ─────────────────────────────────────────────────────────────────
+    // 🔹 QUERY 4 / 4 TRONG TRANSACTION: MỞ LẠI Ô ĐỖ XE (UPDATE 2)
+    // ─────────────────────────────────────────────────────────────────
     await new sql.Request(transaction)
       .input("SlotID", sql.Int, reservation.SlotID)
       .query(`
@@ -675,6 +780,7 @@ export async function cancelReservation(req) {
         WHERE SlotID = @SlotID
       `);
 
+    // 9. Cam kết lưu dữ liệu Transaction thành công
     await transaction.commit();
 
     return {
@@ -682,10 +788,11 @@ export async function cancelReservation(req) {
       status: "Cancelled",
     };
   } catch (err) {
+    // Nếu có bất kỳ lỗi nào xảy ra -> Rollback hủy bỏ toàn bộ các câu lệnh SQL ở trên
     try {
       await transaction.rollback();
     } catch {}
 
     throw err;
   }
-}
+}

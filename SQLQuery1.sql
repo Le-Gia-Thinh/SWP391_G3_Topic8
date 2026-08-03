@@ -23,6 +23,7 @@ IF OBJECT_ID('vw_RevenueByDay',      'V') IS NOT NULL DROP VIEW vw_RevenueByDay;
 IF OBJECT_ID('vw_OccupancyByZone',   'V') IS NOT NULL DROP VIEW vw_OccupancyByZone;
 GO
 
+IF OBJECT_ID('TRG_CheckZoneSlotLimit',               'TR') IS NOT NULL DROP TRIGGER TRG_CheckZoneSlotLimit;
 IF OBJECT_ID('TRG_NotifyOnPaymentComplete',             'TR') IS NOT NULL DROP TRIGGER TRG_NotifyOnPaymentComplete;
 IF OBJECT_ID('TRG_AutoIncident',                        'TR') IS NOT NULL DROP TRIGGER TRG_AutoIncident;
 IF OBJECT_ID('TRG_RecalculateSlotStatus_OnReservation', 'TR') IS NOT NULL DROP TRIGGER TRG_RecalculateSlotStatus_OnReservation;
@@ -67,33 +68,37 @@ IF OBJECT_ID('CK_Users_MinAge', 'C') IS NOT NULL
     ALTER TABLE Users DROP CONSTRAINT CK_Users_MinAge;
 GO
 
-IF OBJECT_ID('WalletTransactions',   'U') IS NOT NULL DROP TABLE WalletTransactions;
+IF OBJECT_ID('SystemConfigs',        'U') IS NOT NULL DROP TABLE SystemConfigs;
 IF OBJECT_ID('TicketReplies',        'U') IS NOT NULL DROP TABLE TicketReplies;
 IF OBJECT_ID('SupportTickets',       'U') IS NOT NULL DROP TABLE SupportTickets;
 IF OBJECT_ID('ServiceRatings',       'U') IS NOT NULL DROP TABLE ServiceRatings;
-IF OBJECT_ID('DriverVehicles',       'U') IS NOT NULL DROP TABLE DriverVehicles;
-IF OBJECT_ID('Notifications',        'U') IS NOT NULL DROP TABLE Notifications;
 IF OBJECT_ID('Feedbacks',            'U') IS NOT NULL DROP TABLE Feedbacks;
 IF OBJECT_ID('Incidents',            'U') IS NOT NULL DROP TABLE Incidents;
 IF OBJECT_ID('Payments',             'U') IS NOT NULL DROP TABLE Payments;
-IF OBJECT_ID('Reservations',         'U') IS NOT NULL DROP TABLE Reservations;
 IF OBJECT_ID('ParkingSessions',      'U') IS NOT NULL DROP TABLE ParkingSessions;
-IF OBJECT_ID('UserSubscriptions',    'U') IS NOT NULL DROP TABLE UserSubscriptions;
-IF OBJECT_ID('SubscriptionPlans',    'U') IS NOT NULL DROP TABLE SubscriptionPlans;
+IF OBJECT_ID('Reservations',         'U') IS NOT NULL DROP TABLE Reservations;
 IF OBJECT_ID('ParkingSlots',         'U') IS NOT NULL DROP TABLE ParkingSlots;
 IF OBJECT_ID('Zones',                'U') IS NOT NULL DROP TABLE Zones;
 IF OBJECT_ID('Floors',               'U') IS NOT NULL DROP TABLE Floors;
-IF OBJECT_ID('Buildings',            'U') IS NOT NULL DROP TABLE Buildings;
+IF OBJECT_ID('Gates',                'U') IS NOT NULL DROP TABLE Gates;
+IF OBJECT_ID('BuildingAssignments',  'U') IS NOT NULL DROP TABLE BuildingAssignments;
 IF OBJECT_ID('NightPricingPolicies', 'U') IS NOT NULL DROP TABLE NightPricingPolicies;
 IF OBJECT_ID('PricingPolicies',      'U') IS NOT NULL DROP TABLE PricingPolicies;
+IF OBJECT_ID('Buildings',            'U') IS NOT NULL DROP TABLE Buildings;
+IF OBJECT_ID('DriverVehicles',       'U') IS NOT NULL DROP TABLE DriverVehicles;
+IF OBJECT_ID('UserSubscriptions',    'U') IS NOT NULL DROP TABLE UserSubscriptions;
+IF OBJECT_ID('SubscriptionPlans',    'U') IS NOT NULL DROP TABLE SubscriptionPlans;
+IF OBJECT_ID('WalletTransactions',   'U') IS NOT NULL DROP TABLE WalletTransactions;
+IF OBJECT_ID('Notifications',        'U') IS NOT NULL DROP TABLE Notifications;
 IF OBJECT_ID('AuditLogs',            'U') IS NOT NULL DROP TABLE AuditLogs;
 IF OBJECT_ID('RefreshTokens',        'U') IS NOT NULL DROP TABLE RefreshTokens;
 IF OBJECT_ID('UserAuthProviders',    'U') IS NOT NULL DROP TABLE UserAuthProviders;
+IF OBJECT_ID('UserPermissions',     'U') IS NOT NULL DROP TABLE UserPermissions;
 IF OBJECT_ID('RolePermissions',      'U') IS NOT NULL DROP TABLE RolePermissions;
-IF OBJECT_ID('Users',                'U') IS NOT NULL DROP TABLE Users;
-IF OBJECT_ID('VehicleTypes',         'U') IS NOT NULL DROP TABLE VehicleTypes;
 IF OBJECT_ID('Permissions',          'U') IS NOT NULL DROP TABLE Permissions;
+IF OBJECT_ID('Users',                'U') IS NOT NULL DROP TABLE Users;
 IF OBJECT_ID('Roles',                'U') IS NOT NULL DROP TABLE Roles;
+IF OBJECT_ID('VehicleTypes',         'U') IS NOT NULL DROP TABLE VehicleTypes;
 GO
 
 /* =====================================================================
@@ -143,6 +148,16 @@ CREATE TABLE Users (
     CreatedAt           DATETIME NOT NULL DEFAULT GETDATE(),
     UpdatedAt           DATETIME NOT NULL DEFAULT GETDATE(),
     FOREIGN KEY (RoleID) REFERENCES Roles(RoleID)
+);
+GO
+
+CREATE TABLE UserPermissions (
+    UserPermissionID INT IDENTITY(1,1) PRIMARY KEY,
+    UserID INT NOT NULL FOREIGN KEY REFERENCES Users(UserID) ON DELETE CASCADE,
+    PermissionID INT NOT NULL FOREIGN KEY REFERENCES Permissions(PermissionID) ON DELETE CASCADE,
+    IsGranted BIT NOT NULL DEFAULT 1,
+    GrantedAt DATETIME DEFAULT GETDATE(),
+    CONSTRAINT UQ_User_Permission UNIQUE (UserID, PermissionID)
 );
 GO
 
@@ -200,14 +215,57 @@ CREATE TABLE VehicleTypes (
 );
 GO
 
+CREATE TABLE Buildings (
+    BuildingID     INT IDENTITY(1,1) PRIMARY KEY,
+    BuildingName   NVARCHAR(100) NOT NULL,
+    Address        NVARCHAR(200),
+    Latitude       DECIMAL(9,6) NULL,
+    Longitude      DECIMAL(9,6) NULL,
+    OperatingHours NVARCHAR(50),
+    OpenTime       TIME NULL DEFAULT '06:00:00',
+    CloseTime      TIME NULL DEFAULT '22:00:00',
+    Is247          BIT NOT NULL DEFAULT 0,
+    TotalFloors    INT,
+    CreatedAt      DATETIME DEFAULT GETDATE(),
+    UpdatedAt      DATETIME DEFAULT GETDATE()
+);
+GO
+
+CREATE TABLE Gates (
+    GateID     INT IDENTITY(1,1) PRIMARY KEY,
+    BuildingID INT NOT NULL,
+    GateName   NVARCHAR(50) NOT NULL,
+    GateType   NVARCHAR(20) NOT NULL CHECK (GateType IN ('In', 'Out', 'BiDirectional')),
+    IsActive   BIT DEFAULT 1,
+    CONSTRAINT FK_Gates_Building FOREIGN KEY (BuildingID) REFERENCES Buildings(BuildingID) ON DELETE CASCADE
+);
+GO
+
+CREATE TABLE BuildingAssignments (
+    AssignmentID INT IDENTITY(1,1) PRIMARY KEY,
+    BuildingID   INT NOT NULL,
+    UserID       INT NOT NULL,
+    AssignedDate DATETIME DEFAULT GETDATE(),
+    IsPrimary    BIT DEFAULT 0,
+    CONSTRAINT FK_BA_Building FOREIGN KEY (BuildingID) REFERENCES Buildings(BuildingID) ON DELETE CASCADE,
+    CONSTRAINT FK_BA_User     FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE,
+    CONSTRAINT UQ_BA_BuildingUser UNIQUE (BuildingID, UserID)
+);
+GO
+CREATE INDEX IX_BA_BuildingID ON BuildingAssignments(BuildingID);
+CREATE INDEX IX_BA_UserID     ON BuildingAssignments(UserID);
+GO
+
 CREATE TABLE PricingPolicies (
     PricingPolicyID INT IDENTITY(1,1) PRIMARY KEY,
+    BuildingID      INT NULL,
     VehicleTypeID   INT NOT NULL,
     MinHours        DECIMAL(5,2) NOT NULL,
     MaxHours        DECIMAL(5,2) NOT NULL,
     Fee             DECIMAL(10,2) NOT NULL,
     IsOvernight     BIT DEFAULT 0,
     IsActive        BIT DEFAULT 1,
+    FOREIGN KEY (BuildingID) REFERENCES Buildings(BuildingID) ON DELETE CASCADE,
     FOREIGN KEY (VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
     CHECK (MinHours >= 0 AND MaxHours >= MinHours),
     CHECK (Fee >= 0)
@@ -216,29 +274,20 @@ GO
 
 CREATE TABLE NightPricingPolicies (
     NightPolicyID  INT IDENTITY(1,1) PRIMARY KEY,
+    BuildingID     INT NULL,
     VehicleTypeID  INT NOT NULL,
     NightStartTime TIME NOT NULL,
     NightEndTime   TIME NOT NULL,
     NightFee       DECIMAL(10,2) NOT NULL,
     IsActive       BIT NOT NULL DEFAULT 1,
     CreatedAt      DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT FK_NightPricing_Building FOREIGN KEY (BuildingID) REFERENCES Buildings(BuildingID) ON DELETE CASCADE,
     CONSTRAINT FK_NightPricing_VehicleType FOREIGN KEY (VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
     CONSTRAINT CK_NightPricing_Fee CHECK (NightFee >= 0)
 );
 GO
 CREATE INDEX IX_NightPricing_VehicleType ON NightPricingPolicies(VehicleTypeID, IsActive);
 CREATE UNIQUE INDEX UQ_NightPricing_OneActivePerVehicle ON NightPricingPolicies(VehicleTypeID) WHERE IsActive = 1;
-GO
-
-CREATE TABLE Buildings (
-    BuildingID     INT IDENTITY(1,1) PRIMARY KEY,
-    BuildingName   NVARCHAR(100) NOT NULL,
-    Address        NVARCHAR(200),
-    OperatingHours NVARCHAR(50),
-    TotalFloors    INT,
-    CreatedAt      DATETIME DEFAULT GETDATE(),
-    UpdatedAt      DATETIME DEFAULT GETDATE()
-);
 GO
 
 CREATE TABLE Floors (
@@ -263,14 +312,35 @@ CREATE TABLE Zones (
 GO
 
 CREATE TABLE ParkingSlots (
-    SlotID        INT IDENTITY(1,1) PRIMARY KEY,
-    ZoneID        INT NOT NULL,
-    SlotCode      NVARCHAR(20) NOT NULL UNIQUE,
-    SlotStatus    NVARCHAR(20) DEFAULT 'Available',
-    VehicleTypeID INT NOT NULL,
+    SlotID          INT IDENTITY(1,1) PRIMARY KEY,
+    ZoneID          INT NOT NULL,
+    SlotCode        NVARCHAR(20) NOT NULL UNIQUE,
+    SlotStatus      NVARCHAR(20) DEFAULT 'Available',
+    VehicleTypeID   INT NOT NULL,
+    DistanceToGate  INT DEFAULT 10,
+    NearElevator    BIT DEFAULT 0,
+    PriorityScore   INT DEFAULT 100,
     FOREIGN KEY (ZoneID)        REFERENCES Zones(ZoneID),
     FOREIGN KEY (VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
     CHECK (SlotStatus IN ('Available','Occupied','Reserved','Maintenance','Blocked'))
+);
+GO
+CREATE TABLE Reservations (
+    ReservationID     INT IDENTITY(1,1) PRIMARY KEY,
+    DriverID          INT NOT NULL,
+    VehicleTypeID     INT NOT NULL,
+    SlotID            INT NULL,
+    ReservationDate   DATE NOT NULL,
+    StartTime         DATETIME NOT NULL,
+    EndTime           DATETIME NOT NULL,
+    ReservationStatus NVARCHAR(20) DEFAULT 'Reserved',
+    PlateNumber       NVARCHAR(20) NULL,
+    CreatedAt         DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (DriverID)      REFERENCES Users(UserID),
+    FOREIGN KEY (VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
+    FOREIGN KEY (SlotID)        REFERENCES ParkingSlots(SlotID),
+    CHECK (EndTime > StartTime),
+    CHECK (ReservationStatus IN ('Reserved','Cancelled','Expired','Completed'))
 );
 GO
 
@@ -279,18 +349,32 @@ CREATE TABLE ParkingSessions (
     SlotID           INT NOT NULL,
     DriverID         INT NULL,
     PlateNumber      NVARCHAR(20) NOT NULL,
+    CardCode         NVARCHAR(50) NULL,
+    GateIn           NVARCHAR(50) NULL,
+    GateOut          NVARCHAR(50) NULL,
+    GateInID         INT NULL,
+    GateOutID        INT NULL,
     VehicleTypeID    INT NOT NULL,
     EntryTime        DATETIME DEFAULT GETDATE(),
     ExitTime         DATETIME NULL,
     SessionStatus    NVARCHAR(20) DEFAULT 'Active',
     EarlyFeeAmount   INT NOT NULL DEFAULT 0,
     BookingStartTime DATETIME NULL,
-    FOREIGN KEY (SlotID)        REFERENCES ParkingSlots(SlotID),
-    FOREIGN KEY (DriverID)      REFERENCES Users(UserID),
-    FOREIGN KEY (VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
+    ReservationID    INT NULL,
+    CreatedByStaffID INT NULL,
+    FOREIGN KEY (SlotID)           REFERENCES ParkingSlots(SlotID),
+    FOREIGN KEY (DriverID)         REFERENCES Users(UserID),
+    FOREIGN KEY (VehicleTypeID)    REFERENCES VehicleTypes(VehicleTypeID),
+    FOREIGN KEY (ReservationID)    REFERENCES Reservations(ReservationID),
+    FOREIGN KEY (CreatedByStaffID) REFERENCES Users(UserID),
+    FOREIGN KEY (GateInID)         REFERENCES Gates(GateID),
+    FOREIGN KEY (GateOutID)        REFERENCES Gates(GateID),
     CHECK (ExitTime IS NULL OR ExitTime > EntryTime),
     CHECK (SessionStatus IN ('Active','Completed','Lost','Overdue'))
 );
+GO
+CREATE UNIQUE INDEX UQ_ActiveSession_PlateNumber ON ParkingSessions(PlateNumber) WHERE SessionStatus = 'Active';
+CREATE UNIQUE INDEX UQ_ActiveSession_CardCode ON ParkingSessions(CardCode) WHERE SessionStatus = 'Active' AND CardCode IS NOT NULL;
 GO
 
 CREATE TABLE Payments (
@@ -312,7 +396,9 @@ CREATE TABLE Payments (
     SurchargeStatus   NVARCHAR(20)  NULL DEFAULT 'None',
     SurchargePaidAt   DATETIME NULL,
     PaymentNote       NVARCHAR(MAX) NULL,
+    ReceivedByStaffID INT NULL,
     FOREIGN KEY (SessionID) REFERENCES ParkingSessions(SessionID),
+    FOREIGN KEY (ReceivedByStaffID) REFERENCES Users(UserID),
     CONSTRAINT CK_Payments_Amount          CHECK (Amount >= 0),
     CONSTRAINT CK_Payments_Status          CHECK (PaymentStatus IN ('Pending','Prepaid','Completed','Failed','Cancelled')),
     CONSTRAINT CK_Payments_SurchargeStatus CHECK (SurchargeStatus IN ('None','Pending','Completed'))
@@ -321,37 +407,22 @@ GO
 CREATE INDEX IX_Payments_OrderCode ON Payments(OrderCode);
 GO
 
-CREATE TABLE Reservations (
-    ReservationID     INT IDENTITY(1,1) PRIMARY KEY,
-    DriverID          INT NOT NULL,
-    VehicleTypeID     INT NOT NULL,
-    SlotID            INT NULL,
-    ReservationDate   DATE NOT NULL,
-    StartTime         DATETIME NOT NULL,
-    EndTime           DATETIME NOT NULL,
-    ReservationStatus NVARCHAR(20) DEFAULT 'Reserved',
-    PlateNumber       NVARCHAR(20) NULL,
-    CreatedAt         DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY (DriverID)      REFERENCES Users(UserID),
-    FOREIGN KEY (VehicleTypeID) REFERENCES VehicleTypes(VehicleTypeID),
-    FOREIGN KEY (SlotID)        REFERENCES ParkingSlots(SlotID),
-    CHECK (EndTime > StartTime),
-    CHECK (ReservationStatus IN ('Reserved','Cancelled','Expired','Completed'))
-);
-GO
 
 CREATE TABLE Incidents (
     IncidentID      INT IDENTITY(1,1) PRIMARY KEY,
+    BuildingID      INT NULL,
     SessionID       INT NULL,
     DriverID        INT NULL,
     IncidentType    NVARCHAR(50) NOT NULL,
     IncidentStatus  NVARCHAR(20) DEFAULT 'Open',
     Priority        NVARCHAR(20) DEFAULT 'Normal',
     Description     NVARCHAR(500),
+    FineAmount      DECIMAL(10,2) DEFAULT 0,
     Attachments     NVARCHAR(MAX) NULL,
     AssignedStaffID INT NULL,
     CreatedAt       DATETIME DEFAULT GETDATE(),
     UpdatedAt       DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (BuildingID)      REFERENCES Buildings(BuildingID),
     FOREIGN KEY (SessionID)       REFERENCES ParkingSessions(SessionID),
     FOREIGN KEY (DriverID)        REFERENCES Users(UserID),
     FOREIGN KEY (AssignedStaffID) REFERENCES Users(UserID),
@@ -487,6 +558,15 @@ CREATE TABLE WalletTransactions (
 );
 GO
 CREATE INDEX IX_WalletTx_UserID ON WalletTransactions(UserID, CreatedAt DESC);
+GO
+
+CREATE TABLE SystemConfigs (
+    ConfigID    INT IDENTITY(1,1) PRIMARY KEY,
+    ConfigKey   NVARCHAR(50) UNIQUE NOT NULL,
+    ConfigValue NVARCHAR(250) NOT NULL,
+    Description NVARCHAR(250) NULL,
+    UpdatedAt   DATETIME DEFAULT GETDATE()
+);
 GO
 
 ALTER TABLE Users ADD CONSTRAINT CK_Users_MinAge CHECK (
@@ -638,6 +718,45 @@ BEGIN
         RETURN;
     END;
 
+    IF NOT EXISTS (
+        SELECT 1 FROM ParkingSlots 
+        WHERE SlotID = @SlotID AND VehicleTypeID = @VehicleTypeID
+    )
+    BEGIN
+        RAISERROR('Ô đỗ này không hỗ trợ loại phương tiện của bạn.',16,1);
+        RETURN;
+    END;
+
+    IF EXISTS (
+        SELECT 1 FROM ParkingSlots 
+        WHERE SlotID = @SlotID AND SlotStatus IN ('Maintenance', 'Blocked')
+    )
+    BEGIN
+        RAISERROR('Ô đỗ này hiện đang bảo trì hoặc tạm khóa.',16,1);
+        RETURN;
+    END;
+
+    -- Kiểm tra Khung giờ hoạt động của Tòa nhà (nếu không mở 24/7): Giờ vào và Giờ ra không được nằm trong lúc cổng đóng cửa
+    IF EXISTS (
+        SELECT 1 FROM ParkingSlots ps
+        JOIN Zones z ON ps.ZoneID = z.ZoneID
+        JOIN Floors f ON z.FloorID = f.FloorID
+        JOIN Buildings b ON f.BuildingID = b.BuildingID
+        WHERE ps.SlotID = @SlotID
+          AND b.Is247 = 0
+          AND (
+              -- Giờ vào trùng lúc cổng đóng cửa
+              (b.OpenTime < b.CloseTime AND (CAST(@StartTime AS TIME) < b.OpenTime OR CAST(@StartTime AS TIME) > b.CloseTime))
+              OR
+              -- Giờ ra trùng lúc cổng đóng cửa
+              (b.OpenTime < b.CloseTime AND (CAST(@EndTime AS TIME) < b.OpenTime OR CAST(@EndTime AS TIME) > b.CloseTime))
+          )
+    )
+    BEGIN
+        RAISERROR('Thời điểm vào hoặc ra nằm trong khung giờ bãi xe đóng cổng.',16,1);
+        RETURN;
+    END;
+
     IF EXISTS (
         SELECT 1
         FROM Reservations
@@ -687,28 +806,48 @@ CREATE PROCEDURE sp_SyncParkingSlotStatuses AS BEGIN
 END
 GO
 
-CREATE PROCEDURE sp_GetPeakHours @StartDate DATE=NULL, @EndDate DATE=NULL, @VehicleTypeID INT=NULL
+CREATE PROCEDURE sp_GetPeakHours 
+    @BuildingID INT = NULL,
+    @StartDate DATE = NULL, 
+    @EndDate DATE = NULL, 
+    @VehicleTypeID INT = NULL
 AS BEGIN
     SET NOCOUNT ON;
-    IF @StartDate IS NULL SET @StartDate=DATEADD(DAY,-30,CAST(GETDATE() AS DATE));
-    IF @EndDate IS NULL SET @EndDate=CAST(GETDATE() AS DATE);
-    SELECT vt.VehicleTypeID,vt.VehicleName,vt.VehicleCode,DATEPART(HOUR,s.EntryTime) AS Hour,COUNT(*) AS SessionCount
-    FROM ParkingSessions s JOIN VehicleTypes vt ON s.VehicleTypeID=vt.VehicleTypeID
-    WHERE CAST(s.EntryTime AS DATE) BETWEEN @StartDate AND @EndDate AND (@VehicleTypeID IS NULL OR s.VehicleTypeID=@VehicleTypeID)
-    GROUP BY vt.VehicleTypeID,vt.VehicleName,vt.VehicleCode,DATEPART(HOUR,s.EntryTime) ORDER BY vt.VehicleTypeID,Hour;
+    IF @StartDate IS NULL SET @StartDate = DATEADD(DAY,-30,CAST(GETDATE() AS DATE));
+    IF @EndDate IS NULL SET @EndDate = CAST(GETDATE() AS DATE);
+    SELECT vt.VehicleTypeID, vt.VehicleName, vt.VehicleCode, DATEPART(HOUR,s.EntryTime) AS Hour, COUNT(*) AS SessionCount
+    FROM ParkingSessions s 
+    JOIN VehicleTypes vt ON s.VehicleTypeID = vt.VehicleTypeID
+    JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+    JOIN Zones z ON ps.ZoneID = z.ZoneID
+    JOIN Floors f ON z.FloorID = f.FloorID
+    WHERE (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
+      AND CAST(s.EntryTime AS DATE) BETWEEN @StartDate AND @EndDate 
+      AND (@VehicleTypeID IS NULL OR s.VehicleTypeID = @VehicleTypeID)
+    GROUP BY vt.VehicleTypeID, vt.VehicleName, vt.VehicleCode, DATEPART(HOUR,s.EntryTime) 
+    ORDER BY vt.VehicleTypeID, Hour;
 END
 GO
 
-CREATE PROCEDURE sp_GetVehicleFlow @StartDate DATE=NULL, @EndDate DATE=NULL
+CREATE PROCEDURE sp_GetVehicleFlow 
+    @BuildingID INT = NULL,
+    @StartDate DATE = NULL, 
+    @EndDate DATE = NULL
 AS BEGIN
     SET NOCOUNT ON;
-    IF @StartDate IS NULL SET @StartDate=DATEADD(DAY,-30,CAST(GETDATE() AS DATE));
-    IF @EndDate IS NULL SET @EndDate=CAST(GETDATE() AS DATE);
-    SELECT CAST(s.EntryTime AS DATE) AS FlowDate,vt.VehicleName,vt.VehicleCode,COUNT(*) AS CheckInCount,
+    IF @StartDate IS NULL SET @StartDate = DATEADD(DAY,-30,CAST(GETDATE() AS DATE));
+    IF @EndDate IS NULL SET @EndDate = CAST(GETDATE() AS DATE);
+    SELECT CAST(s.EntryTime AS DATE) AS FlowDate, vt.VehicleName, vt.VehicleCode, COUNT(*) AS CheckInCount,
         SUM(CASE WHEN s.ExitTime IS NOT NULL AND CAST(s.ExitTime AS DATE)=CAST(s.EntryTime AS DATE) THEN 1 ELSE 0 END) AS CheckOutSameDay
-    FROM ParkingSessions s JOIN VehicleTypes vt ON s.VehicleTypeID=vt.VehicleTypeID
-    WHERE CAST(s.EntryTime AS DATE) BETWEEN @StartDate AND @EndDate
-    GROUP BY CAST(s.EntryTime AS DATE),vt.VehicleName,vt.VehicleCode ORDER BY FlowDate,vt.VehicleName;
+    FROM ParkingSessions s 
+    JOIN VehicleTypes vt ON s.VehicleTypeID = vt.VehicleTypeID
+    JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+    JOIN Zones z ON ps.ZoneID = z.ZoneID
+    JOIN Floors f ON z.FloorID = f.FloorID
+    WHERE (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
+      AND CAST(s.EntryTime AS DATE) BETWEEN @StartDate AND @EndDate
+    GROUP BY CAST(s.EntryTime AS DATE), vt.VehicleName, vt.VehicleCode 
+    ORDER BY FlowDate, vt.VehicleName;
 END
 GO
 
@@ -858,13 +997,18 @@ END
 GO
 
 -- sp_CheckInVehicle (dùng giá mở đầu từ PricingPolicies)
-CREATE PROCEDURE sp_CheckInVehicle @DriverID INT, @PlateNumber NVARCHAR(20), @VehicleTypeID INT, @SlotID INT
+CREATE PROCEDURE sp_CheckInVehicle
+    @DriverID INT, @PlateNumber NVARCHAR(20), @VehicleTypeID INT, @SlotID INT,
+    @GateInID INT = NULL, @GateIn NVARCHAR(50) = NULL
 AS BEGIN
     SET NOCOUNT ON;
     DECLARE @SlotStatus NVARCHAR(20), @Fee DECIMAL(10,2), @SessionID INT;
     SELECT @SlotStatus=SlotStatus FROM ParkingSlots WHERE SlotID=@SlotID;
     IF @SlotStatus IS NULL OR @SlotStatus<>'Available' BEGIN RAISERROR('Slot not available.',16,1); RETURN; END
-    INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus) VALUES (@SlotID,@DriverID,UPPER(@PlateNumber),@VehicleTypeID,GETDATE(),'Active');
+    IF @GateIn IS NULL AND @GateInID IS NOT NULL
+        SELECT @GateIn = GateName FROM Gates WHERE GateID = @GateInID;
+    INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus,GateInID,GateIn)
+    VALUES (@SlotID,@DriverID,UPPER(@PlateNumber),@VehicleTypeID,GETDATE(),'Active',@GateInID,@GateIn);
     SET @SessionID=SCOPE_IDENTITY();
     SELECT TOP 1 @Fee=Fee FROM PricingPolicies WHERE VehicleTypeID=@VehicleTypeID AND MinHours=0 AND IsActive=1 ORDER BY MaxHours;
     INSERT INTO Payments (SessionID,Amount,PaymentMethod,PaymentStatus) VALUES (@SessionID,ISNULL(@Fee,0),'Pending','Pending');
@@ -873,13 +1017,17 @@ END
 GO
 
 -- sp_CheckOutVehicle dùng sp_CalcParkingFeeV2
-CREATE PROCEDURE sp_CheckOutVehicle @SessionID INT, @PaymentMethod NVARCHAR(50)
+CREATE PROCEDURE sp_CheckOutVehicle
+    @SessionID INT, @PaymentMethod NVARCHAR(50),
+    @GateOutID INT = NULL, @GateOut NVARCHAR(50) = NULL
 AS BEGIN
     SET NOCOUNT ON;
     DECLARE @EntryTime DATETIME, @ExitTime DATETIME, @VehicleTypeID INT, @Fee DECIMAL(10,2), @Breakdown NVARCHAR(MAX);
     SELECT @EntryTime=EntryTime,@VehicleTypeID=VehicleTypeID FROM ParkingSessions WHERE SessionID=@SessionID AND SessionStatus='Active';
     IF @EntryTime IS NULL BEGIN RAISERROR('Session not found or already completed.',16,1); RETURN; END
     SET @ExitTime=GETDATE();
+    IF @GateOut IS NULL AND @GateOutID IS NOT NULL
+        SELECT @GateOut = GateName FROM Gates WHERE GateID = @GateOutID;
     EXEC sp_CalcParkingFeeV2 @VehicleTypeID=@VehicleTypeID,@EntryTime=@EntryTime,@ExitTime=@ExitTime,@Fee=@Fee OUTPUT,@Breakdown=@Breakdown OUTPUT;
 
     -- TÍNH PHÍ PHẠT ĐỖ QUÁ GIỜ (OVERTIME PENALTY)
@@ -906,26 +1054,32 @@ AS BEGIN
             ELSE IF @VehicleTypeID = 3 SET @OvertimePenalty = 100000.00 + (@OvertimeH * 40000.00);
             
             SET @Fee = @Fee + @OvertimePenalty;
-            IF @Breakdown IS NULL SET @Breakdown = N'[]';
-            SET @Breakdown = REPLACE(@Breakdown, ']', CONCAT(',{"type":"overtime_penalty","amount":', CAST(@OvertimePenalty AS NVARCHAR(20)), ',"hours":', CAST(@OvertimeH AS NVARCHAR(10)), '}]'));
+            IF @Breakdown IS NULL OR @Breakdown = N'[]' OR @Breakdown = N''
+                SET @Breakdown = CONCAT('[{"type":"overtime_penalty","amount":', CAST(@OvertimePenalty AS NVARCHAR(20)), ',"hours":', CAST(@OvertimeH AS NVARCHAR(10)), '}]');
+            ELSE
+                SET @Breakdown = REPLACE(@Breakdown, ']', CONCAT(',{"type":"overtime_penalty","amount":', CAST(@OvertimePenalty AS NVARCHAR(20)), ',"hours":', CAST(@OvertimeH AS NVARCHAR(10)), '}]'));
         END
     END
     -- HẾT TÍNH PHÍ PHẠT
 
-    UPDATE ParkingSessions SET ExitTime=@ExitTime,SessionStatus='Completed' WHERE SessionID=@SessionID;
+    UPDATE ParkingSessions SET ExitTime=@ExitTime, SessionStatus='Completed', GateOutID=@GateOutID, GateOut=@GateOut WHERE SessionID=@SessionID;
     UPDATE Payments SET Amount=@Fee,PaymentMethod=@PaymentMethod,PaymentTime=@ExitTime,PaymentStatus='Completed',PaymentNote=@Breakdown WHERE SessionID=@SessionID;
     SELECT @Fee AS FinalFee,@Breakdown AS FeeBreakdown;
 END
 GO
 
 -- sp_CheckOutWithSurcharge dùng sp_CalcParkingFeeV2
-CREATE PROCEDURE sp_CheckOutWithSurcharge @SessionID INT, @PaymentMethod NVARCHAR(50)
+CREATE PROCEDURE sp_CheckOutWithSurcharge
+    @SessionID INT, @PaymentMethod NVARCHAR(50),
+    @GateOutID INT = NULL, @GateOut NVARCHAR(50) = NULL
 AS BEGIN
     SET NOCOUNT ON; BEGIN TRANSACTION;
     DECLARE @EntryTime DATETIME, @ExitTime DATETIME=GETDATE(), @VehicleTypeID INT;
     DECLARE @FinalFee DECIMAL(10,2), @Breakdown NVARCHAR(MAX), @PrepaidAmount DECIMAL(10,2)=0, @PayStatus NVARCHAR(20);
     SELECT @EntryTime=EntryTime,@VehicleTypeID=VehicleTypeID FROM ParkingSessions WHERE SessionID=@SessionID AND SessionStatus='Active';
     IF @EntryTime IS NULL BEGIN ROLLBACK; RAISERROR('Session không tồn tại hoặc đã checkout.',16,1); RETURN; END
+    IF @GateOut IS NULL AND @GateOutID IS NOT NULL
+        SELECT @GateOut = GateName FROM Gates WHERE GateID = @GateOutID;
     EXEC sp_CalcParkingFeeV2 @VehicleTypeID=@VehicleTypeID,@EntryTime=@EntryTime,@ExitTime=@ExitTime,@Fee=@FinalFee OUTPUT,@Breakdown=@Breakdown OUTPUT;
 
     -- TÍNH PHÍ PHẠT ĐỖ QUÁ GIỜ (OVERTIME PENALTY)
@@ -952,15 +1106,17 @@ AS BEGIN
             ELSE IF @VehicleTypeID = 3 SET @OvertimePenalty = 100000.00 + (@OvertimeH * 40000.00);
             
             SET @FinalFee = @FinalFee + @OvertimePenalty;
-            IF @Breakdown IS NULL SET @Breakdown = N'[]';
-            SET @Breakdown = REPLACE(@Breakdown, ']', CONCAT(',{"type":"overtime_penalty","amount":', CAST(@OvertimePenalty AS NVARCHAR(20)), ',"hours":', CAST(@OvertimeH AS NVARCHAR(10)), '}]'));
+            IF @Breakdown IS NULL OR @Breakdown = N'[]' OR @Breakdown = N''
+                SET @Breakdown = CONCAT('[{"type":"overtime_penalty","amount":', CAST(@OvertimePenalty AS NVARCHAR(20)), ',"hours":', CAST(@OvertimeH AS NVARCHAR(10)), '}]');
+            ELSE
+                SET @Breakdown = REPLACE(@Breakdown, ']', CONCAT(',{"type":"overtime_penalty","amount":', CAST(@OvertimePenalty AS NVARCHAR(20)), ',"hours":', CAST(@OvertimeH AS NVARCHAR(10)), '}]'));
         END
     END
     -- HẾT TÍNH PHÍ PHẠT
 
     SELECT @PrepaidAmount=ISNULL(PrepaidAmount,0),@PayStatus=PaymentStatus FROM Payments WHERE SessionID=@SessionID;
     DECLARE @Surcharge DECIMAL(10,2)=@FinalFee-@PrepaidAmount; IF @Surcharge<0 SET @Surcharge=0;
-    UPDATE ParkingSessions SET ExitTime=@ExitTime,SessionStatus='Completed' WHERE SessionID=@SessionID;
+    UPDATE ParkingSessions SET ExitTime=@ExitTime, SessionStatus='Completed', GateOutID=@GateOutID, GateOut=@GateOut WHERE SessionID=@SessionID;
     IF @PayStatus='Prepaid' BEGIN
         IF @Surcharge>0 UPDATE Payments SET FinalAmount=@FinalFee,SurchargeAmount=@Surcharge,SurchargeStatus='Pending',PaymentNote=@Breakdown WHERE SessionID=@SessionID;
         ELSE UPDATE Payments SET FinalAmount=@FinalFee,SurchargeAmount=0,SurchargeStatus='None',PaymentStatus='Completed',PaymentMethod='Banking',PaymentNote=@Breakdown WHERE SessionID=@SessionID;
@@ -994,6 +1150,26 @@ CREATE TRIGGER TRG_AutoIncident ON ParkingSessions AFTER UPDATE AS BEGIN SET NOC
     INSERT INTO Incidents (SessionID,DriverID,IncidentType,IncidentStatus,Priority,Description,CreatedAt,UpdatedAt)
     SELECT i.SessionID,i.DriverID,'Lost Ticket','Open','Normal','Auto-created lost ticket',GETDATE(),GETDATE() FROM inserted i WHERE i.SessionStatus='Lost'
     AND NOT EXISTS(SELECT 1 FROM Incidents inc WHERE inc.SessionID=i.SessionID AND inc.IncidentType='Lost Ticket' AND inc.IncidentStatus IN('Open','InProgress'));
+END
+GO
+CREATE TRIGGER TRG_CheckZoneSlotLimit ON ParkingSlots AFTER INSERT AS BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (
+        SELECT 1
+        FROM Zones z
+        JOIN (
+            SELECT ZoneID, COUNT(*) AS CurrentCount
+            FROM ParkingSlots
+            WHERE ZoneID IN (SELECT DISTINCT ZoneID FROM inserted)
+            GROUP BY ZoneID
+        ) ps ON z.ZoneID = ps.ZoneID
+        WHERE z.TotalSlots > 0 AND ps.CurrentCount > z.TotalSlots
+    )
+    BEGIN
+        RAISERROR('So luong o do xe vuot qua suc chua TotalSlots quy dinh cua Khu vuc.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
 END
 GO
 
@@ -1073,15 +1249,31 @@ INSERT INTO Roles (RoleName,Description) VALUES
 GO
 
 INSERT INTO Permissions (PermissionName,Description) VALUES
-('VIEW_SLOTS',      'View parking slots'),
-('MANAGE_SESSIONS', 'Manage parking sessions'),
-('MANAGE_USERS',    'Manage users'),
-('VIEW_REPORTS',    'View reports'),
-('MANAGE_PAYMENTS', 'Manage payments');
+('VIEW_SLOTS',       'View parking slots'),
+('MANAGE_SESSIONS',  'Manage parking sessions'),
+('MANAGE_USERS',     'Manage users'),
+('VIEW_REPORTS',     'View reports'),
+('MANAGE_PAYMENTS',  'Manage payments'),
+('MANAGE_PRICING',   'Manage pricing policies'),
+('MANAGE_BUILDINGS', 'Manage buildings and infrastructure'),
+('MANAGE_INCIDENTS', 'Manage incidents'),
+('MANAGE_SUPPORT',   'Manage support tickets');
 GO
 
+-- RoleID: 1=Driver, 2=Staff, 3=Manager, 4=Admin
+-- Manager: ALL permissions (1-9)
+-- Staff: VIEW_SLOTS(1), MANAGE_SESSIONS(2), MANAGE_PAYMENTS(5), MANAGE_INCIDENTS(8)
+-- Driver: VIEW_SLOTS(1)
+-- Admin: ALL permissions (1-9)
 INSERT INTO RolePermissions (RoleID,PermissionID) VALUES
-(1,1),(2,1),(2,2),(2,5),(3,1),(3,2),(3,3),(3,4),(3,5),(4,1),(4,2),(4,3),(4,4),(4,5);
+-- Driver
+(1,1),
+-- Staff: bãi xe, phiên, thanh toán, sự cố
+(2,1),(2,2),(2,5),(2,8),
+-- Manager: tất cả quyền
+(3,1),(3,2),(3,3),(3,4),(3,5),(3,6),(3,7),(3,8),(3,9),
+-- Admin: tất cả quyền
+(4,1),(4,2),(4,3),(4,4),(4,5),(4,6),(4,7),(4,8),(4,9);
 GO
 
 INSERT INTO VehicleTypes (VehicleCode,VehicleName,Description) VALUES
@@ -1123,9 +1315,41 @@ GO
    BUILDINGS V2 GỐC (Toa A, Toa B - giữ nguyên)
    =================================================================== */
 
-INSERT INTO Buildings (BuildingName,Address,OperatingHours,TotalFloors) VALUES
-(N'Toa A', '123 Nguyen Van Linh, Q7', '06:00-22:00', 3),
-(N'Toa B', '456 Le Van Viet, Q9',     '00:00-23:59', 2);
+INSERT INTO Buildings (BuildingName,Address,Latitude,Longitude,OperatingHours,OpenTime,CloseTime,Is247,TotalFloors) VALUES
+(N'Toa A - Dai Hoc FPT TP.HCM (Khuon Vien Chinh)', N'Lo E2a-7, Duong D1, Khu Cong Nghe Cao, P. Long Thanh My, TP. Thu Duc, TP.HCM', 10.841517, 106.809883, '00:00-23:59', '00:00:00', '23:59:59', 1, 3),
+(N'Toa B - Ky Tuc Xa & FPT Villa',                 N'Duong D2, Khu Cong Nghe Cao, P. Long Thanh My, TP. Thu Duc, TP.HCM',       10.843210, 106.808520, '00:00-23:59', '00:00:00', '23:59:59', 1, 2);
+GO
+
+INSERT INTO Gates (BuildingID,GateName,GateType,IsActive) VALUES
+(1, N'Cổng A - Vào 1', 'In', 1),
+(1, N'Cổng A - Ra 1',  'Out', 1),
+(1, N'Cổng A - Hai chiều 1', 'BiDirectional', 1),
+(2, N'Cổng B - Vào 1', 'In', 1),
+(2, N'Cổng B - Ra 1',  'Out', 1);
+GO
+
+/* ===================================================================
+   USERS V2 GỐC (Alice, Bob, Carol, David, Eve, Grace)
+   =================================================================== */
+
+DECLARE @PW NVARCHAR(256) = '$2b$10$JMq/XrZOd7PKBH1OhnvlCOV.8UYSjBj4feMc0RC1zFDPhzbi54la2';
+INSERT INTO Users (FullName,Email,PasswordHash,PhoneNumber,RoleID,DateOfBirth,HireDate,IsActive,IsEmailVerified) VALUES
+('Alice Driver',  'alice@email.com',   @PW,'0901000001',1,NULL,        NULL,        1,1),
+('Bob Staff',     'bob@email.com',     @PW,'0901000002',2,'1990-05-10','2015-06-01',1,1),
+('Carol Manager', 'carol@email.com',   @PW,'0901000003',3,'1985-03-20','2010-04-15',1,1),
+('David Driver',  'david@email.com',   @PW,'0901000004',1,NULL,        NULL,        1,1),
+('Eve Driver',    'eve@email.com',     @PW,'0901000005',1,NULL,        NULL,        1,1),
+('Grace Admin',   'admin@parking.com', @PW,'0901000007',4,'1990-01-01','2023-01-01',1,1);
+GO
+
+INSERT INTO UserAuthProviders (UserID,ProviderName,ProviderUserID,ProviderEmail)
+SELECT UserID,'local',CAST(UserID AS NVARCHAR(200)),Email FROM Users WHERE PasswordHash IS NOT NULL;
+GO
+
+INSERT INTO BuildingAssignments (BuildingID,UserID,IsPrimary) VALUES
+(1, 2, 1),
+(1, 3, 1),
+(2, 2, 0);
 GO
 
 INSERT INTO Floors (BuildingID,FloorName) VALUES
@@ -1152,23 +1376,6 @@ INSERT INTO ParkingSlots (ZoneID,SlotCode,VehicleTypeID) VALUES
 (4,'B-C-01',2),(4,'B-C-02',2),(4,'B-C-03',2),(4,'B-C-04',2),(4,'B-C-05',2);
 GO
 
-/* ===================================================================
-   USERS V2 GỐC (Alice, Bob, Carol, David, Eve, Grace)
-   =================================================================== */
-
-DECLARE @PW NVARCHAR(256) = '$2a$10$T8Mv3Lg2vR9aI.3tGz.e2.gP0wR.Hj7yX0qA7zJ5rX5f5F5D5Q5g2';
-INSERT INTO Users (FullName,Email,PasswordHash,PhoneNumber,RoleID,DateOfBirth,HireDate,IsActive,IsEmailVerified) VALUES
-('Alice Driver',  'alice@email.com',   @PW,'0901000001',1,NULL,        NULL,        1,1),
-('Bob Staff',     'bob@email.com',     @PW,'0901000002',2,'1990-05-10','2015-06-01',1,1),
-('Carol Manager', 'carol@email.com',   @PW,'0901000003',3,'1985-03-20','2010-04-15',1,1),
-('David Driver',  'david@email.com',   @PW,'0901000004',1,NULL,        NULL,        1,1),
-('Eve Driver',    'eve@email.com',     @PW,'0901000005',1,NULL,        NULL,        1,1),
-('Grace Admin',   'admin@parking.com', @PW,'0901000007',4,'1990-01-01','2023-01-01',1,1);
-GO
-
-INSERT INTO UserAuthProviders (UserID,ProviderName,ProviderUserID,ProviderEmail)
-SELECT UserID,'local',CAST(UserID AS NVARCHAR(200)),Email FROM Users WHERE PasswordHash IS NOT NULL;
-GO
 
 /* ===================================================================
    SESSIONS + PAYMENTS V2 GỐC
@@ -1177,38 +1384,38 @@ GO
    =================================================================== */
 
 -- Active: MOTO bracket 0-4h (vào 1.5h trước)
-INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
-SELECT ps.SlotID, u.UserID, '29A-10001', 1, DATEADD(MINUTE,-90,GETDATE()), 'Active'
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus,GateInID,GateIn)
+SELECT ps.SlotID, u.UserID, '29A-10001', 1, DATEADD(MINUTE,-90,GETDATE()), 'Active', 1, N'Cổng A - Vào 1'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-M-01' AND u.Email='alice@email.com';
 
 -- Active: MOTO bracket 4-8h (vào 5h trước)
-INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
-SELECT ps.SlotID, u.UserID, '29A-10002', 1, DATEADD(HOUR,-5,GETDATE()), 'Active'
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus,GateInID,GateIn)
+SELECT ps.SlotID, u.UserID, '29A-10002', 1, DATEADD(HOUR,-5,GETDATE()), 'Active', 1, N'Cổng A - Vào 1'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-M-02' AND u.Email='david@email.com';
 
 -- Active: MOTO bracket 8h+ (vào 9h trước)
-INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
-SELECT ps.SlotID, u.UserID, '29A-10003', 1, DATEADD(HOUR,-9,GETDATE()), 'Active'
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus,GateInID,GateIn)
+SELECT ps.SlotID, u.UserID, '29A-10003', 1, DATEADD(HOUR,-9,GETDATE()), 'Active', 1, N'Cổng A - Vào 1'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-M-03' AND u.Email='eve@email.com';
 
 -- Active: CAR bracket 0-4h (vào 2h trước)
-INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
-SELECT ps.SlotID, u.UserID, '51G-10001', 2, DATEADD(HOUR,-2,GETDATE()), 'Active'
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus,GateInID,GateIn)
+SELECT ps.SlotID, u.UserID, '51G-10001', 2, DATEADD(HOUR,-2,GETDATE()), 'Active', 1, N'Cổng A - Vào 1'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-C-01' AND u.Email='alice@email.com';
 
 -- Active: CAR bracket 4-8h (vào 6h trước)
-INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
-SELECT ps.SlotID, u.UserID, '51G-10002', 2, DATEADD(HOUR,-6,GETDATE()), 'Active'
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus,GateInID,GateIn)
+SELECT ps.SlotID, u.UserID, '51G-10002', 2, DATEADD(HOUR,-6,GETDATE()), 'Active', 1, N'Cổng A - Vào 1'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-C-02' AND u.Email='david@email.com';
 
 -- Active: CAR bracket 8h+ (vào 10h trước)
-INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
-SELECT ps.SlotID, u.UserID, '51G-10003', 2, DATEADD(HOUR,-10,GETDATE()), 'Active'
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus,GateInID,GateIn)
+SELECT ps.SlotID, u.UserID, '51G-10003', 2, DATEADD(HOUR,-10,GETDATE()), 'Active', 1, N'Cổng A - Vào 1'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='A-C-03' AND u.Email='eve@email.com';
 
 -- Active: MOTO cross-night (vào 17h trước, qua 22:00 → phát sinh phí đêm 12,000đ)
-INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
-SELECT ps.SlotID, u.UserID, '29A-10004', 1, DATEADD(HOUR,-17,GETDATE()), 'Active'
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus,GateInID,GateIn)
+SELECT ps.SlotID, u.UserID, '29A-10004', 1, DATEADD(HOUR,-17,GETDATE()), 'Active', 4, N'Cổng B - Vào 1'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='B-M-01' AND u.Email='alice@email.com';
 GO
 
@@ -1223,17 +1430,19 @@ WHERE s.PlateNumber IN ('29A-10001','29A-10002','29A-10003','51G-10001','51G-100
 GO
 
 -- Completed: MOTO 3h (bracket 0-4h → 5,000đ)
-INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,ExitTime,SessionStatus)
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,ExitTime,SessionStatus,GateInID,GateIn,GateOutID,GateOut)
 SELECT ps.SlotID, u.UserID, '29A-20001', 1,
     DATEADD(DAY,-1,DATEADD(HOUR,8, CAST(CAST(GETDATE() AS DATE) AS DATETIME))),
-    DATEADD(DAY,-1,DATEADD(HOUR,11,CAST(CAST(GETDATE() AS DATE) AS DATETIME))), 'Completed'
+    DATEADD(DAY,-1,DATEADD(HOUR,11,CAST(CAST(GETDATE() AS DATE) AS DATETIME))), 'Completed',
+    4, N'Cổng B - Vào 1', 5, N'Cổng B - Ra 1'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='B-M-02' AND u.Email='david@email.com';
 
 -- Completed: CAR 12h (bracket 8h+ → 120,000đ)
-INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,ExitTime,SessionStatus)
+INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,ExitTime,SessionStatus,GateInID,GateIn,GateOutID,GateOut)
 SELECT ps.SlotID, u.UserID, '51G-20001', 2,
     DATEADD(DAY,-2,DATEADD(HOUR,9, CAST(CAST(GETDATE() AS DATE) AS DATETIME))),
-    DATEADD(DAY,-2,DATEADD(HOUR,21,CAST(CAST(GETDATE() AS DATE) AS DATETIME))), 'Completed'
+    DATEADD(DAY,-2,DATEADD(HOUR,21,CAST(CAST(GETDATE() AS DATE) AS DATETIME))), 'Completed',
+    4, N'Cổng B - Vào 1', 5, N'Cổng B - Ra 1'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='B-C-01' AND u.Email='eve@email.com';
 GO
 
@@ -1345,22 +1554,59 @@ GO
    ===================================================================== */
 
 -- Thêm 3 tòa mới (tầng hầm thực tế)
-INSERT INTO Buildings (BuildingName, Address, OperatingHours, TotalFloors) VALUES
-(N'Toa C - Chung Cu Cao Cap Riverside',     N'118 Nguyen Huu Tho, P.Tan Hung, Q.7, TP.HCM',     N'06:00-22:00', 3),
-(N'Toa D - Toa Nha Van Phong Saigon Tower', N'29 Le Duan, P.Ben Nghe, Q.1, TP.HCM',             N'00:00-23:59', 2),
-(N'Toa E - To Hop TTTM Aeon Mall',          N'30 Bo Bao Tan Thang, P.Son Ky, Q.Tan Phu, TP.HCM',N'08:00-22:00', 3);
+INSERT INTO Buildings (BuildingName, Address, Latitude, Longitude, OperatingHours, OpenTime, CloseTime, Is247, TotalFloors) VALUES
+(N'Toa C - Trung Tam CNTT FPT Software (F-Town 3)', N'Lo E3-1c, Duong D1, Khu Cong Nghe Cao, P. Long Thanh My, TP. Thu Duc, TP.HCM', 10.840250, 106.812310, N'00:00-23:59', '00:00:00', '23:59:59', 1, 3),
+(N'Toa D - Vien Dao Tao Quoc Te FPT Greenwich',     N'Duong N2, Khu Cong Nghe Cao, P. Tang Nhon Phu B, TP. Thu Duc, TP.HCM',      10.845120, 106.795430, N'00:00-23:59', '00:00:00', '23:59:59', 1, 2),
+(N'Toa E - Trung Tam Dao Tao VietinBank Khu CNC',  N'Duong D1, Khu Cong Nghe Cao, P. Tan Phu, TP. Thu Duc, TP.HCM',              10.847250, 106.793810, N'00:00-23:59', '00:00:00', '23:59:59', 1, 3);
 GO
 
--- Floors dùng subquery trực tiếp (tránh lỗi scope biến sau GO)
+-- Floors for C/D/E: dùng LIKE khớp với tên mới đã được cập nhật
 INSERT INTO Floors (BuildingID, FloorName) VALUES
-((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa C - Chung Cu%'), N'Tang Ham B1'),
-((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa C - Chung Cu%'), N'Tang Ham B2'),
-((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa C - Chung Cu%'), N'Tang Ham B3'),
-((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa D - Toa Nha%'),  N'Tang Ham B1'),
-((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa D - Toa Nha%'),  N'Tang Ham B2'),
-((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa E - To Hop%'),   N'Tang Ham B1'),
-((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa E - To Hop%'),   N'Tang Ham B2'),
-((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa E - To Hop%'),   N'Tang Ham B3');
+((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa C - Trung Tam%'), N'Tang Ham B1'),
+((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa C - Trung Tam%'), N'Tang Ham B2'),
+((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa C - Trung Tam%'), N'Tang Ham B3'),
+((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa D - Vien Dao%'),  N'Tang Ham B1'),
+((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa D - Vien Dao%'),  N'Tang Ham B2'),
+((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa E - Trung Tam Dao%'), N'Tang Ham B1'),
+((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa E - Trung Tam Dao%'), N'Tang Ham B2'),
+((SELECT TOP 1 BuildingID FROM Buildings WHERE BuildingName LIKE N'Toa E - Trung Tam Dao%'), N'Tang Ham B3');
+GO
+
+-- Gates cho tòa C, D, E
+INSERT INTO Gates (BuildingID, GateName, GateType, IsActive)
+SELECT b.BuildingID, g.GateName, g.GateType, 1
+FROM (VALUES
+  (N'Toa C - Trung Tam%', N'Cổng C - Vào 1',      'In'),
+  (N'Toa C - Trung Tam%', N'Cổng C - Ra 1',       'Out'),
+  (N'Toa C - Trung Tam%', N'Cổng C - Hai Chiều',  'BiDirectional'),
+  (N'Toa D - Vien Dao%',  N'Cổng D - Vào Chính',  'In'),
+  (N'Toa D - Vien Dao%',  N'Cổng D - Ra Chính',   'Out'),
+  (N'Toa E - Trung Tam Dao%', N'Cổng E - Vào 1',  'In'),
+  (N'Toa E - Trung Tam Dao%', N'Cổng E - Ra 1',   'Out'),
+  (N'Toa E - Trung Tam Dao%', N'Cổng E - Hai Chiều', 'BiDirectional')
+) AS g(BldPattern, GateName, GateType)
+JOIN Buildings b ON b.BuildingName LIKE g.BldPattern;
+GO
+
+-- BuildingAssignments cho tòa C, D, E
+-- Manager UserID=2 phụ trách Toa C; UserID=3 phụ trách Toa D; UserID=2 hỗ trợ Toa E
+-- Staff   UserID=4 làm tại Toa C; UserID=5 làm tại Toa D; UserID=4 hỗ trợ Toa E; UserID=6 làm tại Toa E
+INSERT INTO BuildingAssignments (BuildingID, UserID, IsPrimary)
+SELECT b.BuildingID, a.UserID, a.IsPrimary
+FROM (VALUES
+  (N'Toa C - Trung Tam%', 2, 1),   -- Manager A phụ trách chính Toa C
+  (N'Toa C - Trung Tam%', 4, 1),   -- Staff A trực tại Toa C
+  (N'Toa C - Trung Tam%', 5, 0),   -- Staff B hỗ trợ Toa C
+  (N'Toa D - Vien Dao%',  3, 1),   -- Manager B phụ trách chính Toa D
+  (N'Toa D - Vien Dao%',  5, 1),   -- Staff B trực tại Toa D
+  (N'Toa E - Trung Tam Dao%', 2, 0),-- Manager A hỗ trợ Toa E
+  (N'Toa E - Trung Tam Dao%', 6, 1) -- Staff C trực tại Toa E
+) AS a(BldPattern, UserID, IsPrimary)
+JOIN Buildings b ON b.BuildingName LIKE a.BldPattern
+WHERE NOT EXISTS (
+  SELECT 1 FROM BuildingAssignments ba
+  WHERE ba.BuildingID = b.BuildingID AND ba.UserID = a.UserID
+);
 GO
 
 -- Zones: dùng INSERT SELECT để tránh lỗi subquery NULL
@@ -3362,7 +3608,7 @@ GO
    PHẦN 5: USERS MỚI
    ===================================================================== */
 
-DECLARE @PW NVARCHAR(256) = '$2a$10$T8Mv3Lg2vR9aI.3tGz.e2.gP0wR.Hj7yX0qA7zJ5rX5f5F5D5Q5g2';
+DECLARE @PW NVARCHAR(256) = '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW';
 
 -- Chỉ insert nếu email chưa tồn tại
 IF NOT EXISTS (SELECT 1 FROM Users WHERE Email = 'an.nguyen@gmail.com')
@@ -3583,15 +3829,15 @@ SELECT ps.SlotID, u.UserID, '51G-22222', 2, DATEADD(HOUR,-6,GETDATE()), 'Active'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='E-B1-C-C-001' AND u.Email='an.nguyen@gmail.com';
 
 INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
-SELECT ps.SlotID, u.UserID, '30F-33333', 1, DATEADD(HOUR,-1,GETDATE()), 'Active'
+SELECT ps.SlotID, u.UserID, '30F-33334', 1, DATEADD(HOUR,-1,GETDATE()), 'Active'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='E-B2-A-M-001' AND u.Email='binh.tran@gmail.com';
 
 INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
-SELECT ps.SlotID, u.UserID, '29B-44444', 2, DATEADD(HOUR,-4,GETDATE()), 'Active'
+SELECT ps.SlotID, u.UserID, '29B-44445', 2, DATEADD(HOUR,-4,GETDATE()), 'Active'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='E-B3-VIP-C-001' AND u.Email='cuong.le@gmail.com';
 
 INSERT INTO ParkingSessions (SlotID,DriverID,PlateNumber,VehicleTypeID,EntryTime,SessionStatus)
-SELECT ps.SlotID, u.UserID, '29C-99999', 3, DATEADD(HOUR,-7,GETDATE()), 'Active'
+SELECT ps.SlotID, u.UserID, '29C-99998', 3, DATEADD(HOUR,-7,GETDATE()), 'Active'
 FROM ParkingSlots ps, Users u WHERE ps.SlotCode='E-B3-A-T-001' AND u.Email='long.bui@gmail.com';
 GO
 

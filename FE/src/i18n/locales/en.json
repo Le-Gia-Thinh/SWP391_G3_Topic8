@@ -253,7 +253,8 @@
         "Update": "Update",
         "Delete": "Delete",
         "Lock": "Lock",
-        "Unlock": "Unlock"
+        "Unlock": "Unlock",
+        "Permission": "Permission"
       }
     },
     "buildings": {
@@ -360,7 +361,7 @@
       "zone": {
         "editTitle": "Edit zone",
         "deleteTitle": "Delete zone",
-        "capacityLabel": "Capacity",
+        "capacityLabel": "Created slots",
         "manageSlots": "Manage slots",
         "deleteConfirmLabel": "Delete zone \"{{name}}\"? The zone must have no slots inside.",
         "deleteSuccess": "Zone deleted"
@@ -499,6 +500,31 @@
         "submit": "Reset password",
         "success": "Password reset for \"{{name}}\"",
         "fail": "Could not reset password"
+      },
+      "matrixTitle": "Role Permissions Matrix",
+      "matrixSub": "Enable/Disable specific permission categories for internal staff roles (Manager & Staff).",
+      "savePerms": "Save Permissions",
+      "savePermsSuccess": "Successfully updated role permissions for {{role}}!",
+      "savePermsFail": "Failed to update permissions.",
+      "confirmRoleTitle": "Confirm Role Change",
+      "confirmRoleDesc": "Are you sure you want to change the role for user {{name}}?",
+      "confirmRoleNotice": "⚠️ This action will immediately update the user's access permissions across the system.",
+      "confirmRoleSubmit": "Confirm Role Change",
+      "customPermsTitle": "Custom Permissions — {{name}}",
+      "customPermsSub": "Select additional or custom permissions for this individual account (overrides group role).",
+      "customPermsSave": "Save Custom Permissions",
+      "customPermsSuccess": "Successfully updated custom permissions for {{name}}!",
+      "customPermBtn": "Custom Perms",
+      "perms": {
+        "VIEW_SLOTS": "View parking slots & status (Parking Map & Slots)",
+        "MANAGE_SESSIONS": "Check-in / Check-out parking sessions (Parking Sessions)",
+        "MANAGE_USERS": "Manage user accounts & staff assignments (Users & Staff)",
+        "VIEW_REPORTS": "View revenue reports & system analytics (Reports & Analytics)",
+        "MANAGE_PAYMENTS": "Process payments & transaction history (Payments)",
+        "MANAGE_PRICING": "Configure pricing policies & allowed vehicle types (Pricing & Vehicle Types)",
+        "MANAGE_BUILDINGS": "Configure Buildings, Floors, Zones & Gates (Buildings & Layout)",
+        "MANAGE_INCIDENTS": "Report & resolve parking lot incidents (Incidents Management)",
+        "MANAGE_SUPPORT": "Reply to driver support tickets (Driver Support Tickets)"
       }
     },
     "users": {
@@ -652,7 +678,7 @@
         "cancelled": "Cancelled / Expired"
       },
       "capacity": {
-        "title": "Capacity Status (Live)",
+        "title": "Live Slot Lookup",
         "updatedAt": "Updated at {{time}}",
         "empty": "No slot capacity data available.",
         "fillRate": "Fill rate",
@@ -1047,6 +1073,7 @@
       "plateNotEntered": "Not entered",
       "vehicleLabel": "Vehicle type",
       "timeIn": "Entry time",
+      "timeOut": "Exit time",
       "durationSummary": "Duration",
       "slotPos": "Parking slot",
       "tempPrice": "Estimated price",
@@ -1155,12 +1182,12 @@
         "time": "Time",
         "ratingPrompt": "How many stars would you give?",
         "ratingHint": {
-          "select": "Select a rating",
           "1": "Very poor 😞",
           "2": "Poor 😕",
           "3": "Average 😐",
           "4": "Good 😊",
-          "5": "Excellent! 🤩"
+          "5": "Excellent! 🤩",
+          "select": "Select a rating"
         },
         "tagsLabel": "Quick tags",
         "commentLabel": "Comment (optional)",
@@ -1301,7 +1328,7 @@
       "nightFlatRate": "Fixed night rate / night",
       "baseFee": "Base fee",
       "surcharge": "Surcharge",
-      "totalFee": "Total",
+      "totalFee": "Total parking fee",
       "overnightBadge": "Overnight",
       "bracketLabel0": "0 – 4 hours",
       "bracketLabel1": "4 – 8 hours",
@@ -1325,7 +1352,6 @@
       "backCancel": "Back / Cancel order",
       "scanToPay": "Scan QR to pay",
       "waiting": "Awaiting payment",
-      "totalFee": "Total parking fee",
       "expiresIn": "Expires in:",
       "expired": "Expired",
       "qrHint": "Open your banking app → QR / Scan → scan the code",
@@ -1393,6 +1419,45 @@
     "membershipPage": {
       "loadError": "Could not load membership plan info",
       "cancelSuccess": "Auto-renewal cancelled. You can still use the plan until the end of the current cycle."
+    },
+    "topup": {
+      "title": "Top Up Account",
+      "description": "Top up your wallet to easily pay parking fees and other services.",
+      "balanceLabel": "Current Balance",
+      "selectAmount": "Select Top Up Amount",
+      "customAmountLabel": "Or enter custom amount (VND)",
+      "customAmountPlaceholder": "Enter amount...",
+      "minAmountWarning": "Minimum top up amount is 10,000 VND",
+      "processPayment": "Proceed to Payment",
+      "processing": "Processing...",
+      "successTitle": "Top Up Successful!",
+      "securityHint": "Transaction is 100% encrypted and secure",
+      "sidebarTitle": "Supported Payment Methods",
+      "sidebarATM": "Domestic Card (ATM)",
+      "sidebarInt": "International Card (Visa/Mastercard)",
+      "sidebarWallet": "E-Wallet (Momo, ZaloPay)",
+      "sidebarVietQR": "Bank Transfer (VietQR)",
+      "historyTitle": "Recent Top Up History",
+      "historyEmpty": "No recent top up transactions.",
+      "historyLink": "View all transaction history →",
+      "paymentTitle": "Wallet Top Up Payment",
+      "orderCodeLabel": "Order Code",
+      "timeLeftLabel": "Time Remaining",
+      "qrInstruction": "Use your mobile banking app or e-wallet to scan this QR code",
+      "bankLabel": "Bank Name",
+      "accountNumberLabel": "Account Number",
+      "accountNameLabel": "Account Name",
+      "contentLabel": "Transfer Content",
+      "amountLabel": "Payment Amount",
+      "paymentWarning": "The system will automatically update your balance after receiving payment. Please keep the receipt for reference if needed.",
+      "openPayOS": "Open PayOS payment link",
+      "copied": "Copied",
+      "copy": "Copy",
+      "initPayment": "Initializing payment...",
+      "errorTitle": "An error occurred",
+      "goBack": "Go Back",
+      "successDetail": "You have successfully topped up {{amount}} VND to your wallet account.",
+      "redirecting": "Automatically redirecting to home page..."
     }
   },
   "sidebar": {
@@ -1409,6 +1474,7 @@
     },
     "driver": {
       "home": "Home",
+      "booking": "Reserve Slot",
       "session": "Parking Session",
       "history": "History",
       "payment": "Payment",
@@ -1667,10 +1733,10 @@
         "vehicleType": "Vehicle Type",
         "sortBy": "Sort By",
         "vehicles": {
-          "all": "All vehicle types",
           "1": "Motorbike",
           "2": "Car",
-          "3": "Truck"
+          "3": "Truck",
+          "all": "All vehicle types"
         },
         "sorts": {
           "newest": "Newest entry",

@@ -1,36 +1,53 @@
-import crypto from 'crypto';
-import axios from 'axios';
 /**
  * FILE: subscriptionService.js
- * MÔ TẢ: Service xử lý nghiệp vụ Gói hội viên (Subscriptions).
- * Chức năng: Mua gói, kiểm tra trạng thái gói, xử lý thanh toán gói qua PayOS/Ví.
+ * MÔ TẢ: Service quản lý Đăng ký, Gia hạn & Nâng cấp Gói hội viên (Subscriptions / Vé tháng).
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. Danh mục gói hội viên (`SubscriptionPlans`): Xem chi tiết các gói đỗ xe ưu đãi theo tháng (Gói Vé Tháng, Gói Ưu Đãi VIP...).
+ * 2. Bảng Giảm Giá Đa Tháng (`discountMap`): Tự động giảm % cước dịch vụ theo số tháng đăng ký (1 tháng 0%, 3 tháng 5%, 6 tháng 10%, 12 tháng 20%, 24 tháng 30%).
+ * 3. Tích hợp thanh toán PayOS QR (`createPayment`, `checkStatus`): Sinh mã HMAC SHA256 bảo mật và tạo đơn chờ thanh toán trong bộ nhớ Cache In-Memory `pendingSubOrders`.
+ * 4. LOGIC GIA HẠN / NÂNG CẤP DÙNG SQL TRANSACTION:
+ *    - GIA HẠN (Cùng Gói): Tự động cộng dồn ngày kết thúc nối tiếp từ hạn cũ (`endDate.setMonth(...)`).
+ *    - NÂNG CẤP (Khác Gói): Chuyển trạng thái gói cũ thành `'Upgraded'`, kết thúc gói cũ ngay lập tức và kích hoạt gói mới từ hôm nay.
+ * 5. Tự động kiểm tra xe mặc định (`DriverVehicles.IsDefault`) để gợi ý tài xế gán quyền lợi vé tháng cho biển số xe cụ thể.
+ * 
+ * @module subscriptionService
  */
-/*
-hieu
-*/
 
+import crypto from 'crypto';
+import axios from 'axios';
 import { getPool, sql } from "../config/db.js";
 
+// Đọc cấu hình biến môi trường kết nối Cổng thanh toán PayOS
 const PAYOS_CLIENT_ID = process.env.PAYOS_CLIENT_ID;
 const PAYOS_API_KEY = process.env.PAYOS_API_KEY;
 const PAYOS_CHECKSUM = process.env.PAYOS_CHECKSUM_KEY;
 const PAYOS_BASE_URL = 'https://api-merchant.payos.vn';
 
-// Discount table (matching FE)
+// Bảng cấu hình giảm giá theo số tháng đăng ký cước (Month Duration Discount Lookup Table)
 const discountMap = { 1: 0, 2: 2, 3: 5, 6: 10, 9: 15, 12: 20, 24: 30 };
 
+/**
+ * HÀM PHỤ: makeSignature
+ * TÁC DỤNG: Sinh mã chữ ký số bảo mật HMAC SHA256 gửi sang PayOS để chứng minh tính toàn vẹn của dữ liệu giao dịch.
+ */
 function makeSignature({ amount, cancelUrl, description, orderCode, returnUrl }) {
     const raw = `amount=${amount}&cancelUrl=${cancelUrl}&description=${description}&orderCode=${orderCode}&returnUrl=${returnUrl}`;
     return crypto.createHmac('sha256', PAYOS_CHECKSUM).update(raw).digest('hex');
 }
 
+/**
+ * HÀM PHỤ: makeOrderCode
+ * TÁC DỤNG: Sinh mã đơn hàng duy nhất dạng số nguyên dựa trên UserID + Timestamp.
+ */
 function makeOrderCode(userId) {
     const suffix = Date.now() % 1_000_000;
     return parseInt(`${userId}${String(suffix).padStart(6, '0')}`, 10);
 }
 
-// In-memory pending orders for subscription
+// BỘ NHỚ LƯU TRỮ ĐƠN HÀNG CHỜ TRONG RAM (In-Memory Map for Pending Subscription Orders)
 const pendingSubOrders = new Map();
+
+// Tự động dọn dẹp các đơn hàng quá hạn (Expired > 15 phút) mỗi 60 giây một lần
 setInterval(() => {
     const now = Date.now();
     for (const [code, o] of pendingSubOrders.entries())
@@ -38,6 +55,12 @@ setInterval(() => {
 }, 60_000);
 
 export const subscriptionService = {
+  /**
+   * HÀM 1: getPlans
+   * TÁC DỤNG: Lấy danh sách các gói hội viên đang hoạt động trong hệ thống.
+   * 
+   * @returns {Promise<Array<Object>>} Mảng thông tin các gói dịch vụ
+   */
   getPlans: async () => {
     const pool = await getPool();
     const result = await pool.request().query(`
@@ -48,6 +71,13 @@ export const subscriptionService = {
     return result.recordset;
   },
 
+  /**
+   * HÀM 2: getMyStatus
+   * TÁC DỤNG: Kiểm tra trạng thái gói hội viên hiện tại của Tài xế.
+   * 
+   * @param {number} userId - ID người dùng
+   * @returns {Promise<Object|null>} Thông tin gói đang hoạt động hoặc null
+   */
   getMyStatus: async (userId) => {
     const pool = await getPool();
     const result = await pool.request()
@@ -69,11 +99,22 @@ export const subscriptionService = {
     return result.recordset[0] || null;
   },
 
-  // Create a PayOS payment link for subscription
+  /**
+   * HÀM 3: createPayment
+   * TÁC DỤNG: Khởi tạo liên kết thanh toán QR qua PayOS để mua/gia hạn gói hội viên.
+   * 
+   * @param {number} userId - ID tài xế
+   * @param {string} planId - ID gói đăng ký (vd: 'monthly')
+   * @param {number} durationMonths - Số tháng đăng ký (1, 3, 6, 12, 24)
+   * @param {number} deductionAmount - Số tiền được trừ từ gói cũ (khi nâng cấp)
+   * @param {number} excessValue - Giá trị thừa
+   * @param {number} extraDays - Số ngày tặng thêm
+   * @returns {Promise<Object>} Thông tin mã QR PayOS và thông tin đơn hàng
+   */
   createPayment: async (userId, planId, durationMonths, deductionAmount = 0, excessValue = 0, extraDays = 0) => {
     const pool = await getPool();
     
-    // Validate plan
+    // 1. Kiểm tra gói hội viên có tồn tại và đang hoạt động không
     const planResult = await pool.request()
       .input("PlanID", sql.NVarChar, planId)
       .query("SELECT * FROM SubscriptionPlans WHERE PlanID = @PlanID AND IsActive = 1");
@@ -86,31 +127,31 @@ export const subscriptionService = {
 
     const plan = planResult.recordset[0];
     
-    // Get user info
+    // 2. Lấy thông tin Tài xế
     const userResult = await pool.request()
       .input("UserID", sql.Int, userId)
       .query("SELECT FullName, Email FROM Users WHERE UserID = @UserID");
     const user = userResult.recordset[0];
 
-    // Calculate amount with discount
+    // 3. TÍNH TOÁN TỔNG TIỀN SAU GIẢM GIÁ (Discount & Deduction Calculation):
     const discountPercent = discountMap[durationMonths] || 0;
     const totalBase = plan.BasePrice * durationMonths;
     let amount = Math.round(totalBase * (1 - discountPercent / 100));
     
-    // Khấu trừ số dư từ gói cũ (nếu có)
+    // Khấu trừ tiền dư từ gói cũ nếu có
     if (deductionAmount > 0) {
         amount = Math.max(0, amount - deductionAmount);
     }
 
     const orderCode = makeOrderCode(userId);
-    // PayOS description: max 25 chars, English letters/numbers only, no spaces or special chars if possible (spaces are sometimes allowed, but safer without accents)
     const description = `MUA GOI ${planId.toUpperCase()} ${durationMonths} T`;
 
     const FE = process.env.FE_ORIGIN || 'http://localhost:5173';
     const returnUrl = `${FE}/driver/subscription?status=success`;
     const cancelUrl = `${FE}/driver/subscription?status=cancel`;
-    const expiredAt = Math.floor((Date.now() + 15 * 60 * 1000) / 1000); // 15 min
+    const expiredAt = Math.floor((Date.now() + 15 * 60 * 1000) / 1000); // Đơn hàng hết hạn sau 15 phút
 
+    // Đóng gói Payload gửi sang PayOS API
     const payload = {
         orderCode,
         amount,
@@ -128,7 +169,7 @@ export const subscriptionService = {
         signature: makeSignature({ amount, cancelUrl, description, orderCode, returnUrl }),
     };
 
-    // Call PayOS
+    // 4. Gọi API của PayOS tạo liên kết thanh toán
     let pd;
     try {
         const res = await axios.post(`${PAYOS_BASE_URL}/v2/payment-requests`, payload, {
@@ -150,7 +191,7 @@ export const subscriptionService = {
         throw Object.assign(new Error(`Lỗi kết nối PayOS: ${msg}`), { statusCode: 502 });
     }
 
-    // Cache for polling
+    // 5. Lưu thông tin đơn chờ vào RAM Map
     const expiredMs = expiredAt * 1000;
     pendingSubOrders.set(orderCode, {
         userId, planId, durationMonths, amount,
@@ -177,7 +218,10 @@ export const subscriptionService = {
     };
   },
 
-  // Polling helper
+  /**
+   * HÀM 4: checkStatus
+   * TÁC DỤNG: Tra cứu trạng thái giao dịch thanh toán từ Server PayOS (Phục vụ Frontend Polling).
+   */
   checkStatus: async (orderCode) => {
     try {
         const res = await axios.get(`${PAYOS_BASE_URL}/v2/payment-requests/${orderCode}`, {
@@ -194,9 +238,13 @@ export const subscriptionService = {
     }
   },
 
-  // Confirm subscription after payment (manual verification)
+  /**
+   * HÀM 5: subscribe
+   * TÁC DỤNG: Xác nhận kích hoạt gói hội viên sau khi chuyển khoản PayOS thành công.
+   * KỸ THUẬT: Dùng SQL Transaction xử lý gia hạn nối tiếp hoặc nâng cấp gói mới.
+   */
   subscribe: async (userId, orderCode) => {
-    // 1. Validate pending order
+    // 1. Kiểm tra đơn hàng chờ trong RAM Cache
     const order = pendingSubOrders.get(Number(orderCode));
     if (!order || order.userId !== userId) {
         const error = new Error("Mã thanh toán không tồn tại, đã hết hạn hoặc không thuộc về bạn");
@@ -204,7 +252,7 @@ export const subscriptionService = {
         throw error;
     }
 
-    // 2. Check PayOS status
+    // 2. Xác minh lại với PayOS Server xem tiền đã về thực sự chưa (`PAID`)
     try {
         const res = await axios.get(`${PAYOS_BASE_URL}/v2/payment-requests/${orderCode}`, {
             headers: {
@@ -231,11 +279,12 @@ export const subscriptionService = {
          throw Object.assign(new Error(`Lỗi kiểm tra trạng thái PayOS: ${msg}`), { statusCode: 502 });
     }
 
-    // 3. Success, clear pending order
+    // 3. Tiền đã về ➔ Xóa đơn hàng chờ khỏi RAM Cache
     pendingSubOrders.delete(Number(orderCode));
     const { planId, durationMonths } = order;
 
     const pool = await getPool();
+    // Lấy gói active cũ của tài xế để tính toán gia hạn hoặc nâng cấp
     const resultStatus = await pool.request()
       .input("UserID", sql.Int, userId)
       .query(`
@@ -255,26 +304,28 @@ export const subscriptionService = {
         oldPlanId = row.PlanID;
         const currentEnd = new Date(row.EndDate);
         
-        // Nếu cùng gói (Gia hạn) -> Cộng dồn thời gian nối tiếp
+        // NẾU GIA HẠN CÙNG GÓI ➔ Ngày bắt đầu gói mới được tính nối tiếp từ EndDate của gói cũ
         if (oldPlanId === planId) {
             if (currentEnd > startDate) {
                 startDate = currentEnd;
             }
         } 
-        // Nếu khác gói (Nâng cấp) -> Bắt đầu ngay lập tức từ hôm nay
+        // NẾU NÂNG CẤP KHÁC GÓI ➔ Bắt đầu ngay hôm nay
     }
     
+    // Tính ngày kết thúc mới
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + durationMonths);
     if (order.extraDays) {
         endDate.setDate(endDate.getDate() + order.extraDays);
     }
 
+    // MỞ GIAO DỊCH SQL TRANSACTION:
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
 
     try {
-        // 1. Nếu là nâng cấp, hủy gói cũ
+        // A. Nếu là NÂNG CẤP (khác gói cũ) ➔ Hủy gói cũ, đổi Status thành 'Upgraded'
         if (oldSubId && oldPlanId !== planId) {
             await new sql.Request(transaction)
               .input("OldSubID", sql.Int, oldSubId)
@@ -285,7 +336,7 @@ export const subscriptionService = {
               `);
         }
 
-        // 2. Tạo gói mới
+        // B. Tạo bản ghi gói hội viên mới có Status = 'Active'
         const result = await new sql.Request(transaction)
           .input("UserID", sql.Int, userId)
           .input("PlanID", sql.NVarChar, planId)
@@ -300,7 +351,7 @@ export const subscriptionService = {
           
         await transaction.commit();
 
-        // Kiểm tra nếu user chưa có xe mặc định thì gửi thông báo
+        // C. TỰ ĐỘNG THÔNG BÁO THIẾT LẬP XE MẶC ĐỊNH NẾU CHƯA CÓ
         try {
           const defaultVehicleCheck = await pool.request()
             .input("UserID", sql.Int, userId)
@@ -334,7 +385,6 @@ export const subscriptionService = {
         await transaction.rollback();
         throw error;
     }
-
-    // return is handled inside try block
   }
 };
+

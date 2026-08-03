@@ -117,7 +117,7 @@ const SlotDetail = ({ slotId, onClose, onStatusChange }) => {
     } finally { setUpdating(false) }
   }
 
-  const slot = data?.slot
+  const slot = data?.slot || (data?.SlotCode ? data : null)
   const session = data?.currentSession
   const history = data?.history || []
   const canMaintain = slot && !['Occupied', 'Reserved'].includes(slot.SlotStatus)

@@ -26,18 +26,54 @@ import authorizeAxios from '../../utils/authorizeAxios'
 
 const DEFAULT_BUILDINGS = []
 
+/**
+ * Thêm số 0 vào trước số có 1 chữ số (vd: 9 -> '09')
+ * @param {number|string} value Giá trị cần format
+ * @returns {string} Chuỗi đã format
+ */
 const padNumber = (value) => String(value).padStart(2, '0')
 
+const formatTimeDisplay = (t) => {
+  if (!t) return ''
+  if (typeof t === 'string' && t.includes('T')) {
+    const d = new Date(t)
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+  if (typeof t === 'string') {
+    return t.split(':').slice(0, 2).join(':')
+  }
+  return String(t)
+}
+
 /**
- * Lấy ngày hiện tại định dạng YYYY-MM-DD
+ * Lấy ngày hiện tại theo định dạng YYYY-MM-DD
+ * @returns {string} Ngày hiện tại
+ */
+/**
+ * Hàm xử lý logic: getTodayDateValue
+ * Trả về chuỗi ngày hiện tại (YYYY-MM-DD).
  */
 const getTodayDateValue = () => {
   const now = new Date()
   return `${now.getFullYear()}-${padNumber(now.getMonth() + 1)}-${padNumber(now.getDate())}`
 }
 
+const getDaysDiff = (d1, d2) => {
+  if (!d1 || !d2) return 0
+  const t1 = new Date(d1 + 'T00:00:00')
+  const t2 = new Date(d2 + 'T00:00:00')
+  return Math.max(0, Math.round((t2.getTime() - t1.getTime()) / (24 * 60 * 60 * 1000)))
+}
+
 /**
- * Tính toán thời gian bắt đầu đặt chỗ tối thiểu (cách hiện tại ít nhất 15 phút).
+ * Tính toán thời gian bắt đầu tối thiểu cho phép (hiện tại + 15 phút)
+ * Làm tròn lên phút tiếp theo nếu có số giây lẻ
+ * @returns {Date} Thời gian tối thiểu
+ */
+/**
+ * Hàm xử lý logic: getMinimumStartDate
+ * Tính toán và trả về đối tượng Date đại diện cho thời gian tối thiểu được phép đặt chỗ
+ * (thường là hiện tại cộng thêm 15 phút, làm tròn lên phút tiếp theo).
  */
 const getMinimumStartDate = () => {
   const minimum = new Date(Date.now() + 15 * 60 * 1000)
@@ -52,6 +88,10 @@ const getMinimumStartDate = () => {
   return minimum
 }
 
+/**
+ * Hàm xử lý logic: getMinimumStartTimeValue
+ * Trả về chuỗi giờ:phút tối thiểu được phép đặt (HH:mm).
+ */
 const getMinimumStartTimeValue = () => {
   const minimum = getMinimumStartDate()
   return `${padNumber(minimum.getHours())}:${padNumber(minimum.getMinutes())}`
@@ -59,6 +99,12 @@ const getMinimumStartTimeValue = () => {
 
 const isToday = (dateValue) => dateValue === getTodayDateValue()
 
+/**
+ * Chuyển đổi chuỗi ngày và giờ thành đối tượng Date của Javascript
+ * @param {string} dateValue YYYY-MM-DD
+ * @param {string} timeValue HH:mm
+ * @returns {Date|null} Đối tượng Date
+ */
 const buildLocalDateTime = (dateValue, timeValue) => {
   if (!dateValue || !timeValue) return null
 
@@ -80,6 +126,10 @@ const isStartTimeValid = (dateValue, timeValue) => {
   return selected >= getMinimumStartDate()
 }
 
+/**
+ * Hàm xử lý logic: getMinutesDiff
+ * Tính khoảng cách thời gian (bằng phút) giữa 2 mốc thời gian (cùng 1 ngày).
+ */
 const getMinutesDiff = (dateValue, timeValueA, timeValueB) => {
   const dateA = buildLocalDateTime(dateValue, timeValueA)
   const dateB = buildLocalDateTime(dateValue, timeValueB)
@@ -93,10 +143,20 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN').format(value || 0)
 }
 
+/**
+ * Hàm xử lý logic: getOptionLabel
+ * Tìm kiếm và trả về chuỗi hiển thị (label) của một option dựa vào giá trị (value) cung cấp.
+ */
 const getOptionLabel = (options, value) => {
   return options.find((item) => String(item.value) === String(value))?.label || value
 }
 
+/**
+ * Loại bỏ các phần tử trùng lặp trong mảng dựa vào một key
+ * @param {Array} items Mảng đầu vào
+ * @param {Function} keyGetter Hàm lấy giá trị khóa (key)
+ * @returns {Array} Mảng đã lọc trùng lặp
+ */
 const uniqueBy = (items, keyGetter) => {
   const map = new Map()
 
@@ -125,6 +185,7 @@ const DriverBooking = () => {
   const [vehicles, setVehicles] = useState([])
   const [selectedVehicleId, setSelectedVehicleId] = useState('manual')
   const [bookingDate, setBookingDate] = useState(getTodayDateValue())
+  const [exitDate, setExitDate] = useState(getTodayDateValue())
   const [startTime, setStartTime] = useState(getMinimumStartTimeValue())
   const [isStartTimeTouched, setIsStartTimeTouched] = useState(false)
   const [duration, setDuration] = useState('4h')
@@ -156,14 +217,17 @@ const DriverBooking = () => {
     if (relevantPolicies.length === 0) return []
 
     const generated = []
-    for (let i = 1; i <= 8; i++) {
+    for (let i = 1; i <= 24; i++) {
       let policy = relevantPolicies.find(p => p.MaxHours >= i)
+      if (!policy) {
+        policy = pricingPolicies.find(p => p.VehicleTypeID === activeVehicleTypeId && !p.IsOvernight && p.MaxHours === 999)
+      }
       if (!policy) policy = relevantPolicies[relevantPolicies.length - 1]
 
       generated.push({
         value: `${i}h`,
         label: `${i}h`,
-        price: policy.Fee
+        price: policy ? policy.Fee : 0
       })
     }
     return generated
@@ -176,9 +240,87 @@ const DriverBooking = () => {
   }, [durations, duration])
 
   const selectedDuration = durations.find((item) => item.value === duration) || durations[0]
-  const temporaryPrice = selectedDuration?.price || 0
+
+  const totalHours = useMemo(() => {
+    const days = getDaysDiff(bookingDate, exitDate)
+    const hours = parseInt(duration, 10) || 4
+    return days * 24 + hours
+  }, [bookingDate, exitDate, duration])
+
+  const temporaryPrice = useMemo(() => {
+    const baseHourPrice = selectedDuration?.price || 0
+    const days = getDaysDiff(bookingDate, exitDate)
+    if (days > 0) {
+      const maxFeePolicy = pricingPolicies.find(p => p.VehicleTypeID === activeVehicleTypeId && !p.IsOvernight && p.MaxHours === 999)
+      const dailyMaxFee = maxFeePolicy ? maxFeePolicy.Fee : 120000
+      return days * dailyMaxFee + baseHourPrice
+    }
+    return baseHourPrice
+  }, [bookingDate, exitDate, selectedDuration, pricingPolicies, activeVehicleTypeId])
 
   const isBookingTimeValid = isStartTimeValid(bookingDate, startTime)
+
+  const selectedBuildingData = useMemo(() => {
+    return buildingOptions.find(b => String(b.value) === String(buildingId))
+  }, [buildingOptions, buildingId])
+
+  const exitDateTimeText = useMemo(() => {
+    const start = buildLocalDateTime(bookingDate, startTime)
+    if (!start) return ''
+    const end = new Date(start.getTime() + totalHours * 60 * 60 * 1000)
+    
+    const pad = (n) => String(n).padStart(2, '0')
+    const timeStr = `${pad(end.getHours())}:${pad(end.getMinutes())}`
+    const dateStr = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`
+    return `${timeStr} - ${dateStr}`
+  }, [bookingDate, startTime, totalHours])
+
+  const isTimeInClosedWindow = useMemo(() => {
+    if (!selectedBuildingData || selectedBuildingData.is247) return false
+    
+    if (!selectedBuildingData.openTime || !selectedBuildingData.closeTime) return false
+
+    const formatTimePart = (t) => {
+      if (!t) return ''
+      if (typeof t === 'string' && t.includes('T')) {
+        const d = new Date(t)
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      }
+      if (typeof t === 'string') {
+        return t.split(':').slice(0, 2).join(':')
+      }
+      return String(t)
+    }
+
+    const openTimeStr = formatTimePart(selectedBuildingData.openTime)
+    const closeTimeStr = formatTimePart(selectedBuildingData.closeTime)
+
+    if (!openTimeStr || !closeTimeStr) return false
+
+    const toMinutes = (timeStr) => {
+      const [h, m] = timeStr.split(':').map(Number)
+      return h * 60 + m
+    }
+
+    const openMin = toMinutes(openTimeStr)
+    const closeMin = toMinutes(closeTimeStr)
+
+    const isOutsideOpenHours = (date) => {
+      const min = date.getHours() * 60 + date.getMinutes()
+      if (openMin < closeMin) {
+        return min < openMin || min > closeMin
+      } else {
+        return min > closeMin && min < openMin
+      }
+    }
+
+    const start = buildLocalDateTime(bookingDate, startTime)
+    if (!start) return false
+    
+    const end = new Date(start.getTime() + totalHours * 60 * 60 * 1000)
+
+    return isOutsideOpenHours(start) || isOutsideOpenHours(end)
+  }, [selectedBuildingData, bookingDate, startTime, totalHours])
 
   const floorOptions = useMemo(() => {
     return uniqueBy(
@@ -249,7 +391,12 @@ const DriverBooking = () => {
   }, [displaySlots, slotFilter])
 
   /**
-   * Gọi API lấy danh sách các tòa nhà/bãi đỗ xe khả dụng trong hệ thống.
+   * Gọi API lấy danh sách các tòa nhà (bãi đỗ xe)
+   * và thiết lập tòa nhà mặc định nếu chưa có
+   */
+  /**
+   * Hàm xử lý logic: fetchBuildings
+   * Gọi API GET /buildings để lấy danh sách tòa nhà/bãi đỗ xe và lưu vào state.
    */
   const fetchBuildings = async () => {
     try {
@@ -260,7 +407,10 @@ const DriverBooking = () => {
         setBuildingOptions(
           buildings.map((building) => ({
             value: String(building.BuildingID),
-            label: building.BuildingName
+            label: building.BuildingName,
+            openTime: building.OpenTime,
+            closeTime: building.CloseTime,
+            is247: building.Is247
           }))
         )
 
@@ -278,7 +428,12 @@ const DriverBooking = () => {
   }
 
   /**
-   * Gọi API lấy danh sách phương tiện của tài xế để chọn nhanh khi đặt chỗ.
+   * Gọi API lấy danh sách phương tiện của tài xế
+   * Tự động chọn xe mặc định để load thông tin biển số và loại xe
+   */
+  /**
+   * Hàm xử lý logic: fetchVehicles
+   * Lấy danh sách phương tiện của tài xế. Tự động chọn phương tiện mặc định (nếu có).
    */
   const fetchVehicles = async () => {
     try {
@@ -301,6 +456,10 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: fetchVehicleTypesList
+   * Gọi API để lấy danh mục các loại xe (Car, Moto, Truck...).
+   */
   const fetchVehicleTypesList = async () => {
     try {
       const response = await authorizeAxios.get('/vehicle-types')
@@ -310,6 +469,10 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: fetchPricingPolicies
+   * Gọi API lấy chính sách giá để tự động tạo danh sách thời lượng (durations) cho phép chọn.
+   */
   const fetchPricingPolicies = async () => {
     try {
       const response = await authorizeAxios.get('/pricing')
@@ -320,8 +483,14 @@ const DriverBooking = () => {
   }
 
   /**
-   * Gọi API lấy danh sách các chỗ trống phù hợp với:
-   * loại xe, thời gian, tòa nhà và thời lượng dự kiến gửi xe.
+   * Gọi API tìm kiếm các vị trí đỗ (slots) còn trống
+   * Dựa trên: Tòa nhà, Loại xe, Ngày, Giờ và Thời lượng
+   * Sau đó xử lý logic tự động chọn khu vực và gợi ý vị trí tốt nhất (AI/Nearest)
+   */
+  /**
+   * Hàm xử lý logic: fetchAvailableSlots
+   * Tìm vị trí trống dựa trên các điều kiện lọc. 
+   * Ngoài ra, tích hợp AI gợi ý vị trí (isAIRec) hoặc tự động chọn slot trống đầu tiên.
    */
   const fetchAvailableSlots = async () => {
     if (!buildingId || !vehicleType || !bookingDate || !startTime || !duration) {
@@ -353,7 +522,7 @@ const DriverBooking = () => {
           vehicleType,
           bookingDate,
           startTime,
-          duration
+          duration: `${totalHours}h`
         }
       })
 
@@ -430,7 +599,7 @@ const DriverBooking = () => {
   useEffect(() => {
     void Promise.resolve().then(fetchAvailableSlots)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buildingId, vehicleType, bookingDate, startTime, duration])
+  }, [buildingId, vehicleType, bookingDate, exitDate, startTime, duration])
 
   useEffect(() => {
     fetchBuildings()
@@ -514,7 +683,8 @@ const DriverBooking = () => {
   }, [autoSelect, filteredSlots, availableSlots, selectedSlotId])
 
   /**
-   * Xử lý khi tài xế thay đổi ngày đặt chỗ (không cho chọn ngày trong quá khứ).
+   * Hàm xử lý logic: handleChangeDate
+   * Xử lý khi người dùng đổi ngày đặt chỗ. Nếu là ngày quá khứ sẽ bị chặn.
    */
   const handleChangeDate = (event) => {
     const value = event.target.value
@@ -522,6 +692,7 @@ const DriverBooking = () => {
 
     if (value < today) {
       setBookingDate(today)
+      setExitDate(today)
       setStartTime(getMinimumStartTimeValue())
       setIsStartTimeTouched(false)
       setErrorMessage(t('driver.booking.errPastDate'))
@@ -529,6 +700,9 @@ const DriverBooking = () => {
     }
 
     setBookingDate(value)
+    if (exitDate < value) {
+      setExitDate(value)
+    }
 
     if (value === today) {
       const minimumTime = getMinimumStartTimeValue()
@@ -542,23 +716,40 @@ const DriverBooking = () => {
     setErrorMessage('')
   }
 
-  const handleChangeStartTime = (event) => {
+  const handleChangeExitDate = (event) => {
     const value = event.target.value
-    const minimumTime = getMinimumStartTimeValue()
-
-    setIsStartTimeTouched(true)
-
-    if (isToday(bookingDate) && !isStartTimeValid(bookingDate, value)) {
-      setStartTime(minimumTime)
-      setIsStartTimeTouched(false)
-      setErrorMessage(t('driver.booking.errTimeAdjusted'))
+    if (value < bookingDate) {
+      setExitDate(bookingDate)
       return
     }
+    setExitDate(value)
+    setErrorMessage('')
+  }
 
+  /**
+   * Hàm xử lý logic: handleChangeStartTime
+   * Cập nhật thời gian bắt đầu đỗ xe. Reset về thời gian tối thiểu nếu không hợp lệ.
+   */
+  const handleChangeStartTime = (event) => {
+    const value = event.target.value
+    setIsStartTimeTouched(true)
     setStartTime(value)
     setErrorMessage('')
   }
 
+  const handleBlurStartTime = () => {
+    const minimumTime = getMinimumStartTimeValue()
+    if (isToday(bookingDate) && !isStartTimeValid(bookingDate, startTime)) {
+      setStartTime(minimumTime)
+      setIsStartTimeTouched(false)
+      setErrorMessage(t('driver.booking.errTimeAdjusted'))
+    }
+  }
+
+  /**
+   * Hàm xử lý logic: handleChangeBuilding
+   * Đổi tòa nhà đặt chỗ và reset danh sách slot trống hiện tại.
+   */
   const handleChangeBuilding = (event) => {
     setBuildingId(event.target.value)
 
@@ -571,6 +762,10 @@ const DriverBooking = () => {
     setErrorMessage('')
   }
 
+  /**
+   * Hàm xử lý logic: handleChangeVehicleType
+   * Thay đổi loại phương tiện và yêu cầu lấy lại danh sách slot.
+   */
   const handleChangeVehicleType = (event) => {
     setVehicleType(event.target.value)
 
@@ -583,6 +778,10 @@ const DriverBooking = () => {
     setErrorMessage('')
   }
 
+  /**
+   * Hàm xử lý logic: handleChangeFloor
+   * Lọc slot theo Tầng (Floor) vừa chọn, reset Khu vực (Zone).
+   */
   const handleChangeFloor = (event) => {
     const newFloorId = event.target.value
 
@@ -609,6 +808,10 @@ const DriverBooking = () => {
     setSelectedSlotId(nearestAvailable?.SlotID || null)
   }
 
+  /**
+   * Hàm xử lý logic: handleChangeZone
+   * Lọc slot theo Khu (Zone) thuộc Tầng (Floor) hiện tại.
+   */
   const handleChangeZone = (event) => {
     const newZoneId = event.target.value
 
@@ -627,6 +830,10 @@ const DriverBooking = () => {
     setSelectedSlotId(nearestAvailable?.SlotID || null)
   }
 
+  /**
+   * Hàm xử lý logic: handleChangeSelectedVehicle
+   * Người dùng chọn biển số xe có sẵn, tự động điền loại xe và biển số.
+   */
   const handleChangeSelectedVehicle = (event) => {
     const val = event.target.value
     setSelectedVehicleId(val)
@@ -641,6 +848,10 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: handleAutoSelectChange
+   * Bật/tắt chế độ tự động chọn Slot.
+   */
   const handleAutoSelectChange = (event) => {
     const checked = event.target.checked
     setAutoSelect(checked)
@@ -666,6 +877,10 @@ const DriverBooking = () => {
     }
   }
 
+  /**
+   * Hàm xử lý logic: handleSelectSlot
+   * Khi người dùng click thủ công vào sơ đồ bãi đỗ để chọn ô (Slot). Tự động tắt autoSelect.
+   */
   const handleSelectSlot = (slot) => {
     if (slot.uiStatus === 'occupied') return
 
@@ -674,8 +889,14 @@ const DriverBooking = () => {
   }
 
   /**
-   * Xử lý nộp form đặt chỗ lên Backend (Tạo Booking).
-   * Kiểm tra tính hợp lệ trước khi gửi, và chuyển hướng trang khi thành công.
+   * Xử lý khi tài xế bấm nút "Xác nhận đặt chỗ"
+   * 1. Validate form (biển số, giờ giấc, slot)
+   * 2. Gọi API POST /reservations để tạo Booking
+   * 3. Chuyển hướng sang trang Confirmation
+   */
+  /**
+   * Hàm xử lý logic: handleSubmit
+   * Xác nhận và gửi dữ liệu lên server để tạo đơn đặt chỗ.
    */
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -707,7 +928,7 @@ const DriverBooking = () => {
         licensePlate: licensePlate.trim().toUpperCase(),
         bookingDate,
         startTime,
-        duration,
+        duration: `${totalHours}h`,
         buildingId: Number(buildingId),
         slotId: selectedSlotId
       })
@@ -883,10 +1104,11 @@ const DriverBooking = () => {
               </span>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3">
+            <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+              {/* Entry Date */}
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  {t('driver.booking.date')}
+                  {t('driver.booking.date', 'Ngày vào')}
                 </label>
                 <div className="relative">
                   <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -895,31 +1117,69 @@ const DriverBooking = () => {
                     value={bookingDate}
                     min={getTodayDateValue()}
                     onChange={handleChangeDate}
-                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 font-semibold"
                     required
                   />
                 </div>
               </div>
 
+              {/* Start Time */}
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  {t('driver.booking.startTime')}
+                <label className="mb-1.5 flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <span>{t('driver.booking.startTime', 'Giờ vào')}</span>
+                  {isToday(bookingDate) && (
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                      Sớm nhất: {getMinimumStartTimeValue()}
+                    </span>
+                  )}
                 </label>
                 <div className="relative">
-                  <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500" />
                   <input
                     type="time"
                     value={startTime}
-                    onChange={handleChangeStartTime}
-                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => {
+                      setStartTime(e.target.value)
+                      setIsStartTimeTouched(true)
+                      setErrorMessage('')
+                    }}
+                    onBlur={handleBlurStartTime}
+                    className="w-full rounded-xl border border-blue-200 dark:border-slate-700 bg-blue-50/40 dark:bg-slate-900/50 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500 font-semibold text-blue-900 dark:text-blue-300"
                     required
                   />
                 </div>
               </div>
 
+              {/* Exit Date */}
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
-                  {t('driver.booking.durationLabel', { value: duration.replace('h', t('driver.booking.hourSuffix')) })}
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <CalendarDays size={12} className="text-orange-500" />
+                  {t('driver.booking.exitDate', 'Ngày ra (nếu đỗ qua ngày)')}
+                  {getDaysDiff(bookingDate, exitDate) > 0 && (
+                    <span className="ml-1 rounded-full bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 text-[10px] font-black text-orange-600 dark:text-orange-400">
+                      +{getDaysDiff(bookingDate, exitDate)} ngày
+                    </span>
+                  )}
+                </label>
+                <div className="relative">
+                  <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400" />
+                  <input
+                    type="date"
+                    value={exitDate}
+                    min={bookingDate}
+                    onChange={handleChangeExitDate}
+                    className="w-full rounded-xl border border-orange-200 dark:border-orange-900/40 bg-orange-50/50 dark:bg-orange-900/10 py-2.5 pl-9 pr-4 text-sm outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-orange-400 font-semibold"
+                  />
+                </div>
+              </div>
+
+              {/* Duration slider */}
+              <div>
+                <label className="mb-1.5 flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <span>Thời gian đỗ trong ngày:</span>
+                  <span className="font-black text-blue-600 dark:text-blue-400 text-sm">
+                    {duration.replace('h', ' giờ')}
+                  </span>
                 </label>
                 <div className="pt-2 pb-1">
                   <input
@@ -932,22 +1192,74 @@ const DriverBooking = () => {
                       const idx = parseInt(event.target.value, 10)
                       if (durations[idx]) setDuration(durations[idx].value)
                     }}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-700 accent-blue-600"
+                    className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
-                  <div className="flex justify-between text-[10px] text-gray-500 font-medium mt-2 px-1">
-                    {durations.map((item, idx) => (
-                      <span
-                        key={item.value}
-                        className={durations.findIndex(d => d.value === duration) === idx ? 'text-blue-600 dark:text-blue-400 font-bold' : ''}
-                        onClick={() => setDuration(item.value)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {item.label}
-                      </span>
-                    ))}
-                  </div>
                 </div>
               </div>
+            </div>
+
+            {/* Quick Duration Presets & Total summary */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 mr-1">Chọn nhanh:</span>
+              {[2, 4, 8, 12, 16, 24].map((h) => {
+                const val = `${h}h`
+                const isSelected = duration === val
+                return (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => setDuration(val)}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm scale-105'
+                        : 'bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {h === 24 ? '1 Ngày (24h)' : `${h}h`}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Calculated Exit Time Info & Operating Hours Card */}
+            <div className="mt-5 p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-slate-50 dark:from-slate-900/60 dark:to-slate-800/60 border border-blue-100 dark:border-slate-700/60">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <Clock size={14} className="text-blue-600 dark:text-blue-400" />
+                    <span>Thời gian lấy xe ra dự kiến:</span>
+                  </div>
+                  <div className="text-base font-black text-slate-900 dark:text-white mt-0.5">
+                    {exitDateTimeText}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1.5 rounded-xl text-xs font-black bg-blue-600 text-white shadow-sm">
+                    ⏱️ Tổng: {getDaysDiff(bookingDate, exitDate) > 0 ? `${getDaysDiff(bookingDate, exitDate)} ngày ` : ''}{parseInt(duration, 10)} giờ ({totalHours}h)
+                  </span>
+
+                  {selectedBuildingData && !selectedBuildingData.is247 && (
+                    <div className="text-xs text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-medium">
+                      ⚡ Giờ mở cửa: <span className="font-bold text-blue-600 dark:text-blue-400">{formatTimeDisplay(selectedBuildingData.openTime)} - {formatTimeDisplay(selectedBuildingData.closeTime)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Warning if Exit/Entry is outside operating hours */}
+              {isTimeInClosedWindow && (
+                <div className="mt-3.5 flex items-start gap-2.5 p-3.5 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 rounded-xl text-xs border border-rose-200 dark:border-rose-800 shadow-sm animate-pulse">
+                  <AlertCircle size={18} className="shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+                  <div>
+                    <p className="font-black text-sm text-rose-800 dark:text-rose-200">⚠️ Cảnh báo: Thời gian đỗ rơi vào giờ đóng cửa!</p>
+                    <p className="mt-1 leading-relaxed font-medium">
+                      Thời gian đỗ xe (giờ vào hoặc giờ lấy xe ra dự kiến <strong className="font-black">{exitDateTimeText}</strong>) nằm ngoài giờ hoạt động mở cửa của tòa nhà ({selectedBuildingData ? `${formatTimeDisplay(selectedBuildingData.openTime)} - ${formatTimeDisplay(selectedBuildingData.closeTime)}` : ''}).
+                      Vui lòng chọn thời gian ra trước giờ đóng cửa!
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1143,7 +1455,8 @@ const DriverBooking = () => {
               <SummaryRow icon={<Car size={16} />} label={t('driver.booking.plateLabel')} value={licensePlate || t('driver.booking.plateNotEntered')} />
               <SummaryRow label={t('driver.booking.vehicleLabel')} value={vehicleLabel} />
               <SummaryRow icon={<Clock size={16} />} label={t('driver.booking.timeIn')} value={`${startTime} - ${bookingDate}`} />
-              <SummaryRow label={t('driver.booking.durationSummary')} value={durationLabel} />
+              <SummaryRow icon={<Clock size={16} />} label={t('driver.booking.timeOut', 'Giờ ra dự kiến')} value={exitDateTimeText} />
+              <SummaryRow label={t('driver.booking.durationSummary')} value={`${totalHours}h`} />
 
               <div className="flex items-center justify-between pb-2 text-sm">
                 <span className="flex items-center gap-2 text-gray-500 dark:text-gray-400">

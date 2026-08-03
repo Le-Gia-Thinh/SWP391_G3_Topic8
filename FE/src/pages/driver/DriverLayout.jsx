@@ -59,10 +59,6 @@ const DriverLayout = () => {
   const displayName = user?.fullName || 'Duy Nguyễn'
   const displayEmail = user?.email || 'driver@smartpark.com'
 
-  /**
-   * Đóng tất cả các menu thả xuống (dropdown) đang mở (Profile, Location, Notifications).
-   * Gọi khi người dùng click ra ngoài hoặc chọn một mục trong menu.
-   */
   const closeAllDropdowns = () => {
     setIsProfileOpen(false)
     setIsLocationOpen(false)
@@ -70,8 +66,8 @@ const DriverLayout = () => {
   }
 
   /**
-   * Xử lý sự kiện đăng xuất của tài xế.
-   * Xóa token, gọi API đăng xuất và chuyển hướng về trang Login.
+   * Hàm xử lý logic: handleLogout
+   * Xóa thông tin đăng nhập và điều hướng người dùng về trang Đăng nhập.
    */
   const handleLogout = async () => {
     closeAllDropdowns()
@@ -80,8 +76,8 @@ const DriverLayout = () => {
   }
 
   /**
-   * Xử lý khi tài xế chọn một địa điểm/tòa nhà đỗ xe khác trên thanh Header.
-   * @param {string} locationName Tên tòa nhà được chọn
+   * Hàm xử lý logic: handleSelectLocation
+   * Thay đổi vị trí tòa nhà đang được chọn.
    */
   const handleSelectLocation = (locationName) => {
     setSelectedLocation(locationName)
@@ -89,12 +85,6 @@ const DriverLayout = () => {
   }
 
   const currentPath = location.pathname
-  /**
-   * Kiểm tra xem một đường dẫn (path) menu có đang được kích hoạt hay không,
-   * dùng để tô sáng (highlight) menu hiện tại trên Sidebar.
-   * @param {string} path Đường dẫn của menu item
-   * @returns {boolean} true nếu đường dẫn khớp với trang hiện tại
-   */
   const isActiveMenu = (path) => {
     if (path === '/driver/home') {
       return currentPath === '/driver' || currentPath === '/driver/home'
@@ -102,11 +92,12 @@ const DriverLayout = () => {
     return currentPath === path || currentPath.startsWith(`${path}/`)
   }
 
-  /**
-   * useEffect hook: Lắng nghe sự kiện click chuột bên ngoài các dropdown menu 
-   * để đóng chúng lại (Profile, Location, Notifications).
-   */
   useEffect(() => {
+    /**
+     * Hàm xử lý logic: handleClickOutside
+     * Xử lý sự kiện click chuột bên ngoài các menu dropdown (Profile, Location, Notification)
+     * để tự động đóng chúng lại.
+     */
     const handleClickOutside = (event) => {
       const target = event.target
       if (profileRef.current && !profileRef.current.contains(target)) setIsProfileOpen(false)

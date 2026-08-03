@@ -252,10 +252,17 @@ const WalkInContent = () => {
     if (!finalSlotId) return toast.error(t('staff.checkin.walkin.noSlot'))
     setSubmitting(true)
     try {
+      let activeGate = null
+      try {
+        const saved = localStorage.getItem('staff_active_gate')
+        if (saved) activeGate = JSON.parse(saved)
+      } catch {}
       const res = await staffApi.createWalkInSession({
         plateNumber: plateNumber.trim().toUpperCase(),
         vehicleTypeId: Number(vehicleTypeId),
-        slotId: finalSlotId
+        slotId: finalSlotId,
+        gateInId: activeGate?.GateID || null,
+        gateIn: activeGate?.GateName || null
       })
       if (res.success) {
         toast.success(t('staff.checkin.walkin.checkinSuccess'))

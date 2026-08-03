@@ -253,7 +253,8 @@
         "Update": "Cập nhật",
         "Delete": "Xoá",
         "Lock": "Khoá",
-        "Unlock": "Mở khoá"
+        "Unlock": "Mở khoá",
+        "Permission": "Phân quyền"
       }
     },
     "buildings": {
@@ -360,7 +361,7 @@
       "zone": {
         "editTitle": "Sửa khu vực",
         "deleteTitle": "Xóa khu vực",
-        "capacityLabel": "Sức chứa",
+        "capacityLabel": "Số ô đỗ đã tạo",
         "manageSlots": "Quản lý slot",
         "deleteConfirmLabel": "Xóa khu vực \"{{name}}\"? Khu vực phải không còn slot bên trong.",
         "deleteSuccess": "Đã xóa khu vực"
@@ -499,6 +500,31 @@
         "submit": "Đặt lại mật khẩu",
         "success": "Đã đặt lại mật khẩu cho \"{{name}}\"",
         "fail": "Không thể đặt lại mật khẩu"
+      },
+      "matrixTitle": "Ma trận Phân quyền theo Vai trò (Permissions Matrix)",
+      "matrixSub": "Bật/Tắt các danh mục quyền hạn cụ thể cho từng nhóm chức vụ nội bộ (Quản lý & Nhân viên bảo vệ).",
+      "savePerms": "Lưu cấu hình quyền",
+      "savePermsSuccess": "Đã cập nhật cấu hình quyền hạn cho vai trò {{role}} thành công!",
+      "savePermsFail": "Cập nhật quyền hạn thất bại.",
+      "confirmRoleTitle": "Xác nhận thay đổi vai trò",
+      "confirmRoleDesc": "Bạn có chắc chắn muốn thay đổi vai trò của người dùng {{name}} không?",
+      "confirmRoleNotice": "⚠️ Thao tác này sẽ cập nhật ngay quyền hạn truy cập của người dùng trên toàn hệ thống.",
+      "confirmRoleSubmit": "Xác nhận chuyển vai trò",
+      "customPermsTitle": "Cấu hình Quyền riêng — {{name}}",
+      "customPermsSub": "Tích chọn các quyền cấp thêm hoặc tùy chỉnh riêng cho tài khoản cá nhân này (Ưu tiên đè lên vai trò nhóm).",
+      "customPermsSave": "Lưu quyền cá nhân",
+      "customPermsSuccess": "Đã cập nhật quyền hạn riêng cho tài khoản {{name}} thành công!",
+      "customPermBtn": "Quyền riêng",
+      "perms": {
+        "VIEW_SLOTS": "Xem sơ đồ đỗ xe & trạng thái ô đỗ (Parking Map & Slots)",
+        "MANAGE_SESSIONS": "Soát vé Check-in / Check-out lượt đỗ (Parking Sessions)",
+        "MANAGE_USERS": "Quản lý tài khoản & Phân công nhân sự (Users & Staff)",
+        "VIEW_REPORTS": "Xem báo cáo doanh thu & Thống kê hệ thống (Reports & Analytics)",
+        "MANAGE_PAYMENTS": "Xử lý thanh toán & Quản lý lịch sử giao dịch (Payments)",
+        "MANAGE_PRICING": "Cấu hình bảng giá đỗ xe & Loại xe cho phép (Pricing & Vehicle Types)",
+        "MANAGE_BUILDINGS": "Cấu hình Tòa nhà, Tầng, Khu vực & Cổng (Buildings & Layout)",
+        "MANAGE_INCIDENTS": "Báo cáo & Xử lý sự cố tại bãi đỗ xe (Incidents Management)",
+        "MANAGE_SUPPORT": "Phản hồi Yêu cầu Hỗ trợ từ Tài xế (Driver Support Tickets)"
       }
     },
     "users": {
@@ -652,7 +678,7 @@
         "cancelled": "Đã hủy / hết hạn"
       },
       "capacity": {
-        "title": "Trạng thái Sức chứa (Live)",
+        "title": "Tra cứu Chỗ trống (Live)",
         "updatedAt": "Cập nhật lúc {{time}}",
         "empty": "Chưa có dữ liệu vị trí đỗ được cập nhật.",
         "fillRate": "Tỷ lệ lấp đầy",
@@ -1047,6 +1073,7 @@
       "plateNotEntered": "Chưa nhập",
       "vehicleLabel": "Loại xe",
       "timeIn": "Thời gian vào",
+      "timeOut": "Thời gian ra",
       "durationSummary": "Thời lượng",
       "slotPos": "Vị trí đỗ",
       "tempPrice": "Giá tạm tính",
@@ -1155,12 +1182,12 @@
         "time": "Thời gian",
         "ratingPrompt": "Bạn đánh giá bao nhiêu sao?",
         "ratingHint": {
-          "select": "Chọn số sao",
           "1": "Rất tệ 😞",
           "2": "Tệ 😕",
           "3": "Bình thường 😐",
           "4": "Tốt 😊",
-          "5": "Tuyệt vời! 🤩"
+          "5": "Tuyệt vời! 🤩",
+          "select": "Chọn số sao"
         },
         "tagsLabel": "Gắn thẻ nhanh",
         "commentLabel": "Bình luận (tùy chọn)",
@@ -1301,7 +1328,7 @@
       "nightFlatRate": "Phí đêm cố định / đêm",
       "baseFee": "Phí cơ bản",
       "surcharge": "Phụ thu",
-      "totalFee": "Tổng cộng",
+      "totalFee": "Tổng phí gửi xe",
       "overnightBadge": "Qua đêm",
       "bracketLabel0": "0 – 4 giờ",
       "bracketLabel1": "4 – 8 giờ",
@@ -1325,7 +1352,6 @@
       "backCancel": "Quay lại / Huỷ đơn",
       "scanToPay": "Quét QR để thanh toán",
       "waiting": "Chờ thanh toán",
-      "totalFee": "Tổng phí gửi xe",
       "expiresIn": "Hết hạn sau:",
       "expired": "Hết hạn",
       "qrHint": "Mở app ngân hàng → QR / Scan → quét mã",
@@ -1393,6 +1419,45 @@
     "membershipPage": {
       "loadError": "Không thể tải thông tin gói hội viên",
       "cancelSuccess": "Hủy gia hạn thành công. Bạn vẫn có thể sử dụng gói đến hết chu kỳ."
+    },
+    "topup": {
+      "title": "Nạp tiền tài khoản",
+      "description": "Nạp tiền vào ví để dễ dàng thanh toán phí đỗ xe và các dịch vụ khác.",
+      "balanceLabel": "Số dư hiện tại",
+      "selectAmount": "Chọn mệnh giá nạp",
+      "customAmountLabel": "Hoặc nhập số tiền khác (VNĐ)",
+      "customAmountPlaceholder": "Nhập số tiền...",
+      "minAmountWarning": "Số tiền nạp tối thiểu là 10,000 VNĐ",
+      "processPayment": "Tiến hành thanh toán",
+      "processing": "Đang xử lý...",
+      "successTitle": "Nạp tiền thành công!",
+      "securityHint": "Giao dịch được mã hóa và bảo mật an toàn 100%",
+      "sidebarTitle": "Phương thức hỗ trợ",
+      "sidebarATM": "Thẻ nội địa (ATM)",
+      "sidebarInt": "Thẻ quốc tế (Visa/Mastercard)",
+      "sidebarWallet": "Ví điện tử (Momo, ZaloPay)",
+      "sidebarVietQR": "Chuyển khoản ngân hàng (VietQR)",
+      "historyTitle": "Lịch sử nạp gần đây",
+      "historyEmpty": "Chưa có giao dịch nạp tiền nào gần đây.",
+      "historyLink": "Xem tất cả lịch sử giao dịch →",
+      "paymentTitle": "Thanh toán nạp tiền ví",
+      "orderCodeLabel": "Mã đơn hàng",
+      "timeLeftLabel": "Thời gian còn lại",
+      "qrInstruction": "Sử dụng ứng dụng ngân hàng hoặc ví điện tử để quét mã QR này",
+      "bankLabel": "Ngân hàng",
+      "accountNumberLabel": "Số tài khoản",
+      "accountNameLabel": "Tên tài khoản",
+      "contentLabel": "Nội dung CK",
+      "amountLabel": "Số tiền thanh toán",
+      "paymentWarning": "Hệ thống sẽ tự động cập nhật số dư sau khi nhận được tiền. Vui lòng giữ lại biên lai để đối chiếu nếu cần.",
+      "openPayOS": "Mở link thanh toán PayOS",
+      "copied": "Đã copy",
+      "copy": "Copy",
+      "initPayment": "Đang khởi tạo thanh toán...",
+      "errorTitle": "Đã xảy ra lỗi",
+      "goBack": "Quay lại",
+      "successDetail": "Bạn đã nạp thành công {{amount}} VNĐ vào tài khoản ví.",
+      "redirecting": "Đang tự động chuyển hướng về trang chủ..."
     }
   },
   "sidebar": {
@@ -1409,6 +1474,7 @@
     },
     "driver": {
       "home": "Trang chủ",
+      "booking": "Đặt chỗ đỗ xe",
       "session": "Phiên đỗ xe",
       "history": "Lịch sử",
       "payment": "Thanh toán",
@@ -1667,10 +1733,10 @@
         "vehicleType": "Loại xe",
         "sortBy": "Sắp xếp",
         "vehicles": {
-          "all": "Tất cả loại xe",
           "1": "Xe máy",
           "2": "Ô tô",
-          "3": "Xe tải"
+          "3": "Xe tải",
+          "all": "Tất cả loại xe"
         },
         "sorts": {
           "newest": "Mới nhất",

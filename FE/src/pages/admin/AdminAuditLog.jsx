@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Search, RefreshCcw, ScrollText, LogIn, LogOut, UserPlus, Plus, Pencil, Trash2, Lock, Unlock, Activity
+  Search, RefreshCcw, ScrollText, LogIn, LogOut, UserPlus, Plus, Pencil, Trash2, Lock, Unlock, Shield, Activity
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import Badge from '../../components/ui/Badge'
@@ -30,17 +30,65 @@ const actionMeta = {
   Update: { icon: Pencil, cls: 'bg-amber-50 text-amber-600 border-amber-200/60' },
   Delete: { icon: Trash2, cls: 'bg-rose-50 text-rose-600 border-rose-200/60' },
   Lock: { icon: Lock, cls: 'bg-red-50 text-red-600 border-red-200/60' },
-  Unlock: { icon: Unlock, cls: 'bg-teal-50 text-teal-600 border-teal-200/60' }
+  Unlock: { icon: Unlock, cls: 'bg-teal-50 text-teal-600 border-teal-200/60' },
+  Permission: { icon: Shield, cls: 'bg-indigo-50 text-indigo-600 border-indigo-200/60' }
 }
 
-const ACTION_FILTERS = ['Login', 'Logout', 'Create', 'Update', 'Delete', 'Lock', 'Unlock']
+const ACTION_FILTERS = ['Login', 'Logout', 'Create', 'Update', 'Delete', 'Lock', 'Unlock', 'Permission']
 
 const fmtDateTime = (d) => d
   ? new Date(d).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   : '—'
 
+const translateDetail = (desc, lang) => {
+  if (!desc) return '—'
+  if (lang !== 'en') return desc
+
+  const exactMatches = {
+    'Đăng nhập bằng email/mật khẩu': 'Logged in with email/password',
+    'Đăng xuất': 'Logged out'
+  }
+  if (exactMatches[desc]) return exactMatches[desc]
+
+  let translated = desc
+
+  // Floors
+  translated = translated.replace(/Thêm tầng "([^"]+)" \(Building (\d+)\)/g, 'Added floor "$1" (Building $2)')
+  translated = translated.replace(/Cập nhật tầng ID (\d+)/g, 'Updated floor ID $1')
+  translated = translated.replace(/Xóa tầng ID (\d+)/g, 'Deleted floor ID $1')
+
+  // Zones
+  translated = translated.replace(/Thêm khu vực "([^"]+)" \(Floor (\d+)\)/g, 'Added zone "$1" (Floor $2)')
+  translated = translated.replace(/Cập nhật khu vực ID (\d+)/g, 'Updated zone ID $1')
+  translated = translated.replace(/Xóa khu vực ID (\d+)/g, 'Deleted zone ID $1')
+
+  // Slots
+  translated = translated.replace(/Thêm slot "([^"]+)" \(Zone (\d+)\)/g, 'Added slot "$1" (Zone $2)')
+  translated = translated.replace(/Tạo hàng loạt (\d+) slot \(Zone (\d+)\)/g, 'Bulk created $1 slots (Zone $2)')
+  translated = translated.replace(/Cập nhật slot ID (\d+)/g, 'Updated slot ID $1')
+  translated = translated.replace(/Xóa slot ID (\d+) \(([^)]+)\)/g, 'Deleted slot ID $1 ($2)')
+
+  // Users
+  translated = translated.replace(/Tạo tài khoản "([^"]+)" \(Role (\d+)\)/g, 'Created account "$1" (Role $2)')
+  translated = translated.replace(/Cập nhật người dùng ID (\d+)/g, 'Updated user ID $1')
+  translated = translated.replace(/Khóa người dùng ID (\d+)/g, 'Locked user ID $1')
+  translated = translated.replace(/Mở khóa người dùng ID (\d+)/g, 'Unlocked user ID $1')
+  translated = translated.replace(/Đặt lại mật khẩu cho người dùng ID (\d+)/g, 'Reset password for user ID $1')
+
+  // Buildings
+  translated = translated.replace(/Thêm tòa nhà "([^"]+)"/g, 'Added building "$1"')
+  translated = translated.replace(/Cập nhật tòa nhà ID (\d+)/g, 'Updated building ID $1')
+  translated = translated.replace(/Xóa tòa nhà ID (\d+)/g, 'Deleted building ID $1')
+
+  // Permissions
+  translated = translated.replace(/Cập nhật phân quyền cho vai trò ID (\d+)/g, 'Updated permissions for role ID $1')
+  translated = translated.replace(/Cập nhật quyền hạn cá nhân cho người dùng ID (\d+)/g, 'Updated custom permissions for user ID $1')
+
+  return translated
+}
+
 const AdminAuditLog = () => {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [isLoaded, setIsLoaded] = useState(false)
@@ -146,7 +194,7 @@ const AdminAuditLog = () => {
                           </span>
                         </td>
                         {/* <td className="px-5 py-4 font-semibold text-slate-700 font-bold">{log.Target || '—'}</td> */}
-                        <td className="px-5 py-4 text-slate-600">{log.Description}</td>
+                        <td className="px-5 py-4 text-slate-600">{translateDetail(log.Description, i18n.language)}</td>
                         <td className="px-5 py-4 text-slate-500 font-medium text-xs whitespace-nowrap">{fmtDateTime(log.CreatedAt)}</td>
                       </tr>
                     )

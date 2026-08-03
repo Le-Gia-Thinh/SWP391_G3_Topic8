@@ -90,8 +90,9 @@ const DriverSubscription = () => {
   }, [location.state]);
 
   /**
-   * Gọi API tải danh sách các gói hội viên và thông tin gói hiện tại của tài xế.
-   * Xử lý merge dữ liệu từ server với UI config nội bộ.
+   * Hàm xử lý logic: fetchData
+   * Lấy danh sách các gói cước và trạng thái gói cước hiện tại của tài xế.
+   * Kết hợp dữ liệu từ API với cấu hình giao diện frontend (planConfigs).
    */
   const fetchData = async () => {
     try {
@@ -164,7 +165,8 @@ const DriverSubscription = () => {
   }, []);
 
   /**
-   * Tính toán giá sau khi đã áp dụng phần trăm giảm giá theo số tháng.
+   * Hàm xử lý logic: getDiscountedPrice
+   * Tính toán giá tiền sau khi đã áp dụng chiết khấu dựa trên số tháng đăng ký.
    */
   const getDiscountedPrice = (basePrice, months, discountPercent) => {
     const totalBase = basePrice * months;

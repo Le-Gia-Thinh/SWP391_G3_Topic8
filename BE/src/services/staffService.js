@@ -1,21 +1,31 @@
 /**
  * FILE: staffService.js
- * MÔ TẢ: Service xử lý nghiệp vụ cho Nhân viên (Staff).
- * Chức năng: Dashboard nhân viên, Check-in khách walk-in/đặt trước, 
- * Check-out (tính phí/phụ thu), xem Sơ đồ bãi đỗ, và Tạo/Quản lý Sự cố.
+ * MÔ TẢ: Service quản lý toàn bộ các thao tác nghiệp vụ tại cổng bãi đỗ xe dành cho Nhân viên Bảo vệ (Parking Guard Operational Engine).
+ * NGUYÊN LÝ HOẠT ĐỘNG:
+ * 1. THỐNG KÊ CA TRỰC DASHBOARD BẢO VỆ (`getDashboardStats`): Đếm số lượt xe vào/ra trong ca, số ô đỗ còn trống theo loại xe, thông báo xe đỗ quá giờ.
+ * 2. CHO XE VÀO BÃI (`checkIn`):
+ *    - Phân loại Khách đặt trước (Booking): Tra cứu mã `BK-xxxx`, chuyển trạng thái `Reservations` ➔ 'Completed'.
+ *    - Phân loại Khách vãng lai (Walk-in): Tự động gán tài khoản vãng lai `walkin.guest@system.local`.
+ *    - Gọi Stored Procedure `sp_StaffCheckIn` ghi nhận mốc thời gian xe vào bãi.
+ * 3. CHO XE RA BÃI & THU PHÍ (`checkOut`): Gọi Stored Proc `sp_CheckOutWithSurcharge` để cấn trừ số tiền trả trước `PrepaidAmount` hoặc thu thêm phụ phí quá giờ `SurchargeAmount`.
+ * 4. QUẢN LÝ SỰ CỐ TẠI BÃI (`createIncident`, `getIncidents`): Lập biên bản sự cố (va quẹt, làm mất thẻ, hỏng barrier), đính kèm chuỗi JSON ảnh Base64 (`serializeAttachments`).
+ * 
+ * @module staffService
  */
-/*
-Thinh
-*/
 
 import { getPool, sql } from '../config/db.js'
 
+/**
+ * HÀM PHỤ: createHttpError
+ * TÁC DỤNG: Khởi tạo đối tượng lỗi Error chuẩn với HTTP Status Code.
+ */
 function createHttpError(statusCode, message, code) {
     const error = new Error(message)
     error.statusCode = statusCode
     error.code = code
     return error
 }
+
 
 function badRequest(message, code = 'BAD_REQUEST') {
     return createHttpError(400, message, code)
@@ -91,6 +101,10 @@ function parseAttachments(raw) {
         return []
     }
 }
+/**
+ * HÀM PHỤ: getDefaultDriverId
+ * MỤC ĐÍCH: Lấy UserID của tài khoản Khách Vãng Lai hệ thống (`walkin.guest@system.local`) phục vụ check-in không tài khoản.
+ */
 async function getDefaultDriverId(pool) {
     const result = await pool.request().query(`
         SELECT UserID FROM Users
@@ -110,6 +124,10 @@ async function getDefaultDriverId(pool) {
     return user.UserID
 }
 
+/**
+ * HÀM PHỤ: calcParkingFee
+ * MỤC ĐÍCH: Gọi Stored Procedure `sp_CalcParkingFeeV2` tính cước đỗ xe theo thời gian vào/ra.
+ */
 async function calcParkingFee(pool, vehicleTypeId, entryTime, exitTime) {
     const request = pool.request()
 
@@ -127,25 +145,48 @@ async function calcParkingFee(pool, vehicleTypeId, entryTime, exitTime) {
     }
 }
 
-export async function getDashboard() {
+/**
+ * HÀM: getDashboard
+ * MỤC ĐÍCH: Thống kê chỉ số ca trực dành cho Bảo vệ tại cổng bãi xe.
+ * NGUỒN ĐẦU VÀO TỪ FE: Gọi từ `GET /api/staff/dashboard`.
+ * DỮ LIỆU TRẢ VỀ CHO FE: `stats` (các chỉ số ca trực), `recentCheckIns` (8 lượt vào gần nhất), `alerts` (các sự cố mở).
+ */
+export async function getGates(buildingId = null, staffUserId = null) {
     const pool = await getPool()
+    const request = pool.request()
+    request.input('BuildingID', sql.Int, buildingId || null)
+    request.input('StaffUserID', sql.Int, staffUserId || null)
+    const result = await request.query(`
+        SELECT g.GateID, g.BuildingID, b.BuildingName, g.GateName, g.GateType, g.IsActive
+        FROM Gates g
+        JOIN Buildings b ON g.BuildingID = b.BuildingID
+        WHERE (@BuildingID IS NULL OR g.BuildingID = @BuildingID) AND g.IsActive = 1
+          AND (@StaffUserID IS NULL OR g.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @StaffUserID))
+        ORDER BY g.BuildingID, g.GateID
+    `)
+    return result.recordset
+}
 
-    const stats = await pool.request().query(`
+export async function getDashboard(staffUserId = null) {
+    const pool = await getPool()
+    const request = pool.request()
+    request.input('staffUserId', sql.Int, staffUserId || null)
+
+    const stats = await request.query(`
         SELECT
-        (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Active') AS activeSessions,
-        (SELECT COUNT(*) FROM ParkingSessions WHERE CAST(EntryTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckIns,
-        (SELECT COUNT(*) FROM ParkingSessions WHERE SessionStatus = 'Completed' AND CAST(ExitTime AS DATE) = CAST(GETDATE() AS DATE)) AS todayCheckOuts,
-        (SELECT ISNULL(SUM(ISNULL(FinalAmount, Amount)), 0)
-        FROM Payments
-        WHERE PaymentStatus = 'Completed'
-            AND CAST(ISNULL(PaymentTime, SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE)) AS todayRevenue,
-        (SELECT COUNT(*) FROM Incidents WHERE IncidentStatus IN ('Open', 'InProgress')) AS openIncidents,
-        (SELECT COUNT(*) FROM Reservations WHERE ReservationStatus = 'Reserved') AS pendingBookings,
-        (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Available') AS availableSlots,
-        (SELECT COUNT(*) FROM ParkingSlots WHERE SlotStatus = 'Occupied') AS occupiedSlots
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Active' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS activeSessions,
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE CAST(s.EntryTime AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayCheckIns,
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Completed' AND CAST(s.ExitTime AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayCheckOuts,
+        (SELECT ISNULL(SUM(ISNULL(p.FinalAmount, p.Amount)), 0) FROM Payments p JOIN ParkingSessions s ON p.SessionID = s.SessionID JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE p.PaymentStatus = 'Completed' AND CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayRevenue,
+        (SELECT COUNT(*) FROM Incidents i WHERE i.IncidentStatus IN ('Open', 'InProgress') AND (@staffUserId IS NULL OR i.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS openIncidents,
+        (SELECT COUNT(*) FROM Reservations r WHERE r.ReservationStatus = 'Reserved' AND (@staffUserId IS NULL OR r.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS pendingBookings,
+        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Available' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS availableSlots,
+        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Occupied' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS occupiedSlots
     `)
 
-    const recentCheckIns = await pool.request().query(`
+    const recentCheckIns = await pool.request()
+        .input('staffUserId', sql.Int, staffUserId || null)
+        .query(`
         SELECT TOP 8
         ps.SessionID,
         CONCAT('SS-', RIGHT('00000' + CAST(ps.SessionID AS VARCHAR(10)), 5)) AS SessionCode,
@@ -166,10 +207,13 @@ export async function getDashboard() {
         JOIN Floors f ON z.FloorID = f.FloorID
         JOIN Buildings b ON f.BuildingID = b.BuildingID
         LEFT JOIN Users u ON ps.DriverID = u.UserID
+        WHERE (@staffUserId IS NULL OR b.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))
         ORDER BY ps.EntryTime DESC
     `)
 
-    const alerts = await pool.request().query(`
+    const alerts = await pool.request()
+        .input('staffUserId', sql.Int, staffUserId || null)
+        .query(`
         SELECT TOP 6
         IncidentID,
         IncidentType,
@@ -179,6 +223,7 @@ export async function getDashboard() {
         CreatedAt
         FROM Incidents
         WHERE IncidentStatus IN ('Open', 'InProgress')
+          AND (@staffUserId IS NULL OR BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))
         ORDER BY
         CASE Priority
             WHEN 'High' THEN 1
@@ -216,8 +261,8 @@ export async function updateSlotStatus(slotId, slotStatus) {
         .query(`
         UPDATE ParkingSlots
         SET SlotStatus = @slotStatus
-        OUTPUT INSERTED.*
-        WHERE SlotID = @slotId
+        WHERE SlotID = @slotId;
+        SELECT * FROM ParkingSlots WHERE SlotID = @slotId;
         `)
 
     const slot = result.recordset[0]
@@ -419,6 +464,7 @@ export async function getBookingDetail(reservationId) {
     return booking
 }
 
+// 🅿️ LUỒNG STAFF CHECK-IN [BƯỚC 5/7]: Service thực thi SQL Transaction & Kiểm tra điều kiện nghiệp vụ
 export async function checkInBooking(reservationId, plateNumber) {
     const id = parseReservationId(reservationId)
 
@@ -427,12 +473,14 @@ export async function checkInBooking(reservationId, plateNumber) {
     }
 
     const pool = await getPool()
+    // 💡 TRANSACTION: Mở giao dịch an toàn (All-or-Nothing) đảm bảo tính toàn vẹn dữ liệu
     const transaction = new sql.Transaction(pool)
 
     await transaction.begin()
 
     let committed = false
     try {
+        // 💡 LOCK HINTS: UPDLOCK + ROWLOCK khóa riêng dòng Booking này để chống race condition khi 2 người cùng check-in 1 lúc
         const bookingResult = await new sql.Request(transaction)
             .input('reservationId', sql.Int, id)
             .query(`
@@ -567,17 +615,22 @@ export async function checkInBooking(reservationId, plateNumber) {
             .input('plateNumber', sql.NVarChar(20), finalPlate)
             .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
             .input('earlyFeeAmount', sql.Int, earlyFee)
+            .input('cardCode', sql.NVarChar(50), cardCode || null)
+            .input('gateIn', sql.NVarChar(50), gateIn || 'Gate 1')
+            .input('gateInId', sql.Int, gateInId || null)
             .input('bookingStartTime', sql.DateTime, startTime)
+            .input('reservationId', sql.Int, id)
+            .input('createdByStaffId', sql.Int, staffId || null)
             .query(`
                 INSERT INTO ParkingSessions (
-                    SlotID, DriverID, PlateNumber,
-                    VehicleTypeID, EntryTime, SessionStatus, EarlyFeeAmount, BookingStartTime
+                    SlotID, DriverID, PlateNumber, CardCode, GateIn, GateInID,
+                    VehicleTypeID, EntryTime, SessionStatus, EarlyFeeAmount, BookingStartTime, ReservationID, CreatedByStaffID
                 )
                 VALUES (
-                    @slotId, @driverId, @plateNumber,
-                    @vehicleTypeId, GETDATE(), 'Active', @earlyFeeAmount, @bookingStartTime
+                    @slotId, @driverId, @plateNumber, @cardCode, @gateIn, @gateInId,
+                    @vehicleTypeId, GETDATE(), 'Active', @earlyFeeAmount, @bookingStartTime, @reservationId, @createdByStaffId
                 );
-                      SELECT * FROM ParkingSessions WHERE SessionID = SCOPE_IDENTITY();
+                SELECT * FROM ParkingSessions WHERE SessionID = SCOPE_IDENTITY();
             `)
 
         const session = insertSessionResult.recordset[0]
@@ -740,12 +793,16 @@ export async function cancelAndWalkIn(reservationId, plateNumber, slotId) {
         // 3. Tạo walk-in session trên slot vừa tìm được
         const insertResult = await new sql.Request(transaction)
             .input('slotId', sql.Int, availableSlot.SlotID)
-            .input('driverId', sql.Int, booking.DriverID)
+            .input('driverId', sql.Int, booking ? booking.DriverID : null)
             .input('plateNumber', sql.NVarChar(20), finalPlate)
-            .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
+            .input('cardCode', sql.NVarChar(50), cardCode || null)
+            .input('gateIn', sql.NVarChar(50), gateIn || 'Gate 1')
+            .input('gateInId', sql.Int, gateInId || null)
+            .input('vehicleTypeId', sql.Int, vehicleTypeId || (booking ? booking.VehicleTypeID : 1))
+            .input('createdByStaffId', sql.Int, staffId || null)
             .query(`
-                INSERT INTO ParkingSessions (SlotID, DriverID, PlateNumber, VehicleTypeID, EntryTime, SessionStatus)
-                VALUES (@slotId, @driverId, @plateNumber, @vehicleTypeId, GETDATE(), 'Active');
+                INSERT INTO ParkingSessions (SlotID, DriverID, PlateNumber, CardCode, GateIn, GateInID, VehicleTypeID, EntryTime, SessionStatus, CreatedByStaffID)
+                VALUES (@slotId, @driverId, @plateNumber, @cardCode, @gateIn, @gateInId, @vehicleTypeId, GETDATE(), 'Active', @createdByStaffId);
                 SELECT * FROM ParkingSessions WHERE SessionID = SCOPE_IDENTITY();
             `)
 
@@ -1183,11 +1240,11 @@ export async function createIncident({
                 SessionID, DriverID, IncidentType, IncidentStatus,
                 Priority, Description, AssignedStaffID, Attachments, CreatedAt, UpdatedAt
             )
-            OUTPUT INSERTED.*
             VALUES (
                 @sessionId, @driverId, @incidentType, 'Open',
                 @priority, @description, @staffId, @attachments, GETDATE(), GETDATE()
-            )
+            );
+            SELECT * FROM Incidents WHERE IncidentID = SCOPE_IDENTITY();
         `)
 
     const row = result.recordset[0]
@@ -1335,8 +1392,8 @@ export async function updateIncidentStatus(incidentId, { status, note, attachmen
                 ELSE Description END
             ${attachmentClause},
             UpdatedAt = GETDATE()
-        OUTPUT INSERTED.*
-        WHERE IncidentID = @id
+        WHERE IncidentID = @id;
+        SELECT * FROM Incidents WHERE IncidentID = @id;
     `)
 
     const incident = result.recordset[0]
@@ -1417,13 +1474,14 @@ export async function getVehicleTypes() {
   `)
     return result.recordset
 }
-export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status } = {}) {
+export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status } = {}, staffUserId = null) {
     const pool = await getPool()
 
     const result = await pool.request()
         .input('BuildingID', sql.Int, buildingId || null)
         .input('FloorID', sql.Int, floorId || null)
         .input('VehicleTypeID', sql.Int, vehicleTypeId || null)
+        .input('StaffUserID', sql.Int, staffUserId || null)
         .query(`
             SELECT 
                 ps.SlotID,
@@ -1469,6 +1527,7 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
               AND (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
               AND (@FloorID IS NULL OR z.FloorID = @FloorID)
               AND (@VehicleTypeID IS NULL OR ps.VehicleTypeID = @VehicleTypeID)
+              AND (@StaffUserID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @StaffUserID))
             ORDER BY z.ZoneID, ps.SlotCode
         `)
 
