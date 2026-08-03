@@ -588,6 +588,41 @@ export async function checkInBooking(reservationId, options = {}) {
 
             // HỖ TRỢ XÁC NHẬN CHO XE VÀO THEO LUỒNG VÃNG LAI (Walk-in Support)
             const finalPlate = plateNumber?.trim().toUpperCase() || booking.PlateNumber || `WALKIN-${id}`
+            const plateNorm = finalPlate.replace(/[^0-9A-Z]/g, '')
+
+            if (plateNorm) {
+                const activePlateCheck = await new sql.Request(transaction)
+                    .input('plateNorm', sql.NVarChar(20), plateNorm)
+                    .query(`
+                        SELECT TOP 1 SessionID, SlotID FROM ParkingSessions
+                        WHERE REPLACE(REPLACE(UPPER(PlateNumber), '-', ''), '.', '') = @plateNorm
+                          AND SessionStatus = 'Active' AND ExitTime IS NULL
+                    `)
+                if (activePlateCheck.recordset.length > 0) {
+                    throw conflict(
+                        `Xe mang biển số ${finalPlate} hiện đang có một phiên đỗ xe hoạt động trong bãi (Session #${activePlateCheck.recordset[0].SessionID}). Không thể check-in thêm.`,
+                        'PLATE_ALREADY_PARKED'
+                    )
+                }
+            }
+
+            // Kiểm tra slot đỗ mục tiêu xem có đang bị chiếm không
+            const slotCheck = await new sql.Request(transaction)
+                .input('slotId', sql.Int, targetSlotId)
+                .query(`
+                    SELECT TOP 1 ps.SessionID, ps.PlateNumber, sl.SlotCode, sl.SlotStatus
+                    FROM ParkingSlots sl WITH (UPDLOCK, ROWLOCK)
+                    LEFT JOIN ParkingSessions ps ON ps.SlotID = sl.SlotID AND ps.SessionStatus = 'Active' AND ps.ExitTime IS NULL
+                    WHERE sl.SlotID = @slotId
+                `)
+            const targetSlotInfo = slotCheck.recordset[0]
+            if (!targetSlotInfo) throw badRequest('Slot không tồn tại.', 'SLOT_NOT_FOUND')
+            if (['Maintenance', 'Blocked'].includes(targetSlotInfo.SlotStatus)) {
+                throw conflict(`Vị trí đỗ ${targetSlotInfo.SlotCode} đang bảo trì hoặc bị khóa.`, 'SLOT_NOT_AVAILABLE')
+            }
+            if (targetSlotInfo.SessionID) {
+                throw conflict(`Vị trí đỗ ${targetSlotInfo.SlotCode} hiện đang có xe ${targetSlotInfo.PlateNumber} đỗ. Vui lòng chọn vị trí đỗ khác.`, 'SLOT_OCCUPIED')
+            }
 
             const insertSessionResult = await new sql.Request(transaction)
                 .input('slotId', sql.Int, targetSlotId)
@@ -742,7 +777,42 @@ export async function checkInBooking(reservationId, options = {}) {
         }
 
         // ✅ Dùng biển số thực tế nếu có, fallback về BOOKING-{id}
-        const finalPlate = plateNumber?.trim().toUpperCase() || `BOOKING-${id}`
+        const finalPlate = plateNumber?.trim().toUpperCase() || booking.PlateNumber || `BOOKING-${id}`
+        const plateNorm = finalPlate.replace(/[^0-9A-Z]/g, '')
+
+        if (plateNorm) {
+            const activePlateCheck = await new sql.Request(transaction)
+                .input('plateNorm', sql.NVarChar(20), plateNorm)
+                .query(`
+                    SELECT TOP 1 SessionID, SlotID FROM ParkingSessions
+                    WHERE REPLACE(REPLACE(UPPER(PlateNumber), '-', ''), '.', '') = @plateNorm
+                      AND SessionStatus = 'Active' AND ExitTime IS NULL
+                `)
+            if (activePlateCheck.recordset.length > 0) {
+                throw conflict(
+                    `Xe mang biển số ${finalPlate} hiện đang có một phiên đỗ xe hoạt động trong bãi (Session #${activePlateCheck.recordset[0].SessionID}). Không thể check-in thêm.`,
+                    'PLATE_ALREADY_PARKED'
+                )
+            }
+        }
+
+        // Kiểm tra slot đỗ mục tiêu xem có đang bị chiếm không
+        const slotCheck = await new sql.Request(transaction)
+            .input('slotId', sql.Int, finalSlotId)
+            .query(`
+                SELECT TOP 1 ps.SessionID, ps.PlateNumber, sl.SlotCode, sl.SlotStatus
+                FROM ParkingSlots sl WITH (UPDLOCK, ROWLOCK)
+                LEFT JOIN ParkingSessions ps ON ps.SlotID = sl.SlotID AND ps.SessionStatus = 'Active' AND ps.ExitTime IS NULL
+                WHERE sl.SlotID = @slotId
+            `)
+        const targetSlotInfo = slotCheck.recordset[0]
+        if (!targetSlotInfo) throw badRequest('Slot không tồn tại.', 'SLOT_NOT_FOUND')
+        if (['Maintenance', 'Blocked'].includes(targetSlotInfo.SlotStatus)) {
+            throw conflict(`Vị trí đỗ ${targetSlotInfo.SlotCode} đang bảo trì hoặc bị khóa.`, 'SLOT_NOT_AVAILABLE')
+        }
+        if (targetSlotInfo.SessionID) {
+            throw conflict(`Vị trí đỗ ${targetSlotInfo.SlotCode} hiện đang có xe ${targetSlotInfo.PlateNumber} đỗ. Vui lòng chọn vị trí đỗ khác.`, 'SLOT_OCCUPIED')
+        }
 
         const insertSessionResult = await new sql.Request(transaction)
             .input('slotId', sql.Int, finalSlotId)
@@ -811,7 +881,28 @@ export async function checkInBooking(reservationId, options = {}) {
     }
 }
 
-export async function cancelAndWalkIn(reservationId, plateNumber, slotId) {
+export async function cancelAndWalkIn(reservationId, options = {}, slotIdParam = null) {
+    let plateNumber = null
+    let slotId = null
+    let cardCode = null
+    let gateIn = null
+    let gateInId = null
+    let staffId = null
+    let vehicleTypeId = null
+
+    if (typeof options === 'string') {
+        plateNumber = options
+        slotId = slotIdParam
+    } else if (typeof options === 'object' && options !== null) {
+        plateNumber = options.plateNumber
+        slotId = options.slotId || slotIdParam
+        cardCode = options.cardCode
+        gateIn = options.gateIn
+        gateInId = options.gateInId
+        staffId = options.staffId
+        vehicleTypeId = options.vehicleTypeId
+    }
+
     const id = parseReservationId(reservationId)
     if (!id) throw badRequest('ReservationID không hợp lệ.', 'INVALID_RESERVATION_ID')
     if (!plateNumber?.trim()) throw badRequest('Vui lòng nhập biển số xe.', 'PLATE_REQUIRED')

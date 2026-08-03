@@ -189,8 +189,18 @@ export async function checkInBooking(req, res, next) {
 export async function cancelAndWalkIn(req, res, next) {
     try {
         const { reservationId } = req.params
-        const { plateNumber, slotId } = req.body
-        const data = await staffService.cancelAndWalkIn(reservationId, plateNumber, slotId)
+        const { plateNumber, slotId, cardCode, gateIn, gateInId } = req.body || {}
+        const staffId = getUserId(req)
+
+        const data = await staffService.cancelAndWalkIn(reservationId, {
+            plateNumber,
+            slotId,
+            cardCode,
+            gateIn,
+            gateInId,
+            staffId
+        })
+
         res.status(StatusCodes.CREATED).json({
             success: true,
             message: 'Check-in vãng lai thành công. Đặt trước đã được hủy.',
