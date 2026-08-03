@@ -156,11 +156,18 @@ export async function getBookingDetail(req, res, next) {
 export async function checkInBooking(req, res, next) {
     try {
         const { reservationId } = req.params // Lấy ID mã đặt chỗ từ URL
-        const { plateNumber } = req.body     // Biển số xe quét được tại cổng vào
-        
+        const { plateNumber, cardCode, gateIn, gateInId } = req.body || {}
+        const staffId = getUserId(req)
+
         // Gọi service xử lý chuyển đổi đặt trước thành phiên đỗ xe hoạt động
-        const data = await staffService.checkInBooking(reservationId, plateNumber)
-        
+        const data = await staffService.checkInBooking(reservationId, {
+            plateNumber,
+            cardCode,
+            gateIn,
+            gateInId,
+            staffId
+        })
+
         // Trả về kết quả HTTP 201 Created
         res.status(StatusCodes.CREATED).json({
             success: true,

@@ -59,18 +59,14 @@ const STATUS_CONFIG = {
   Cancelled: { labelKey: 'staff.verifyBooking.status.cancelled', color: 'bg-slate-100 text-slate-500 border-slate-100', dot: 'bg-slate-400' }
 }
 
-const EARLY_CHECKIN_MIN = 60   // quá sớm > 60 phút → phải cancelAndWalkIn
+const EARLY_CHECKIN_MIN = 15   // cửa sổ đến sớm tối đa 15 phút
 const LATE_CHECKIN_MIN = 60    // no-show nếu trễ > 60 phút
-const GRACE_PERIOD_MIN = 15    // ân hạn: đến sớm ≤ 15 phút → miễn phí
-const EARLY_FEE_FLAT = 5000    // phụ phí cố định 5.000đ nếu đến sớm 15–60 phút
 
 const getCheckinTimeStatus = (startTime) => {
   if (!startTime) return null
   const diffMin = Math.round((Date.now() - new Date(startTime).getTime()) / 60000)
-  // Ranh giới rõ ràng: đúng 15 phút = earlyFee, < 15 phút = grace
-  if (diffMin < -EARLY_CHECKIN_MIN)  return { status: 'tooEarly', diffMin, minutesLeft: -diffMin - EARLY_CHECKIN_MIN }
-  if (diffMin <= -GRACE_PERIOD_MIN)  return { status: 'earlyFee', diffMin, minutesEarly: -diffMin, fee: EARLY_FEE_FLAT }
-  if (diffMin < 0)                   return { status: 'grace',    diffMin, minutesEarly: -diffMin }
+  if (diffMin < -EARLY_CHECKIN_MIN) return { status: 'tooEarly', diffMin, minutesLeft: -diffMin - EARLY_CHECKIN_MIN }
+  if (diffMin <= 0) return { status: 'grace', diffMin, minutesEarly: -diffMin }
   if (diffMin <= 15) return { status: 'onTime', diffMin }
   if (diffMin <= LATE_CHECKIN_MIN) return { status: 'lateWindow', diffMin }
   return { status: 'noShow', diffMin }
@@ -471,25 +467,13 @@ const BookingDetailPanel = ({ booking, onCheckIn, checking, onClose }) => {
       {/* Time status banner — không hiện cho tooEarly vì có 2 options riêng bên dưới */}
       {isValid && !isExpired && timeInfo && timeInfo.status !== 'tooEarly' && (() => {
         const tsCfg = TIME_STATUS_CFG[timeInfo.status]
-        const msgParams = timeInfo.status === 'earlyFee'
-          ? { n: timeInfo.minutesEarly, fee: '5.000đ' }
-          : timeInfo.status === 'grace'
-            ? { n: timeInfo.minutesEarly }
-            : timeInfo.status === 'lateWindow'
-              ? { n: timeInfo.diffMin }
-              : {}
+        const msgParams = timeInfo.status === 'grace'
+          ? { n: timeInfo.minutesEarly }
+          : timeInfo.status === 'lateWindow'
+            ? { n: timeInfo.diffMin }
+            : {}
         return (
           <div className={`rounded-3xl border p-4 ${tsCfg.bg}`}>
-            {/* Fee highlight cho earlyFee */}
-            {timeInfo.status === 'earlyFee' && (
-              <div className="flex items-center justify-between mb-3 bg-blue-100 rounded-xl px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">💳</span>
-                  <span className="text-sm font-black text-blue-800">Phụ phí đến sớm</span>
-                </div>
-                <span className="text-xl font-black text-blue-700">5.000đ</span>
-              </div>
-            )}
             <div className="flex items-center gap-2 mb-1">
               <span className="text-base">{tsCfg.icon}</span>
               <span className={`text-xs font-black uppercase tracking-wider ${tsCfg.text}`}>
