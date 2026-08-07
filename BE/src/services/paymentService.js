@@ -283,8 +283,19 @@ export async function getActiveSessionsService(driverId) {
             const baseFee = feeRes.output.Fee || 0;
             
             // Tính tỷ lệ giảm giá ưu đãi
-            const { discountPercent } = await applySubscriptionDiscount(driverId, baseFee, s.SessionID);
+            const { discountPercent } = await applySubscriptionDiscount(pool, driverId, baseFee, s.SessionID);
             s.DiscountPercent = discountPercent;
+            const finalRealTimeFee = Math.round(baseFee * (1 - (discountPercent || 0) / 100));
+            s.RealTimeFee = finalRealTimeFee;
+            s.ParkingFee = finalRealTimeFee;
+            if (s.PrepaidAmount > 0 && finalRealTimeFee > s.PrepaidAmount) {
+              s.SurchargeAmount = finalRealTimeFee - s.PrepaidAmount;
+              s.HasSurcharge = true;
+            } else {
+              s.SurchargeAmount = 0;
+              s.HasSurcharge = false;
+            }
+            s.Amount = finalRealTimeFee > 0 ? finalRealTimeFee : (s.CurrentAmount || 0);
             
         } catch (e) {
             console.error('Error calculating discount for session:', s.SessionID, e);
@@ -346,7 +357,18 @@ export async function createPaymentService(sessionId, driverId) {
     const pricingTable = await getPricingTable(pool, session.VehicleTypeID);
 
     // 3. Áp dụng ưu đãi gói hội viên
-    const { finalFee: amount, discountPercent, planId, sessionCount } = await applySubscriptionDiscount(pool, driverId, baseFee, sessionId);
+    const { finalFee: totalFee, discountPercent, planId, sessionCount } = await applySubscriptionDiscount(pool, driverId, baseFee, sessionId);
+
+    // Tính số tiền phụ trội cần tạo mã QR thanh toán (trừ tiền đã trả trước nếu có)
+    let amount = totalFee;
+    const existingPrepaid = Number(session.PrepaidAmount || 0);
+    if (session.PaymentStatus === 'Prepaid' && existingPrepaid > 0) {
+        if (totalFee <= existingPrepaid) {
+            const err = new Error('Phiên này đã được thanh toán đầy đủ rồi');
+            err.statusCode = 400; throw err;
+        }
+        amount = totalFee - existingPrepaid;
+    }
 
     // 4. Nếu số tiền sau giảm giá = 0 (Được miễn phí hoàn toàn) ➔ Tự động đánh dấu Prepaid 0đ không cần gọi PayOS
     if (amount === 0) {
@@ -455,6 +477,8 @@ export async function createPaymentService(sessionId, driverId) {
     return {
         orderCode,
         amount,
+        totalFee,
+        prepaidAmount: existingPrepaid,
         baseFee,
         description,
         qrCode: pd.qrCode,

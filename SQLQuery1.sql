@@ -938,21 +938,40 @@ GO
 CREATE FUNCTION fn_SplitDayNightSegments (@EntryTime DATETIME, @ExitTime DATETIME, @NightStart TIME, @NightEnd TIME)
 RETURNS @Segments TABLE (SegStart DATETIME, SegEnd DATETIME, IsNight BIT)
 AS BEGIN
-    DECLARE @Cursor DATETIME = @EntryTime, @DayAnchor DATE;
-    DECLARE @NightStartDT DATETIME, @NightEndDT DATETIME, @SafetyCounter INT = 0;
-    WHILE @Cursor < @ExitTime AND @SafetyCounter < 60
+    DECLARE @Cursor DATETIME = @EntryTime;
+    DECLARE @NextBreak DATETIME;
+    DECLARE @IsNight BIT;
+    DECLARE @CurTime TIME;
+    DECLARE @DayAnchor DATE;
+    DECLARE @SafetyCounter INT = 0;
+
+    WHILE @Cursor < @ExitTime AND @SafetyCounter < 100
     BEGIN
         SET @SafetyCounter += 1;
+        SET @CurTime = CAST(@Cursor AS TIME);
         SET @DayAnchor = CAST(@Cursor AS DATE);
-        SET @NightStartDT = CAST(@DayAnchor AS DATETIME) + CAST(@NightStart AS DATETIME);
-        SET @NightEndDT   = DATEADD(DAY,1,CAST(@DayAnchor AS DATETIME)) + CAST(@NightEnd AS DATETIME);
-        IF @Cursor < @NightStartDT BEGIN
-            DECLARE @SegEndDay DATETIME = CASE WHEN @ExitTime<@NightStartDT THEN @ExitTime ELSE @NightStartDT END;
-            INSERT INTO @Segments VALUES(@Cursor,@SegEndDay,0); SET @Cursor=@SegEndDay;
-        END ELSE IF @Cursor>=@NightStartDT AND @Cursor<@NightEndDT BEGIN
-            DECLARE @SegEndNight DATETIME = CASE WHEN @ExitTime<@NightEndDT THEN @ExitTime ELSE @NightEndDT END;
-            INSERT INTO @Segments VALUES(@Cursor,@SegEndNight,1); SET @Cursor=@SegEndNight;
-        END ELSE SET @Cursor=DATEADD(DAY,1,CAST(@DayAnchor AS DATETIME));
+
+        IF @CurTime >= @NightEnd AND @CurTime < @NightStart BEGIN
+            SET @IsNight = 0;
+            SET @NextBreak = CAST(@DayAnchor AS DATETIME) + CAST(@NightStart AS DATETIME);
+        END
+        ELSE IF @CurTime >= @NightStart BEGIN
+            SET @IsNight = 1;
+            SET @NextBreak = DATEADD(DAY, 1, CAST(@DayAnchor AS DATETIME)) + CAST(@NightEnd AS DATETIME);
+        END
+        ELSE BEGIN
+            SET @IsNight = 1;
+            SET @NextBreak = CAST(@DayAnchor AS DATETIME) + CAST(@NightEnd AS DATETIME);
+        END
+
+        IF @NextBreak > @ExitTime SET @NextBreak = @ExitTime;
+
+        IF @NextBreak > @Cursor BEGIN
+            INSERT INTO @Segments VALUES (@Cursor, @NextBreak, @IsNight);
+            SET @Cursor = @NextBreak;
+        END ELSE BEGIN
+            SET @Cursor = DATEADD(MINUTE, 1, @Cursor);
+        END
     END
     RETURN;
 END
@@ -3608,7 +3627,7 @@ GO
    PHẦN 5: USERS MỚI
    ===================================================================== */
 
-DECLARE @PW NVARCHAR(256) = '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW';
+DECLARE @PW NVARCHAR(256) = '$2b$10$BJ0ZZ/i8jjoVXZKPXQJwAuBLrzXuvldHY4ui81OBFk.zSfCFqm.B2';
 
 -- Chỉ insert nếu email chưa tồn tại
 IF NOT EXISTS (SELECT 1 FROM Users WHERE Email = 'an.nguyen@gmail.com')
@@ -4156,4 +4175,69 @@ SELECT b.BuildingName, COUNT(*) AS TotalSlots,
 FROM ParkingSlots ps
 JOIN Zones z ON ps.ZoneID=z.ZoneID JOIN Floors f ON z.FloorID=f.FloorID JOIN Buildings b ON f.BuildingID=b.BuildingID
 GROUP BY b.BuildingName ORDER BY b.BuildingName;
+GO
+
+/* =====================================================================
+   PHẦN 15: UPDATED STORED PROCEDURES (CẬP NHẬT THANH TOÁN & PHỤ TRỘI)
+   ===================================================================== */
+
+CREATE OR ALTER PROCEDURE sp_CreatePrepayment
+    @SessionID INT, @OrderCode BIGINT, @Amount DECIMAL(10,2), @SnapshotH DECIMAL(10,2),
+    @QrCode NVARCHAR(MAX)=NULL, @CheckoutUrl NVARCHAR(500)=NULL
+AS BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS(SELECT 1 FROM ParkingSessions WHERE SessionID=@SessionID AND SessionStatus='Active') BEGIN RAISERROR('Session không tồn tại hoặc không active.',16,1); RETURN; END
+    
+    DECLARE @CurPrepaid DECIMAL(10,2)=0, @CurPrepaidAt DATETIME=NULL;
+    SELECT @CurPrepaid = ISNULL(PrepaidAmount, 0), @CurPrepaidAt = PrepaidAt FROM Payments WHERE SessionID=@SessionID AND (PaymentStatus='Prepaid' OR PrepaidAmount > 0);
+
+    IF EXISTS(SELECT 1 FROM Payments WHERE SessionID=@SessionID)
+        UPDATE Payments SET 
+            OrderCode=@OrderCode,
+            Amount=@Amount,
+            SnapshotDurationH=@SnapshotH,
+            QrCode=@QrCode,
+            CheckoutUrl=@CheckoutUrl,
+            PaymentMethod='Banking',
+            PaymentStatus=CASE WHEN @CurPrepaid > 0 THEN 'Prepaid' ELSE 'Pending' END,
+            PrepaidAt=ISNULL(PrepaidAt, @CurPrepaidAt),
+            PrepaidAmount=@CurPrepaid,
+            SurchargeAmount=CASE WHEN @CurPrepaid > 0 THEN @Amount ELSE 0 END,
+            SurchargeStatus=CASE WHEN @CurPrepaid > 0 THEN 'Pending' ELSE 'None' END
+        WHERE SessionID=@SessionID;
+    ELSE
+        INSERT INTO Payments (SessionID,Amount,PaymentMethod,PaymentStatus,OrderCode,SnapshotDurationH,QrCode,CheckoutUrl,PrepaidAmount,SurchargeAmount,SurchargeStatus)
+        VALUES (@SessionID,@Amount,'Banking','Pending',@OrderCode,@SnapshotH,@QrCode,@CheckoutUrl,0,0,'None');
+        
+    SELECT p.PaymentID,p.SessionID,p.OrderCode,p.Amount,p.PaymentStatus,p.SnapshotDurationH FROM Payments p WHERE p.SessionID=@SessionID;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_MarkPaymentPrepaid @OrderCode BIGINT, @PaidAt DATETIME=NULL
+AS BEGIN
+    SET NOCOUNT ON;
+    IF @PaidAt IS NULL SET @PaidAt=GETDATE();
+    
+    DECLARE @SessionID INT, @PayStatus NVARCHAR(50), @SurStatus NVARCHAR(50), @SurAmount DECIMAL(10,2), @OrderAmount DECIMAL(10,2);
+    SELECT @SessionID=SessionID, @PayStatus=PaymentStatus, @SurStatus=SurchargeStatus, @SurAmount=ISNULL(SurchargeAmount,0), @OrderAmount=ISNULL(Amount,0)
+    FROM Payments WHERE OrderCode=@OrderCode;
+    
+    IF @SessionID IS NULL BEGIN SELECT 0 AS Updated; RETURN; END
+
+    IF @PayStatus = 'Pending' BEGIN
+        UPDATE Payments 
+        SET PaymentStatus='Prepaid', PrepaidAmount=@OrderAmount, PrepaidAt=@PaidAt, PaymentTime=@PaidAt 
+        WHERE SessionID=@SessionID;
+    END
+    ELSE IF @PayStatus = 'Prepaid' AND @SurStatus = 'Pending' BEGIN
+        UPDATE Payments 
+        SET PrepaidAmount = ISNULL(PrepaidAmount,0) + @SurAmount,
+            SurchargeStatus = 'Completed',
+            SurchargePaidAt = @PaidAt,
+            PaymentTime = @PaidAt
+        WHERE SessionID=@SessionID;
+    END
+
+    SELECT @SessionID AS SessionID, 1 AS Updated;
+END;
 GO

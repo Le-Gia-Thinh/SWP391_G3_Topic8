@@ -177,7 +177,7 @@ export async function getDashboard(staffUserId = null) {
         (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Active' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS activeSessions,
         (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE CAST(s.EntryTime AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayCheckIns,
         (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Completed' AND CAST(s.ExitTime AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayCheckOuts,
-        (SELECT ISNULL(SUM(ISNULL(p.FinalAmount, p.Amount)), 0) FROM Payments p JOIN ParkingSessions s ON p.SessionID = s.SessionID JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE p.PaymentStatus = 'Completed' AND CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayRevenue,
+        (SELECT ISNULL(SUM(ISNULL(p.PrepaidAmount, ISNULL(p.FinalAmount, p.Amount))), 0) FROM Payments p JOIN ParkingSessions s ON p.SessionID = s.SessionID JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE p.PaymentStatus IN ('Completed', 'Prepaid') AND CAST(ISNULL(p.PaymentTime, p.PrepaidAt) AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayRevenue,
         (SELECT COUNT(*) FROM Incidents i LEFT JOIN ParkingSessions s ON i.SessionID = s.SessionID LEFT JOIN ParkingSlots ps ON s.SlotID = ps.SlotID LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID LEFT JOIN Floors f ON z.FloorID = f.FloorID WHERE i.IncidentStatus IN ('Open', 'InProgress') AND (@staffUserId IS NULL OR s.SessionID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS openIncidents,
         (SELECT COUNT(*) FROM Reservations r LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID LEFT JOIN Floors f ON z.FloorID = f.FloorID WHERE r.ReservationStatus = 'Reserved' AND (@staffUserId IS NULL OR r.SlotID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS pendingBookings,
         (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Available' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS availableSlots,
@@ -1292,7 +1292,13 @@ export async function getCheckoutPreview(sessionId) {
     const durationH = Math.max(0.01, (now.getTime() - entry.getTime()) / 1000 / 60 / 60)
     const durationMin = Math.floor((now.getTime() - entry.getTime()) / 60000)
 
-    const { fee, breakdown } = await calcParkingFee(pool, session.VehicleTypeID, entry, now)
+    let { fee, breakdown } = await calcParkingFee(pool, session.VehicleTypeID, entry, now)
+    if (session.DriverID) {
+        const { applySubscriptionDiscount } = await import('./paymentService.js')
+        const { finalFee } = await applySubscriptionDiscount(pool, session.DriverID, fee, sessionId)
+        fee = finalFee
+    }
+
     const earlyFeeAmount = Number(session.EarlyFeeAmount || 0)
     const bookingStart = session.BookingStartTime ? new Date(session.BookingStartTime) : null
     const isEarlyExit = !!(bookingStart && now < bookingStart && durationMin < 30 && earlyFeeAmount > 0)
@@ -1315,6 +1321,8 @@ export async function getCheckoutPreview(sessionId) {
     const totalFee = fee + effectiveEarlyFee + overtimePenaltyAmount
     const prepaidAmount = Number(session.PrepaidAmount || 0)
 
+    const isSurchargePaid = session.SurchargeStatus === 'Completed' || session.PaymentStatus === 'Completed'
+
     return {
         session,
         checkoutTime: now,
@@ -1328,7 +1336,7 @@ export async function getCheckoutPreview(sessionId) {
         estimatedFee: totalFee,
         feeBreakdown: breakdown,
         prepaidAmount,
-        surchargeAmount: Math.max(0, totalFee - prepaidAmount)
+        surchargeAmount: isSurchargePaid ? 0 : Math.max(0, totalFee - prepaidAmount)
     }
 }
 
