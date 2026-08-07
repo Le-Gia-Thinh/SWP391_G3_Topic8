@@ -58,14 +58,14 @@ export async function getDashboardStats(buildingId = null, managerUserId = null)
 
   // 3. QUERY REVENUE TODAY
   const revenueToday = await makeReq().query(`
-    SELECT ISNULL(SUM(ISNULL(p.FinalAmount, p.Amount)), 0) AS RevenueToday
+    SELECT ISNULL(SUM(ISNULL(p.PrepaidAmount, ISNULL(p.FinalAmount, p.Amount))), 0) AS RevenueToday
     FROM Payments p
     JOIN ParkingSessions s ON p.SessionID = s.SessionID
     JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
     JOIN Zones z ON ps.ZoneID = z.ZoneID
     JOIN Floors f ON z.FloorID = f.FloorID
     WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
-      AND CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE)
+      AND CAST(ISNULL(p.PaymentTime, p.PrepaidAt) AS DATE) = CAST(GETDATE() AS DATE)
       AND (@buildingId IS NULL OR f.BuildingID = @buildingId)
       AND (@managerUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @managerUserId))
   `);

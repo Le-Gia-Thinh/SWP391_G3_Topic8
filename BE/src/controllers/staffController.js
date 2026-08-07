@@ -33,7 +33,8 @@ const getUserId = (req) =>
 export async function getDashboard(req, res, next) {
     try {
         const staffUserId = req.user?.RoleName === 'Staff' ? req.user.UserID : null;
-        const data = await staffService.getDashboard(staffUserId)
+        const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null;
+        const data = await staffService.getDashboard(staffUserId, buildingId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
         next(error)

@@ -11,8 +11,9 @@ const STAFF_BASE = '/staff'
 
 const staffApi = {
   // ── Dashboard ────────────────────────────────────────────────
-  getDashboard: async () => {
-    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/dashboard`)
+  getDashboard: async (buildingId = null) => {
+    const params = buildingId && buildingId !== 'all' ? { buildingId } : {}
+    const res = await authorizedAxiosInstance.get(`${STAFF_BASE}/dashboard`, { params })
     return res.data
   },
 

@@ -167,25 +167,27 @@ export async function getGates(buildingId = null, staffUserId = null) {
     return result.recordset
 }
 
-export async function getDashboard(staffUserId = null) {
+export async function getDashboard(staffUserId = null, buildingId = null) {
     const pool = await getPool()
     const request = pool.request()
     request.input('staffUserId', sql.Int, staffUserId || null)
+    request.input('buildingId', sql.Int, buildingId || null)
 
     const stats = await request.query(`
         SELECT
-        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Active' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS activeSessions,
-        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE CAST(s.EntryTime AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayCheckIns,
-        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Completed' AND CAST(s.ExitTime AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayCheckOuts,
-        (SELECT ISNULL(SUM(ISNULL(p.PrepaidAmount, ISNULL(p.FinalAmount, p.Amount))), 0) FROM Payments p JOIN ParkingSessions s ON p.SessionID = s.SessionID JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE p.PaymentStatus IN ('Completed', 'Prepaid') AND CAST(ISNULL(p.PaymentTime, p.PrepaidAt) AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayRevenue,
-        (SELECT COUNT(*) FROM Incidents i LEFT JOIN ParkingSessions s ON i.SessionID = s.SessionID LEFT JOIN ParkingSlots ps ON s.SlotID = ps.SlotID LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID LEFT JOIN Floors f ON z.FloorID = f.FloorID WHERE i.IncidentStatus IN ('Open', 'InProgress') AND (@staffUserId IS NULL OR s.SessionID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS openIncidents,
-        (SELECT COUNT(*) FROM Reservations r LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID LEFT JOIN Floors f ON z.FloorID = f.FloorID WHERE r.ReservationStatus = 'Reserved' AND (@staffUserId IS NULL OR r.SlotID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS pendingBookings,
-        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Available' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS availableSlots,
-        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Occupied' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS occupiedSlots
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Active' AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS activeSessions,
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE CAST(s.EntryTime AS DATE) = CAST(GETDATE() AS DATE) AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS todayCheckIns,
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Completed' AND CAST(s.ExitTime AS DATE) = CAST(GETDATE() AS DATE) AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS todayCheckOuts,
+        (SELECT ISNULL(SUM(ISNULL(p.PrepaidAmount, ISNULL(p.FinalAmount, p.Amount))), 0) FROM Payments p JOIN ParkingSessions s ON p.SessionID = s.SessionID JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE p.PaymentStatus IN ('Completed', 'Prepaid') AND CAST(ISNULL(p.PaymentTime, p.PrepaidAt) AS DATE) = CAST(GETDATE() AS DATE) AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS todayRevenue,
+        (SELECT COUNT(*) FROM Incidents i LEFT JOIN ParkingSessions s ON i.SessionID = s.SessionID LEFT JOIN ParkingSlots ps ON s.SlotID = ps.SlotID LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID LEFT JOIN Floors f ON z.FloorID = f.FloorID WHERE i.IncidentStatus IN ('Open', 'InProgress') AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR s.SessionID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS openIncidents,
+        (SELECT COUNT(*) FROM Reservations r LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID LEFT JOIN Floors f ON z.FloorID = f.FloorID WHERE r.ReservationStatus = 'Reserved' AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR r.SlotID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS pendingBookings,
+        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Available' AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS availableSlots,
+        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Occupied' AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS occupiedSlots
     `)
 
     const recentCheckIns = await pool.request()
         .input('staffUserId', sql.Int, staffUserId || null)
+        .input('buildingId', sql.Int, buildingId || null)
         .query(`
         SELECT TOP 8
         ps.SessionID,
@@ -207,12 +209,13 @@ export async function getDashboard(staffUserId = null) {
         JOIN Floors f ON z.FloorID = f.FloorID
         JOIN Buildings b ON f.BuildingID = b.BuildingID
         LEFT JOIN Users u ON ps.DriverID = u.UserID
-        WHERE (@staffUserId IS NULL OR b.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))
+        WHERE (@buildingId IS NOT NULL AND b.BuildingID = @buildingId) OR (@buildingId IS NULL AND (@staffUserId IS NULL OR b.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))
         ORDER BY ps.EntryTime DESC
     `)
 
     const alerts = await pool.request()
         .input('staffUserId', sql.Int, staffUserId || null)
+        .input('buildingId', sql.Int, buildingId || null)
         .query(`
         SELECT TOP 6
         i.IncidentID,
@@ -227,7 +230,7 @@ export async function getDashboard(staffUserId = null) {
         LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID
         LEFT JOIN Floors f ON z.FloorID = f.FloorID
         WHERE i.IncidentStatus IN ('Open', 'InProgress')
-          AND (@staffUserId IS NULL OR s.SessionID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))
+          AND ((@buildingId IS NOT NULL AND f.BuildingID = @buildingId) OR (@buildingId IS NULL AND (@staffUserId IS NULL OR s.SessionID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))))
         ORDER BY
         CASE i.Priority
             WHEN 'High' THEN 1
@@ -237,10 +240,33 @@ export async function getDashboard(staffUserId = null) {
         i.CreatedAt DESC
     `)
 
+    const assignedBuildingsRes = await pool.request()
+        .input('staffUserId', sql.Int, staffUserId || null)
+        .query(`
+            SELECT 
+                b.BuildingID, 
+                b.BuildingName,
+                (
+                    SELECT ISNULL(SUM(ISNULL(p.PrepaidAmount, ISNULL(p.FinalAmount, p.Amount))), 0) 
+                    FROM Payments p 
+                    JOIN ParkingSessions s ON p.SessionID = s.SessionID 
+                    JOIN ParkingSlots ps ON s.SlotID = ps.SlotID 
+                    JOIN Zones z ON ps.ZoneID = z.ZoneID 
+                    JOIN Floors f ON z.FloorID = f.FloorID 
+                    WHERE p.PaymentStatus IN ('Completed', 'Prepaid') 
+                      AND CAST(ISNULL(p.PaymentTime, p.PrepaidAt) AS DATE) = CAST(GETDATE() AS DATE) 
+                      AND f.BuildingID = b.BuildingID
+                ) AS TodayRevenue
+            FROM Buildings b
+            WHERE @staffUserId IS NULL OR b.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)
+            ORDER BY b.BuildingID
+        `)
+
     return {
         stats: stats.recordset[0],
         recentCheckIns: recentCheckIns.recordset,
-        alerts: alerts.recordset
+        alerts: alerts.recordset,
+        assignedBuildings: assignedBuildingsRes.recordset
     }
 }
 
