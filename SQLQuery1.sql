@@ -1038,7 +1038,9 @@ GO
 -- sp_CheckOutVehicle dùng sp_CalcParkingFeeV2
 CREATE PROCEDURE sp_CheckOutVehicle
     @SessionID INT, @PaymentMethod NVARCHAR(50),
-    @GateOutID INT = NULL, @GateOut NVARCHAR(50) = NULL
+    @GateOutID INT = NULL, @GateOut NVARCHAR(50) = NULL,
+    @OverrideFee DECIMAL(10,2) = NULL,
+    @OverrideNote NVARCHAR(MAX) = NULL
 AS BEGIN
     SET NOCOUNT ON;
     DECLARE @EntryTime DATETIME, @ExitTime DATETIME, @VehicleTypeID INT, @Fee DECIMAL(10,2), @Breakdown NVARCHAR(MAX);
@@ -1047,7 +1049,16 @@ AS BEGIN
     SET @ExitTime=GETDATE();
     IF @GateOut IS NULL AND @GateOutID IS NOT NULL
         SELECT @GateOut = GateName FROM Gates WHERE GateID = @GateOutID;
-    EXEC sp_CalcParkingFeeV2 @VehicleTypeID=@VehicleTypeID,@EntryTime=@EntryTime,@ExitTime=@ExitTime,@Fee=@Fee OUTPUT,@Breakdown=@Breakdown OUTPUT;
+
+    IF @OverrideFee IS NOT NULL
+    BEGIN
+        SET @Fee = @OverrideFee;
+        SET @Breakdown = ISNULL(@OverrideNote, N'{"type":"override","note":"Fee overridden by application"}');
+    END
+    ELSE
+    BEGIN
+        EXEC sp_CalcParkingFeeV2 @VehicleTypeID=@VehicleTypeID,@EntryTime=@EntryTime,@ExitTime=@ExitTime,@Fee=@Fee OUTPUT,@Breakdown=@Breakdown OUTPUT;
+    END
 
     -- TÍNH PHÍ PHẠT ĐỖ QUÁ GIỜ (OVERTIME PENALTY)
     DECLARE @ReservationEndTime DATETIME = NULL;
@@ -1090,7 +1101,9 @@ GO
 -- sp_CheckOutWithSurcharge dùng sp_CalcParkingFeeV2
 CREATE PROCEDURE sp_CheckOutWithSurcharge
     @SessionID INT, @PaymentMethod NVARCHAR(50),
-    @GateOutID INT = NULL, @GateOut NVARCHAR(50) = NULL
+    @GateOutID INT = NULL, @GateOut NVARCHAR(50) = NULL,
+    @OverrideFee DECIMAL(10,2) = NULL,
+    @OverrideNote NVARCHAR(MAX) = NULL
 AS BEGIN
     SET NOCOUNT ON; BEGIN TRANSACTION;
     DECLARE @EntryTime DATETIME, @ExitTime DATETIME=GETDATE(), @VehicleTypeID INT;
@@ -1099,7 +1112,16 @@ AS BEGIN
     IF @EntryTime IS NULL BEGIN ROLLBACK; RAISERROR('Session không tồn tại hoặc đã checkout.',16,1); RETURN; END
     IF @GateOut IS NULL AND @GateOutID IS NOT NULL
         SELECT @GateOut = GateName FROM Gates WHERE GateID = @GateOutID;
-    EXEC sp_CalcParkingFeeV2 @VehicleTypeID=@VehicleTypeID,@EntryTime=@EntryTime,@ExitTime=@ExitTime,@Fee=@FinalFee OUTPUT,@Breakdown=@Breakdown OUTPUT;
+
+    IF @OverrideFee IS NOT NULL
+    BEGIN
+        SET @FinalFee = @OverrideFee;
+        SET @Breakdown = ISNULL(@OverrideNote, N'{"type":"override","note":"Fee overridden by application"}');
+    END
+    ELSE
+    BEGIN
+        EXEC sp_CalcParkingFeeV2 @VehicleTypeID=@VehicleTypeID,@EntryTime=@EntryTime,@ExitTime=@ExitTime,@Fee=@FinalFee OUTPUT,@Breakdown=@Breakdown OUTPUT;
+    END
 
     -- TÍNH PHÍ PHẠT ĐỖ QUÁ GIỜ (OVERTIME PENALTY)
     DECLARE @ReservationEndTime DATETIME = NULL;

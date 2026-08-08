@@ -308,21 +308,24 @@ export async function payParkingByWalletService(sessionId, driverId) {
 
     // NẾU SỐ TIỀN PHẢI TRẢ = 0 (Được miễn phí gửi xe hoàn toàn theo gói hội viên):
     if (amountToDeduct === 0) {
-        const durationH = parseFloat(diffH.toFixed(2));
-        // Kích hoạt thủ tục tạo thanh toán 0 đồng
+        // Kích hoạt thanh toán 0 đồng cho hội viên
         await pool.request()
             .input('SessionID', sql.Int, sessionId)
-            .input('OrderCode', sql.BigInt, 0)
-            .input('Amount', sql.Decimal(10, 2), 0)
-            .input('SnapshotH', sql.Decimal(10, 2), durationH)
-            .input('QrCode', sql.NVarChar(sql.MAX), null)
-            .input('CheckoutUrl', sql.NVarChar(500), 'FREE')
-            .execute('sp_CreatePrepayment');
-        // Đánh dấu hóa đơn đã trả tiền xong (Prepaid)
-        await pool.request()
-            .input('OrderCode', sql.BigInt, 0)
-            .input('PaidAt', sql.DateTime, new Date())
-            .execute('sp_MarkPaymentPrepaid');
+            .query(`
+                UPDATE Payments
+                SET Amount = 0,
+                    FinalAmount = 0,
+                    PrepaidAmount = 0,
+                    SurchargeAmount = 0,
+                    PaymentStatus = 'Prepaid',
+                    PrepaidAt = GETDATE(),
+                    PaymentMethod = 'Subscription',
+                    CheckoutUrl = 'FREE',
+                    OrderCode = 0,
+                    PaymentNote = N'Miễn phí hội viên'
+                WHERE SessionID = @SessionID
+            `);
+
         // Trả về kết quả miễn phí thành công
         return { success: true, amount: 0, totalFee, prepaidAmount: existingPrepaid, newBalance: await getBalanceService(driverId) };
     }

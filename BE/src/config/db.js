@@ -35,8 +35,8 @@ const config = {
 
   // Cấu hình pool kết nối (quản lý số lượng kết nối đồng thời để tối ưu hiệu suất)
   pool: {
-    max: 10,                 // Tối đa 10 kết nối đồng thời
-    min: 0,                  // Tối thiểu 0 kết nối khi không dùng
+    max: 30,                 // Tối đa 30 kết nối đồng thời để tránh làm nghẽn API khi tải trang
+    min: 5,                  // Tối thiểu 5 kết nối mở sẵn
     idleTimeoutMillis: 30000,// Giải phóng kết nối nếu không hoạt động sau 30 giây
   },
 };
