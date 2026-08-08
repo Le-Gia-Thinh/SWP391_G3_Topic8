@@ -26,7 +26,9 @@ import * as managerService from "../services/managerService.js";
  */
 export async function getDashboard(req, res, next) {
     try {
-        const data = await managerService.getDashboardStats();
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null;
+        const data = await managerService.getDashboardStats(buildingId, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -95,8 +97,9 @@ export async function deleteBuilding(req, res, next) {
 
 export async function getGates(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null;
-        const data = await managerService.getGates(buildingId);
+        const data = await managerService.getGates(buildingId, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -416,13 +419,15 @@ export async function getVehicleTypes(req, res, next) {
  */
 export async function getIncidents(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const result = await managerService.getIncidents({
             status: req.query.status || undefined,
             priority: req.query.priority || undefined,
             search: req.query.search || undefined,
+            buildingId: req.query.buildingId ? Number(req.query.buildingId) : undefined,
             page: req.query.page ? Number(req.query.page) : 1,
             limit: req.query.limit ? Number(req.query.limit) : 20,
-        });
+        }, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, ...result });
     } catch (err) { next(err); }
 }
@@ -473,11 +478,13 @@ export async function updateIncidentStatus(req, res, next) {
  */
 export async function getRevenueReport(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.getRevenueReport({
             startDate: req.query.startDate || undefined,
             endDate: req.query.endDate || undefined,
             groupBy: req.query.groupBy || "day",
-        });
+            buildingId: req.query.buildingId ? Number(req.query.buildingId) : undefined,
+        }, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -491,7 +498,9 @@ export async function getRevenueReport(req, res, next) {
  */
 export async function getOccupancyReport(req, res, next) {
     try {
-        const data = await managerService.getOccupancyReport();
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null;
+        const data = await managerService.getOccupancyReport(buildingId, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -505,10 +514,12 @@ export async function getOccupancyReport(req, res, next) {
  */
 export async function getSessionsReport(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.getSessionsReport({
             startDate: req.query.startDate || undefined,
             endDate: req.query.endDate || undefined,
-        });
+            buildingId: req.query.buildingId ? Number(req.query.buildingId) : undefined,
+        }, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -536,11 +547,13 @@ export async function getStaffList(req, res, next) {
  */
 export async function getPeakHoursReport(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.getPeakHoursReport({
             startDate: req.query.startDate || undefined,
             endDate: req.query.endDate || undefined,
             vehicleTypeId: req.query.vehicleTypeId ? Number(req.query.vehicleTypeId) : undefined,
-        });
+            buildingId: req.query.buildingId ? Number(req.query.buildingId) : undefined,
+        }, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -554,10 +567,12 @@ export async function getPeakHoursReport(req, res, next) {
  */
 export async function getVehicleFlowReport(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.getVehicleFlowReport({
             startDate: req.query.startDate || undefined,
             endDate: req.query.endDate || undefined,
-        });
+            buildingId: req.query.buildingId ? Number(req.query.buildingId) : undefined,
+        }, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -640,9 +655,11 @@ export async function toggleVehicleType(req, res, next) {
  */
 export async function getUnpaidSessions(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.getUnpaidSessions({
             search: req.query.search || undefined,
-        });
+            buildingId: req.query.buildingId ? Number(req.query.buildingId) : undefined,
+        }, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }

@@ -947,7 +947,7 @@ export async function deletePricingPolicy(policyId) {
 // ─────────────────────────────────────────────────────────────
 // INCIDENTS
 // ─────────────────────────────────────────────────────────────
-export async function getIncidents({ status, priority, page = 1, limit = 20, search } = {}) {
+export async function getIncidents({ status, priority, page = 1, limit = 20, search, buildingId } = {}, managerUserId = null) {
   const pool = await getPool();
   const offset = (page - 1) * limit;
 
@@ -955,6 +955,8 @@ export async function getIncidents({ status, priority, page = 1, limit = 20, sea
     .input("Status", sql.NVarChar(20), status || null)
     .input("Priority", sql.NVarChar(20), priority || null)
     .input("Search", sql.NVarChar(200), search || null)
+    .input("BuildingID", sql.Int, buildingId || null)
+    .input("ManagerUserID", sql.Int, managerUserId || null)
     .input("Offset", sql.Int, offset)
     .input("Limit", sql.Int, limit)
     .query(`
@@ -989,6 +991,10 @@ export async function getIncidents({ status, priority, page = 1, limit = 20, sea
       LEFT JOIN Users st          ON st.UserID    = i.AssignedStaffID
       WHERE (@Status   IS NULL OR i.IncidentStatus = @Status)
         AND (@Priority IS NULL OR i.Priority       = @Priority)
+        AND (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
+        AND (@ManagerUserID IS NULL OR s.SessionID IS NULL OR f.BuildingID IN (
+              SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID
+            ))
         AND (@Search   IS NULL OR i.IncidentType LIKE '%' + @Search + '%'
                                OR d.FullName      LIKE '%' + @Search + '%'
                                OR s.PlateNumber   LIKE '%' + @Search + '%'
@@ -1001,13 +1007,22 @@ export async function getIncidents({ status, priority, page = 1, limit = 20, sea
     .input("Status", sql.NVarChar(20), status || null)
     .input("Priority", sql.NVarChar(20), priority || null)
     .input("Search", sql.NVarChar(200), search || null)
+    .input("BuildingID", sql.Int, buildingId || null)
+    .input("ManagerUserID", sql.Int, managerUserId || null)
     .query(`
       SELECT COUNT(*) AS Total
       FROM Incidents i
       LEFT JOIN ParkingSessions s ON s.SessionID = i.SessionID
+      LEFT JOIN ParkingSlots ps   ON ps.SlotID   = s.SlotID
+      LEFT JOIN Zones z           ON z.ZoneID    = ps.ZoneID
+      LEFT JOIN Floors f          ON f.FloorID   = z.FloorID
       LEFT JOIN Users d           ON d.UserID    = i.DriverID
       WHERE (@Status   IS NULL OR i.IncidentStatus = @Status)
         AND (@Priority IS NULL OR i.Priority       = @Priority)
+        AND (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
+        AND (@ManagerUserID IS NULL OR s.SessionID IS NULL OR f.BuildingID IN (
+              SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID
+            ))
         AND (@Search   IS NULL OR i.IncidentType LIKE '%' + @Search + '%'
                                OR d.FullName      LIKE '%' + @Search + '%'
                                OR s.PlateNumber   LIKE '%' + @Search + '%'
@@ -1103,13 +1118,11 @@ export async function updateIncidentStatus(incidentId, { status, assignedStaffId
 // ─────────────────────────────────────────────────────────────
 // REPORTS
 // ─────────────────────────────────────────────────────────────
-export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } = {}) {
+export async function getRevenueReport({ startDate, endDate, groupBy = 'day', buildingId } = {}, managerUserId = null) {
   const pool = await getPool();
   const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const end = endDate || new Date().toISOString().slice(0, 10);
 
-  // Dùng ISNULL(PaymentTime, SurchargePaidAt) làm mốc thời gian doanh thu
-  // để các giao dịch Prepaid (chỉ có PrepaidAt/SurchargePaidAt) không bị rớt.
   const payTimeExpr = "ISNULL(p.PaymentTime, p.SurchargePaidAt)";
   const amountExpr = "ISNULL(p.FinalAmount, p.Amount)";
 
@@ -1123,22 +1136,22 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
   const result = await pool.request()
     .input("StartDate", sql.Date, start)
     .input("EndDate", sql.Date, end)
+    .input("BuildingID", sql.Int, buildingId || null)
+    .input("ManagerUserID", sql.Int, managerUserId || null)
     .query(`
       WITH AllPayments AS (
           SELECT 
               ISNULL(p.FinalAmount, p.Amount) AS Revenue, 
               ISNULL(p.PaymentTime, p.SurchargePaidAt) AS PayTime,
-              p.PaymentMethod
+              p.PaymentMethod,
+              f.BuildingID
           FROM Payments p
+          JOIN ParkingSessions s ON p.SessionID = s.SessionID
+          JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+          JOIN Zones z ON ps.ZoneID = z.ZoneID
+          JOIN Floors f ON z.FloorID = f.FloorID
           WHERE p.PaymentStatus IN ('Completed', 'Prepaid') 
             AND ISNULL(p.PaymentTime, p.SurchargePaidAt) IS NOT NULL
-          UNION ALL
-          SELECT 
-              AmountPaid AS Revenue, 
-              CreatedAt AS PayTime,
-              'Banking' AS PaymentMethod
-          FROM UserSubscriptions
-          WHERE AmountPaid > 0
       )
       SELECT
         ${dateGroup}          AS Period,
@@ -1147,6 +1160,8 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
         AVG(t.Revenue)        AS AvgRevenue
       FROM AllPayments t
       WHERE CAST(t.PayTime AS DATE) BETWEEN @StartDate AND @EndDate
+        AND (@BuildingID IS NULL OR t.BuildingID = @BuildingID)
+        AND (@ManagerUserID IS NULL OR t.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID))
       GROUP BY ${dateGroup}
       ORDER BY Period
     `);
@@ -1154,22 +1169,22 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
   const summaryResult = await pool.request()
     .input("StartDate", sql.Date, start)
     .input("EndDate", sql.Date, end)
+    .input("BuildingID", sql.Int, buildingId || null)
+    .input("ManagerUserID", sql.Int, managerUserId || null)
     .query(`
       WITH AllPayments AS (
           SELECT 
               ISNULL(p.FinalAmount, p.Amount) AS Revenue, 
               ISNULL(p.PaymentTime, p.SurchargePaidAt) AS PayTime,
-              p.PaymentMethod
+              p.PaymentMethod,
+              f.BuildingID
           FROM Payments p
+          JOIN ParkingSessions s ON p.SessionID = s.SessionID
+          JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+          JOIN Zones z ON ps.ZoneID = z.ZoneID
+          JOIN Floors f ON z.FloorID = f.FloorID
           WHERE p.PaymentStatus IN ('Completed', 'Prepaid') 
             AND ISNULL(p.PaymentTime, p.SurchargePaidAt) IS NOT NULL
-          UNION ALL
-          SELECT 
-              AmountPaid AS Revenue, 
-              CreatedAt AS PayTime,
-              'Banking' AS PaymentMethod
-          FROM UserSubscriptions
-          WHERE AmountPaid > 0
       )
       SELECT
         COUNT(*)                                                                  AS TotalTransactions,
@@ -1179,12 +1194,16 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
         SUM(CASE WHEN t.PaymentMethod = 'Banking' THEN t.Revenue ELSE 0 END)      AS BankingRevenue
       FROM AllPayments t
       WHERE CAST(t.PayTime AS DATE) BETWEEN @StartDate AND @EndDate
+        AND (@BuildingID IS NULL OR t.BuildingID = @BuildingID)
+        AND (@ManagerUserID IS NULL OR t.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID))
     `);
 
   // Theo loại xe
   const byVehicleResult = await pool.request()
     .input("StartDate", sql.Date, start)
     .input("EndDate", sql.Date, end)
+    .input("BuildingID", sql.Int, buildingId || null)
+    .input("ManagerUserID", sql.Int, managerUserId || null)
     .query(`
       SELECT
         vt.VehicleName,
@@ -1194,9 +1213,14 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
       FROM Payments p
       JOIN ParkingSessions s ON p.SessionID = s.SessionID
       JOIN VehicleTypes vt   ON s.VehicleTypeID = vt.VehicleTypeID
+      JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+      JOIN Zones z ON ps.ZoneID = z.ZoneID
+      JOIN Floors f ON z.FloorID = f.FloorID
       WHERE p.PaymentStatus IN ('Completed', 'Prepaid')
         AND ${payTimeExpr} IS NOT NULL
         AND CAST(${payTimeExpr} AS DATE) BETWEEN @StartDate AND @EndDate
+        AND (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
+        AND (@ManagerUserID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID))
       GROUP BY vt.VehicleTypeID, vt.VehicleName, vt.VehicleCode
       ORDER BY TotalRevenue DESC
     `);
@@ -1209,10 +1233,13 @@ export async function getRevenueReport({ startDate, endDate, groupBy = 'day' } =
   };
 }
 
-export async function getOccupancyReport() {
+export async function getOccupancyReport(buildingId = null, managerUserId = null) {
   const pool = await getPool();
 
-  const byFloor = await pool.request().query(`
+  const byFloor = await pool.request()
+    .input("BuildingID", sql.Int, buildingId || null)
+    .input("ManagerUserID", sql.Int, managerUserId || null)
+    .query(`
     SELECT
       b.BuildingName,
       f.FloorID,
@@ -1232,6 +1259,8 @@ export async function getOccupancyReport() {
     JOIN Floors f    ON f.FloorID    = z.FloorID
     JOIN Buildings b ON b.BuildingID = f.BuildingID
     WHERE f.IsActive = 1
+      AND (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
+      AND (@ManagerUserID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID))
     GROUP BY b.BuildingID, b.BuildingName, f.FloorID, f.FloorName
     ORDER BY b.BuildingID, f.FloorID
   `);
