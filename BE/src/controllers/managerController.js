@@ -26,7 +26,9 @@ import * as managerService from "../services/managerService.js";
  */
 export async function getDashboard(req, res, next) {
     try {
-        const data = await managerService.getDashboardStats();
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null;
+        const data = await managerService.getDashboardStats(buildingId, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
