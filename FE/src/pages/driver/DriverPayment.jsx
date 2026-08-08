@@ -115,6 +115,10 @@ const calcBreakdown = (entryTime, vehicleTypeId) => {
       dayDetails.push({ minutes: seg.minutes, hours, bracketIdx: bi, fee: brackets[bi].fee })
     }
   })
+  if (baseFee === 0) {
+    baseFee = brackets[0].fee
+    dayDetails.push({ minutes: Math.max(1, totalMinutes), hours: totalMinutes / 60, bracketIdx: 0, fee: brackets[0].fee })
+  }
   return { totalMinutes, segments: segs, dayDetails, nightCount, nightFee, nightFeeTotal: nightCount * nightFee, baseFee, brackets, isOvernight: nightCount > 0, isMultiDay: dayDetails.length > 1 }
 }
 
