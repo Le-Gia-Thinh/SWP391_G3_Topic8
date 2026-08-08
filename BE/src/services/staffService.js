@@ -39,6 +39,10 @@ function conflict(message, code = 'CONFLICT') {
     return createHttpError(409, message, code)
 }
 
+function forbidden(message, code = 'FORBIDDEN') {
+    return createHttpError(403, message, code)
+}
+
 function normalizeSlotStatus(status) {
     const map = {
         available: 'Available',
@@ -304,7 +308,7 @@ export async function updateSlotStatus(slotId, slotStatus) {
     return slot
 }
 
-export async function checkInWalkIn({ driverId, plateNumber, licensePlate, vehicleTypeId, slotId }) {
+export async function checkInWalkIn({ driverId, plateNumber, licensePlate, vehicleTypeId, slotId, staffUserId }) {
     const pool = await getPool()
 
     const finalDriverId = driverId ? Number(driverId) : await getDefaultDriverId(pool)
@@ -320,6 +324,24 @@ export async function checkInWalkIn({ driverId, plateNumber, licensePlate, vehic
 
     if (!slotId) {
         throw badRequest('Vui lòng chọn slot.', 'SLOT_REQUIRED')
+    }
+
+    if (staffUserId) {
+        const slotCheck = await pool.request()
+            .input('slotId', sql.Int, Number(slotId))
+            .input('staffUserId', sql.Int, Number(staffUserId))
+            .query(`
+                SELECT TOP 1 sl.SlotID, b.BuildingName
+                FROM ParkingSlots sl
+                JOIN Zones z ON sl.ZoneID = z.ZoneID
+                JOIN Floors f ON z.FloorID = f.FloorID
+                JOIN Buildings b ON f.BuildingID = b.BuildingID
+                WHERE sl.SlotID = @slotId
+                  AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)
+            `)
+        if (slotCheck.recordset.length === 0) {
+            throw badRequest('Vị trí ô đỗ này thuộc tòa nhà khác ngoài phạm vi được phân công của bạn.', 'SLOT_BUILDING_MISMATCH')
+        }
     }
 
     // Chặn cùng biển số check-in 2 slot cùng lúc (so sánh sau khi chuẩn hóa: bỏ -, .)
@@ -362,11 +384,21 @@ const LATE_CHECKIN_MIN = 60    // no-show nếu đến trễ hơn 60 phút
 const GRACE_PERIOD_MIN = 15    // ân hạn 15 phút: đến sớm nhưng miễn phí
 const EARLY_FEE_FLAT = 5000    // phụ phí cố định 5.000đ nếu đến sớm > 15 phút
 
-export async function getBookings({ status, keyword, timeWindowHours, dateFrom, dateTo, vehicleTypeId }) {
+export async function getBookings({ status, keyword, timeWindowHours, dateFrom, dateTo, vehicleTypeId, buildingId } = {}, staffUserId = null) {
     const pool = await getPool()
     const request = pool.request()
 
     let where = 'WHERE 1 = 1'
+
+    if (staffUserId) {
+        request.input('staffUserId', sql.Int, Number(staffUserId))
+        where += ' AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)'
+    }
+
+    if (buildingId) {
+        request.input('buildingId', sql.Int, Number(buildingId))
+        where += ' AND f.BuildingID = @buildingId'
+    }
 
     if (status && status !== 'all') {
         request.input('status', sql.NVarChar(20), status)
@@ -442,7 +474,7 @@ export async function getBookings({ status, keyword, timeWindowHours, dateFrom, 
     return result.recordset
 }
 
-export async function getBookingDetail(reservationId) {
+export async function getBookingDetail(reservationId, staffUserId = null) {
     const id = parseReservationId(reservationId)
 
     if (!id) {
@@ -453,6 +485,7 @@ export async function getBookingDetail(reservationId) {
 
     const result = await pool.request()
         .input('reservationId', sql.Int, id)
+        .input('staffUserId', sql.Int, staffUserId || null)
         .query(`
         SELECT
             r.ReservationID,
@@ -469,6 +502,7 @@ export async function getBookingDetail(reservationId) {
             sl.SlotStatus,
             z.ZoneName,
             f.FloorName,
+            b.BuildingID,
             b.BuildingName,
             r.ReservationDate,
             r.StartTime,
@@ -483,12 +517,13 @@ export async function getBookingDetail(reservationId) {
         LEFT JOIN Floors f ON z.FloorID = f.FloorID
         LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
         WHERE r.ReservationID = @reservationId
+          AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))
         `)
 
     const booking = result.recordset[0]
 
     if (!booking) {
-        throw notFound('Không tìm thấy booking.', 'BOOKING_NOT_FOUND')
+        throw notFound('Không tìm thấy booking hoặc booking thuộc tòa nhà khác ngoài phạm vi được phân công của bạn.', 'BOOKING_NOT_FOUND')
     }
 
     return booking
@@ -530,11 +565,12 @@ export async function checkInBooking(reservationId, options = {}) {
         const bookingResult = await new sql.Request(transaction)
             .input('reservationId', sql.Int, id)
             .query(`
-                SELECT r.*, sl.SlotStatus, f.BuildingID, sl.SlotCode AS OldSlotCode
+                SELECT r.*, sl.SlotStatus, f.BuildingID, b.BuildingName, sl.SlotCode AS OldSlotCode
                 FROM Reservations r WITH (UPDLOCK, ROWLOCK)
                 LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
                 LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
                 LEFT JOIN Floors f ON z.FloorID = f.FloorID
+                LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
                 WHERE r.ReservationID = @reservationId
             `)
 
@@ -542,6 +578,23 @@ export async function checkInBooking(reservationId, options = {}) {
 
         if (!booking) {
             throw notFound('Không tìm thấy booking.', 'BOOKING_NOT_FOUND')
+        }
+
+        if (staffId) {
+            const checkStaffAssignment = await new sql.Request(transaction)
+                .input('staffId', sql.Int, staffId)
+                .input('buildingId', sql.Int, booking.BuildingID)
+                .query(`
+                    SELECT TOP 1 AssignmentID 
+                    FROM BuildingAssignments 
+                    WHERE UserID = @staffId AND BuildingID = @buildingId
+                `)
+            if (checkStaffAssignment.recordset.length === 0) {
+                throw forbidden(
+                    `Không thể check-in: Lịch đặt chỗ này thuộc ${booking.BuildingName || 'Tòa nhà khác'}, không nằm trong tòa nhà được phân công cho bạn.`,
+                    'BUILDING_MISMATCH'
+                )
+            }
         }
 
         if (booking.ReservationStatus !== 'Reserved') {

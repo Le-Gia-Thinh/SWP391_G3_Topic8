@@ -101,8 +101,11 @@ export async function updateSlotStatus(req, res, next) {
  */
 export async function checkInWalkIn(req, res, next) {
     try {
-        // Truyền body chứa biển số, loại xe, mã slotId cho service xử lý
-        const data = await staffService.checkInWalkIn(req.body)
+        const staffUserId = getUserId(req)
+        const data = await staffService.checkInWalkIn({
+            ...req.body,
+            staffUserId
+        })
         res.status(StatusCodes.CREATED).json({
             success: true,
             message: 'Tạo phiên gửi xe vãng lai thành công.',
@@ -122,7 +125,8 @@ export async function checkInWalkIn(req, res, next) {
  */
 export async function getBookings(req, res, next) {
     try {
-        const data = await staffService.getBookings(req.query)
+        const staffUserId = req.user?.RoleName === 'Staff' ? req.user.UserID : null
+        const data = await staffService.getBookings(req.query, staffUserId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
         next(error)
@@ -139,7 +143,8 @@ export async function getBookings(req, res, next) {
 export async function getBookingDetail(req, res, next) {
     try {
         const { reservationId } = req.params
-        const data = await staffService.getBookingDetail(reservationId)
+        const staffUserId = getUserId(req)
+        const data = await staffService.getBookingDetail(reservationId, staffUserId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
         next(error)
