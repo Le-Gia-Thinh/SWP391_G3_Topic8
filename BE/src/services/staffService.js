@@ -178,7 +178,7 @@ export async function getDashboard(staffUserId = null, buildingId = null) {
         (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Active' AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS activeSessions,
         (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE CAST(s.EntryTime AS DATE) = CAST(GETDATE() AS DATE) AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS todayCheckIns,
         (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Completed' AND CAST(s.ExitTime AS DATE) = CAST(GETDATE() AS DATE) AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS todayCheckOuts,
-        (SELECT ISNULL(SUM(ISNULL(p.PrepaidAmount, ISNULL(p.FinalAmount, p.Amount))), 0) FROM Payments p JOIN ParkingSessions s ON p.SessionID = s.SessionID JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE p.PaymentStatus IN ('Completed', 'Prepaid') AND CAST(ISNULL(p.PaymentTime, p.PrepaidAt) AS DATE) = CAST(GETDATE() AS DATE) AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS todayRevenue,
+        (SELECT ISNULL(SUM(ISNULL(p.FinalAmount, ISNULL(NULLIF(p.Amount, 0), ISNULL(p.PrepaidAmount, 0)))), 0) FROM Payments p JOIN ParkingSessions s ON p.SessionID = s.SessionID JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE p.PaymentStatus IN ('Completed', 'Prepaid') AND CAST(ISNULL(p.PaymentTime, p.PrepaidAt) AS DATE) = CAST(GETDATE() AS DATE) AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS todayRevenue,
         (SELECT COUNT(*) FROM Incidents i LEFT JOIN ParkingSessions s ON i.SessionID = s.SessionID LEFT JOIN ParkingSlots ps ON s.SlotID = ps.SlotID LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID LEFT JOIN Floors f ON z.FloorID = f.FloorID WHERE i.IncidentStatus IN ('Open', 'InProgress') AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR s.SessionID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS openIncidents,
         (SELECT COUNT(*) FROM Reservations r LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID LEFT JOIN Floors f ON z.FloorID = f.FloorID WHERE r.ReservationStatus = 'Reserved' AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR r.SlotID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS pendingBookings,
         (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Available' AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS availableSlots,
@@ -247,7 +247,7 @@ export async function getDashboard(staffUserId = null, buildingId = null) {
                 b.BuildingID, 
                 b.BuildingName,
                 (
-                    SELECT ISNULL(SUM(ISNULL(p.PrepaidAmount, ISNULL(p.FinalAmount, p.Amount))), 0) 
+                    SELECT ISNULL(SUM(ISNULL(p.FinalAmount, ISNULL(NULLIF(p.Amount, 0), ISNULL(p.PrepaidAmount, 0)))), 0) 
                     FROM Payments p 
                     JOIN ParkingSessions s ON p.SessionID = s.SessionID 
                     JOIN ParkingSlots ps ON s.SlotID = ps.SlotID 
@@ -1380,7 +1380,7 @@ export async function checkOutSession(sessionId, { paymentMethod = 'Cash', confi
     // Đọc EarlyFeeAmount và BookingStartTime để kiểm tra "vào sớm ra sớm"
     const sessionRow = await pool.request()
         .input('SessionID', sql.Int, Number(sessionId))
-        .query(`SELECT EarlyFeeAmount, BookingStartTime, EntryTime FROM ParkingSessions WHERE SessionID = @SessionID`)
+        .query(`SELECT DriverID, VehicleTypeID, EarlyFeeAmount, BookingStartTime, EntryTime FROM ParkingSessions WHERE SessionID = @SessionID`)
     const row = sessionRow.recordset[0]
     const rawEarlyFee = Number(row?.EarlyFeeAmount || 0)
     const now = new Date()
@@ -1391,9 +1391,35 @@ export async function checkOutSession(sessionId, { paymentMethod = 'Cash', confi
     const isEarlyExit = !!(bookingStart && now < bookingStart && durationMin < 30 && rawEarlyFee > 0)
     const earlyFeeAmount = isEarlyExit ? 0 : rawEarlyFee
 
+    // Kiểm tra ưu đãi gói hội viên của tài xế
+    let subDiscountApplied = false
+    let subFinalFee = 0
+    let overrideNote = null
+    if (row?.DriverID && row?.VehicleTypeID && entryTime) {
+        const { fee } = await calcParkingFee(pool, row.VehicleTypeID, entryTime, now)
+        const { applySubscriptionDiscount } = await import('./paymentService.js')
+        const { finalFee, planId, discountPercent } = await applySubscriptionDiscount(pool, row.DriverID, fee, Number(sessionId))
+        if (finalFee < fee) {
+            subDiscountApplied = true
+            subFinalFee = finalFee
+            overrideNote = JSON.stringify({
+                type: 'subscription',
+                planId,
+                originalFee: fee,
+                finalFee,
+                discountPercent,
+                earlyFee: earlyFeeAmount
+            })
+        }
+    }
+
     const request = pool.request()
     request.input('SessionID', sql.Int, Number(sessionId))
-    request.input('PaymentMethod', sql.NVarChar(50), paymentMethod)
+    request.input('PaymentMethod', sql.NVarChar(50), subDiscountApplied ? 'Subscription' : paymentMethod)
+    if (subDiscountApplied) {
+        request.input('OverrideFee', sql.Decimal(10, 2), subFinalFee + earlyFeeAmount)
+        request.input('OverrideNote', sql.NVarChar(sql.MAX), overrideNote)
+    }
 
     let checkoutResult
     try {
@@ -1402,18 +1428,30 @@ export async function checkOutSession(sessionId, { paymentMethod = 'Cash', confi
     } catch (error) {
         const fallback = pool.request()
         fallback.input('SessionID', sql.Int, Number(sessionId))
-        fallback.input('PaymentMethod', sql.NVarChar(50), paymentMethod)
+        fallback.input('PaymentMethod', sql.NVarChar(50), subDiscountApplied ? 'Subscription' : paymentMethod)
+        if (subDiscountApplied) {
+            fallback.input('OverrideFee', sql.Decimal(10, 2), subFinalFee + earlyFeeAmount)
+            fallback.input('OverrideNote', sql.NVarChar(sql.MAX), overrideNote)
+        }
         const result = await fallback.execute('sp_CheckOutVehicle')
         checkoutResult = {
             sessionId: Number(sessionId),
-            paymentMethod,
+            paymentMethod: subDiscountApplied ? 'Subscription' : paymentMethod,
             fallbackProcedure: 'sp_CheckOutVehicle',
             result: result.recordset?.[0] || null
         }
     }
 
-    // Cộng phụ phí đến sớm vào FinalAmount nếu có
-    if (earlyFeeAmount > 0) {
+    if (subDiscountApplied) {
+        const netFee = subFinalFee + earlyFeeAmount
+        if (checkoutResult) {
+            checkoutResult.FinalFee = netFee
+            checkoutResult.FinalAmount = netFee
+            checkoutResult.Amount = netFee
+            checkoutResult.SurchargeAmount = 0
+            checkoutResult.paymentMethod = 'Subscription'
+        }
+    } else if (earlyFeeAmount > 0) {
         await pool.request()
             .input('SessionID', sql.Int, Number(sessionId))
             .input('EarlyFee', sql.Int, earlyFeeAmount)
@@ -1757,21 +1795,9 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
                 b.BuildingName,
                 CASE 
                     WHEN ps.SlotStatus IN ('Maintenance','Blocked') THEN ps.SlotStatus
-                    WHEN EXISTS (
-                        SELECT 1 FROM ParkingSessions s
-                        JOIN Reservations r ON r.DriverID = s.DriverID AND r.SlotID = s.SlotID AND r.StartTime = s.BookingStartTime AND r.ReservationStatus = 'Completed'
-                        WHERE s.SlotID = ps.SlotID AND s.SessionStatus = 'Active' AND s.ExitTime IS NULL
-                          AND r.EndTime < GETDATE()
-                    ) THEN 'Overstay'
-                    WHEN EXISTS (
-                        SELECT 1 FROM ParkingSessions s
-                        WHERE s.SlotID = ps.SlotID AND s.SessionStatus = 'Active' AND s.ExitTime IS NULL
-                    ) THEN 'Occupied'
-                    WHEN EXISTS (
-                        SELECT 1 FROM Reservations r
-                        WHERE r.SlotID = ps.SlotID AND r.ReservationStatus = 'Reserved'
-                        AND r.StartTime <= DATEADD(HOUR, 8, GETDATE())
-                    ) THEN 'Reserved'
+                    WHEN sess.SessionID IS NOT NULL AND rsvComp.EndTime IS NOT NULL AND rsvComp.EndTime < GETDATE() THEN 'Overstay'
+                    WHEN sess.SessionID IS NOT NULL THEN 'Occupied'
+                    WHEN rsv.ReservationID IS NOT NULL THEN 'Reserved'
                     ELSE 'Available'
                 END AS SlotStatus,
                 sess.SessionID,
@@ -1785,6 +1811,12 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
             LEFT JOIN Reservations rsv
                 ON rsv.SlotID = ps.SlotID AND rsv.ReservationStatus = 'Reserved'
                 AND rsv.StartTime <= DATEADD(HOUR, 8, GETDATE())
+            LEFT JOIN Reservations rsvComp
+                ON sess.SessionID IS NOT NULL 
+                AND rsvComp.DriverID = sess.DriverID 
+                AND rsvComp.SlotID = sess.SlotID 
+                AND rsvComp.StartTime = sess.BookingStartTime 
+                AND rsvComp.ReservationStatus = 'Completed'
             WHERE f.IsActive = 1
               AND (@BuildingID IS NULL OR f.BuildingID = @BuildingID)
               AND (@FloorID IS NULL OR z.FloorID = @FloorID)
