@@ -106,7 +106,20 @@ async function calcFeeV2(pool, vehicleTypeId, entryTime) {
  * @param {number} sessionId - ID phiên gửi xe đang tính
  * @returns {Promise<Object>} Mức phí cuối cùng (`finalFee`), % giảm giá (`discountPercent`) và tên gói (`planId`)
  */
-export async function applySubscriptionDiscount(pool, driverId, baseFee, sessionId) {
+export async function applySubscriptionDiscount(arg1, arg2, arg3, arg4) {
+    let pool, driverId, baseFee, sessionId;
+    if (typeof arg1 === 'number') {
+        driverId = arg1;
+        baseFee = arg2;
+        sessionId = arg3;
+        pool = await getPool();
+    } else {
+        pool = arg1 || (await getPool());
+        driverId = arg2;
+        baseFee = arg3;
+        sessionId = arg4;
+    }
+
     // 1. Kiểm tra gói hội viên đang Active của Tài xế
     const subRes = await pool.request()
         .input('UserID', sql.Int, driverId)
@@ -374,17 +387,20 @@ export async function createPaymentService(sessionId, driverId) {
     if (amount === 0) {
         await pool.request()
             .input('SessionID', sql.Int, sessionId)
-            .input('OrderCode', sql.BigInt, 0)
-            .input('Amount', sql.Decimal(10, 2), 0)
-            .input('SnapshotH', sql.Decimal(10, 2), durationH)
-            .input('QrCode', sql.NVarChar(sql.MAX), null)
-            .input('CheckoutUrl', sql.NVarChar(500), 'FREE')
-            .execute('sp_CreatePrepayment');
-            
-        await pool.request()
-            .input('OrderCode', sql.BigInt, 0)
-            .input('PaidAt', sql.DateTime, new Date())
-            .execute('sp_MarkPaymentPrepaid');
+            .query(`
+                UPDATE Payments
+                SET Amount = 0,
+                    FinalAmount = 0,
+                    PrepaidAmount = 0,
+                    SurchargeAmount = 0,
+                    PaymentStatus = 'Prepaid',
+                    PrepaidAt = GETDATE(),
+                    PaymentMethod = 'Subscription',
+                    CheckoutUrl = 'FREE',
+                    OrderCode = 0,
+                    PaymentNote = N'Miễn phí hội viên'
+                WHERE SessionID = @SessionID
+            `);
             
         return {
             qrCode: '',
@@ -744,6 +760,10 @@ export async function getPaymentHistoryService(driverId, limit = 20, offset = 0)
 export async function staffCheckoutService(sessionId, paymentMethod) {
     const pool = await getPool();
 
+    let subDiscountApplied = false;
+    let subFinalFee = 0;
+    let overrideNote = null;
+
     // 1. Lấy thông tin phiên đỗ
     const sessionRes = await pool.request()
         .input('SessionID', sql.Int, sessionId)
@@ -768,35 +788,45 @@ export async function staffCheckoutService(sessionId, paymentMethod) {
         const baseFee = feeRes.output.Fee || 0;
         
         // 3. Áp dụng ưu đãi gói hội viên
-        const { finalFee } = await applySubscriptionDiscount(DriverID, baseFee, sessionId);
-        const discountAmount = baseFee - finalFee;
-        
-        // 4. Nếu giảm 100% ➔ Tự động tạo Prepayment 0đ
-        if (discountAmount > 0 && finalFee === 0) {
-            const payRes = await pool.request()
-                .input('SessionID', sql.Int, sessionId)
-                .query(`SELECT PrepaidAmount, PaymentStatus FROM Payments WHERE SessionID = @SessionID`);
-            
-            if (payRes.recordset.length === 0 || payRes.recordset[0].PaymentStatus !== 'Prepaid') {
-                await pool.request()
-                    .input('SessionID', sql.Int, sessionId)
-                    .input('Amount', sql.Decimal(10, 2), 0)
-                    .input('PaidAt', sql.DateTime, new Date())
-                    .input('PaymentMethod', sql.NVarChar(50), 'Subscription')
-                    .execute('sp_CreatePrepayment');
+        if (DriverID) {
+            const { finalFee, planId, discountPercent } = await applySubscriptionDiscount(pool, DriverID, baseFee, sessionId);
+            if (finalFee < baseFee) {
+                subDiscountApplied = true;
+                subFinalFee = finalFee;
+                overrideNote = JSON.stringify({
+                    type: 'subscription',
+                    planId,
+                    originalFee: baseFee,
+                    finalFee,
+                    discountPercent
+                });
             }
         }
     }
 
     // 5. Gọi Stored Procedure sp_CheckOutWithSurcharge hoàn tất check-out
-    const { recordset } = await pool.request()
-        .input('SessionID', sql.Int, sessionId)
-        .input('PaymentMethod', sql.NVarChar(50), paymentMethod)
-        .execute('sp_CheckOutWithSurcharge');
+    const request = pool.request();
+    request.input('SessionID', sql.Int, sessionId);
+    request.input('PaymentMethod', sql.NVarChar(50), subDiscountApplied ? 'Subscription' : paymentMethod);
+    if (subDiscountApplied) {
+        request.input('OverrideFee', sql.Decimal(10, 2), subFinalFee);
+        request.input('OverrideNote', sql.NVarChar(sql.MAX), overrideNote);
+    }
+
+    const { recordset } = await request.execute('sp_CheckOutWithSurcharge');
 
     if (!recordset[0]) {
         const err = new Error('Checkout thất bại'); err.statusCode = 400; throw err;
     }
+
+    if (subDiscountApplied) {
+        recordset[0].FinalFee = subFinalFee;
+        recordset[0].FinalAmount = subFinalFee;
+        recordset[0].Amount = subFinalFee;
+        recordset[0].SurchargeAmount = 0;
+        recordset[0].paymentMethod = 'Subscription';
+    }
+
     return recordset[0];
 }
 
