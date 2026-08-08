@@ -229,8 +229,29 @@ export async function getBuildings(managerUserId = null) {
   return result.recordset;
 }
 
-export async function updateBuilding(buildingId, data) {
+async function checkManagerBuildingAssignment(pool, buildingId, managerUserId) {
+  if (!managerUserId || !buildingId) return;
+  const res = await pool.request()
+    .input("buildingId", sql.Int, Number(buildingId))
+    .input("managerUserId", sql.Int, Number(managerUserId))
+    .query(`
+      SELECT TOP 1 AssignmentID 
+      FROM BuildingAssignments 
+      WHERE UserID = @managerUserId AND BuildingID = @buildingId
+    `);
+  if (res.recordset.length === 0) {
+    const error = new Error("Tòa nhà này không nằm trong phạm vi phân công của bạn.");
+    error.statusCode = 403;
+    error.code = "BUILDING_MISMATCH";
+    throw error;
+  }
+}
+
+export async function updateBuilding(buildingId, data, managerUserId = null) {
   const pool = await getPool();
+  if (managerUserId) {
+    await checkManagerBuildingAssignment(pool, buildingId, managerUserId);
+  }
   const lat = data.latitude !== undefined ? data.latitude : data.Latitude;
   const lng = data.longitude !== undefined ? data.longitude : data.Longitude;
   const totalFloorsVal = data.totalFloors !== undefined ? data.totalFloors : data.TotalFloors;
@@ -344,8 +365,11 @@ export async function createBuilding(data) {
   return newBuilding;
 }
 
-export async function deleteBuilding(buildingId) {
+export async function deleteBuilding(buildingId, managerUserId = null) {
   const pool = await getPool();
+  if (managerUserId) {
+    await checkManagerBuildingAssignment(pool, buildingId, managerUserId);
+  }
   await pool.request()
     .input("BuildingID", sql.Int, buildingId)
     .query(`DELETE FROM Buildings WHERE BuildingID = @BuildingID`);
@@ -372,8 +396,11 @@ export async function getBuildingStaff(buildingId, managerUserId = null) {
   return result.recordset;
 }
 
-export async function assignStaffToBuilding({ buildingId, staffUserId, isPrimary = true }) {
+export async function assignStaffToBuilding({ buildingId, staffUserId, isPrimary = true }, managerUserId = null) {
   const pool = await getPool();
+  if (managerUserId) {
+    await checkManagerBuildingAssignment(pool, buildingId, managerUserId);
+  }
   await pool.request()
     .input("buildingId", sql.Int, buildingId)
     .input("staffUserId", sql.Int, staffUserId)
@@ -388,8 +415,12 @@ export async function assignStaffToBuilding({ buildingId, staffUserId, isPrimary
   return { success: true, message: 'Phân công nhân viên vào tòa nhà thành công' };
 }
 
-export async function removeStaffFromBuilding(assignmentId) {
+export async function removeStaffFromBuilding(assignmentId, managerUserId = null) {
   const pool = await getPool();
+  if (managerUserId) {
+    const aRes = await pool.request().input("assignmentId", sql.Int, assignmentId).query("SELECT BuildingID FROM BuildingAssignments WHERE AssignmentID = @assignmentId");
+    if (aRes.recordset[0]) await checkManagerBuildingAssignment(pool, aRes.recordset[0].BuildingID, managerUserId);
+  }
   await pool.request()
     .input("assignmentId", sql.Int, assignmentId)
     .query(`DELETE FROM BuildingAssignments WHERE AssignmentID = @assignmentId`);
@@ -432,7 +463,7 @@ export async function getGates(buildingId = null) {
   return result.recordset;
 }
 
-export async function getGateById(gateId) {
+export async function getGateById(gateId, managerUserId = null) {
   const pool = await getPool();
   const result = await pool.request()
     .input("GateID", sql.Int, gateId)
@@ -442,11 +473,18 @@ export async function getGateById(gateId) {
       JOIN Buildings b ON g.BuildingID = b.BuildingID
       WHERE g.GateID = @GateID
     `);
-  return result.recordset[0] || null;
+  const gate = result.recordset[0] || null;
+  if (gate && managerUserId) {
+    await checkManagerBuildingAssignment(pool, gate.BuildingID, managerUserId);
+  }
+  return gate;
 }
 
-export async function createGate(data) {
+export async function createGate(data, managerUserId = null) {
   const pool = await getPool();
+  if (managerUserId && data.buildingId) {
+    await checkManagerBuildingAssignment(pool, data.buildingId, managerUserId);
+  }
   const result = await pool.request()
     .input("BuildingID", sql.Int, data.buildingId)
     .input("GateName", sql.NVarChar(50), data.gateName)
@@ -460,8 +498,12 @@ export async function createGate(data) {
   return result.recordset[0];
 }
 
-export async function updateGate(gateId, data) {
+export async function updateGate(gateId, data, managerUserId = null) {
   const pool = await getPool();
+  if (managerUserId) {
+    const existing = await getGateById(gateId);
+    if (existing) await checkManagerBuildingAssignment(pool, existing.BuildingID, managerUserId);
+  }
   const req = pool.request().input("GateID", sql.Int, gateId);
   const sets = [];
   if (data.buildingId !== undefined) { req.input("BuildingID", sql.Int, data.buildingId); sets.push("BuildingID = @BuildingID"); }
@@ -475,8 +517,12 @@ export async function updateGate(gateId, data) {
   return await getGateById(gateId);
 }
 
-export async function deleteGate(gateId) {
+export async function deleteGate(gateId, managerUserId = null) {
   const pool = await getPool();
+  if (managerUserId) {
+    const existing = await getGateById(gateId);
+    if (existing) await checkManagerBuildingAssignment(pool, existing.BuildingID, managerUserId);
+  }
   await pool.request()
     .input("GateID", sql.Int, gateId)
     .query(`DELETE FROM Gates WHERE GateID = @GateID`);
@@ -512,8 +558,12 @@ export async function getFloors(buildingId = null, managerUserId = null) {
   return result.recordset;
 }
 
-export async function updateFloor(floorId, data) {
+export async function updateFloor(floorId, data, managerUserId = null) {
   const pool = await getPool();
+  if (managerUserId) {
+    const fRes = await pool.request().input("FloorID", sql.Int, floorId).query("SELECT BuildingID FROM Floors WHERE FloorID = @FloorID");
+    if (fRes.recordset[0]) await checkManagerBuildingAssignment(pool, fRes.recordset[0].BuildingID, managerUserId);
+  }
   await pool.request()
     .input("FloorID", sql.Int, floorId)
     .input("FloorName", sql.NVarChar(50), data.floorName)
@@ -566,8 +616,12 @@ export async function getZones(floorId = null, managerUserId = null) {
   return result.recordset;
 }
 
-export async function updateZone(zoneId, data) {
+export async function updateZone(zoneId, data, managerUserId = null) {
   const pool = await getPool();
+  if (managerUserId) {
+    const zRes = await pool.request().input("ZoneID", sql.Int, zoneId).query("SELECT f.BuildingID FROM Zones z JOIN Floors f ON z.FloorID = f.FloorID WHERE z.ZoneID = @ZoneID");
+    if (zRes.recordset[0]) await checkManagerBuildingAssignment(pool, zRes.recordset[0].BuildingID, managerUserId);
+  }
   await pool.request()
     .input("ZoneID", sql.Int, zoneId)
     .input("ZoneName", sql.NVarChar(50), data.zoneName)
@@ -694,7 +748,7 @@ export async function getParkingSlots({
   };
 }
 
-export async function getSlotById(slotId) {
+export async function getSlotById(slotId, managerUserId = null) {
   const pool = await getPool();
 
   const slotResult = await pool.request()
@@ -714,9 +768,14 @@ export async function getSlotById(slotId) {
       WHERE ps.SlotID = @SlotID
     `);
 
-  if (!slotResult.recordset[0]) {
+  const slotData = slotResult.recordset[0];
+  if (!slotData) {
     const err = new Error("Slot không tồn tại");
     err.statusCode = 404; throw err;
+  }
+
+  if (managerUserId) {
+    await checkManagerBuildingAssignment(pool, slotData.BuildingID, managerUserId);
   }
 
   const sessResult = await pool.request()
@@ -761,14 +820,14 @@ export async function getSlotById(slotId) {
     `);
 
   return {
-    ...slotResult.recordset[0],
-    slot: slotResult.recordset[0],
+    ...slotData,
+    slot: slotData,
     currentSession: sessResult.recordset[0] || null,
     history: histResult.recordset,
   };
 }
 
-export async function updateSlotStatus(slotId, { status, notes }) {
+export async function updateSlotStatus(slotId, { status, notes }, managerUserId = null) {
   const validStatuses = ['Available', 'Maintenance', 'Blocked'];
   if (!validStatuses.includes(status)) {
     const err = new Error(`Trạng thái không hợp lệ. Cho phép: ${validStatuses.join(', ')}`);
@@ -776,6 +835,11 @@ export async function updateSlotStatus(slotId, { status, notes }) {
   }
 
   const pool = await getPool();
+  if (managerUserId) {
+    const sRes = await pool.request().input("SlotID", sql.Int, slotId).query("SELECT f.BuildingID FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotID = @SlotID");
+    if (sRes.recordset[0]) await checkManagerBuildingAssignment(pool, sRes.recordset[0].BuildingID, managerUserId);
+  }
+
   await pool.request()
     .input("SlotID", sql.Int, slotId)
     .input("Status", sql.NVarChar(20), status)
@@ -1040,7 +1104,7 @@ export async function getIncidents({ status, priority, page = 1, limit = 20, sea
   };
 }
 
-export async function getIncidentById(incidentId) {
+export async function getIncidentById(incidentId, managerUserId = null) {
   const pool = await getPool();
   const result = await pool.request()
     .input("IncidentID", sql.Int, incidentId)
@@ -1050,7 +1114,7 @@ export async function getIncidentById(incidentId) {
         s.PlateNumber, s.EntryTime,
         ISNULL(d.FullName, N'Khách vãng lai') AS DriverName, d.Email AS DriverEmail, d.PhoneNumber AS DriverPhone,
         st.FullName AS StaffName,
-        ps.SlotCode, z.ZoneName, f.FloorName, b.BuildingName
+        ps.SlotCode, z.ZoneName, f.FloorName, b.BuildingID, b.BuildingName
       FROM Incidents i
       LEFT JOIN ParkingSessions s ON s.SessionID  = i.SessionID
       LEFT JOIN ParkingSlots ps   ON ps.SlotID    = s.SlotID
@@ -1061,16 +1125,17 @@ export async function getIncidentById(incidentId) {
       LEFT JOIN Users st          ON st.UserID    = i.AssignedStaffID
       WHERE i.IncidentID = @IncidentID
     `);
-  if (!result.recordset[0]) {
-    const err = new Error("Incident không tồn tại");
-    err.statusCode = 404; throw err;
-  }
   const row = result.recordset[0];
   if (!row) { const err = new Error("Incident không tồn tại"); err.statusCode = 404; throw err; }
+
+  if (managerUserId && row.BuildingID) {
+    await checkManagerBuildingAssignment(pool, row.BuildingID, managerUserId);
+  }
+
   return { ...row, Attachments: parseAttachments(row.Attachments) };
 }
 
-export async function updateIncidentStatus(incidentId, { status, assignedStaffId, note }) {
+export async function updateIncidentStatus(incidentId, { status, assignedStaffId, note }, managerUserId = null) {
   const valid = ['Open', 'InProgress', 'Resolved'];
   if (!valid.includes(status)) {
     const err = new Error(`Trạng thái không hợp lệ: ${valid.join(', ')}`);
@@ -1078,6 +1143,10 @@ export async function updateIncidentStatus(incidentId, { status, assignedStaffId
   }
 
   const pool = await getPool();
+  if (managerUserId) {
+    await getIncidentById(incidentId, managerUserId);
+  }
+
   await pool.request()
     .input("IncidentID", sql.Int, incidentId)
     .input("IncidentStatus", sql.NVarChar(20), status)
@@ -1094,7 +1163,7 @@ export async function updateIncidentStatus(incidentId, { status, assignedStaffId
       WHERE IncidentID = @IncidentID
     `);
 
-  const updatedIncident = await getIncidentById(incidentId);
+  const updatedIncident = await getIncidentById(incidentId, managerUserId);
 
   if (status === 'Resolved' && updatedIncident.DriverID) {
     await pool.request().query(`
@@ -1366,9 +1435,11 @@ export async function getSessionsReport({ startDate, endDate } = {}) {
 // ─────────────────────────────────────────────────────────────
 // STAFF LIST
 // ─────────────────────────────────────────────────────────────
-export async function getStaffList() {
+export async function getStaffList(managerUserId = null) {
   const pool = await getPool();
-  const result = await pool.request().query(`
+  const request = pool.request();
+  request.input("ManagerUserID", sql.Int, managerUserId || null);
+  const result = await request.query(`
     SELECT
       u.UserID, u.FullName, u.Email, u.PhoneNumber,
       u.RoleID, r.RoleName, u.IsActive,
@@ -1376,6 +1447,11 @@ export async function getStaffList() {
     FROM Users u
     JOIN Roles r ON r.RoleID = u.RoleID
     WHERE u.RoleID IN (2, 3)
+      AND (@ManagerUserID IS NULL OR u.UserID IN (
+        SELECT baStaff.UserID 
+        FROM BuildingAssignments baStaff
+        WHERE baStaff.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @ManagerUserID)
+      ))
     ORDER BY u.RoleID, u.FullName
   `);
   return result.recordset;

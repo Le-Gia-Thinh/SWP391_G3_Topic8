@@ -59,9 +59,11 @@ export async function getBuildings(req, res, next) {
  */
 export async function updateBuilding(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.updateBuilding(
             Number(req.params.id),
-            req.body
+            req.body,
+            managerUserId
         );
         return res.status(StatusCodes.OK).json({
             success: true,
@@ -84,7 +86,8 @@ export async function createBuilding(req, res, next) {
 
 export async function deleteBuilding(req, res, next) {
     try {
-        const data = await managerService.deleteBuilding(Number(req.params.id));
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.deleteBuilding(Number(req.params.id), managerUserId);
         return res.status(StatusCodes.OK).json({
             success: true,
             message: "Xóa tòa nhà thành công",
@@ -106,7 +109,8 @@ export async function getGates(req, res, next) {
 
 export async function getGateById(req, res, next) {
     try {
-        const data = await managerService.getGateById(Number(req.params.id));
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.getGateById(Number(req.params.id), managerUserId);
         if (!data) {
             return res.status(StatusCodes.NOT_FOUND).json({ success: false, message: "Không tìm thấy cổng" });
         }
@@ -116,7 +120,8 @@ export async function getGateById(req, res, next) {
 
 export async function createGate(req, res, next) {
     try {
-        const data = await managerService.createGate(req.body);
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.createGate(req.body, managerUserId);
         return res.status(StatusCodes.CREATED).json({
             success: true,
             message: "Tạo cổng bãi xe thành công",
@@ -127,7 +132,8 @@ export async function createGate(req, res, next) {
 
 export async function updateGate(req, res, next) {
     try {
-        const data = await managerService.updateGate(Number(req.params.id), req.body);
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.updateGate(Number(req.params.id), req.body, managerUserId);
         return res.status(StatusCodes.OK).json({
             success: true,
             message: "Cập nhật thông tin cổng thành công",
@@ -138,7 +144,8 @@ export async function updateGate(req, res, next) {
 
 export async function deleteGate(req, res, next) {
     try {
-        const data = await managerService.deleteGate(Number(req.params.id));
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.deleteGate(Number(req.params.id), managerUserId);
         return res.status(StatusCodes.OK).json({
             success: true,
             message: "Xóa cổng thành công",
@@ -174,9 +181,11 @@ export async function getFloors(req, res, next) {
  */
 export async function updateFloor(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.updateFloor(
             Number(req.params.id),
-            req.body
+            req.body,
+            managerUserId
         );
         return res.status(StatusCodes.OK).json({
             success: true,
@@ -213,9 +222,11 @@ export async function getZones(req, res, next) {
  */
 export async function updateZone(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.updateZone(
             Number(req.params.id),
-            req.body
+            req.body,
+            managerUserId
         );
         return res.status(StatusCodes.OK).json({
             success: true,
@@ -274,9 +285,11 @@ export async function getSlotById(req, res, next) {
  */
 export async function updateSlotStatus(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.updateSlotStatus(
             Number(req.params.id),
-            req.body
+            req.body,
+            managerUserId
         );
         return res.status(StatusCodes.OK).json({
             success: true,
@@ -316,7 +329,8 @@ export async function getPricingPolicies(req, res, next) {
  */
 export async function createPricingPolicy(req, res, next) {
     try {
-        const data = await managerService.createPricingPolicy(req.body);
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.createPricingPolicy(req.body, managerUserId);
         return res.status(StatusCodes.CREATED).json({
             success: true,
             message: "Tạo chính sách giá thành công",
@@ -334,9 +348,11 @@ export async function createPricingPolicy(req, res, next) {
  */
 export async function updatePricingPolicy(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.updatePricingPolicy(
             Number(req.params.id),
-            req.body
+            req.body,
+            managerUserId
         );
         return res.status(StatusCodes.OK).json({
             success: true,
@@ -355,7 +371,8 @@ export async function updatePricingPolicy(req, res, next) {
  */
 export async function deletePricingPolicy(req, res, next) {
     try {
-        const data = await managerService.deletePricingPolicy(Number(req.params.id));
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.deletePricingPolicy(Number(req.params.id), managerUserId);
         return res.status(StatusCodes.OK).json({
             success: true,
             message: "Xóa chính sách giá thành công",
@@ -373,7 +390,8 @@ export async function deletePricingPolicy(req, res, next) {
  */
 export async function getNightPricingPolicies(req, res, next) {
     try {
-        const data = await managerService.getNightPricingPolicies();
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.getNightPricingPolicies(managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -387,7 +405,8 @@ export async function getNightPricingPolicies(req, res, next) {
  */
 export async function updateNightPricingPolicy(req, res, next) {
     try {
-        const data = await managerService.updateNightPricingPolicy(Number(req.params.id), req.body);
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.updateNightPricingPolicy(Number(req.params.id), req.body, managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, message: "Cập nhật giá đêm thành công", data });
     } catch (err) { next(err); }
 }
@@ -403,7 +422,8 @@ export async function updateNightPricingPolicy(req, res, next) {
  */
 export async function getVehicleTypes(req, res, next) {
     try {
-        const data = await managerService.getVehicleTypes();
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.getVehicleTypes(managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -441,7 +461,8 @@ export async function getIncidents(req, res, next) {
  */
 export async function getIncidentById(req, res, next) {
     try {
-        const data = await managerService.getIncidentById(Number(req.params.id));
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.getIncidentById(Number(req.params.id), managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -455,9 +476,11 @@ export async function getIncidentById(req, res, next) {
  */
 export async function updateIncidentStatus(req, res, next) {
     try {
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
         const data = await managerService.updateIncidentStatus(
             Number(req.params.id),
-            req.body
+            req.body,
+            managerUserId
         );
         return res.status(StatusCodes.OK).json({
             success: true,
@@ -533,7 +556,8 @@ export async function getSessionsReport(req, res, next) {
  */
 export async function getStaffList(req, res, next) {
     try {
-        const data = await managerService.getStaffList();
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const data = await managerService.getStaffList(managerUserId);
         return res.status(StatusCodes.OK).json({ success: true, data });
     } catch (err) { next(err); }
 }
@@ -692,14 +716,16 @@ export async function getBuildingStaff(req, res, next) {
 
 export async function assignStaffToBuilding(req, res, next) {
     try {
-        const result = await managerService.assignStaffToBuilding(req.body);
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const result = await managerService.assignStaffToBuilding(req.body, managerUserId);
         return res.status(StatusCodes.OK).json(result);
     } catch (err) { next(err); }
 }
 
 export async function removeStaffFromBuilding(req, res, next) {
     try {
-        const result = await managerService.removeStaffFromBuilding(Number(req.params.id));
+        const managerUserId = req.user?.RoleName === 'Manager' ? req.user.UserID : null;
+        const result = await managerService.removeStaffFromBuilding(Number(req.params.id), managerUserId);
         return res.status(StatusCodes.OK).json(result);
     } catch (err) { next(err); }
 }

@@ -21,7 +21,7 @@ import * as sessionService from '../services/sessionService.js';
  * TÁC DỤNG: Lấy mã ID của Nhân viên bảo vệ đang đăng nhập từ req.user hoặc req.jwtDecoded
  */
 const getUserId = (req) =>
-    req.user?.UserID || req.user?.userId || req.jwtDecoded?.userId
+    req.user?.UserID || req.user?.userId || req.user?.id || req.jwtDecoded?.userId || req.jwtDecoded?.UserID
 
 /**
  * HÀM 1: getDashboard
@@ -32,7 +32,7 @@ const getUserId = (req) =>
  */
 export async function getDashboard(req, res, next) {
     try {
-        const staffUserId = req.user?.RoleName === 'Staff' ? req.user.UserID : null;
+        const staffUserId = ['Staff', 'Manager'].includes(req.user?.RoleName) ? getUserId(req) : null;
         const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null;
         const data = await staffService.getDashboard(staffUserId, buildingId)
         res.status(StatusCodes.OK).json({ success: true, data })
@@ -43,7 +43,7 @@ export async function getDashboard(req, res, next) {
 
 export async function getGates(req, res, next) {
     try {
-        const staffUserId = req.user?.RoleName === 'Staff' ? req.user.UserID : null;
+        const staffUserId = ['Staff', 'Manager'].includes(req.user?.RoleName) ? getUserId(req) : null;
         const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null;
         const data = await staffService.getGates(buildingId, staffUserId);
         res.status(StatusCodes.OK).json({ success: true, data });
@@ -61,7 +61,7 @@ export async function getGates(req, res, next) {
  */
 export async function getParkingMap(req, res, next) {
     try {
-        const staffUserId = req.user?.RoleName === 'Staff' ? req.user.UserID : null;
+        const staffUserId = ['Staff', 'Manager'].includes(req.user?.RoleName) ? getUserId(req) : null;
         const data = await staffService.getParkingMap(req.query, staffUserId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
@@ -80,7 +80,8 @@ export async function updateSlotStatus(req, res, next) {
     try {
         const { slotId } = req.params // Lấy ID ô đỗ từ đường dẫn URL
         const { slotStatus } = req.body // Lấy trạng thái mới từ req.body (Maintenance / Available / Blocked)
-        const data = await staffService.updateSlotStatus(slotId, slotStatus)
+        const staffUserId = getUserId(req)
+        const data = await staffService.updateSlotStatus(slotId, slotStatus, staffUserId)
         res.status(StatusCodes.OK).json({
             success: true,
             message: 'Cập nhật trạng thái slot thành công.',
@@ -125,7 +126,7 @@ export async function checkInWalkIn(req, res, next) {
  */
 export async function getBookings(req, res, next) {
     try {
-        const staffUserId = req.user?.RoleName === 'Staff' ? req.user.UserID : null
+        const staffUserId = ['Staff', 'Manager'].includes(req.user?.RoleName) ? getUserId(req) : null;
         const data = await staffService.getBookings(req.query, staffUserId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
@@ -226,7 +227,8 @@ export async function cancelAndWalkIn(req, res, next) {
  */
 export async function searchSessions(req, res, next) {
     try {
-        const data = await staffService.searchSessions(req.query)
+        const staffUserId = getUserId(req)
+        const data = await staffService.searchSessions(req.query, staffUserId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (err) { next(err) }
 }
@@ -240,10 +242,11 @@ export async function searchSessions(req, res, next) {
  */
 export async function getActiveSessions(req, res, next) {
     try {
+        const staffUserId = getUserId(req)
         const data = await staffService.searchSessions({
             ...req.query,
             status: 'Active'
-        })
+        }, staffUserId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
         next(error)
@@ -260,7 +263,8 @@ export async function getActiveSessions(req, res, next) {
 export async function getCheckoutPreview(req, res, next) {
     try {
         const { sessionId } = req.params
-        const data = await staffService.getCheckoutPreview(sessionId)
+        const staffUserId = getUserId(req)
+        const data = await staffService.getCheckoutPreview(sessionId, staffUserId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
         next(error)
@@ -278,7 +282,8 @@ export async function getCheckoutPreview(req, res, next) {
 export async function checkOutSession(req, res, next) {
     try {
         const { sessionId } = req.params
-        const data = await staffService.checkOutSession(sessionId, req.body)
+        const staffUserId = getUserId(req)
+        const data = await staffService.checkOutSession(sessionId, { ...req.body, staffUserId })
         res.status(StatusCodes.OK).json({
             success: true,
             message: 'Check-out thành công.',
@@ -300,7 +305,8 @@ export async function confirmSurcharge(req, res, next) {
     try {
         const { sessionId } = req.params
         const { paymentMethod } = req.body
-        const data = await staffService.confirmSurcharge(sessionId, paymentMethod)
+        const staffUserId = getUserId(req)
+        const data = await staffService.confirmSurcharge(sessionId, paymentMethod, staffUserId)
         res.status(StatusCodes.OK).json({
             success: true,
             message: 'Thu phụ trội thành công.',
@@ -358,7 +364,8 @@ export async function createIncident(req, res, next) {
  */
 export async function getIncidents(req, res, next) {
     try {
-        const data = await staffService.getIncidents(req.query)
+        const staffUserId = getUserId(req)
+        const data = await staffService.getIncidents(req.query, staffUserId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
         next(error)
@@ -375,7 +382,8 @@ export async function getIncidents(req, res, next) {
 export async function getIncidentById(req, res, next) {
     try {
         const { incidentId } = req.params
-        const data = await staffService.getIncidentById(incidentId)
+        const staffUserId = getUserId(req)
+        const data = await staffService.getIncidentById(incidentId, staffUserId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) { next(error) }
 }
@@ -390,6 +398,7 @@ export async function getIncidentById(req, res, next) {
 export async function updateIncidentStatus(req, res, next) {
     try {
         const { incidentId } = req.params
+        const staffUserId = getUserId(req)
 
         const { attachments } = req.body
         if (attachments && Array.isArray(attachments) && attachments.length > 15) {
@@ -400,7 +409,7 @@ export async function updateIncidentStatus(req, res, next) {
             })
         }
 
-        const data = await staffService.updateIncidentStatus(incidentId, req.body)
+        const data = await staffService.updateIncidentStatus(incidentId, req.body, staffUserId)
         res.status(StatusCodes.OK).json({
             success: true,
             message: 'Cập nhật sự cố thành công.',
@@ -452,7 +461,8 @@ export async function getVehicleTypes(req, res, next) {
 export async function getSlotDetail(req, res, next) {
     try {
         const { slotCode } = req.params
-        const data = await staffService.getSlotDetail(slotCode)
+        const staffUserId = getUserId(req)
+        const data = await staffService.getSlotDetail(slotCode, staffUserId)
         res.status(200).json({ success: true, data })
     } catch (err) {
         next(err)
@@ -469,13 +479,14 @@ export async function getSlotDetail(req, res, next) {
 export async function getPendingPayments(req, res, next) {
     try {
         const { keyword, fromDate, toDate, vehicleTypeId } = req.query
+        const staffUserId = getUserId(req)
         const data = await staffService.searchSessions({
             status: 'Pending',
             keyword,
             fromDate,
             toDate,
             vehicleTypeId
-        })
+        }, staffUserId)
         res.status(200).json({ success: true, data })
     } catch (err) {
         next(err)

@@ -9,7 +9,7 @@ hieu
 */
 
 import { getPool, sql } from "../config/db.js";
-import { getUserIdFromToken } from "../utils/requestUser.js";
+import { getUserIdFromToken, getRoleNameFromToken } from "../utils/requestUser.js";
 import {
   buildSessionCode,
   getReservationIdFromBookingCode,
@@ -300,14 +300,19 @@ export async function checkInVehicle(req) {
     const slotResult = await new sql.Request(transaction)
       // Truyền ID ô đỗ vào câu query
       .input("SlotID", sql.Int, finalSlotId)
-      // Query bảng ParkingSlots lấy trạng thái và loại xe cho phép
+      // Query bảng ParkingSlots lấy trạng thái, loại xe cho phép và thông tin Tòa nhà
       .query(`
             SELECT 
               ps.SlotID,
               ps.SlotCode,
               ps.SlotStatus,
-              ps.VehicleTypeID
+              ps.VehicleTypeID,
+              f.BuildingID,
+              b.BuildingName
             FROM ParkingSlots ps
+            LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID
+            LEFT JOIN Floors f ON z.FloorID = f.FloorID
+            LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
             WHERE ps.SlotID = @SlotID
           `);
 
@@ -317,6 +322,27 @@ export async function checkInVehicle(req) {
     // Nếu ô đỗ không tồn tại trong database -> Ném lỗi 404
     if (!slot) {
       throw createHttpError(404, "Không tìm thấy vị trí đỗ.");
+    }
+
+    // Nếu người thực hiện là Staff -> Kiểm tra phân công tòa nhà (BuildingAssignments)
+    const staffUserId = getUserIdFromToken(req);
+    const roleName = getRoleNameFromToken(req);
+    if (roleName === "Staff" && staffUserId && slot.BuildingID) {
+      const assignmentCheck = await new sql.Request(transaction)
+        .input("staffUserId", sql.Int, staffUserId)
+        .input("buildingId", sql.Int, slot.BuildingID)
+        .query(`
+          SELECT TOP 1 AssignmentID 
+          FROM BuildingAssignments 
+          WHERE UserID = @staffUserId AND BuildingID = @buildingId
+        `);
+
+      if (assignmentCheck.recordset.length === 0) {
+        throw createHttpError(
+          403,
+          `Không thể check-in: Vị trí đỗ này thuộc ${slot.BuildingName || "Tòa nhà khác"}, không nằm trong tòa nhà được phân công cho bạn.`
+        );
+      }
     }
 
     // Nếu loại xe của xe không khớp với loại xe được quy định cho ô đỗ -> Ném lỗi 400
@@ -465,13 +491,19 @@ export async function checkOutVehicle(req) {
       // Query truy vấn thông tin phiên đỗ xe
       .query(`
             SELECT TOP 1
-              SessionID,
-              SlotID,
-              EntryTime,
-              VehicleTypeID,
-              SessionStatus
-            FROM ParkingSessions
-            WHERE SessionID = @SessionID
+              ps.SessionID,
+              ps.SlotID,
+              ps.EntryTime,
+              ps.VehicleTypeID,
+              ps.SessionStatus,
+              f.BuildingID,
+              b.BuildingName
+            FROM ParkingSessions ps
+            LEFT JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
+            LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
+            LEFT JOIN Floors f ON z.FloorID = f.FloorID
+            LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
+            WHERE ps.SessionID = @SessionID
           `);
 
     // Lấy bản ghi phiên đỗ xe tìm thấy
@@ -480,6 +512,27 @@ export async function checkOutVehicle(req) {
     // Nếu không tìm thấy phiên đỗ xe -> Ném lỗi 404
     if (!session) {
       throw createHttpError(404, "Không tìm thấy phiên đỗ xe.");
+    }
+
+    // Nếu người thực hiện là Staff -> Kiểm tra phân công tòa nhà (BuildingAssignments)
+    const staffUserId = getUserIdFromToken(req);
+    const roleName = getRoleNameFromToken(req);
+    if (roleName === "Staff" && staffUserId && session.BuildingID) {
+      const assignmentCheck = await new sql.Request(transaction)
+        .input("staffUserId", sql.Int, staffUserId)
+        .input("buildingId", sql.Int, session.BuildingID)
+        .query(`
+          SELECT TOP 1 AssignmentID 
+          FROM BuildingAssignments 
+          WHERE UserID = @staffUserId AND BuildingID = @buildingId
+        `);
+
+      if (assignmentCheck.recordset.length === 0) {
+        throw createHttpError(
+          403,
+          `Không thể check-out: Phiên đỗ xe này thuộc ${session.BuildingName || "Tòa nhà khác"}, không nằm trong tòa nhà được phân công cho bạn.`
+        );
+      }
     }
 
     // Nếu phiên đỗ xe không ở trạng thái Active (đã check-out rồi) -> Ném lỗi 400

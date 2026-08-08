@@ -276,7 +276,7 @@ export async function getDashboard(staffUserId = null, buildingId = null) {
 
 
 
-export async function updateSlotStatus(slotId, slotStatus) {
+export async function updateSlotStatus(slotId, slotStatus, staffUserId = null) {
     if (!slotId) {
         throw badRequest('Thiếu SlotID.', 'SLOT_ID_REQUIRED')
     }
@@ -288,6 +288,36 @@ export async function updateSlotStatus(slotId, slotStatus) {
     }
 
     const pool = await getPool()
+
+    if (staffUserId) {
+        const userRoleRes = await pool.request()
+            .input('staffUserId', sql.Int, Number(staffUserId))
+            .query(`
+                SELECT r.RoleName 
+                FROM Users u 
+                JOIN Roles r ON u.RoleID = r.RoleID 
+                WHERE u.UserID = @staffUserId
+            `)
+        const roleName = userRoleRes.recordset[0]?.RoleName
+
+        if (['Staff', 'Manager'].includes(roleName)) {
+            const slotCheck = await pool.request()
+                .input('slotId', sql.Int, Number(slotId))
+                .input('staffUserId', sql.Int, Number(staffUserId))
+                .query(`
+                    SELECT TOP 1 sl.SlotID, b.BuildingName
+                    FROM ParkingSlots sl
+                    JOIN Zones z ON sl.ZoneID = z.ZoneID
+                    JOIN Floors f ON z.FloorID = f.FloorID
+                    JOIN Buildings b ON f.BuildingID = b.BuildingID
+                    WHERE sl.SlotID = @slotId
+                      AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)
+                `)
+            if (slotCheck.recordset.length === 0) {
+                throw forbidden('Vị trí ô đỗ này thuộc tòa nhà khác ngoài phạm vi được phân công của bạn.', 'SLOT_BUILDING_MISMATCH')
+            }
+        }
+    }
 
     const result = await pool.request()
         .input('slotId', sql.Int, Number(slotId))
@@ -327,20 +357,32 @@ export async function checkInWalkIn({ driverId, plateNumber, licensePlate, vehic
     }
 
     if (staffUserId) {
-        const slotCheck = await pool.request()
-            .input('slotId', sql.Int, Number(slotId))
+        const userRoleRes = await pool.request()
             .input('staffUserId', sql.Int, Number(staffUserId))
             .query(`
-                SELECT TOP 1 sl.SlotID, b.BuildingName
-                FROM ParkingSlots sl
-                JOIN Zones z ON sl.ZoneID = z.ZoneID
-                JOIN Floors f ON z.FloorID = f.FloorID
-                JOIN Buildings b ON f.BuildingID = b.BuildingID
-                WHERE sl.SlotID = @slotId
-                  AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)
+                SELECT r.RoleName 
+                FROM Users u 
+                JOIN Roles r ON u.RoleID = r.RoleID 
+                WHERE u.UserID = @staffUserId
             `)
-        if (slotCheck.recordset.length === 0) {
-            throw badRequest('Vị trí ô đỗ này thuộc tòa nhà khác ngoài phạm vi được phân công của bạn.', 'SLOT_BUILDING_MISMATCH')
+        const roleName = userRoleRes.recordset[0]?.RoleName
+
+        if (['Staff', 'Manager'].includes(roleName)) {
+            const slotCheck = await pool.request()
+                .input('slotId', sql.Int, Number(slotId))
+                .input('staffUserId', sql.Int, Number(staffUserId))
+                .query(`
+                    SELECT TOP 1 sl.SlotID, b.BuildingName
+                    FROM ParkingSlots sl
+                    JOIN Zones z ON sl.ZoneID = z.ZoneID
+                    JOIN Floors f ON z.FloorID = f.FloorID
+                    JOIN Buildings b ON f.BuildingID = b.BuildingID
+                    WHERE sl.SlotID = @slotId
+                      AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)
+                `)
+            if (slotCheck.recordset.length === 0) {
+                throw badRequest('Vị trí ô đỗ này thuộc tòa nhà khác ngoài phạm vi được phân công của bạn.', 'SLOT_BUILDING_MISMATCH')
+            }
         }
     }
 
@@ -581,19 +623,31 @@ export async function checkInBooking(reservationId, options = {}) {
         }
 
         if (staffId) {
-            const checkStaffAssignment = await new sql.Request(transaction)
+            const userRoleRes = await new sql.Request(transaction)
                 .input('staffId', sql.Int, staffId)
-                .input('buildingId', sql.Int, booking.BuildingID)
                 .query(`
-                    SELECT TOP 1 AssignmentID 
-                    FROM BuildingAssignments 
-                    WHERE UserID = @staffId AND BuildingID = @buildingId
+                    SELECT r.RoleName 
+                    FROM Users u 
+                    JOIN Roles r ON u.RoleID = r.RoleID 
+                    WHERE u.UserID = @staffId
                 `)
-            if (checkStaffAssignment.recordset.length === 0) {
-                throw forbidden(
-                    `Không thể check-in: Lịch đặt chỗ này thuộc ${booking.BuildingName || 'Tòa nhà khác'}, không nằm trong tòa nhà được phân công cho bạn.`,
-                    'BUILDING_MISMATCH'
-                )
+            const roleName = userRoleRes.recordset[0]?.RoleName
+
+            if (['Staff', 'Manager'].includes(roleName)) {
+                const checkStaffAssignment = await new sql.Request(transaction)
+                    .input('staffId', sql.Int, staffId)
+                    .input('buildingId', sql.Int, booking.BuildingID)
+                    .query(`
+                        SELECT TOP 1 AssignmentID 
+                        FROM BuildingAssignments 
+                        WHERE UserID = @staffId AND BuildingID = @buildingId
+                    `)
+                if (checkStaffAssignment.recordset.length === 0) {
+                    throw forbidden(
+                        `Không thể check-in: Lịch đặt chỗ này thuộc ${booking.BuildingName || 'Tòa nhà khác'}, không nằm trong tòa nhà được phân công cho bạn.`,
+                        'BUILDING_MISMATCH'
+                    )
+                }
             }
         }
 
@@ -996,15 +1050,48 @@ export async function cancelAndWalkIn(reservationId, options = {}, slotIdParam =
         const bookingResult = await new sql.Request(transaction)
             .input('reservationId', sql.Int, id)
             .query(`
-                SELECT r.*, sl.SlotStatus, sl.SlotCode, vt.VehicleName
+                SELECT r.*, sl.SlotStatus, sl.SlotCode, vt.VehicleName, f.BuildingID, b.BuildingName
                 FROM Reservations r WITH (UPDLOCK, ROWLOCK)
                 LEFT JOIN ParkingSlots sl ON r.SlotID = sl.SlotID
+                LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
+                LEFT JOIN Floors f ON z.FloorID = f.FloorID
+                LEFT JOIN Buildings b ON f.BuildingID = b.BuildingID
                 LEFT JOIN VehicleTypes vt ON r.VehicleTypeID = vt.VehicleTypeID
                 WHERE r.ReservationID = @reservationId
             `)
 
         const booking = bookingResult.recordset[0]
         if (!booking) throw notFound('Không tìm thấy booking.', 'BOOKING_NOT_FOUND')
+
+        if (staffId) {
+            const userRoleRes = await new sql.Request(transaction)
+                .input('staffId', sql.Int, staffId)
+                .query(`
+                    SELECT r.RoleName 
+                    FROM Users u 
+                    JOIN Roles r ON u.RoleID = r.RoleID 
+                    WHERE u.UserID = @staffId
+                `)
+            const roleName = userRoleRes.recordset[0]?.RoleName
+
+            if (['Staff', 'Manager'].includes(roleName)) {
+                const checkStaffAssignment = await new sql.Request(transaction)
+                    .input('staffId', sql.Int, staffId)
+                    .input('buildingId', sql.Int, booking.BuildingID)
+                    .query(`
+                        SELECT TOP 1 AssignmentID 
+                        FROM BuildingAssignments 
+                        WHERE UserID = @staffId AND BuildingID = @buildingId
+                    `)
+                if (checkStaffAssignment.recordset.length === 0) {
+                    throw forbidden(
+                        `Không thể xử lý: Lịch đặt chỗ này thuộc ${booking.BuildingName || 'Tòa nhà khác'}, không nằm trong tòa nhà được phân công cho bạn.`,
+                        'BUILDING_MISMATCH'
+                    )
+                }
+            }
+        }
+
         if (booking.ReservationStatus !== 'Reserved') {
             throw conflict('Booking này không còn ở trạng thái Reserved.', 'BOOKING_NOT_RESERVED')
         }
@@ -1142,13 +1229,31 @@ export async function cancelAndWalkIn(reservationId, options = {}, slotIdParam =
     }
 }
 
-export async function searchSessions({ keyword, status, vehicleTypeId, fromDate, toDate } = {}) {
+export async function searchSessions({ keyword, status, vehicleTypeId, fromDate, toDate } = {}, staffUserId = null) {
     const pool = await getPool()
+
+    let isStaffRole = false
+    if (staffUserId) {
+        const userRoleRes = await pool.request()
+            .input('staffUserId', sql.Int, Number(staffUserId))
+            .query(`
+                SELECT r.RoleName 
+                FROM Users u 
+                JOIN Roles r ON u.RoleID = r.RoleID 
+                WHERE u.UserID = @staffUserId
+            `)
+        isStaffRole = ['Staff', 'Manager'].includes(userRoleRes.recordset[0]?.RoleName)
+    }
 
     // ── Case đặc biệt: Reserved → query bảng Reservations ──
     if (status === 'Reserved') {
         const request = pool.request()
         let where = "WHERE r.ReservationStatus = 'Reserved'"
+
+        if (isStaffRole && staffUserId) {
+            request.input('staffUserId', sql.Int, Number(staffUserId))
+            where += ' AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)'
+        }
 
         if (keyword) {
             request.input('keyword', sql.NVarChar(100), `%${keyword}%`)
@@ -1203,6 +1308,11 @@ export async function searchSessions({ keyword, status, vehicleTypeId, fromDate,
     // ── Case bình thường: query ParkingSessions ──
     const request = pool.request()
     let where = 'WHERE 1 = 1'
+
+    if (isStaffRole && staffUserId) {
+        request.input('staffUserId', sql.Int, Number(staffUserId))
+        where += ' AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)'
+    }
 
     if (keyword) {
         request.input('keyword', sql.NVarChar(100), `%${keyword}%`)
@@ -1305,12 +1415,43 @@ async function getSessionById(sessionId) {
     return result.recordset[0] || null
 }
 
-export async function getCheckoutPreview(sessionId) {
+export async function getCheckoutPreview(sessionId, staffUserId = null) {
     if (!sessionId) {
         throw badRequest('Thiếu SessionID.', 'SESSION_ID_REQUIRED')
     }
 
     const pool = await getPool()
+
+    if (staffUserId) {
+        const userRoleRes = await pool.request()
+            .input('staffUserId', sql.Int, Number(staffUserId))
+            .query(`
+                SELECT r.RoleName 
+                FROM Users u 
+                JOIN Roles r ON u.RoleID = r.RoleID 
+                WHERE u.UserID = @staffUserId
+            `)
+        const roleName = userRoleRes.recordset[0]?.RoleName
+
+        if (['Staff', 'Manager'].includes(roleName)) {
+            const sessionCheck = await pool.request()
+                .input('sessionId', sql.Int, Number(sessionId))
+                .input('staffUserId', sql.Int, Number(staffUserId))
+                .query(`
+                    SELECT TOP 1 ps.SessionID, b.BuildingName
+                    FROM ParkingSessions ps
+                    JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
+                    JOIN Zones z ON sl.ZoneID = z.ZoneID
+                    JOIN Floors f ON z.FloorID = f.FloorID
+                    JOIN Buildings b ON f.BuildingID = b.BuildingID
+                    WHERE ps.SessionID = @sessionId
+                      AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)
+                `)
+            if (sessionCheck.recordset.length === 0) {
+                throw forbidden('Phiên gửi xe này thuộc tòa nhà khác ngoài phạm vi được phân công của bạn.', 'BUILDING_MISMATCH')
+            }
+        }
+    }
 
     const result = await pool.request()
         .input('sessionId', sql.Int, Number(sessionId))
@@ -1419,7 +1560,7 @@ export async function getCheckoutPreview(sessionId) {
     }
 }
 
-export async function checkOutSession(sessionId, { paymentMethod = 'Cash', confirmedPlate = true }) {
+export async function checkOutSession(sessionId, { paymentMethod = 'Cash', confirmedPlate = true, staffUserId = null } = {}) {
     if (!sessionId) {
         throw badRequest('Thiếu SessionID.', 'SESSION_ID_REQUIRED')
     }
@@ -1429,6 +1570,37 @@ export async function checkOutSession(sessionId, { paymentMethod = 'Cash', confi
     }
 
     const pool = await getPool()
+
+    if (staffUserId) {
+        const userRoleRes = await pool.request()
+            .input('staffUserId', sql.Int, Number(staffUserId))
+            .query(`
+                SELECT r.RoleName 
+                FROM Users u 
+                JOIN Roles r ON u.RoleID = r.RoleID 
+                WHERE u.UserID = @staffUserId
+            `)
+        const roleName = userRoleRes.recordset[0]?.RoleName
+
+        if (['Staff', 'Manager'].includes(roleName)) {
+            const sessionCheck = await pool.request()
+                .input('sessionId', sql.Int, Number(sessionId))
+                .input('staffUserId', sql.Int, Number(staffUserId))
+                .query(`
+                    SELECT TOP 1 ps.SessionID, b.BuildingName
+                    FROM ParkingSessions ps
+                    JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
+                    JOIN Zones z ON sl.ZoneID = z.ZoneID
+                    JOIN Floors f ON z.FloorID = f.FloorID
+                    JOIN Buildings b ON f.BuildingID = b.BuildingID
+                    WHERE ps.SessionID = @sessionId
+                      AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)
+                `)
+            if (sessionCheck.recordset.length === 0) {
+                throw forbidden('Không thể check-out: Phiên gửi xe này thuộc tòa nhà khác ngoài phạm vi được phân công của bạn.', 'BUILDING_MISMATCH')
+            }
+        }
+    }
 
     // Đọc EarlyFeeAmount và BookingStartTime để kiểm tra "vào sớm ra sớm"
     const sessionRow = await pool.request()
@@ -1524,8 +1696,39 @@ export async function checkOutSession(sessionId, { paymentMethod = 'Cash', confi
     return checkoutResult
 }
 
-export async function confirmSurcharge(sessionId, paymentMethod = 'Cash') {
+export async function confirmSurcharge(sessionId, paymentMethod = 'Cash', staffUserId = null) {
     const pool = await getPool()
+
+    if (staffUserId) {
+        const userRoleRes = await pool.request()
+            .input('staffUserId', sql.Int, Number(staffUserId))
+            .query(`
+                SELECT r.RoleName 
+                FROM Users u 
+                JOIN Roles r ON u.RoleID = r.RoleID 
+                WHERE u.UserID = @staffUserId
+            `)
+        const roleName = userRoleRes.recordset[0]?.RoleName
+
+        if (['Staff', 'Manager'].includes(roleName)) {
+            const sessionCheck = await pool.request()
+                .input('sessionId', sql.Int, Number(sessionId))
+                .input('staffUserId', sql.Int, Number(staffUserId))
+                .query(`
+                    SELECT TOP 1 ps.SessionID, b.BuildingName
+                    FROM ParkingSessions ps
+                    JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
+                    JOIN Zones z ON sl.ZoneID = z.ZoneID
+                    JOIN Floors f ON z.FloorID = f.FloorID
+                    JOIN Buildings b ON f.BuildingID = b.BuildingID
+                    WHERE ps.SessionID = @sessionId
+                      AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)
+                `)
+            if (sessionCheck.recordset.length === 0) {
+                throw forbidden('Không thể xác nhận phụ phí: Phiên gửi xe này thuộc tòa nhà khác ngoài phạm vi được phân công của bạn.', 'BUILDING_MISMATCH')
+            }
+        }
+    }
 
     const request = pool.request()
     request.input('SessionID', sql.Int, Number(sessionId))
@@ -1554,6 +1757,37 @@ export async function createIncident({
     const pool = await getPool()
     let finalDriverId = driverId ? Number(driverId) : null
     let finalSessionId = sessionId ? Number(sessionId) : null
+
+    if (staffId) {
+        const userRoleRes = await pool.request()
+            .input('staffId', sql.Int, Number(staffId))
+            .query(`
+                SELECT r.RoleName 
+                FROM Users u 
+                JOIN Roles r ON u.RoleID = r.RoleID 
+                WHERE u.UserID = @staffId
+            `)
+        const roleName = userRoleRes.recordset[0]?.RoleName
+
+        if (['Staff', 'Manager'].includes(roleName) && finalSessionId) {
+            const sessionCheck = await pool.request()
+                .input('sessionId', sql.Int, finalSessionId)
+                .input('staffId', sql.Int, Number(staffId))
+                .query(`
+                    SELECT TOP 1 ps.SessionID, b.BuildingName
+                    FROM ParkingSessions ps
+                    JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
+                    JOIN Zones z ON sl.ZoneID = z.ZoneID
+                    JOIN Floors f ON z.FloorID = f.FloorID
+                    JOIN Buildings b ON f.BuildingID = b.BuildingID
+                    WHERE ps.SessionID = @sessionId
+                      AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffId)
+                `)
+            if (sessionCheck.recordset.length === 0) {
+                throw forbidden('Không thể tạo sự cố cho phiên gửi xe thuộc tòa nhà khác ngoài phạm vi phân công.', 'BUILDING_MISMATCH')
+            }
+        }
+    }
 
     if (!finalDriverId && finalSessionId) {
         const r = await pool.request()
@@ -1607,11 +1841,29 @@ export async function createIncident({
     }
 }
 
-export async function getIncidents({ status, priority, keyword, fromDate, toDate } = {}) {
+export async function getIncidents({ status, priority, keyword, fromDate, toDate } = {}, staffUserId = null) {
     const pool = await getPool()
     const request = pool.request()
 
+    let isStaffRole = false
+    if (staffUserId) {
+        const userRoleRes = await pool.request()
+            .input('staffUserId', sql.Int, Number(staffUserId))
+            .query(`
+                SELECT r.RoleName 
+                FROM Users u 
+                JOIN Roles r ON u.RoleID = r.RoleID 
+                WHERE u.UserID = @staffUserId
+            `)
+        isStaffRole = ['Staff', 'Manager'].includes(userRoleRes.recordset[0]?.RoleName)
+    }
+
     let where = 'WHERE 1 = 1'
+
+    if (isStaffRole && staffUserId) {
+        request.input('staffUserId', sql.Int, Number(staffUserId))
+        where += ' AND (i.SessionID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))'
+    }
 
     if (status && status !== 'all') {
         request.input('status', sql.NVarChar(20), status)
@@ -1665,6 +1917,9 @@ export async function getIncidents({ status, priority, keyword, fromDate, toDate
         FROM Incidents i
         LEFT JOIN Users u ON i.DriverID = u.UserID
         LEFT JOIN ParkingSessions ps ON i.SessionID = ps.SessionID
+        LEFT JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
+        LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
+        LEFT JOIN Floors f ON z.FloorID = f.FloorID
         LEFT JOIN Users staff ON i.AssignedStaffID = staff.UserID
         ${where}
         ORDER BY i.CreatedAt DESC
@@ -1676,10 +1931,42 @@ export async function getIncidents({ status, priority, keyword, fromDate, toDate
     }))
 }
 
-export async function getIncidentById(incidentId) {
+export async function getIncidentById(incidentId, staffUserId = null) {
     if (!incidentId) throw badRequest('Thiếu IncidentID.', 'INCIDENT_ID_REQUIRED')
 
     const pool = await getPool()
+
+    if (staffUserId) {
+        const userRoleRes = await pool.request()
+            .input('staffUserId', sql.Int, Number(staffUserId))
+            .query(`
+                SELECT r.RoleName 
+                FROM Users u 
+                JOIN Roles r ON u.RoleID = r.RoleID 
+                WHERE u.UserID = @staffUserId
+            `)
+        const roleName = userRoleRes.recordset[0]?.RoleName
+
+        if (['Staff', 'Manager'].includes(roleName)) {
+            const checkInc = await pool.request()
+                .input('id', sql.Int, Number(incidentId))
+                .input('staffUserId', sql.Int, Number(staffUserId))
+                .query(`
+                    SELECT TOP 1 i.IncidentID
+                    FROM Incidents i
+                    LEFT JOIN ParkingSessions ps ON i.SessionID = ps.SessionID
+                    LEFT JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
+                    LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
+                    LEFT JOIN Floors f ON z.FloorID = f.FloorID
+                    WHERE i.IncidentID = @id
+                      AND (i.SessionID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))
+                `)
+            if (checkInc.recordset.length === 0) {
+                throw forbidden('Không tìm thấy sự cố hoặc sự cố thuộc tòa nhà ngoài phạm vi phân công của bạn.', 'BUILDING_MISMATCH')
+            }
+        }
+    }
+
     const result = await pool.request()
         .input('id', sql.Int, Number(incidentId))
         .query(`
@@ -1713,7 +2000,7 @@ export async function getIncidentById(incidentId) {
     }
 }
 
-export async function updateIncidentStatus(incidentId, { status, note, attachments }) {
+export async function updateIncidentStatus(incidentId, { status, note, attachments } = {}, staffUserId = null) {
     if (!incidentId) throw badRequest('Thiếu IncidentID.', 'INCIDENT_ID_REQUIRED')
 
     const validStatuses = ['Open', 'InProgress', 'Resolved']
@@ -1721,11 +2008,43 @@ export async function updateIncidentStatus(incidentId, { status, note, attachmen
         throw badRequest('Trạng thái không hợp lệ.', 'INVALID_STATUS')
     }
 
+    const pool = await getPool()
+
+    if (staffUserId) {
+        const userRoleRes = await pool.request()
+            .input('staffUserId', sql.Int, Number(staffUserId))
+            .query(`
+                SELECT r.RoleName 
+                FROM Users u 
+                JOIN Roles r ON u.RoleID = r.RoleID 
+                WHERE u.UserID = @staffUserId
+            `)
+        const roleName = userRoleRes.recordset[0]?.RoleName
+
+        if (['Staff', 'Manager'].includes(roleName)) {
+            const checkInc = await pool.request()
+                .input('id', sql.Int, Number(incidentId))
+                .input('staffUserId', sql.Int, Number(staffUserId))
+                .query(`
+                    SELECT TOP 1 i.IncidentID
+                    FROM Incidents i
+                    LEFT JOIN ParkingSessions ps ON i.SessionID = ps.SessionID
+                    LEFT JOIN ParkingSlots sl ON ps.SlotID = sl.SlotID
+                    LEFT JOIN Zones z ON sl.ZoneID = z.ZoneID
+                    LEFT JOIN Floors f ON z.FloorID = f.FloorID
+                    WHERE i.IncidentID = @id
+                      AND (i.SessionID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))
+                `)
+            if (checkInc.recordset.length === 0) {
+                throw forbidden('Không thể cập nhật sự cố thuộc tòa nhà ngoài phạm vi phân công của bạn.', 'BUILDING_MISMATCH')
+            }
+        }
+    }
+
     // attachments: nếu truyền lên thì thay toàn bộ; nếu không truyền (undefined) thì giữ nguyên
     const hasNewAttachments = Array.isArray(attachments)
     const attachmentsJson = hasNewAttachments ? serializeAttachments(attachments) : undefined
 
-    const pool = await getPool()
     const request = pool.request()
         .input('id', sql.Int, Number(incidentId))
         .input('status', sql.NVarChar(20), status)
@@ -1880,8 +2199,37 @@ export async function getParkingMap({ buildingId, floorId, vehicleTypeId, status
 
     return result.recordset  // flat array
 }
-export async function getSlotDetail(slotCode) {
+export async function getSlotDetail(slotCode, staffUserId = null) {
     const pool = await getPool();
+
+    if (staffUserId) {
+        const userRoleRes = await pool.request()
+            .input('staffUserId', sql.Int, Number(staffUserId))
+            .query(`
+                SELECT r.RoleName 
+                FROM Users u 
+                JOIN Roles r ON u.RoleID = r.RoleID 
+                WHERE u.UserID = @staffUserId
+            `)
+        const roleName = userRoleRes.recordset[0]?.RoleName
+
+        if (['Staff', 'Manager'].includes(roleName)) {
+            const checkSlot = await pool.request()
+                .input('SlotCode', sql.NVarChar(20), slotCode)
+                .input('staffUserId', sql.Int, Number(staffUserId))
+                .query(`
+                    SELECT TOP 1 ps.SlotID
+                    FROM ParkingSlots ps
+                    JOIN Zones z ON ps.ZoneID = z.ZoneID
+                    JOIN Floors f ON z.FloorID = f.FloorID
+                    WHERE ps.SlotCode = @SlotCode
+                      AND f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)
+                `)
+            if (checkSlot.recordset.length === 0) {
+                return null;
+            }
+        }
+    }
 
     // Lấy slot info + active session (ưu tiên Active session)
     const result = await pool.request()

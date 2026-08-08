@@ -1389,8 +1389,7 @@ GO
 
 INSERT INTO BuildingAssignments (BuildingID,UserID,IsPrimary) VALUES
 (1, 2, 1),
-(1, 3, 1),
-(2, 2, 0);
+(1, 3, 1);
 GO
 
 INSERT INTO Floors (BuildingID,FloorName) VALUES
@@ -1630,17 +1629,13 @@ JOIN Buildings b ON b.BuildingName LIKE g.BldPattern;
 GO
 
 -- BuildingAssignments cho tòa C, D, E
--- Manager UserID=2 phụ trách Toa C; UserID=3 phụ trách Toa D; UserID=2 hỗ trợ Toa E
--- Staff   UserID=4 làm tại Toa C; UserID=5 làm tại Toa D; UserID=4 hỗ trợ Toa E; UserID=6 làm tại Toa E
+-- Staff UserID=4 làm tại Toa C; UserID=5 làm tại Toa D; UserID=6 làm tại Toa E
 INSERT INTO BuildingAssignments (BuildingID, UserID, IsPrimary)
 SELECT b.BuildingID, a.UserID, a.IsPrimary
 FROM (VALUES
-  (N'Toa C - Trung Tam%', 2, 1),   -- Manager A phụ trách chính Toa C
   (N'Toa C - Trung Tam%', 4, 1),   -- Staff A trực tại Toa C
-  (N'Toa C - Trung Tam%', 5, 0),   -- Staff B hỗ trợ Toa C
   (N'Toa D - Vien Dao%',  3, 1),   -- Manager B phụ trách chính Toa D
   (N'Toa D - Vien Dao%',  5, 1),   -- Staff B trực tại Toa D
-  (N'Toa E - Trung Tam Dao%', 2, 0),-- Manager A hỗ trợ Toa E
   (N'Toa E - Trung Tam Dao%', 6, 1) -- Staff C trực tại Toa E
 ) AS a(BldPattern, UserID, IsPrimary)
 JOIN Buildings b ON b.BuildingName LIKE a.BldPattern
