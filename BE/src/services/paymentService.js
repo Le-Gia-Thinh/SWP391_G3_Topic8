@@ -144,7 +144,7 @@ export async function applySubscriptionDiscount(arg1, arg2, arg3, arg4) {
             .query(`
                 SELECT dv.IsDefault 
                 FROM ParkingSessions ps
-                JOIN DriverVehicles dv ON ps.PlateNumber = dv.PlateNumber
+                JOIN DriverVehicles dv ON UPPER(REPLACE(REPLACE(ps.PlateNumber, ' ', ''), '-', '')) = UPPER(REPLACE(REPLACE(dv.PlateNumber, ' ', ''), '-', ''))
                     AND ps.DriverID = dv.DriverID
                 WHERE ps.SessionID = @SessionID
             `);
