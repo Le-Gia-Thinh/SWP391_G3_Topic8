@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'react-toastify'
 import { formatPlateNumber } from '../../utils/formatters'
 import authorizeAxios from '../../utils/authorizeAxios'
 
@@ -742,7 +743,7 @@ const DriverBooking = () => {
     if (isToday(bookingDate) && !isStartTimeValid(bookingDate, startTime)) {
       setStartTime(minimumTime)
       setIsStartTimeTouched(false)
-      setErrorMessage(t('driver.booking.errTimeAdjusted'))
+      toast.warn(`Giờ đỗ xe hôm nay phải từ ${minimumTime} trở đi (+15 phút từ hiện tại). Hệ thống đã tự điều chỉnh về ${minimumTime}.`)
     }
   }
 
@@ -1138,6 +1139,7 @@ const DriverBooking = () => {
                   <input
                     type="time"
                     value={startTime}
+                    min={isToday(bookingDate) ? getMinimumStartTimeValue() : undefined}
                     onChange={(e) => {
                       setStartTime(e.target.value)
                       setIsStartTimeTouched(true)

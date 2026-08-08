@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Car, Grid, LogOut, CreditCard, Clock, ChevronRight,
-  Search, AlertTriangle, Map, ArrowRightLeft, RefreshCcw, Loader2, ShieldCheck
+  Search, AlertTriangle, Map, ArrowRightLeft, RefreshCcw, Loader2, ShieldCheck, Building2
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -61,29 +61,31 @@ export default function StaffDashboardScreen() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState({ stats: {}, recentCheckIns: [], alerts: [] })
+  const [data, setData] = useState({ stats: {}, recentCheckIns: [], alerts: [], assignedBuildings: [] })
   const [quickSearch, setQuickSearch] = useState('')
+  const [selectedBuildingId, setSelectedBuildingId] = useState('all')
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+
   useEffect(() => {
     let cancelled = false
     const run = async () => {
       setLoading(true)
       try {
-        const res = await staffApi.getDashboard()
+        const res = await staffApi.getDashboard(selectedBuildingId)
         if (!cancelled && res.success) setData(res.data)
       } catch {
-        if (!cancelled) toast.error(t('staff.dashboard.error') /* TRANSLATED: Không thể tải dữ liệu dashboard */)
+        if (!cancelled) toast.error(t('staff.dashboard.error'))
       } finally {
         if (!cancelled) setLoading(false)
       }
     }
     run()
     return () => { cancelled = true }
-  }, [refreshTrigger])
+  }, [refreshTrigger, selectedBuildingId, t])
 
   const handleRefresh = () => setRefreshTrigger(t => t + 1)
 
-  const { stats, recentCheckIns, alerts } = data
+  const { stats, recentCheckIns, alerts, assignedBuildings } = data
 
   return (
     <div className="flex flex-col h-full">
@@ -233,11 +235,83 @@ export default function StaffDashboardScreen() {
 
           {/* Today Revenue */}
           {!loading && stats && (
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg border border-emerald-400/30 p-6 text-white relative overflow-hidden group">
-              <div className="absolute -right-4 -bottom-4 bg-white/10 rounded-full w-32 h-32 blur-2xl group-hover:scale-150 transition-transform duration-700" />
-              <h3 className="text-[13px] font-bold text-emerald-100 mb-2 flex items-center gap-2 uppercase tracking-widest relative z-10"><CreditCard size={18} className="text-emerald-200" /> {t('staff.dashboard.revenue.title')}</h3>
-              <p className="text-3xl font-black relative z-10 tracking-tight">{Number(stats.todayRevenue || 0).toLocaleString('vi-VN')}₫</p>
-              <p className="text-xs font-semibold text-emerald-100/80 mt-2 relative z-10">{t('staff.dashboard.revenue.desc')}</p>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-slate-900/50 p-6 relative overflow-hidden group">
+              
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400 rounded-xl shadow-sm">
+                    <CreditCard size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      {t('staff.dashboard.revenue.title')}
+                    </h3>
+                    <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                      {selectedBuildingId === 'all' 
+                        ? 'Tổng doanh thu hôm nay' 
+                        : assignedBuildings?.find(b => String(b.BuildingID) === String(selectedBuildingId))?.BuildingName?.split('(')[0]?.trim()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bộ lọc chọn tòa nhà */}
+              {assignedBuildings && assignedBuildings.length > 0 && (
+                <div className="mb-4">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1.5">
+                    Chọn Tòa nhà xem doanh thu:
+                  </label>
+                  <select
+                    value={selectedBuildingId}
+                    onChange={(e) => setSelectedBuildingId(e.target.value)}
+                    className="w-full py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-extrabold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-inner"
+                  >
+                    <option value="all">🏢 Tất cả các tòa nhà (Tổng)</option>
+                    {assignedBuildings.map(b => (
+                      <option key={b.BuildingID} value={b.BuildingID}>
+                        📍 {b.BuildingName?.split('(')[0]?.trim() || b.BuildingName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Hiển thị số tiền Doanh Thu to, sắc nét */}
+              <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl p-4 text-white shadow-md mb-4">
+                <p className="text-xs font-semibold text-emerald-100 uppercase tracking-wider mb-0.5">Doanh Thu Thực Thu</p>
+                <p className="text-3xl font-black tracking-tight">{Number(stats.todayRevenue || 0).toLocaleString('vi-VN')}₫</p>
+              </div>
+
+              {/* Bóc tách doanh thu chi tiết từng tòa */}
+              {assignedBuildings && assignedBuildings.length > 0 && (
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 space-y-1.5">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+                    Chi tiết doanh thu theo tòa:
+                  </p>
+                  {assignedBuildings.map(b => {
+                    const isSelected = String(selectedBuildingId) === String(b.BuildingID)
+                    return (
+                      <div 
+                        key={b.BuildingID} 
+                        onClick={() => setSelectedBuildingId(String(b.BuildingID))}
+                        className={`flex justify-between items-center py-2 px-3 rounded-xl cursor-pointer transition-all ${
+                          isSelected 
+                            ? 'bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 font-extrabold shadow-sm' 
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-700/40 text-slate-700 dark:text-slate-300 border border-transparent'
+                        }`}
+                      >
+                        <span className="truncate max-w-[170px] text-xs font-bold">
+                          📍 {b.BuildingName?.split('-')[0]?.trim() || b.BuildingName}:
+                        </span>
+                        <span className={`text-xs font-black font-mono ${isSelected ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                          {Number(b.TodayRevenue || 0).toLocaleString('vi-VN')}₫
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
             </div>
           )}
         </div>

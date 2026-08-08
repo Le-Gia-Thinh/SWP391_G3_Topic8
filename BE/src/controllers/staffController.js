@@ -33,7 +33,8 @@ const getUserId = (req) =>
 export async function getDashboard(req, res, next) {
     try {
         const staffUserId = req.user?.RoleName === 'Staff' ? req.user.UserID : null;
-        const data = await staffService.getDashboard(staffUserId)
+        const buildingId = req.query.buildingId ? Number(req.query.buildingId) : null;
+        const data = await staffService.getDashboard(staffUserId, buildingId)
         res.status(StatusCodes.OK).json({ success: true, data })
     } catch (error) {
         next(error)
@@ -156,11 +157,18 @@ export async function getBookingDetail(req, res, next) {
 export async function checkInBooking(req, res, next) {
     try {
         const { reservationId } = req.params // Lấy ID mã đặt chỗ từ URL
-        const { plateNumber } = req.body     // Biển số xe quét được tại cổng vào
-        
+        const { plateNumber, cardCode, gateIn, gateInId } = req.body || {}
+        const staffId = getUserId(req)
+
         // Gọi service xử lý chuyển đổi đặt trước thành phiên đỗ xe hoạt động
-        const data = await staffService.checkInBooking(reservationId, plateNumber)
-        
+        const data = await staffService.checkInBooking(reservationId, {
+            plateNumber,
+            cardCode,
+            gateIn,
+            gateInId,
+            staffId
+        })
+
         // Trả về kết quả HTTP 201 Created
         res.status(StatusCodes.CREATED).json({
             success: true,
@@ -182,8 +190,18 @@ export async function checkInBooking(req, res, next) {
 export async function cancelAndWalkIn(req, res, next) {
     try {
         const { reservationId } = req.params
-        const { plateNumber, slotId } = req.body
-        const data = await staffService.cancelAndWalkIn(reservationId, plateNumber, slotId)
+        const { plateNumber, slotId, cardCode, gateIn, gateInId } = req.body || {}
+        const staffId = getUserId(req)
+
+        const data = await staffService.cancelAndWalkIn(reservationId, {
+            plateNumber,
+            slotId,
+            cardCode,
+            gateIn,
+            gateInId,
+            staffId
+        })
+
         res.status(StatusCodes.CREATED).json({
             success: true,
             message: 'Check-in vãng lai thành công. Đặt trước đã được hủy.',

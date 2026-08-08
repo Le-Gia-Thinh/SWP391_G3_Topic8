@@ -167,25 +167,27 @@ export async function getGates(buildingId = null, staffUserId = null) {
     return result.recordset
 }
 
-export async function getDashboard(staffUserId = null) {
+export async function getDashboard(staffUserId = null, buildingId = null) {
     const pool = await getPool()
     const request = pool.request()
     request.input('staffUserId', sql.Int, staffUserId || null)
+    request.input('buildingId', sql.Int, buildingId || null)
 
     const stats = await request.query(`
         SELECT
-        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Active' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS activeSessions,
-        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE CAST(s.EntryTime AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayCheckIns,
-        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Completed' AND CAST(s.ExitTime AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayCheckOuts,
-        (SELECT ISNULL(SUM(ISNULL(p.FinalAmount, p.Amount)), 0) FROM Payments p JOIN ParkingSessions s ON p.SessionID = s.SessionID JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE p.PaymentStatus = 'Completed' AND CAST(ISNULL(p.PaymentTime, p.SurchargePaidAt) AS DATE) = CAST(GETDATE() AS DATE) AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS todayRevenue,
-        (SELECT COUNT(*) FROM Incidents i WHERE i.IncidentStatus IN ('Open', 'InProgress') AND (@staffUserId IS NULL OR i.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS openIncidents,
-        (SELECT COUNT(*) FROM Reservations r WHERE r.ReservationStatus = 'Reserved' AND (@staffUserId IS NULL OR r.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS pendingBookings,
-        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Available' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS availableSlots,
-        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Occupied' AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))) AS occupiedSlots
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Active' AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS activeSessions,
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE CAST(s.EntryTime AS DATE) = CAST(GETDATE() AS DATE) AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS todayCheckIns,
+        (SELECT COUNT(*) FROM ParkingSessions s JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE s.SessionStatus = 'Completed' AND CAST(s.ExitTime AS DATE) = CAST(GETDATE() AS DATE) AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS todayCheckOuts,
+        (SELECT ISNULL(SUM(ISNULL(p.PrepaidAmount, ISNULL(p.FinalAmount, p.Amount))), 0) FROM Payments p JOIN ParkingSessions s ON p.SessionID = s.SessionID JOIN ParkingSlots ps ON s.SlotID = ps.SlotID JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE p.PaymentStatus IN ('Completed', 'Prepaid') AND CAST(ISNULL(p.PaymentTime, p.PrepaidAt) AS DATE) = CAST(GETDATE() AS DATE) AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS todayRevenue,
+        (SELECT COUNT(*) FROM Incidents i LEFT JOIN ParkingSessions s ON i.SessionID = s.SessionID LEFT JOIN ParkingSlots ps ON s.SlotID = ps.SlotID LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID LEFT JOIN Floors f ON z.FloorID = f.FloorID WHERE i.IncidentStatus IN ('Open', 'InProgress') AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR s.SessionID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS openIncidents,
+        (SELECT COUNT(*) FROM Reservations r LEFT JOIN ParkingSlots ps ON r.SlotID = ps.SlotID LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID LEFT JOIN Floors f ON z.FloorID = f.FloorID WHERE r.ReservationStatus = 'Reserved' AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR r.SlotID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS pendingBookings,
+        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Available' AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS availableSlots,
+        (SELECT COUNT(*) FROM ParkingSlots ps JOIN Zones z ON ps.ZoneID = z.ZoneID JOIN Floors f ON z.FloorID = f.FloorID WHERE ps.SlotStatus = 'Occupied' AND (@buildingId IS NOT NULL AND f.BuildingID = @buildingId OR @buildingId IS NULL AND (@staffUserId IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))) AS occupiedSlots
     `)
 
     const recentCheckIns = await pool.request()
         .input('staffUserId', sql.Int, staffUserId || null)
+        .input('buildingId', sql.Int, buildingId || null)
         .query(`
         SELECT TOP 8
         ps.SessionID,
@@ -207,36 +209,64 @@ export async function getDashboard(staffUserId = null) {
         JOIN Floors f ON z.FloorID = f.FloorID
         JOIN Buildings b ON f.BuildingID = b.BuildingID
         LEFT JOIN Users u ON ps.DriverID = u.UserID
-        WHERE (@staffUserId IS NULL OR b.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))
+        WHERE (@buildingId IS NOT NULL AND b.BuildingID = @buildingId) OR (@buildingId IS NULL AND (@staffUserId IS NULL OR b.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)))
         ORDER BY ps.EntryTime DESC
     `)
 
     const alerts = await pool.request()
         .input('staffUserId', sql.Int, staffUserId || null)
+        .input('buildingId', sql.Int, buildingId || null)
         .query(`
         SELECT TOP 6
-        IncidentID,
-        IncidentType,
-        IncidentStatus,
-        Priority,
-        Description,
-        CreatedAt
-        FROM Incidents
-        WHERE IncidentStatus IN ('Open', 'InProgress')
-          AND (@staffUserId IS NULL OR BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))
+        i.IncidentID,
+        i.IncidentType,
+        i.IncidentStatus,
+        i.Priority,
+        i.Description,
+        i.CreatedAt
+        FROM Incidents i
+        LEFT JOIN ParkingSessions s ON i.SessionID = s.SessionID
+        LEFT JOIN ParkingSlots ps ON s.SlotID = ps.SlotID
+        LEFT JOIN Zones z ON ps.ZoneID = z.ZoneID
+        LEFT JOIN Floors f ON z.FloorID = f.FloorID
+        WHERE i.IncidentStatus IN ('Open', 'InProgress')
+          AND ((@buildingId IS NOT NULL AND f.BuildingID = @buildingId) OR (@buildingId IS NULL AND (@staffUserId IS NULL OR s.SessionID IS NULL OR f.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId))))
         ORDER BY
-        CASE Priority
+        CASE i.Priority
             WHEN 'High' THEN 1
             WHEN 'Normal' THEN 2
             ELSE 3
         END,
-        CreatedAt DESC
+        i.CreatedAt DESC
     `)
+
+    const assignedBuildingsRes = await pool.request()
+        .input('staffUserId', sql.Int, staffUserId || null)
+        .query(`
+            SELECT 
+                b.BuildingID, 
+                b.BuildingName,
+                (
+                    SELECT ISNULL(SUM(ISNULL(p.PrepaidAmount, ISNULL(p.FinalAmount, p.Amount))), 0) 
+                    FROM Payments p 
+                    JOIN ParkingSessions s ON p.SessionID = s.SessionID 
+                    JOIN ParkingSlots ps ON s.SlotID = ps.SlotID 
+                    JOIN Zones z ON ps.ZoneID = z.ZoneID 
+                    JOIN Floors f ON z.FloorID = f.FloorID 
+                    WHERE p.PaymentStatus IN ('Completed', 'Prepaid') 
+                      AND CAST(ISNULL(p.PaymentTime, p.PrepaidAt) AS DATE) = CAST(GETDATE() AS DATE) 
+                      AND f.BuildingID = b.BuildingID
+                ) AS TodayRevenue
+            FROM Buildings b
+            WHERE @staffUserId IS NULL OR b.BuildingID IN (SELECT BuildingID FROM BuildingAssignments WHERE UserID = @staffUserId)
+            ORDER BY b.BuildingID
+        `)
 
     return {
         stats: stats.recordset[0],
         recentCheckIns: recentCheckIns.recordset,
-        alerts: alerts.recordset
+        alerts: alerts.recordset,
+        assignedBuildings: assignedBuildingsRes.recordset
     }
 }
 
@@ -465,7 +495,23 @@ export async function getBookingDetail(reservationId) {
 }
 
 // 🅿️ LUỒNG STAFF CHECK-IN [BƯỚC 5/7]: Service thực thi SQL Transaction & Kiểm tra điều kiện nghiệp vụ
-export async function checkInBooking(reservationId, plateNumber) {
+export async function checkInBooking(reservationId, options = {}) {
+    let plateNumber = null
+    let cardCode = null
+    let gateIn = null
+    let gateInId = null
+    let staffId = null
+
+    if (typeof options === 'string') {
+        plateNumber = options
+    } else if (typeof options === 'object' && options !== null) {
+        plateNumber = options.plateNumber
+        cardCode = options.cardCode
+        gateIn = options.gateIn
+        gateInId = options.gateInId
+        staffId = options.staffId
+    }
+
     const id = parseReservationId(reservationId)
 
     if (!id) {
@@ -507,35 +553,185 @@ export async function checkInBooking(reservationId, plateNumber) {
         const endTime = new Date(booking.EndTime)
         const diffMin = Math.round((now - startTime) / 60000)
 
-        if (diffMin < -EARLY_CHECKIN_MIN) {
-            const minutesLeft = -diffMin - EARLY_CHECKIN_MIN
-            const windowOpensAt = new Date(startTime.getTime() - EARLY_CHECKIN_MIN * 60000)
-            const timeStr = windowOpensAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-            const err = badRequest(
-                `Quá sớm để check-in. Cửa sổ check-in mở lúc ${timeStr} (còn ${minutesLeft} phút nữa).`,
-                'CHECKIN_TOO_EARLY'
-            )
-            err.data = { minutesLeft, windowOpensAt }
-            throw err
+        const earlyMinutes = diffMin < 0 ? -diffMin : 0
+        const lateMinutes = diffMin > 0 ? diffMin : 0
+
+        // =========================================================================
+        // TRƯỜNG HỢP 1: ĐẾN SỚM TRƯỚC > 15 PHÚT (Vd: sớm 20', 21', 30'...)
+        // -> Tự động kiểm tra ô đỗ/bãi đỗ:
+        //    + Nếu Ô ĐỖ TRỐNG: Hỗ trợ cho vào ngay theo luồng VÃNG LAI (Walk-in Support), giữ thông tin tài xế & loại xe từ Booking.
+        //    + Nếu Ô ĐỖ BỊ CHIẾM: Thông báo không cho vào và hiển thị giờ mở cửa sổ check-in đúng hẹn (trước 15').
+        // =========================================================================
+        if (earlyMinutes > 15) {
+            // Kiểm tra slot hiện tại có đang bị xe khác đỗ không
+            const activeCheck = await new sql.Request(transaction)
+                .input('slotId', sql.Int, booking.SlotID)
+                .query(`
+                    SELECT TOP 1 SessionID FROM ParkingSessions
+                    WHERE SlotID = @slotId AND SessionStatus = 'Active' AND ExitTime IS NULL
+                `)
+
+            const isCurrentSlotFree = (booking.SlotStatus === 'Available' || booking.SlotStatus === 'Reserved')
+                && activeCheck.recordset.length === 0
+
+            let targetSlotId = booking.SlotID
+            let targetSlotCode = booking.OldSlotCode
+            let isReassigned = false
+
+            if (!isCurrentSlotFree) {
+                // Thử tìm slot trống khác cùng tòa nhà và loại xe
+                const altSlotRes = await new sql.Request(transaction)
+                    .input('buildingId', sql.Int, booking.BuildingID)
+                    .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
+                    .query(`
+                        SELECT TOP 1 sl.SlotID, sl.SlotCode
+                        FROM ParkingSlots sl WITH (UPDLOCK, ROWLOCK)
+                        JOIN Zones z ON sl.ZoneID = z.ZoneID
+                        JOIN Floors f ON z.FloorID = f.FloorID
+                        WHERE f.BuildingID = @buildingId
+                          AND sl.VehicleTypeID = @vehicleTypeId
+                          AND sl.SlotStatus = 'Available'
+                          AND NOT EXISTS (
+                            SELECT 1 FROM ParkingSessions ps
+                            WHERE ps.SlotID = sl.SlotID AND ps.SessionStatus = 'Active' AND ps.ExitTime IS NULL
+                          )
+                        ORDER BY sl.SlotCode
+                    `)
+                const altSlot = altSlotRes.recordset[0]
+                if (altSlot) {
+                    targetSlotId = altSlot.SlotID
+                    targetSlotCode = altSlot.SlotCode
+                    isReassigned = true
+                } else {
+                    const windowOpensAt = new Date(startTime.getTime() - 15 * 60000)
+                    const timeStr = windowOpensAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                    throw badRequest(
+                        `Khách đến sớm ${earlyMinutes} phút và ô đỗ hiện đang có xe khác đỗ. Vui lòng chờ đến cửa sổ check-in đúng hẹn lúc ${timeStr}.`,
+                        'CHECKIN_TOO_EARLY_SLOT_BUSY'
+                    )
+                }
+            }
+
+            // HỖ TRỢ XÁC NHẬN CHO XE VÀO THEO LUỒNG VÃNG LAI (Walk-in Support)
+            const finalPlate = plateNumber?.trim().toUpperCase() || booking.PlateNumber || `WALKIN-${id}`
+            const plateNorm = finalPlate.replace(/[^0-9A-Z]/g, '')
+
+            if (plateNorm) {
+                const activePlateCheck = await new sql.Request(transaction)
+                    .input('plateNorm', sql.NVarChar(20), plateNorm)
+                    .query(`
+                        SELECT TOP 1 SessionID, SlotID FROM ParkingSessions
+                        WHERE REPLACE(REPLACE(UPPER(PlateNumber), '-', ''), '.', '') = @plateNorm
+                          AND SessionStatus = 'Active' AND ExitTime IS NULL
+                    `)
+                if (activePlateCheck.recordset.length > 0) {
+                    throw conflict(
+                        `Xe mang biển số ${finalPlate} hiện đang có một phiên đỗ xe hoạt động trong bãi (Session #${activePlateCheck.recordset[0].SessionID}). Không thể check-in thêm.`,
+                        'PLATE_ALREADY_PARKED'
+                    )
+                }
+            }
+
+            // Kiểm tra slot đỗ mục tiêu xem có đang bị chiếm không
+            const slotCheck = await new sql.Request(transaction)
+                .input('slotId', sql.Int, targetSlotId)
+                .query(`
+                    SELECT TOP 1 ps.SessionID, ps.PlateNumber, sl.SlotCode, sl.SlotStatus
+                    FROM ParkingSlots sl WITH (UPDLOCK, ROWLOCK)
+                    LEFT JOIN ParkingSessions ps ON ps.SlotID = sl.SlotID AND ps.SessionStatus = 'Active' AND ps.ExitTime IS NULL
+                    WHERE sl.SlotID = @slotId
+                `)
+            const targetSlotInfo = slotCheck.recordset[0]
+            if (!targetSlotInfo) throw badRequest('Slot không tồn tại.', 'SLOT_NOT_FOUND')
+            if (['Maintenance', 'Blocked'].includes(targetSlotInfo.SlotStatus)) {
+                throw conflict(`Vị trí đỗ ${targetSlotInfo.SlotCode} đang bảo trì hoặc bị khóa.`, 'SLOT_NOT_AVAILABLE')
+            }
+            if (targetSlotInfo.SessionID) {
+                throw conflict(`Vị trí đỗ ${targetSlotInfo.SlotCode} hiện đang có xe ${targetSlotInfo.PlateNumber} đỗ. Vui lòng chọn vị trí đỗ khác.`, 'SLOT_OCCUPIED')
+            }
+
+            const insertSessionResult = await new sql.Request(transaction)
+                .input('slotId', sql.Int, targetSlotId)
+                .input('driverId', sql.Int, booking.DriverID)
+                .input('plateNumber', sql.NVarChar(20), finalPlate)
+                .input('vehicleTypeId', sql.Int, booking.VehicleTypeID)
+                .input('cardCode', sql.NVarChar(50), cardCode || null)
+                .input('gateIn', sql.NVarChar(50), gateIn || 'Gate 1')
+                .input('gateInId', sql.Int, gateInId || null)
+                .input('createdByStaffId', sql.Int, staffId || null)
+                .query(`
+                    INSERT INTO ParkingSessions (
+                        SlotID, DriverID, PlateNumber, CardCode, GateIn, GateInID,
+                        VehicleTypeID, EntryTime, SessionStatus, EarlyFeeAmount, CreatedByStaffID
+                    )
+                    VALUES (
+                        @slotId, @driverId, @plateNumber, @cardCode, @gateIn, @gateInId,
+                        @vehicleTypeId, GETDATE(), 'Active', 0, @createdByStaffId
+                    );
+                    SELECT * FROM ParkingSessions WHERE SessionID = SCOPE_IDENTITY();
+                `)
+
+            const session = insertSessionResult.recordset[0]
+
+            await new sql.Request(transaction)
+                .input('slotId', sql.Int, targetSlotId)
+                .query(`UPDATE ParkingSlots SET SlotStatus = 'Occupied' WHERE SlotID = @slotId`)
+
+            await new sql.Request(transaction)
+                .input('sessionId', sql.Int, session.SessionID)
+                .query(`
+                    IF NOT EXISTS (SELECT 1 FROM Payments WHERE SessionID = @sessionId)
+                    BEGIN
+                        INSERT INTO Payments (SessionID, Amount, PaymentMethod, PaymentStatus)
+                        VALUES (@sessionId, 0, 'Pending', 'Pending')
+                    END
+                `)
+
+            await transaction.commit()
+            committed = true
+
+            return {
+                reservationId: id,
+                bookingCode: formatBookingCode(id),
+                sessionId: session.SessionID,
+                sessionCode: formatSessionCode(session.SessionID),
+                timeStatus: 'walkin_early_supported',
+                earlyFeeAmount: 0,
+                reassigned: isReassigned,
+                slotCode: targetSlotCode,
+                message: `Khách đến sớm ${earlyMinutes} phút. Đã hỗ trợ check-in vãng lai cho ô đỗ ${targetSlotCode} (lấy thông tin từ Booking).`,
+                session
+            }
         }
 
-        if (diffMin > LATE_CHECKIN_MIN) {
+        // =========================================================================
+        // TRƯỜNG HỢP 3: ĐẾN TRỄ
+        // -> Trễ <= 15': Miễn phí phạt trễ (0đ)
+        // -> Trễ 15' - 60': Phạt trễ (LateFee = 10,000 + ceil((diffMin - 15)/60) * 10,000)
+        // -> Trễ > 60': Booking hết hạn (Expired)
+        // =========================================================================
+        if (lateMinutes > LATE_CHECKIN_MIN) {
             await new sql.Request(transaction)
                 .input('reservationId', sql.Int, id)
                 .query(`UPDATE Reservations SET ReservationStatus = 'Expired' WHERE ReservationID = @reservationId`)
             await transaction.commit()
             committed = true
             throw conflict(
-                `Khách hàng không đến đúng giờ (no-show). Booking đã bị đánh dấu hết hạn.`,
+                `Khách hàng trễ quá 60 phút (no-show). Booking đã bị đánh dấu hết hạn.`,
                 'CHECKIN_NO_SHOW'
             )
         }
 
-        // Ranh giới: đúng 15 phút = earlyFee (tính phí), < 15 phút = grace (miễn phí)
-        const earlyFee = (diffMin <= -GRACE_PERIOD_MIN) ? EARLY_FEE_FLAT : 0
-        const timeStatus = diffMin <= -GRACE_PERIOD_MIN ? 'earlyfee'
-            : diffMin < 0 ? 'grace'
-                : diffMin <= 15 ? 'ontime' : 'late'
+        let lateFee = 0
+        if (lateMinutes > 15) {
+            // Phụ phí phạt trễ: 10.000đ cố định + (Số giờ trễ vượt quá 15 phút * 10.000đ/giờ)
+            const extraHours = Math.ceil((lateMinutes - 15) / 60)
+            lateFee = 10000 + (extraHours * 10000)
+        }
+
+        // Ranh giới: Đến sớm <= 15 phút = Miễn phí đỗ sớm (earlyFee = 0)
+        const earlyFee = 0
+        const timeStatus = earlyMinutes > 0 ? 'grace_early' : (lateMinutes <= 15 ? 'ontime' : 'late')
 
         if (endTime < now) {
             await new sql.Request(transaction)
@@ -607,7 +803,42 @@ export async function checkInBooking(reservationId, plateNumber) {
         }
 
         // ✅ Dùng biển số thực tế nếu có, fallback về BOOKING-{id}
-        const finalPlate = plateNumber?.trim().toUpperCase() || `BOOKING-${id}`
+        const finalPlate = plateNumber?.trim().toUpperCase() || booking.PlateNumber || `BOOKING-${id}`
+        const plateNorm = finalPlate.replace(/[^0-9A-Z]/g, '')
+
+        if (plateNorm) {
+            const activePlateCheck = await new sql.Request(transaction)
+                .input('plateNorm', sql.NVarChar(20), plateNorm)
+                .query(`
+                    SELECT TOP 1 SessionID, SlotID FROM ParkingSessions
+                    WHERE REPLACE(REPLACE(UPPER(PlateNumber), '-', ''), '.', '') = @plateNorm
+                      AND SessionStatus = 'Active' AND ExitTime IS NULL
+                `)
+            if (activePlateCheck.recordset.length > 0) {
+                throw conflict(
+                    `Xe mang biển số ${finalPlate} hiện đang có một phiên đỗ xe hoạt động trong bãi (Session #${activePlateCheck.recordset[0].SessionID}). Không thể check-in thêm.`,
+                    'PLATE_ALREADY_PARKED'
+                )
+            }
+        }
+
+        // Kiểm tra slot đỗ mục tiêu xem có đang bị chiếm không
+        const slotCheck = await new sql.Request(transaction)
+            .input('slotId', sql.Int, finalSlotId)
+            .query(`
+                SELECT TOP 1 ps.SessionID, ps.PlateNumber, sl.SlotCode, sl.SlotStatus
+                FROM ParkingSlots sl WITH (UPDLOCK, ROWLOCK)
+                LEFT JOIN ParkingSessions ps ON ps.SlotID = sl.SlotID AND ps.SessionStatus = 'Active' AND ps.ExitTime IS NULL
+                WHERE sl.SlotID = @slotId
+            `)
+        const targetSlotInfo = slotCheck.recordset[0]
+        if (!targetSlotInfo) throw badRequest('Slot không tồn tại.', 'SLOT_NOT_FOUND')
+        if (['Maintenance', 'Blocked'].includes(targetSlotInfo.SlotStatus)) {
+            throw conflict(`Vị trí đỗ ${targetSlotInfo.SlotCode} đang bảo trì hoặc bị khóa.`, 'SLOT_NOT_AVAILABLE')
+        }
+        if (targetSlotInfo.SessionID) {
+            throw conflict(`Vị trí đỗ ${targetSlotInfo.SlotCode} hiện đang có xe ${targetSlotInfo.PlateNumber} đỗ. Vui lòng chọn vị trí đỗ khác.`, 'SLOT_OCCUPIED')
+        }
 
         const insertSessionResult = await new sql.Request(transaction)
             .input('slotId', sql.Int, finalSlotId)
@@ -645,11 +876,12 @@ export async function checkInBooking(reservationId, plateNumber) {
 
         await new sql.Request(transaction)
             .input('sessionId', sql.Int, session.SessionID)
+            .input('lateFee', sql.Int, lateFee)
             .query(`
                 IF NOT EXISTS (SELECT 1 FROM Payments WHERE SessionID = @sessionId)
                 BEGIN
-                    INSERT INTO Payments (SessionID, Amount, PaymentMethod, PaymentStatus)
-                    VALUES (@sessionId, 0, 'Pending', 'Pending')
+                    INSERT INTO Payments (SessionID, Amount, PaymentMethod, PaymentStatus, SurchargeAmount)
+                    VALUES (@sessionId, @lateFee, 'Pending', 'Pending', @lateFee)
                 END
             `)
 
@@ -663,6 +895,7 @@ export async function checkInBooking(reservationId, plateNumber) {
             sessionCode: formatSessionCode(session.SessionID),
             timeStatus,
             earlyFeeAmount: earlyFee,
+            lateFeeAmount: lateFee,
             reassigned,
             oldSlotCode: booking.OldSlotCode,
             newSlotCode: finalSlotCode,
@@ -674,7 +907,28 @@ export async function checkInBooking(reservationId, plateNumber) {
     }
 }
 
-export async function cancelAndWalkIn(reservationId, plateNumber, slotId) {
+export async function cancelAndWalkIn(reservationId, options = {}, slotIdParam = null) {
+    let plateNumber = null
+    let slotId = null
+    let cardCode = null
+    let gateIn = null
+    let gateInId = null
+    let staffId = null
+    let vehicleTypeId = null
+
+    if (typeof options === 'string') {
+        plateNumber = options
+        slotId = slotIdParam
+    } else if (typeof options === 'object' && options !== null) {
+        plateNumber = options.plateNumber
+        slotId = options.slotId || slotIdParam
+        cardCode = options.cardCode
+        gateIn = options.gateIn
+        gateInId = options.gateInId
+        staffId = options.staffId
+        vehicleTypeId = options.vehicleTypeId
+    }
+
     const id = parseReservationId(reservationId)
     if (!id) throw badRequest('ReservationID không hợp lệ.', 'INVALID_RESERVATION_ID')
     if (!plateNumber?.trim()) throw badRequest('Vui lòng nhập biển số xe.', 'PLATE_REQUIRED')
@@ -1064,7 +1318,13 @@ export async function getCheckoutPreview(sessionId) {
     const durationH = Math.max(0.01, (now.getTime() - entry.getTime()) / 1000 / 60 / 60)
     const durationMin = Math.floor((now.getTime() - entry.getTime()) / 60000)
 
-    const { fee, breakdown } = await calcParkingFee(pool, session.VehicleTypeID, entry, now)
+    let { fee, breakdown } = await calcParkingFee(pool, session.VehicleTypeID, entry, now)
+    if (session.DriverID) {
+        const { applySubscriptionDiscount } = await import('./paymentService.js')
+        const { finalFee } = await applySubscriptionDiscount(pool, session.DriverID, fee, sessionId)
+        fee = finalFee
+    }
+
     const earlyFeeAmount = Number(session.EarlyFeeAmount || 0)
     const bookingStart = session.BookingStartTime ? new Date(session.BookingStartTime) : null
     const isEarlyExit = !!(bookingStart && now < bookingStart && durationMin < 30 && earlyFeeAmount > 0)
@@ -1087,6 +1347,8 @@ export async function getCheckoutPreview(sessionId) {
     const totalFee = fee + effectiveEarlyFee + overtimePenaltyAmount
     const prepaidAmount = Number(session.PrepaidAmount || 0)
 
+    const isSurchargePaid = session.SurchargeStatus === 'Completed' || session.PaymentStatus === 'Completed'
+
     return {
         session,
         checkoutTime: now,
@@ -1100,7 +1362,7 @@ export async function getCheckoutPreview(sessionId) {
         estimatedFee: totalFee,
         feeBreakdown: breakdown,
         prepaidAmount,
-        surchargeAmount: Math.max(0, totalFee - prepaidAmount)
+        surchargeAmount: isSurchargePaid ? 0 : Math.max(0, totalFee - prepaidAmount)
     }
 }
 

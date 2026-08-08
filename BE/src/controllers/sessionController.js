@@ -264,7 +264,7 @@ export async function getCurrentDriverSession(req, res, next) {
     // Tự động tính số phút đã đỗ và gọi hàm `calculateEstimatedFee` để tính tiền tạm tính thời gian thực
     const minutes = Number(session.ParkedMinutes || 0);
     let est = { Amount: session.Amount, ParkingFee: session.Amount, OvertimeFee: 0, OtherFee: 0 };
-    if (session.SessionStatus === "Active" && !session.Amount) {
+    if (session.SessionStatus === "Active") {
       est = await calculateEstimatedFee(pool, driverId, session);
     }
 
@@ -368,7 +368,7 @@ export async function getCurrentDriverSessions(req, res, next) {
       result.recordset.map(async (session) => {
         const minutes = Number(session.ParkedMinutes || 0);
         let est = { Amount: session.Amount, ParkingFee: session.Amount, OvertimeFee: 0, OtherFee: 0 };
-        if (session.SessionStatus === "Active" && !session.Amount) {
+        if (session.SessionStatus === "Active") {
           est = await calculateEstimatedFee(pool, driverId, session);
         }
 

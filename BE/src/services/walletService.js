@@ -252,7 +252,7 @@ export async function payParkingByWalletService(sessionId, driverId) {
         .input('DriverID', sql.Int, driverId) // Truyền ID tài xế
         .query(`
             SELECT ps.SessionID, ps.VehicleTypeID, ps.EntryTime, ps.SessionStatus,
-                   p.PaymentStatus, p.Amount
+                   p.PaymentStatus, p.Amount, p.PrepaidAmount
             FROM ParkingSessions ps
             LEFT JOIN Payments p ON ps.SessionID = p.SessionID
             WHERE ps.SessionID = @SessionID AND ps.DriverID = @DriverID AND ps.SessionStatus = 'Active'
@@ -262,31 +262,52 @@ export async function payParkingByWalletService(sessionId, driverId) {
     const session = recordset[0];
     // Nếu không tìm thấy phiên đỗ xe hợp lệ -> Ném lỗi HTTP 404
     if (!session) throw Object.assign(new Error('Không tìm thấy phiên đỗ xe'), { statusCode: 404 });
-    // Nếu phiên đỗ đã được thanh toán rồi -> Ném lỗi HTTP 400
-    if (session.PaymentStatus === 'Completed' || session.PaymentStatus === 'Prepaid' || session.PaymentStatus === 'Paid')
-        throw Object.assign(new Error('Phiên đã được thanh toán'), { statusCode: 400 });
+    
+    // Đã thanh toán hoàn tất xong lượt đỗ
+    if (session.PaymentStatus === 'Completed' || session.PaymentStatus === 'Paid')
+        throw Object.assign(new Error('Phiên đã được thanh toán hoàn tất'), { statusCode: 400 });
 
-    // Tính tổng số giờ đỗ thực tế
-    const diffH = Math.max(0.017, (Date.now() - new Date(session.EntryTime).getTime()) / 3_600_000);
-    // Query tra bảng giá PricingPolicies theo loại xe và số giờ đỗ
-    const r = await pool.request()
-        .input('VehicleTypeID', sql.Int, session.VehicleTypeID)
-        .input('DurationH', sql.Decimal(10, 2), parseFloat(diffH.toFixed(2)))
+    // Kiểm tra chống nhấp đúp/giao dịch lặp dồn trong vòng 10 giây
+    const recentTx = await pool.request()
+        .input('UserID', sql.Int, driverId)
+        .input('RefID', sql.NVarChar(100), String(sessionId))
         .query(`
-            SELECT TOP 1 Fee FROM PricingPolicies
-            WHERE VehicleTypeID = @VehicleTypeID AND IsActive = 1
-            AND ((IsOvernight = 1 AND @DurationH > 8) OR (@DurationH BETWEEN MinHours AND MaxHours))
-            ORDER BY IsOvernight DESC, MaxHours
+            SELECT TOP 1 TransactionID FROM WalletTransactions
+            WHERE UserID = @UserID AND ReferenceID = @RefID AND TransactionType = 'PAY_PARKING'
+              AND CreatedAt > DATEADD(SECOND, -10, GETDATE())
         `);
-    // Tính mức phí gốc (tối thiểu 2.000 VNĐ)
-    const baseFee = Math.max(2000, Math.round(Number(r.recordset[0]?.Fee || 2000)));
+    if (recentTx.recordset.length > 0) {
+        throw Object.assign(new Error('Giao dịch đang được xử lý, vui lòng không nhấp nút liên tục.'), { statusCode: 429 });
+    }
+
+    // Tính tổng số giờ đỗ và gọi Stored Proc sp_CalcParkingFeeV2 để tính cước chính xác cho cả đỗ qua đêm & nhiều ngày
+    const feeRes = await pool.request()
+        .input('VehicleTypeID', sql.Int, session.VehicleTypeID)
+        .input('EntryTime', sql.DateTime, session.EntryTime)
+        .input('ExitTime', sql.DateTime, new Date())
+        .output('Fee', sql.Decimal(10, 2))
+        .output('Breakdown', sql.NVarChar(sql.MAX))
+        .execute('sp_CalcParkingFeeV2');
+
+    const baseFee = Math.max(2000, Math.round(Number(feeRes.output.Fee || 2000)));
+    const diffH = Math.max(0.017, (Date.now() - new Date(session.EntryTime).getTime()) / 3_600_000);
 
     // Tự động kiểm tra quyền lợi giảm giá từ gói hội viên (nếu có)
     const { applySubscriptionDiscount } = await import('./paymentService.js');
-    const { finalFee: amount, discountPercent, planId } = await applySubscriptionDiscount(pool, driverId, baseFee, sessionId);
+    const { finalFee: totalFee, discountPercent, planId } = await applySubscriptionDiscount(pool, driverId, baseFee, sessionId);
+
+    // Tính số tiền thực tế cần thanh toán trong giao dịch này (trừ đi khoản trả trước nếu có)
+    let amountToDeduct = totalFee;
+    const existingPrepaid = Number(session.PrepaidAmount || 0);
+    if (session.PaymentStatus === 'Prepaid' && existingPrepaid > 0) {
+        if (totalFee <= existingPrepaid) {
+            throw Object.assign(new Error('Phiên đỗ đã được thanh toán đủ rồi'), { statusCode: 400 });
+        }
+        amountToDeduct = totalFee - existingPrepaid;
+    }
 
     // NẾU SỐ TIỀN PHẢI TRẢ = 0 (Được miễn phí gửi xe hoàn toàn theo gói hội viên):
-    if (amount === 0) {
+    if (amountToDeduct === 0) {
         const durationH = parseFloat(diffH.toFixed(2));
         // Kích hoạt thủ tục tạo thanh toán 0 đồng
         await pool.request()
@@ -303,30 +324,30 @@ export async function payParkingByWalletService(sessionId, driverId) {
             .input('PaidAt', sql.DateTime, new Date())
             .execute('sp_MarkPaymentPrepaid');
         // Trả về kết quả miễn phí thành công
-        return { success: true, amount: 0, newBalance: await getBalanceService(driverId) };
+        return { success: true, amount: 0, totalFee, prepaidAmount: existingPrepaid, newBalance: await getBalanceService(driverId) };
     }
 
     // Lấy số dư ví hiện tại của tài xế
     const balance = await getBalanceService(driverId);
     // Nếu số dư không đủ thanh toán -> Ném lỗi HTTP 400 báo số dư không đủ
-    if (balance < amount) {
-        throw Object.assign(new Error(`Số dư không đủ. Cần ${amount.toLocaleString('vi-VN')}đ, hiện có ${balance.toLocaleString('vi-VN')}đ`), { statusCode: 400 });
+    if (balance < amountToDeduct) {
+        throw Object.assign(new Error(`Số dư không đủ. Cần ${amountToDeduct.toLocaleString('vi-VN')}đ, hiện có ${balance.toLocaleString('vi-VN')}đ`), { statusCode: 400 });
     }
 
     // THỰC THI TRỪ TIỀN VÍ TRONG SQL SERVER (sp_PayByWallet):
     await pool.request()
         .input('UserID', sql.Int, driverId) // ID tài xế
-        .input('Amount', sql.Decimal(10, 2), amount) // Số tiền trừ
+        .input('Amount', sql.Decimal(10, 2), amountToDeduct) // Số tiền trừ
         .input('TransactionType', sql.NVarChar(50), 'PAY_PARKING') // Loại giao dịch
         .input('ReferenceID', sql.NVarChar(100), String(sessionId)) // Mã phiên đỗ
-        .input('Description', sql.NVarChar(200), `Thanh toán đỗ xe - Session #${sessionId}`) // Mô tả
+        .input('Description', sql.NVarChar(200), existingPrepaid > 0 ? `Thanh toán phụ trội đỗ xe - Session #${sessionId}` : `Thanh toán đỗ xe - Session #${sessionId}`) // Mô tả
         .execute('sp_PayByWallet'); // Chạy thủ tục trừ tiền và ghi nhật ký giao dịch
 
     // Tự động chèn một thông báo hệ thống vào bảng Notifications cho tài xế
     await pool.request()
         .input('UserID', sql.Int, driverId)
         .input('Title', sql.NVarChar, 'Thanh toán phí đỗ xe')
-        .input('Message', sql.NVarChar, `Bạn đã thanh toán ${amount.toLocaleString('vi-VN')} VNĐ phí đỗ xe qua Ví cho phiên #${sessionId}.`)
+        .input('Message', sql.NVarChar, `Bạn đã thanh toán ${amountToDeduct.toLocaleString('vi-VN')} VNĐ phí đỗ xe qua Ví cho phiên #${sessionId}.`)
         .input('Type', sql.NVarChar, 'system')
         .input('RefID', sql.Int, sessionId)
         .query(`
@@ -340,7 +361,7 @@ export async function payParkingByWalletService(sessionId, driverId) {
     await pool.request()
         .input('SessionID', sql.Int, sessionId)
         .input('OrderCode', sql.BigInt, orderCode)
-        .input('Amount', sql.Decimal(10, 2), amount)
+        .input('Amount', sql.Decimal(10, 2), amountToDeduct)
         .input('SnapshotH', sql.Decimal(10, 2), durationH)
         .input('QrCode', sql.NVarChar(sql.MAX), null)
         .input('CheckoutUrl', sql.NVarChar(500), 'WALLET')
@@ -353,8 +374,8 @@ export async function payParkingByWalletService(sessionId, driverId) {
 
     // Lấy số dư ví mới sau khi vừa trừ tiền
     const newBalance = await getBalanceService(driverId);
-    // Trả về kết quả thanh toán ví thành công kèm số dư mới
-    return { success: true, amount, newBalance };
+    // Trả về kết quả thanh toán ví thành công kèm số dư mới và chi tiết giao dịch
+    return { success: true, amount: amountToDeduct, totalFee, prepaidAmount: existingPrepaid, newBalance };
 }
 
 // ── 7. MUA / GIA HẠN GÓI HỘI VIÊN BẰNG VÍ TIỀN ────────────────────

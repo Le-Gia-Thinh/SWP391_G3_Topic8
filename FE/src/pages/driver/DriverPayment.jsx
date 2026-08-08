@@ -643,6 +643,7 @@ const DriverPayment = () => {
    * Xử lý thanh toán nhanh bằng Ví (ngay từ danh sách phiên).
    */
   const handlePayByWalletDirect = async (session) => {
+    if (isWalletPaying) return
     try {
       setIsWalletPaying(true)
       setPaying(session)
@@ -741,10 +742,19 @@ const DriverPayment = () => {
             </div>
 
             <div className="text-center relative z-10">
-              <p className="text-xs font-semibold text-white/60 mb-1 uppercase tracking-widest">{t('driver.payment.totalFee')}</p>
-              <p className="text-[2.5rem] font-black tracking-tight leading-none mb-2">
+              <p className="text-xs font-semibold text-white/70 mb-1 uppercase tracking-widest">
+                {payment.prepaidAmount > 0 ? 'SỐ TIỀN CẦN THANH TOÁN BỔ SUNG (PHỤ TRỘI)' : t('driver.payment.totalFee')}
+              </p>
+              <p className="text-[2.5rem] font-black tracking-tight leading-none mb-2 text-amber-300">
                 {fmt(payment.amount, cur)}
               </p>
+              {payment.prepaidAmount > 0 && (
+                <div className="mt-2 text-xs font-medium text-white/90 bg-white/10 rounded-xl py-1.5 px-3 inline-block backdrop-blur-sm border border-white/10">
+                  <span>Tổng cước 30h: <strong>{fmt(payment.totalFee || payment.fee, cur)}</strong></span>
+                  <span className="mx-2">·</span>
+                  <span>Đã trả trước: <strong>-{fmt(payment.prepaidAmount, cur)}</strong></span>
+                </div>
+              )}
               {payment.discountPercent > 0 && (
                 <div className="inline-block px-3 py-1 bg-green-500/20 text-green-300 border border-green-500/30 rounded-lg text-xs font-bold mt-2">
                   Đã giảm {payment.discountPercent}% (lượt {payment.sessionCount}) - Gói {payment.planId?.toUpperCase()}
@@ -806,7 +816,16 @@ const DriverPayment = () => {
                   {[
                     { label: t('driver.payment.accountNumber'), value: payment.accountNumber, mono: true, bg: 'bg-slate-50', text: 'text-slate-800', lg: true },
                     { label: t('driver.payment.accountName'), value: payment.accountName, mono: false, bg: 'bg-slate-50', text: 'text-slate-800' },
-                    { label: payment.discountPercent > 0 ? 'Tổng tiền (đã giảm)' : t('driver.payment.amount'), value: fmt(payment.amount, cur), mono: false, bg: 'bg-green-50', text: 'text-green-700', original: payment.fee },
+                    { 
+                      label: payment.prepaidAmount > 0 
+                        ? 'SỐ TIỀN CẦN CHUYỂN KHOẢN (PHỤ TRỘI)' 
+                        : (payment.discountPercent > 0 ? 'Tổng tiền (đã giảm)' : t('driver.payment.amount')), 
+                      value: fmt(payment.amount, cur), 
+                      mono: false, 
+                      bg: payment.prepaidAmount > 0 ? 'bg-amber-50' : 'bg-green-50', 
+                      text: payment.prepaidAmount > 0 ? 'text-amber-700 font-black' : 'text-green-700', 
+                      original: payment.fee 
+                    },
                     { label: t('driver.payment.transferContent'), value: payment.description, mono: true, bg: 'bg-amber-50', text: 'text-amber-700' }
                   ].map(({ label, value, mono, bg, text, lg, original }) => (
                     <div key={label} className={`flex items-center justify-between p-4 rounded-2xl ${bg} border border-black/5`}>
@@ -942,9 +961,21 @@ const DriverPayment = () => {
             {payment && (
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-6 space-y-3">
                 <div className="flex justify-between items-center pb-3 border-b border-slate-200 border-dashed">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t('driver.payment.paidAmount')}</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Số tiền vừa thanh toán</span>
                   <span className="text-lg font-black text-green-600">{fmt(payment.amount, cur)}</span>
                 </div>
+                {payment.prepaidAmount > 0 && (
+                  <div className="flex justify-between items-center text-xs text-slate-500">
+                    <span>Đã trả trước trước đó:</span>
+                    <span className="font-semibold text-slate-700">{fmt(payment.prepaidAmount, cur)}</span>
+                  </div>
+                )}
+                {payment.totalFee > 0 && payment.totalFee !== payment.amount && (
+                  <div className="flex justify-between items-center text-xs text-slate-500">
+                    <span>Tổng phí phiên đỗ (Tích lũy):</span>
+                    <span className="font-bold text-slate-800">{fmt(payment.totalFee, cur)}</span>
+                  </div>
+                )}
                 {payment.sessionInfo && (
                   <>
                     <div className="flex justify-between items-center">

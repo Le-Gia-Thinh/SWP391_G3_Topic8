@@ -19,7 +19,8 @@ import {
   MapPin,
   RefreshCcw,
   ShieldCheck,
-  Map
+  Map,
+  QrCode
 } from 'lucide-react'
 import driverApi from '../../apis/driverApi'
 import Card from '../../components/ui/Card'
@@ -260,7 +261,9 @@ const SessionDetail = ({
   onViewMap
 }) => {
   const { t } = useTranslation()
+  const hasSurcharge = Boolean(session.SurchargeAmount > 0 || session.HasSurcharge)
   const isPaid = ['completed', 'prepaid', 'paid'].includes(String(session.PaymentStatus || '').toLowerCase())
+  const isFullyPaid = isPaid && !hasSurcharge
 
   const parkedDuration = useMemo(() => {
     return getParkedDuration(session.EntryTime, currentTime, t)
@@ -283,11 +286,17 @@ const SessionDetail = ({
               </h2>
 
               <span className={`rounded-full px-3 py-1 text-xs font-bold ${
-                isPaid
+                hasSurcharge
+                  ? 'bg-amber-500 text-white'
+                  : isFullyPaid
                   ? 'bg-emerald-500 text-white'
                   : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
               }`}>
-                {isPaid ? t('driver.session.paidStatus', 'Đã thanh toán') : t(getSessionStatusKey(session.SessionStatus))}
+                {hasSurcharge 
+                  ? `⚠️ Phụ trội: +${formatCurrency(session.SurchargeAmount)}` 
+                  : isFullyPaid 
+                  ? t('driver.session.paidStatus', 'Đã thanh toán') 
+                  : t(getSessionStatusKey(session.SessionStatus))}
               </span>
             </div>
 
@@ -296,20 +305,33 @@ const SessionDetail = ({
             </p>
           </div>
 
-          {!isPaid ? (
+          {hasSurcharge ? (
             <button
               type="button"
               onClick={() => onGoPayment(session.SessionID)}
-              className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+              className="inline-flex w-fit items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-amber-700 active:scale-95 transition-all cursor-pointer"
+            >
+              <CreditCard size={16} />
+              Thanh toán phụ trội (+{formatCurrency(session.SurchargeAmount)})
+            </button>
+          ) : isFullyPaid ? (
+            <button
+              type="button"
+              onClick={() => onGoPayment(session.SessionID)}
+              className="inline-flex w-fit items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer"
+            >
+              <QrCode size={16} />
+              <span>Thanh toán bổ sung / Xem QR</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onGoPayment(session.SessionID)}
+              className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
             >
               <CreditCard size={16} />
               {t('driver.session.pay')}
             </button>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 px-3.5 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-200">
-              <ShieldCheck size={16} />
-              <span>{t('driver.session.paidStatus', 'Đã thanh toán')}</span>
-            </span>
           )}
         </div>
       </div>
@@ -491,21 +513,45 @@ const SessionDetail = ({
               </p>
 
               <p className="mt-1 text-2xl font-black text-gray-900 dark:text-white">
-                {formatCurrency(totalAmount)}
+                {formatCurrency(session.RealTimeFee || session.ParkingFee || totalAmount)}
               </p>
+              {session.SurchargeAmount > 0 && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300">
+                  <div className="flex items-center justify-between font-bold mb-1">
+                    <span>⚠️ Phát sinh phụ trội quá giờ:</span>
+                    <span className="text-amber-700 dark:text-amber-400">+{formatCurrency(session.SurchargeAmount)}</span>
+                  </div>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                    Đã trả trước: {formatCurrency(session.PrepaidAmount)}. Phí tạm tính 10h: {formatCurrency(session.RealTimeFee || session.ParkingFee)}.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="mt-5 space-y-3">
-              {isPaid ? (
-                <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white shadow-md shadow-emerald-600/20 cursor-default">
-                  <ShieldCheck size={18} />
-                  <span>{t('driver.session.paidButton', 'Phiên đỗ đã được thanh toán')}</span>
-                </div>
+              {hasSurcharge ? (
+                <button
+                  type="button"
+                  onClick={() => onGoPayment(session.SessionID)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 py-3.5 text-sm font-bold text-white shadow-md hover:bg-amber-700 active:scale-95 transition-all cursor-pointer"
+                >
+                  <CreditCard size={18} />
+                  <span>Thanh toán phụ trội (+{formatCurrency(session.SurchargeAmount)})</span>
+                </button>
+              ) : isFullyPaid ? (
+                <button
+                  type="button"
+                  onClick={() => onGoPayment(session.SessionID)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer"
+                >
+                  <QrCode size={18} />
+                  <span>Thanh toán bổ sung / Quét mã QR</span>
+                </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => onGoPayment(session.SessionID)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-md shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all cursor-pointer"
                 >
                   <CreditCard size={18} />
                   {t('driver.session.payThisSession')}

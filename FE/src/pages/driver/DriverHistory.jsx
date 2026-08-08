@@ -514,7 +514,14 @@ const DriverHistory = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-5 py-4 font-black text-blue-600 dark:text-blue-400">{fmt(payment.Amount)}</td>
+                          <td className="px-5 py-4 font-black text-blue-600 dark:text-blue-400">
+                            <div>{fmt(payment.FinalAmount ?? payment.Amount)}</div>
+                            {payment.SurchargeAmount > 0 && (
+                              <div className="text-[10px] font-medium text-amber-600 dark:text-amber-400 mt-0.5">
+                                Gốc: {fmt(payment.PrepaidAmount || payment.Amount)} + Phụ trội: {fmt(payment.SurchargeAmount)}
+                              </div>
+                            )}
+                          </td>
                           <td className="px-5 py-4 font-bold text-slate-700 dark:text-slate-300">{payment.PaymentMethod || '--'}</td>
                           <td className="px-5 py-4">
                             <Badge variant={STATUS_BADGE_VARIANTS[payment.PaymentStatus] || 'default'}>
